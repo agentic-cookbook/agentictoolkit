@@ -7,9 +7,10 @@ import {
   buildSiteHref,
   detectEnv,
   getSite,
-  hubSwitchHref,
   hubWorkspaceSlug,
   isHubWorkspacePath,
+  siteWorkspaceHref,
+  siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
   siteUrl,
   type SiteDef,
@@ -43,6 +44,11 @@ export type UseSiteMenuOpts = {
    *  so the workspace menu resolves its feature links against the user's own slug
    *  instead of degrading to slug-less (broken) links. */
   personalSlug?: string
+  /** Whether a user is signed in. Gates the workspace CARRY below: every workspace
+   *  route in the family sits behind an auth gate, so a path that merely parses as
+   *  one on a signed-out visitor is a public page that happens to share its shape,
+   *  and carrying its first segment as a slug would be a guess. */
+  authenticated?: boolean
 }
 
 /**
@@ -53,32 +59,40 @@ export type UseSiteMenuOpts = {
  */
 export function useSiteMenu(
   groups: MenuGroup[],
-  { currentSiteId, resolveHref, personalSlug }: UseSiteMenuOpts,
+  { currentSiteId, resolveHref, personalSlug, authenticated }: UseSiteMenuOpts,
 ): {
   entries: PopoverEntry[]
   navigate: (item: PopoverItem) => void
+  /** The signed-in Home destination, resolved by the same route logic as every
+   *  config-driven row. The one row SiteMenu still builds by hand that needs a
+   *  resolved href — everything else it renders is either a plain action (Help) or a
+   *  {@link MenuGroup} the `entries` above already resolved. */
   homeHref: string
-  /** Resolve an arbitrary hub route to its href with the same env/SSO logic the
-   *  config-driven rows get. For the handful of rows SiteMenu builds by hand rather
-   *  than declaring as a {@link MenuGroup} — `homeHref` below is one such call, and
-   *  the Contact row is another. Exposed so those rows can't drift into resolving a
-   *  destination differently from every row beside them. */
-  routeHref: (route: string) => string
 } {
   const pathname = usePathname() ?? '/'
   const router = useRouter()
 
-  // The logged-in APP context: a workspace route on the hub — `/<slug>/home` or a
-  // feature route like `/<slug>/ecosystems`. NOT the marketing landing `/`. The
-  // active workspace SLUG (first path segment) is derived once here and threaded
-  // into the in-hub hrefs below; null off a workspace route (or off the hub). On the
-  // slug-less workspace shell routes (`/home`, `/home/settings`, …) there's no slug
-  // segment, so fall back to the signed-in user's personal slug — keeping the in-hub
-  // menu with working feature links rather than slug-less ones.
-  const workspaceSlug =
-    currentSiteId === 'hub' && isHubWorkspacePath(pathname)
-      ? (hubWorkspaceSlug(pathname) ?? personalSlug ?? null)
-      : null
+  // The logged-in APP context: the workspace the visitor is INSIDE right now, on
+  // whichever site this header belongs to. NOT the marketing landing `/`. It is the
+  // slug the menu carries across a site switch (see hrefFor) and the one the in-hub
+  // ROUTE rows are scoped to (see routeHref); null wherever there is no workspace.
+  //
+  // Two shapes, because the two are known with different confidence:
+  //
+  //  - The HUB's workspace paths are self-identifying — `/<slug>/<feature>` matched
+  //    against the shared segment set — so they need no auth signal. Its slug-less
+  //    workspace shells (`/home`, `/home/settings`, …) are workspace routes with no
+  //    slug segment to read, so the signed-in user's personal slug stands in; without
+  //    it the feature links resolve slug-less and the `[slug]` route 404s.
+  //  - Every OTHER site puts its workspace where a public page's segment could also
+  //    sit (`/<slug>` beside `/details`), so the registry's `siteWorkspaceSlug` reads
+  //    it only for a signed-in visitor — see UseSiteMenuOpts.authenticated.
+  const currentSite = getSite(currentSiteId)
+  const workspaceSlug = useMemo(() => {
+    if (currentSiteId === 'hub')
+      return isHubWorkspacePath(pathname) ? (hubWorkspaceSlug(pathname) ?? personalSlug ?? null) : null
+    return currentSite && authenticated ? siteWorkspaceSlug(currentSite, pathname) : null
+  }, [currentSiteId, currentSite, pathname, personalSlug, authenticated])
 
   // The destination host depends on the current hostname (client-only): null until
   // mount, then the real host. No hydration mismatch — the menu's links aren't in
@@ -119,25 +133,33 @@ export function useSiteMenu(
 
   const hrefFor = useCallback(
     (site: SiteDef, external?: boolean): string => {
-      // In-hub mode: on a workspace route, switch to the target's workspace route on
-      // the hub, scoped to the ACTIVE slug (same origin, same tab), when it has one.
-      // Targets without a workspace route (Docs, Cookbook, …) and every other context
-      // keep the cross-site path. `external` links (the dev site-family submenus) opt
-      // out — they always want the actual site deployment, never the in-hub view.
-      if (workspaceSlug && !external) {
-        if (site.id === 'hub') return `/${workspaceSlug}/home`
-        const hubRoute = hubSwitchHref(workspaceSlug, site)
-        if (hubRoute) return hubRoute
-      }
-      if (site.id === currentSiteId) return '/'
+      // Carry the workspace: switching sites from inside one lands in the SAME
+      // workspace on the site you picked, at THAT site's own workspace route —
+      // `/<slug>`, `/home/<slug>` or `/<slug>/home`, per its shape (siteWorkspaceHref).
+      // This menu is a cross-site navigator: the destination is the target site's
+      // workspace, never the hub's in-house view of it. undefined when there is no
+      // workspace to carry, or when the target has none of its own (Docs, Community, …),
+      // and then the plain path below applies. `external` links (the dev site-family
+      // submenus) opt out — they always want the target's landing.
+      const workspacePath =
+        workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : undefined
+      // The site we're already on: a bare same-origin path either way.
+      if (site.id === currentSiteId) return workspacePath ?? '/'
       if (!hostname) return '#'
-      // `external` links (the dev site-family submenus) open the target's LANDING
-      // rather than carrying the current route — the debug menu is "jump to this
-      // site", not "switch to the same area on this site" (which /home-carries).
-      const carriedPath = external ? '/' : pathname
       // Tag the destination with the previewed theme BEFORE the SSO wrap below, so it
       // survives in resolveHref's encoded `return` param (a no-op in prod / non-http).
-      const href = carryTheme(buildSiteHref(site, hostname, carriedPath))
+      //
+      // A carried workspace is an EXACT destination and goes through siteUrl, not
+      // buildSiteHref: that one route-MATCHES, mapping everything but `/home*` onto the
+      // target's landing, so `/acme` would arrive as `/`. Without one, route matching is
+      // exactly right — and `external` links (the dev site-family submenus) open the
+      // target's LANDING rather than carrying the current route, because the debug menu
+      // is "jump to this site", not "switch to the same area on this site".
+      const href = carryTheme(
+        workspacePath
+          ? siteUrl(site.id, workspacePath, hostname)
+          : buildSiteHref(site, hostname, external ? '/' : pathname),
+      )
       if (!resolveHref) return href
       // Only route the switch through silent SSO when the destination is in the SAME
       // environment as the current site (see SiteMenu for the full rationale): each
@@ -211,6 +233,18 @@ export function useSiteMenu(
           current: href.startsWith('/') && !href.startsWith('//') && (path === href || path.startsWith(`${href}/`)),
         }
       }
+      if ('href' in link) {
+        // A destination with no registry site: the href is used verbatim. No `current`
+        // marking and no SSO wrap — see MenuLink's `href` variant for why both are
+        // absent by construction rather than forgotten.
+        return {
+          key: `href:${link.href}`,
+          label: link.label,
+          description: link.description,
+          href: link.href,
+          icon: menuIcon(link.iconKey),
+        }
+      }
       const site = getSite(link.site)
       if (!site) return null
       // Icon from the single source of truth (menu-icons), keyed by the site id.
@@ -227,7 +261,23 @@ export function useSiteMenu(
     for (const g of groups) {
       if (g.kind === 'topic') {
         const items = g.links.map(toItem).filter((r): r is PopoverItem => r !== null)
-        if (items.length) out.push({ kind: 'topic', section: g.section, label: g.label, items })
+        // The trigger's OWN destination, when the topic has one — resolved through the
+        // same toItem as its children, so a topic that IS a site cannot resolve its
+        // href, tagline or `current` by a different rule than the row for that same
+        // site elsewhere in the menu. Null for a grouping header (Plan, Build), which
+        // leaves `href` undefined and the trigger a pure disclosure.
+        const self = g.link ? toItem(g.link) : null
+        if (items.length)
+          out.push({
+            kind: 'topic',
+            section: g.section,
+            label: g.label,
+            items,
+            href: self?.href,
+            description: g.description ?? self?.description,
+            icon: menuIcon(g.iconKey) ?? self?.icon,
+            current: self?.current,
+          })
       } else {
         const item = toItem(g.link)
         // Both leaf + inline resolve to a leaf entry; `inline` marks it indented
@@ -274,5 +324,5 @@ export function useSiteMenu(
   // (on the hub → `/<slug>/home`; a satellite → the hub's `/home`, SSO-wrapped).
   const homeHref = routeHref('/home')
 
-  return { entries, navigate, homeHref, routeHref }
+  return { entries, navigate, homeHref }
 }

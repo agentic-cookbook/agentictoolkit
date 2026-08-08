@@ -29,7 +29,7 @@ vi.mock('@agentic-toolkit/adh/header', async (importOriginal) => {
 })
 
 // adh's real switcher stands in as a probe, because its contents are already covered by
-// header/__tests__/{useSiteMenu,debugSiteGroups,hubCoreGroups}.test — re-rendering the
+// header/__tests__/{useSiteMenu,debugSiteGroups,fleetMenuGroups}.test — re-rendering the
 // whole menu here would test those twice and this file's subject not at all.
 //
 // That is now the WHOLE reason. While this file lived in the former `@adh/chrome` it carried a

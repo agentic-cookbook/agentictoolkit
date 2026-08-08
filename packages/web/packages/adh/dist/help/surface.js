@@ -239,7 +239,7 @@ sibling of the REST API, not a replacement.</p>
 <li>Auth: JWT (email/password or OAuth)</li>
 </ul>`,
   "mcp-tools": `<h1 id="tool-surface"><a href="#tool-surface">Tool surface</a></h1>
-<p>52 tools, scoped to the user behind the API token. Revoke a token
+<p>54 tools, scoped to the user behind the API token. Revoke a token
 to cut access immediately. Profile tools return only rows the acting agent has
 been granted read access to via the data bucket ACL.</p>
 <h2 id="persona-storage--19-tools"><a href="#persona-storage--19-tools">Persona Storage \xB7 19 tools</a></h2>
@@ -502,8 +502,8 @@ been granted read access to via the data bucket ACL.</p>
 </tr>
 </tbody>
 </table>
-<h2 id="projects--4-tools"><a href="#projects--4-tools">Projects \xB7 4 tools</a></h2>
-<p>List projects and their work items, update a work item, and post a comment \u2014 the agent write surface for the Projects feature (acts as the token subject).</p>
+<h2 id="projects--6-tools"><a href="#projects--6-tools">Projects \xB7 6 tools</a></h2>
+<p>List projects, their iterations and their work items, update a work item \u2014 including committing it to an iteration and sizing it \u2014 and post a comment: the agent write surface for the Projects feature (acts as the token subject).</p>
 <table>
 <thead>
 <tr>
@@ -517,6 +517,10 @@ been granted read access to via the data bucket ACL.</p>
 <td>Read</td>
 </tr>
 <tr>
+<td><code>projectListIterations</code></td>
+<td>Read</td>
+</tr>
+<tr>
 <td><code>projectListWorkItems</code></td>
 <td>Read</td>
 </tr>
@@ -527,6 +531,10 @@ been granted read access to via the data bucket ACL.</p>
 <tr>
 <td><code>projectAddComment</code></td>
 <td>Write</td>
+</tr>
+<tr>
+<td><code>projectListComments</code></td>
+<td>Read</td>
 </tr>
 </tbody>
 </table>

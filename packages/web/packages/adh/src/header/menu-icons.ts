@@ -3,9 +3,16 @@
 // Every row in the site menu (SiteMenu → NavigationPopover) resolves its icon
 // through THIS map — never a hard-coded icon at a render site. Keys are:
 //   - a SiteId (for `{ site }` menu links): 'hub', 'bitbag', …
-//   - an in-hub route path (for `{ route }` links): '/products', '/personas', …
+//   - a hub route path: '/contact' and '/details' for the fleet tree's two
+//     `{ route }` links, and one per hub WORKSPACE feature ('/storage',
+//     '/personas', …) for the Recents rows, which key each recorded place by the
+//     feature route it sits under.
 //   - a chrome key (for the non-site rows): 'home', 'workspaces', 'recents',
 //     'login', 'signup', 'routes', 'debug'.
+//   - a fleet-menu key (`iconKey`), for the rows the registry cannot name: the
+//     grouping topics that are no single site ('plan', 'build') and the
+//     destinations that have no registry entry yet ('organizations', 'notebook',
+//     'integrations', 'registry'). See fleetMenuGroups.
 //
 // Icons reuse the glyph the platform already associates with the thing wherever
 // one exists (feature icons from hub `FEATURE_META`, the workspace type icons,
@@ -20,8 +27,11 @@
 
 import {
   Activity,
+  AppWindow,
   BadgeCheck,
   Bell,
+  Blocks,
+  BookMarked,
   BookOpen,
   BookText,
   BookUser,
@@ -32,10 +42,13 @@ import {
   Building,
   ChefHat,
   CircleHelp,
+  ClipboardList,
   Code,
   Contact,
   CreditCard,
+  Database,
   Fingerprint,
+  Flag,
   FlaskConical,
   FolderKanban,
   GitPullRequest,
@@ -47,23 +60,32 @@ import {
   Hexagon,
   History,
   House,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
   LayoutTemplate,
   Library,
   LifeBuoy,
+  Lightbulb,
   LogIn,
   Mail,
+  MessageCircle,
   MonitorSmartphone,
   Network,
   Newspaper,
+  NotebookPen,
   NotebookText,
   Package,
+  Plug,
+  Puzzle,
   Route,
   School,
   ScrollText,
+  Server,
+  Settings,
   ShieldCheck,
   Sparkles,
+  Trophy,
   UserCircle,
   UserCog,
   UserPlus,
@@ -96,10 +118,62 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   // route, because that is what the row points at on whichever site renders it.
   '/contact': Mail,
   '/details': LayoutGrid,
-  '/products': Network, // matches FEATURE_META `products` (Products replaced /ecosystems)
-  '/personas': UserCircle, // matches FEATURE_META `personas`
-  '/organizations': Building, // matches WorkspaceShell's organization type icon
-  '/research': FlaskConical, // matches FEATURE_META `research`
+
+  // --- Hub WORKSPACE feature routes, for the Recents rows -----------------------
+  // Recents keys each recorded place by the feature route it sits under
+  // (`/<slug>/personas` → '/personas'), so this block must cover EVERY hub workspace
+  // segment: a key that resolves to nothing renders a blank icon slot beside rows
+  // that have one, which is how Recents came to be the only inconsistently-iconed
+  // block in the menu. It is the whole of HUB_WORKSPACE_SEGMENTS minus `home` (the
+  // menu's own permanent row, never recorded) — held to that by the hub's
+  // recents-recorder test, which walks the registry set and resolves each one here.
+  //
+  // Each glyph is the one hub's own FEATURE_META gives that feature, so a place looks
+  // the same in the menu as it does on the workspace rail it was visited from.
+  '/all-data': Database,
+  '/applications': AppWindow,
+  '/auth': KeyRound,
+  '/billing': CreditCard,
+  '/communities': Users,
+  '/dashboards': LayoutDashboard,
+  '/email-signup': Mail,
+  '/feature-flags': Flag,
+  '/gamification': Trophy,
+  '/integrations': Plug,
+  '/invitations': UsersRound,
+  '/knowledgebases': BookOpen,
+  '/llm-providers': Boxes,
+  '/members': BookUser,
+  '/messaging': MessageCircle,
+  '/narratives': ScrollText,
+  '/persona-services': Boxes,
+  '/personas': UserCircle,
+  '/products': Package,
+  '/projects': FolderKanban,
+  '/research': FlaskConical,
+  '/server-bags': Server,
+  '/settings': Settings,
+  '/signin-apps': LogIn,
+  '/storage': HardDrive,
+  '/teams': UsersRound,
+  '/tokens': KeyRound,
+
+  // --- Fleet-menu rows the registry cannot name (see fleetMenuGroups) ---
+  // The two grouping topics, which are no single site: a checklist for the things
+  // you decide before writing anything, blocks for the things you assemble after.
+  plan: ClipboardList,
+  build: Blocks,
+  // Destinations with no registry entry yet. Each reuses the glyph its eventual site
+  // would carry — 'organizations' the same Building as the in-hub `/organizations`
+  // route, so the two read as one destination once the site exists.
+  organizations: Building,
+  notebook: NotebookPen, // notes (agenticdevelopernotebook.com)
+  integrations: Puzzle,
+  registry: BookMarked, // hire's consultant registry
+  // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
+  // submenu already wears — a topic that duplicates one of its children's icons
+  // reads as that child promoted, rather than as the group it is.
+  learn: Lightbulb,
 
   // --- Chrome rows (the auth-conditional top section, + the dev-only tools
   //     appended after the Marketing/Main sites submenus) ---

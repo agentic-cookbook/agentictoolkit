@@ -31,7 +31,10 @@ import { buildDebugSiteGroups } from './debugSiteGroups'
 import { buildDevToolsEntries, DEV_TOOLS_BUILD_ENABLED } from './devToolsEntries'
 import { useEffectiveEnv, useEnvOverride } from './envOverride'
 import { menuIcon } from './menu-icons'
-import { buildBelowHelpEntries, siteDetailsHref } from './belowHelpEntries'
+// The section number only — this base renders the Recents flyout that HEADS the fleet
+// block, so it has to agree with the rows underneath it or a divider appears between
+// them. The tree itself is the subclasses' to supply (see SiteMenuProps.groups).
+import { FLEET_SECTION } from './fleetMenuGroups'
 // Package path (the external help entry) so no bundling cost — this pulls only the light
 // HelpContext hook, never the code-split window. Safe no-op outside a HelpProvider.
 //
@@ -75,14 +78,39 @@ const DebugConsoleWindow = dynamic(() =>
 export type MenuLink =
   | { site: SiteId; label?: string; description?: string; external?: boolean }
   | { route: string; label: string; description?: string }
+  // A destination with no registry site and no in-hub route: an absolute URL,
+  // written out. This is how the menu names a site that does not exist as an app
+  // yet — the registry cannot carry it, because `registry.test.ts` holds every
+  // SiteId to a real folder under `frontend/src/sites/`, and wanting a menu row is
+  // not a reason to invent a site. Consequences of having no registry entry, all
+  // deliberate: no per-env host mapping (no `testing.`/`staging.` prefix), no SSO
+  // wrap, and no `current` marking — there is no deployment for any of that to
+  // describe. When the site ships, replace the row with `{ site }` to get them.
+  | { href: string; label: string; description?: string; iconKey?: string }
 export type MenuGroup =
   // A promoted top-level link row (with an optional inline description via `blurb`).
   | { kind: 'leaf'; section: number; blurb?: boolean; link: MenuLink }
   // An always-visible link row INDENTED under the row above it (an inline sub-item,
   // e.g. Hub's ecosystem sites). Renders like a leaf but nested; not a flyout.
   | { kind: 'inline'; section: number; blurb?: boolean; link: MenuLink }
-  // A row that opens a cascading flyout submenu of its `links`.
-  | { kind: 'topic'; section: number; label: string; links: MenuLink[] }
+  // A row that opens a cascading flyout submenu of its `links`. `link` makes the
+  // trigger itself a destination as well as a disclosure — the shape the fleet menu
+  // needs, where "Hub" both opens the hub's sites and IS the hub. Click (or Enter)
+  // navigates; hover and → still open the flyout. Omit `link` for a pure grouping
+  // header with nowhere of its own to go (Plan, Build).
+  //
+  // The trigger's icon is `iconKey`'s (a menu-icons key), else the one `link`
+  // resolves to — a topic that IS a site wears that site's glyph without restating
+  // it. A grouping header has no link, so it must name an `iconKey` to have one.
+  | {
+      kind: 'topic'
+      section: number
+      label: string
+      links: MenuLink[]
+      link?: MenuLink
+      description?: string
+      iconKey?: string
+    }
 
 /** The header-chrome props every site menu (and the dispatcher) carry. */
 export type SiteMenuChromeProps = {
@@ -219,17 +247,17 @@ export function SiteMenu({
   // The resolved Hub-core rows + navigation + the Home destination — env-aware,
   // SSO-wrapped, `current`-marked, via the shared {@link useSiteMenu} engine (single
   // source of truth for the link logic).
-  const { entries, navigate, homeHref, routeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug })
+  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, {
+    currentSiteId,
+    resolveHref,
+    personalSlug,
+    authenticated,
+  })
 
-  // This site's own `/details`, or undefined where there is no such page. Drives BOTH
-  // the Details row below Help (see `belowHelp`) and the phone fold-in's duplicate
-  // filter, which is why it is resolved up here rather than beside the row it describes.
-  const detailsHref = siteDetailsHref(currentSiteId)
-
-  // The auth-conditional TOP section, above the shared Hub core (section 0, so one
-  // divider falls between it and the Hub block at section 1). Signed out → Login +
-  // Sign up. Signed in → Home, an indented Workspaces flyout (hub-only, via context),
-  // and a Recents flyout (from the on-device store; hidden when empty).
+  // The auth-conditional TOP section, above the fleet tree (section 0, so one divider
+  // falls between it and the tree at section 1). Signed out → Login + Sign up. Signed
+  // in → Home and an indented Workspaces flyout (hub-only, via context). Recents is
+  // NOT here: it heads the fleet block below (see `recentsSection`).
   const pathname = usePathname() ?? '/'
   const workspacesMenu = useWorkspacesMenu()
   const recents = useRecents()
@@ -271,19 +299,41 @@ export function SiteMenu({
         items: items.length ? items : [{ key: 'ws:loading', label: 'Loading…' }],
       })
     }
-    // Recents — a flyout of the last places visited, newest-first; hidden when empty.
-    if (recents.length) {
-      const items: PopoverItem[] = recents.map((r) => ({
-        key: `recent:${r.url}`,
-        label: r.label,
-        href: r.url,
-        icon: menuIcon(r.iconKey),
-        current: r.url === pathname,
-      }))
-      out.push({ kind: 'topic', section: 0, label: 'Recents', icon: menuIcon('recents'), items })
-    }
     return out
-  }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname])
+  }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, pathname])
+
+  // Recents — a flyout of the last places visited, newest-first; hidden when empty, and
+  // signed-out (the store only ever records workspace routes). It HEADS the fleet block
+  // rather than sitting with the chrome above, because it is the same kind of thing as
+  // the rows under it: somewhere in the family to go. Hence FLEET_SECTION — a different
+  // number here would rule a divider between Recents and the first site.
+  //
+  // Every row carries an icon, falling back to the hub's mark: the store keys each visit
+  // by its feature, and a key this build doesn't know (an older entry persisted by a
+  // previous build, a retired feature) would otherwise leave one row in the list blank
+  // while its neighbours are iconed. The recorder's own test pins that every LIVE key
+  // resolves, so the fallback covers only the stale ones it cannot reach.
+  const recentsSection = useMemo<PopoverEntry[]>(() => {
+    if (!authenticated || !recents.length) return []
+    const items: PopoverItem[] = recents.map((r) => ({
+      key: `recent:${r.url}`,
+      label: r.label,
+      description: r.description,
+      href: r.url,
+      icon: menuIcon(r.iconKey) ?? menuIcon('hub'),
+      current: r.url === pathname,
+    }))
+    return [
+      {
+        kind: 'topic',
+        section: FLEET_SECTION,
+        label: 'Recents',
+        description: 'Where you just were',
+        icon: menuIcon('recents'),
+        items,
+      },
+    ]
+  }, [authenticated, recents, pathname])
 
   // The host site's own primary nav, surfaced HERE exactly while the bar has dropped
   // it (below 768px). The rows are {@link buildSiteNavEntries}' — a pure builder with
@@ -299,13 +349,10 @@ export function SiteMenu({
             // regardless would delete community's "Forum" (`/home`) from the menu of
             // an anonymous phone visitor and leave the board unreachable.
             homeHref: authenticated ? homeHref : undefined,
-            // Unconditional, unlike homeHref: the Details row below Help is not
-            // auth-gated, so wherever it exists it exists in both states.
-            detailsHref,
             pathname,
           })
         : [],
-    [linksCollapsed, navLinks, authenticated, homeHref, detailsHref, pathname],
+    [linksCollapsed, navLinks, authenticated, homeHref, pathname],
   )
 
   // The Routes flyout's data: the site's curated `routes` prop when it passed one,
@@ -373,17 +420,10 @@ export function SiteMenu({
   // auth. Sits at the foot of the top section (section 0), just above the first divider.
   const openHelp = useHelp().open
 
-  // Contact + Details, the two destinations that left hub's header bar — rows in the
-  // pure {@link buildBelowHelpEntries}, which is where the asymmetry between them (a
-  // hub route vs. a site-relative one) and the `current` rules are explained.
-  const belowHelp = useMemo<PopoverEntry[]>(
-    () => buildBelowHelpEntries({ contactHref: routeHref('/contact'), detailsHref, pathname }),
-    [routeHref, detailsHref, pathname],
-  )
-
   // The full ordered list: the site's own nav (phone only — see navSection), the auth
-  // top section, the shared Hub core (which already ends with the dev site-family
-  // submenus), then Routes/Debug Options.
+  // top section closing on the Help row, then the fleet block — Recents at its head,
+  // then the tree the subclass supplied (which already ends with the dev site-family
+  // submenus) — and finally Routes/Debug Options.
   //
   // The site's nav goes FIRST because on a phone this menu IS the site's navigation —
   // that is the whole of what the bar handed over. Reaching a page on the site you are
@@ -397,11 +437,11 @@ export function SiteMenu({
         section: 0,
         item: { key: 'help', label: 'Help', icon: menuIcon('help'), onSelect: () => openHelp() },
       },
-      ...belowHelp,
+      ...recentsSection,
       ...entries,
       ...devToolsSection,
     ],
-    [navSection, topSection, belowHelp, entries, devToolsSection, openHelp],
+    [navSection, topSection, recentsSection, entries, devToolsSection, openHelp],
   )
 
   // Open the single shared sites-overview popover (rendered by the always-present

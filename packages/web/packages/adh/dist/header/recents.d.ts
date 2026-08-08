@@ -5,6 +5,10 @@ export type RecentPlace = {
     url: string;
     /** Human label for the row (the destination's title). */
     label: string;
+    /** Optional trailing tagline for the row, in the same slot every other menu row
+     *  puts one. What the label cannot say: the label is a route, this is what the
+     *  route points AT (the hub records a breadcrumb of the selections it reflects). */
+    description?: string;
     /** Optional icon key, opaque to this store: whatever identifier the caller's own
      *  icon map is keyed by (e.g. a feature route or a site id). */
     iconKey?: string;

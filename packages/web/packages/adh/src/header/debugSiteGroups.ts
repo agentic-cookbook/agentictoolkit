@@ -19,8 +19,8 @@ import { type MenuGroup } from './SiteMenu'
 // an in-hub workspace route, where a plain site link would open the
 // `/<slug>/<feature>` workspace view instead (see useSiteMenu's hrefFor).
 
-// One section past the hub core (section 1, in hubCoreGroups) so a single divider
-// falls between the core menu and this dev section. Exported so the Routes /
+// One section past the fleet tree (section 1, in fleetMenuGroups) so a single divider
+// falls between the family menu and this dev section. Exported so the Routes /
 // Debug Options rows SiteMenu appends after these site-family flyouts share the
 // same section — they're all part of one contiguous "dev tools" run, no divider.
 export const DEBUG_SECTION = 2

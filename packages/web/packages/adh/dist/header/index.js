@@ -190,6 +190,16 @@ function IconSlot({ icon: Icon }) {
   if (!Icon) return null;
   return /* @__PURE__ */ jsx4(Icon, { className: "adh-dropdown-menu__item-icon adh-nav-popover__icon", "aria-hidden": true });
 }
+function topicItem(entry) {
+  return {
+    key: `topic:${entry.label}`,
+    label: entry.label,
+    description: entry.description,
+    href: entry.href,
+    icon: entry.icon,
+    current: entry.current
+  };
+}
 function isModifiedClick(event) {
   return event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }
@@ -331,6 +341,10 @@ function NavigationPopover({
     if (!entry) return;
     if (nav.kind === "top") {
       if (entry.kind === "topic") {
+        if (entry.href) {
+          chooseItem(topicItem(entry));
+          return;
+        }
         discloseRight();
         return;
       }
@@ -520,9 +534,23 @@ function NavigationPopover({
                           /* @__PURE__ */ jsxs3(
                             DropdownMenuSubTrigger,
                             {
+                              render: entry.href !== void 0 ? /* @__PURE__ */ jsx4(
+                                "a",
+                                {
+                                  href: entry.href,
+                                  "aria-current": entry.current ? "page" : void 0,
+                                  ...GUARDED_NAV_PROPS,
+                                  onClick: (event) => {
+                                    if (isModifiedClick(event)) return;
+                                    event.preventDefault();
+                                    chooseItem(topicItem(entry));
+                                  }
+                                }
+                              ) : void 0,
                               "data-nav": `e${index}`,
                               className: cn("adh-nav-popover__topic", {
                                 "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
+                                "adh-nav-popover__item--current": entry.current,
                                 "adh-nav-popover__item--indent": entry.indent
                               }),
                               onMouseDown: (event) => event.preventDefault(),
@@ -532,7 +560,8 @@ function NavigationPopover({
                               },
                               children: [
                                 /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
-                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, children: entry.label })
+                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, className: "adh-nav-popover__link-name", children: entry.label }),
+                                entry.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.description })
                               ]
                             }
                           ),
@@ -980,7 +1009,7 @@ import {
 } from "@agentic-toolkit/adh/header";
 import { useAnonymousHeaderAuth } from "@agentic-toolkit/adh/header-auth";
 import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath, siteProdUrl as siteProdUrl2, siteUrl as siteUrl2 } from "@agentic-toolkit/adh-registry";
-import { isConceptSite as isConceptSite2 } from "@agentic-toolkit/adh/concepts/participating";
+import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
 
 // src/header/SiteMenuSwitcher.tsx
 import { Fragment as Fragment6 } from "react";
@@ -990,7 +1019,7 @@ import { usePathname as usePathname4 } from "next/navigation";
 import { useEffect as useEffect4, useMemo as useMemo3, useState as useState4 } from "react";
 import { usePathname as usePathname3 } from "next/navigation";
 import dynamic from "next/dynamic";
-import { CircleHelp as CircleHelp2, Settings as Settings2 } from "lucide-react";
+import { CircleHelp as CircleHelp2, Settings as Settings3 } from "lucide-react";
 
 // src/footer/SitesOverview.tsx
 import { FOOTER_SITES, groupSitesByCategory, siteProdUrl } from "@agentic-toolkit/adh-registry";
@@ -1015,9 +1044,10 @@ import {
   buildSiteHref,
   detectEnv,
   getSite,
-  hubSwitchHref,
   hubWorkspaceSlug,
   isHubWorkspacePath,
+  siteWorkspaceHref,
+  siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
   siteUrl
 } from "@agentic-toolkit/adh-registry";
@@ -1029,8 +1059,11 @@ import {
 // src/header/menu-icons.ts
 import {
   Activity,
+  AppWindow,
   BadgeCheck,
   Bell,
+  Blocks,
+  BookMarked,
   BookOpen,
   BookText,
   BookUser,
@@ -1041,10 +1074,13 @@ import {
   Building,
   ChefHat,
   CircleHelp,
+  ClipboardList,
   Code,
   Contact,
   CreditCard,
+  Database,
   Fingerprint,
+  Flag,
   FlaskConical,
   FolderKanban,
   GitPullRequest,
@@ -1056,23 +1092,32 @@ import {
   Hexagon,
   History,
   House,
+  KeyRound,
   LayoutDashboard,
   LayoutGrid,
   LayoutTemplate,
   Library,
   LifeBuoy,
+  Lightbulb,
   LogIn,
   Mail,
+  MessageCircle,
   MonitorSmartphone,
   Network,
   Newspaper,
+  NotebookPen,
   NotebookText,
   Package,
+  Plug,
+  Puzzle,
   Route,
   School,
   ScrollText,
+  Server,
+  Settings as Settings2,
   ShieldCheck,
   Sparkles,
+  Trophy,
   UserCircle,
   UserCog,
   UserPlus,
@@ -1111,14 +1156,62 @@ var MENU_ICONS = {
   // route, because that is what the row points at on whichever site renders it.
   "/contact": Mail,
   "/details": LayoutGrid,
-  "/products": Network,
-  // matches FEATURE_META `products` (Products replaced /ecosystems)
+  // --- Hub WORKSPACE feature routes, for the Recents rows -----------------------
+  // Recents keys each recorded place by the feature route it sits under
+  // (`/<slug>/personas` → '/personas'), so this block must cover EVERY hub workspace
+  // segment: a key that resolves to nothing renders a blank icon slot beside rows
+  // that have one, which is how Recents came to be the only inconsistently-iconed
+  // block in the menu. It is the whole of HUB_WORKSPACE_SEGMENTS minus `home` (the
+  // menu's own permanent row, never recorded) — held to that by the hub's
+  // recents-recorder test, which walks the registry set and resolves each one here.
+  //
+  // Each glyph is the one hub's own FEATURE_META gives that feature, so a place looks
+  // the same in the menu as it does on the workspace rail it was visited from.
+  "/all-data": Database,
+  "/applications": AppWindow,
+  "/auth": KeyRound,
+  "/billing": CreditCard,
+  "/communities": Users,
+  "/dashboards": LayoutDashboard,
+  "/email-signup": Mail,
+  "/feature-flags": Flag,
+  "/gamification": Trophy,
+  "/integrations": Plug,
+  "/invitations": UsersRound,
+  "/knowledgebases": BookOpen,
+  "/llm-providers": Boxes,
+  "/members": BookUser,
+  "/messaging": MessageCircle,
+  "/narratives": ScrollText,
+  "/persona-services": Boxes,
   "/personas": UserCircle,
-  // matches FEATURE_META `personas`
-  "/organizations": Building,
-  // matches WorkspaceShell's organization type icon
+  "/products": Package,
+  "/projects": FolderKanban,
   "/research": FlaskConical,
-  // matches FEATURE_META `research`
+  "/server-bags": Server,
+  "/settings": Settings2,
+  "/signin-apps": LogIn,
+  "/storage": HardDrive,
+  "/teams": UsersRound,
+  "/tokens": KeyRound,
+  // --- Fleet-menu rows the registry cannot name (see fleetMenuGroups) ---
+  // The two grouping topics, which are no single site: a checklist for the things
+  // you decide before writing anything, blocks for the things you assemble after.
+  plan: ClipboardList,
+  build: Blocks,
+  // Destinations with no registry entry yet. Each reuses the glyph its eventual site
+  // would carry — 'organizations' the same Building as the in-hub `/organizations`
+  // route, so the two read as one destination once the site exists.
+  organizations: Building,
+  notebook: NotebookPen,
+  // notes (agenticdevelopernotebook.com)
+  integrations: Puzzle,
+  registry: BookMarked,
+  // hire's consultant registry
+  // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
+  // submenu already wears — a topic that duplicates one of its children's icons
+  // reads as that child promoted, rather than as the group it is.
+  learn: Lightbulb,
   // --- Chrome rows (the auth-conditional top section, + the dev-only tools
   //     appended after the Marketing/Main sites submenus) ---
   home: House,
@@ -1193,10 +1286,15 @@ function menuIcon(key) {
 }
 
 // src/header/useSiteMenu.ts
-function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
+function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authenticated }) {
   const pathname = usePathname2() ?? "/";
   const router = useRouter();
-  const workspaceSlug = currentSiteId === "hub" && isHubWorkspacePath(pathname) ? hubWorkspaceSlug(pathname) ?? personalSlug ?? null : null;
+  const currentSite = getSite(currentSiteId);
+  const workspaceSlug = useMemo2(() => {
+    if (currentSiteId === "hub")
+      return isHubWorkspacePath(pathname) ? hubWorkspaceSlug(pathname) ?? personalSlug ?? null : null;
+    return currentSite && authenticated ? siteWorkspaceSlug(currentSite, pathname) : null;
+  }, [currentSiteId, currentSite, pathname, personalSlug, authenticated]);
   const hostname = useClientHost2();
   const currentEnv = useMemo2(() => hostname ? detectEnv(hostname) : null, [hostname]);
   const previewTheme = process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? readPreviewTheme() : null;
@@ -1206,15 +1304,12 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
   );
   const hrefFor = useCallback2(
     (site, external) => {
-      if (workspaceSlug && !external) {
-        if (site.id === "hub") return `/${workspaceSlug}/home`;
-        const hubRoute = hubSwitchHref(workspaceSlug, site);
-        if (hubRoute) return hubRoute;
-      }
-      if (site.id === currentSiteId) return "/";
+      const workspacePath = workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : void 0;
+      if (site.id === currentSiteId) return workspacePath ?? "/";
       if (!hostname) return "#";
-      const carriedPath = external ? "/" : pathname;
-      const href = carryTheme(buildSiteHref(site, hostname, carriedPath));
+      const href = carryTheme(
+        workspacePath ? siteUrl(site.id, workspacePath, hostname) : buildSiteHref(site, hostname, external ? "/" : pathname)
+      );
       if (!resolveHref) return href;
       try {
         return detectEnv(new URL(href).hostname) === currentEnv ? resolveHref(href) : href;
@@ -1256,6 +1351,15 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
           current: href.startsWith("/") && !href.startsWith("//") && (path === href || path.startsWith(`${href}/`))
         };
       }
+      if ("href" in link) {
+        return {
+          key: `href:${link.href}`,
+          label: link.label,
+          description: link.description,
+          href: link.href,
+          icon: menuIcon(link.iconKey)
+        };
+      }
       const site = getSite(link.site);
       if (!site) return null;
       return {
@@ -1271,7 +1375,18 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
     for (const g of groups) {
       if (g.kind === "topic") {
         const items = g.links.map(toItem).filter((r) => r !== null);
-        if (items.length) out.push({ kind: "topic", section: g.section, label: g.label, items });
+        const self = g.link ? toItem(g.link) : null;
+        if (items.length)
+          out.push({
+            kind: "topic",
+            section: g.section,
+            label: g.label,
+            items,
+            href: self?.href,
+            description: g.description ?? self?.description,
+            icon: menuIcon(g.iconKey) ?? self?.icon,
+            current: self?.current
+          });
       } else {
         const item = toItem(g.link);
         if (item)
@@ -1302,7 +1417,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug }) {
     [router]
   );
   const homeHref = routeHref("/home");
-  return { entries, navigate, homeHref, routeHref };
+  return { entries, navigate, homeHref };
 }
 
 // src/header/useHeaderLinksCollapsed.ts
@@ -1325,10 +1440,9 @@ function useHeaderLinksCollapsed() {
 
 // src/header/siteNavEntries.ts
 var SITE_NAV_SECTION = 3;
-function buildSiteNavEntries(navLinks, { homeHref, detailsHref, pathname }) {
+function buildSiteNavEntries(navLinks, { homeHref, pathname }) {
   if (!navLinks?.length) return [];
-  const alreadyAbove = [homeHref, detailsHref].filter((h) => h !== void 0);
-  return navLinks.filter((link) => !alreadyAbove.includes(link.href)).map((link) => ({
+  return navLinks.filter((link) => link.href !== homeHref).map((link) => ({
     kind: "leaf",
     section: SITE_NAV_SECTION,
     item: {
@@ -1466,53 +1580,139 @@ function useEffectiveEnv(hostname) {
   return resolveEffectiveEnv(override, hostname ? detectEnv2(hostname) : null);
 }
 
-// src/header/belowHelpEntries.ts
-import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
-var BELOW_HELP_SECTION = 0;
-function siteDetailsHref(siteId) {
-  return isConceptSite(siteId) || siteId === "hub" ? "/details" : void 0;
+// src/header/fleetMenuGroups.ts
+var FLEET_SECTION = 1;
+function leaf(link) {
+  return { kind: "leaf", section: FLEET_SECTION, blurb: true, link };
 }
-function buildBelowHelpEntries({
-  contactHref,
-  detailsHref,
-  pathname
-}) {
-  const out = [
-    {
-      kind: "leaf",
-      section: BELOW_HELP_SECTION,
-      item: {
-        key: "route:/contact",
-        label: "Contact",
-        href: contactHref,
-        icon: menuIcon("/contact"),
-        // Only ever current on the hub, where the href is the bare path; elsewhere it is
-        // an absolute URL, which never starts with '/'. The same test the config-driven
-        // route rows apply in `useSiteMenu` — a destination must not highlight by one
-        // rule here and another there.
-        current: isSameOrigin(contactHref) && pathname === contactHref
+function topic(t) {
+  return { kind: "topic", section: FLEET_SECTION, ...t };
+}
+var FLEET_MENU_GROUPS = [
+  leaf({ site: "bitbag", description: "The hub's AI persona" }),
+  topic({
+    label: "Hub",
+    description: "The center of it all",
+    link: { site: "hub" },
+    links: [
+      { site: "news" },
+      { site: "status" },
+      // Hub ROUTES, not sites: `/contact` and `/details` exist on the hub and are
+      // resolved through it from every other site (see useSiteMenu's routeHref).
+      { route: "/contact", label: "Contact", description: "Get in touch" },
+      { site: "community" },
+      // hub-help (help.adh.com), not the delisted 'help' landing — the family's Help
+      // destination since its promotion. Its key is the site id, so it stays distinct
+      // from the Help-MODAL action row SiteMenu adds to the chrome above.
+      { site: "hub-help" },
+      { site: "support" },
+      { route: "/details", label: "Details", description: "What the hub does" }
+    ]
+  }),
+  // No registry site yet (agenticdeveloperorgs.com), so an absolute href — see
+  // MenuLink's `href` variant for what that costs.
+  leaf({
+    href: "https://agenticdeveloperorgs.com",
+    label: "Organizations",
+    description: "Your organizations",
+    iconKey: "organizations"
+  }),
+  topic({
+    label: "Learn",
+    description: "Guides & courses",
+    iconKey: "learn",
+    link: { site: "help" },
+    links: [
+      { site: "academy" },
+      { site: "help" },
+      // The registry's description for this one is its own domain (it has no other
+      // blurb), which reads as a stray URL in a menu row.
+      { site: "learntruefacts", description: "Facts, checked" }
+    ]
+  }),
+  topic({
+    label: "Plan",
+    description: "Decide what to build",
+    iconKey: "plan",
+    links: [
+      { site: "projects" },
+      { site: "narratives", description: "Your development story" },
+      {
+        href: "https://agenticdevelopernotebook.com",
+        label: "Notes",
+        description: "Your notebook",
+        iconKey: "notebook"
+      },
+      { site: "research" }
+    ]
+  }),
+  topic({
+    label: "Build",
+    description: "Make it",
+    iconKey: "build",
+    links: [
+      { site: "devteam", label: "Dev Team" },
+      { site: "codereviews", description: "Review your code" },
+      { site: "cookbook" },
+      { site: "recipes" },
+      { site: "toolkit" },
+      { site: "tools" }
+    ]
+  }),
+  topic({
+    label: "Personas",
+    description: "Your agentic personas",
+    link: { site: "personas" },
+    links: [
+      { site: "personabuilder" },
+      { site: "personaregistry" },
+      { site: "knowledgebases", label: "Knowledge" },
+      { site: "teambuilder" },
+      { site: "teamregistry" },
+      { site: "myagenticteams", label: "My Agentic Teams", description: "Your own agentic teams" }
+    ]
+  }),
+  topic({
+    label: "Products",
+    description: "Your product platform",
+    link: { site: "products" },
+    links: [
+      { site: "storage", label: "Storage Buckets" },
+      { site: "ecosystems" },
+      { site: "authentication" },
+      { site: "customers" },
+      { site: "billing" },
+      { site: "notifications" },
+      { site: "sites" },
+      { site: "communities" },
+      { site: "dashboards" },
+      { site: "devices" },
+      { site: "domains" },
+      { site: "education" },
+      {
+        href: "https://agenticdeveloperintegrations.com",
+        label: "Integrations",
+        description: "Connect other tools",
+        iconKey: "integrations"
+      },
+      { site: "registries" }
+    ]
+  }),
+  topic({
+    label: "Hire",
+    description: "Get expert help",
+    link: { site: "consulting" },
+    links: [
+      { site: "consultants" },
+      {
+        href: "https://agenticdeveloperregistry.com",
+        label: "Registry",
+        description: "The consultant registry",
+        iconKey: "registry"
       }
-    }
-  ];
-  if (detailsHref)
-    out.push({
-      kind: "leaf",
-      section: BELOW_HELP_SECTION,
-      item: {
-        key: "route:/details",
-        label: "Details",
-        href: detailsHref,
-        icon: menuIcon("/details"),
-        // Prefix-matched, so a details CHILD route (`/details/acme`) keeps the row lit —
-        // matching how the bar's own `details` link behaved via `matchPaths`.
-        current: pathname === detailsHref || pathname.startsWith(`${detailsHref}/`)
-      }
-    });
-  return out;
-}
-function isSameOrigin(href) {
-  return href.startsWith("/") && !href.startsWith("//");
-}
+    ]
+  })
+];
 
 // src/header/SiteMenu.tsx
 import { useHelp } from "@agentic-toolkit/adh/help";
@@ -1544,8 +1744,12 @@ function SiteMenu({
     () => devToolsUnlocked ? [...groups, ...buildDebugSiteGroups()] : groups,
     [groups, devToolsUnlocked]
   );
-  const { entries, navigate, homeHref, routeHref } = useSiteMenu(menuGroups, { currentSiteId, resolveHref, personalSlug });
-  const detailsHref = siteDetailsHref(currentSiteId);
+  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, {
+    currentSiteId,
+    resolveHref,
+    personalSlug,
+    authenticated
+  });
   const pathname = usePathname3() ?? "/";
   const workspacesMenu = useWorkspacesMenu2();
   const recents = useRecents();
@@ -1585,18 +1789,29 @@ function SiteMenu({
         items: items.length ? items : [{ key: "ws:loading", label: "Loading\u2026" }]
       });
     }
-    if (recents.length) {
-      const items = recents.map((r) => ({
-        key: `recent:${r.url}`,
-        label: r.label,
-        href: r.url,
-        icon: menuIcon(r.iconKey),
-        current: r.url === pathname
-      }));
-      out.push({ kind: "topic", section: 0, label: "Recents", icon: menuIcon("recents"), items });
-    }
     return out;
-  }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, recents, pathname]);
+  }, [authenticated, loginHref, signupHref, homeHref, workspacesMenu, pathname]);
+  const recentsSection = useMemo3(() => {
+    if (!authenticated || !recents.length) return [];
+    const items = recents.map((r) => ({
+      key: `recent:${r.url}`,
+      label: r.label,
+      description: r.description,
+      href: r.url,
+      icon: menuIcon(r.iconKey) ?? menuIcon("hub"),
+      current: r.url === pathname
+    }));
+    return [
+      {
+        kind: "topic",
+        section: FLEET_SECTION,
+        label: "Recents",
+        description: "Where you just were",
+        icon: menuIcon("recents"),
+        items
+      }
+    ];
+  }, [authenticated, recents, pathname]);
   const linksCollapsed = useHeaderLinksCollapsed();
   const navSection = useMemo3(
     () => linksCollapsed ? buildSiteNavEntries(navLinks, {
@@ -1605,12 +1820,9 @@ function SiteMenu({
       // regardless would delete community's "Forum" (`/home`) from the menu of
       // an anonymous phone visitor and leave the board unreachable.
       homeHref: authenticated ? homeHref : void 0,
-      // Unconditional, unlike homeHref: the Details row below Help is not
-      // auth-gated, so wherever it exists it exists in both states.
-      detailsHref,
       pathname
     }) : [],
-    [linksCollapsed, navLinks, authenticated, homeHref, detailsHref, pathname]
+    [linksCollapsed, navLinks, authenticated, homeHref, pathname]
   );
   const [generated, setGenerated] = useState4();
   const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
@@ -1649,10 +1861,6 @@ function SiteMenu({
     [devToolsUnlocked, suppressDevTools, effectiveRoutes, effectiveEnv, realEnv, userIsAdmin, override, pathname]
   );
   const openHelp = useHelp().open;
-  const belowHelp = useMemo3(
-    () => buildBelowHelpEntries({ contactHref: routeHref("/contact"), detailsHref, pathname }),
-    [routeHref, detailsHref, pathname]
-  );
   const allEntries = useMemo3(
     () => [
       ...navSection,
@@ -1662,11 +1870,11 @@ function SiteMenu({
         section: 0,
         item: { key: "help", label: "Help", icon: menuIcon("help"), onSelect: () => openHelp() }
       },
-      ...belowHelp,
+      ...recentsSection,
       ...entries,
       ...devToolsSection
     ],
-    [navSection, topSection, belowHelp, entries, devToolsSection, openHelp]
+    [navSection, topSection, recentsSection, entries, devToolsSection, openHelp]
   );
   function showOverview() {
     requestAnimationFrame(() => {
@@ -1720,12 +1928,12 @@ function SiteMenu({
               close({ restoreFocus: false });
               requestAnimationFrame(() => onSettings());
             },
-            children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+            children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
           }
         ) : authenticated && settingsHref ? (
           // A real link so middle-click / new-tab work; native nav tears down the
           // page, so no explicit close needed.
-          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings2, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
         ) : /* @__PURE__ */ jsx13(
           "button",
           {
@@ -1746,59 +1954,17 @@ function SiteMenu({
 }
 
 // src/header/MarketingSiteMenu.tsx
-import { useMemo as useMemo4 } from "react";
-
-// src/header/hubCoreGroups.ts
-var HUB_SECTION = 1;
-var inline = (link) => ({
-  kind: "inline",
-  section: HUB_SECTION,
-  blurb: true,
-  link
-});
-var ALWAYS_SUBITEMS = [
-  inline({ site: "bitbag", description: "The hub's AI Persona, here to help!" }),
-  inline({ site: "community", description: "The hub's forums & discussions" }),
-  inline({ site: "personaregistry" }),
-  inline({ site: "toolkit" }),
-  inline({ site: "cookbook" }),
-  inline({ site: "devteam", description: "Your LLM agentic dev team" }),
-  inline({ site: "myagenticteams", description: "Build your own agentic teams" }),
-  inline({ site: "narratives", description: "Your project development story" }),
-  // hub-help (help.adh.com), not the delisted 'help' landing — the family's Help
-  // destination since its promotion; also keeps this row's key distinct from the
-  // Help-modal action row SiteMenu adds (both keyed by site id / 'help' before).
-  inline({ site: "hub-help", description: "Top level help site" })
-];
-var AUTHED_SUBITEMS = [
-  inline({ site: "news", description: "The latest Hub news!" }),
-  // Products replaced the old /ecosystems rail feature (each product IS an ecosystem).
-  inline({ route: "/products", label: "Products", description: "Build and manage your products" }),
-  inline({ route: "/personas", label: "Personas", description: "Register and configure your personas" }),
-  inline({ route: "/organizations", label: "Organizations", description: "Manage your organizations" }),
-  inline({ route: "/research", label: "Research", description: "Write, organize, and publish your research" })
-];
-function hubCoreGroups(authenticated) {
-  return [
-    { kind: "leaf", section: HUB_SECTION, blurb: true, link: { site: "hub", description: "The center of the Agentic Developer ecosystem" } },
-    ...ALWAYS_SUBITEMS,
-    ...authenticated ? AUTHED_SUBITEMS : []
-  ];
-}
-
-// src/header/MarketingSiteMenu.tsx
+import "react";
 import { jsx as jsx14 } from "react/jsx-runtime";
 function MarketingSiteMenu(props) {
-  const groups = useMemo4(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx14(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx14(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
 }
 
 // src/header/WorkspaceSiteMenu.tsx
-import { useMemo as useMemo5 } from "react";
+import "react";
 import { jsx as jsx15 } from "react/jsx-runtime";
 function WorkspaceSiteMenu(props) {
-  const groups = useMemo5(() => hubCoreGroups(props.authenticated ?? false), [props.authenticated]);
-  return /* @__PURE__ */ jsx15(SiteMenu, { groups, ...props });
+  return /* @__PURE__ */ jsx15(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
 }
 
 // src/header/activeMenuGroups.ts
@@ -1880,7 +2046,7 @@ function SiteHeader({
   } = { ...source, ...authOverrides };
   const resolvedNavLinks = (typeof navLinks === "function" ? navLinks(user != null) : navLinks) ?? [];
   const hostname = useClientHost4();
-  const conceptSite = isConceptSite2(siteId);
+  const conceptSite = isConceptSite(siteId);
   const site = getSite3(siteId);
   const siteName = site ? siteHeaderTitle2(site) : siteId;
   const resolveHubHref = (path) => hostname ? siteUrl2("hub", path, hostname) : siteProdUrl2("hub", path);
@@ -1946,6 +2112,8 @@ export {
   AvatarMenu,
   DEBUG_SECTION,
   DEV_TOOLS_BUILD_ENABLED,
+  FLEET_MENU_GROUPS,
+  FLEET_SECTION,
   HubMark,
   MarketingSiteMenu,
   NavLinkItem,
@@ -1965,7 +2133,6 @@ export {
   clearRecents,
   currentRoutePath,
   getEnvOverride,
-  hubCoreGroups,
   isWorkspaceMenuRoute,
   menuIcon,
   parseEnvOverride,

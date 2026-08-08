@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 
 import { buildSiteNavEntries, SITE_NAV_SECTION } from '../siteNavEntries'
 import { DEBUG_SECTION } from '../debugSiteGroups'
+import { FLEET_SECTION } from '../fleetMenuGroups'
 import type { NavLink } from '../NavLink'
 
 // The site menu's phone-only rows: the destinations the header bar drops below 768px
@@ -47,37 +48,14 @@ describe('buildSiteNavEntries', () => {
     expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/details', '/contact'])
   })
 
-  it('drops the link that duplicates the menu’s own Details row', () => {
-    // Hub signed OUT keeps exactly one bar link — `details` — and the menu now renders a
-    // canonical Details row below Help. Below 768px the bar's links fold into that same
-    // menu, so without this the phone opens on two identical Details rows.
-    const out = buildSiteNavEntries(HUB_NAV, {
-      homeHref: undefined,
-      detailsHref: '/details',
-      pathname: '/details',
-    })
-
-    expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/contact'])
-  })
-
-  it('drops Home and Details together when the menu renders both', () => {
-    const out = buildSiteNavEntries(HUB_NAV, {
-      homeHref: '/home',
-      detailsHref: '/details',
-      pathname: '/',
-    })
-
-    expect(out.map((e) => leaf(e).item.href)).toEqual(['/contact'])
-  })
-
-  it('keeps a details link on a site whose menu has no Details row', () => {
-    // The 11 sites with no `/details` page get no row to duplicate. A site that declares
-    // one in its bar anyway must keep it, exactly as with `homeHref`.
-    const out = buildSiteNavEntries(HUB_NAV, {
-      homeHref: undefined,
-      detailsHref: undefined,
-      pathname: '/',
-    })
+  it('keeps a details link, which nothing at this level duplicates any more', () => {
+    // Home is the ONLY de-dup, and `/details` is the reason that is worth stating: this
+    // builder used to drop it too, against a canonical Details row the menu rendered
+    // directly below Help. That row is gone — Details is a child of the fleet tree's Hub
+    // topic now (fleetMenuGroups), one level down inside a flyout rather than stacked
+    // against these rows. Drop it here anyway and hub's signed-out phone loses its one
+    // bar link to a row it has to open a submenu to find.
+    const out = buildSiteNavEntries(HUB_NAV, { homeHref: undefined, pathname: '/details' })
 
     expect(out.map((e) => leaf(e).item.href)).toEqual(['/home', '/details', '/contact'])
   })
@@ -115,13 +93,13 @@ describe('buildSiteNavEntries', () => {
 
   it('carries a section distinct from every other the menu renders', () => {
     // The popover rules a divider wherever adjacent entries disagree on `section`. If
-    // this collided with the hub core (1) or the dev tools (2), the site's own nav
+    // this collided with the fleet tree (1) or the dev tools (2), the site's own nav
     // would silently merge into that block instead of standing as its own group.
     const out = buildSiteNavEntries(HUB_NAV, { homeHref: '/x', pathname: '/' })
 
     expect(new Set(out.map((e) => e.section))).toEqual(new Set([SITE_NAV_SECTION]))
     expect(SITE_NAV_SECTION).not.toBe(0) // SiteMenu's auth top section
-    expect(SITE_NAV_SECTION).not.toBe(1) // hubCoreGroups' HUB_SECTION
+    expect(SITE_NAV_SECTION).not.toBe(FLEET_SECTION)
     expect(SITE_NAV_SECTION).not.toBe(DEBUG_SECTION)
   })
 

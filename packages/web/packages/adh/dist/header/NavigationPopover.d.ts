@@ -48,6 +48,16 @@ export type PopoverEntry = {
     items: PopoverItem[];
     icon?: PopoverIcon;
     indent?: boolean;
+    /** Makes the topic's own trigger a destination as well as a disclosure: the
+     *  row becomes a real `<a>` (middle-click / open-in-new-tab work), a plain
+     *  click navigates, and Enter on the highlighted row navigates instead of
+     *  opening. Hover and → still open the flyout either way. Omit for a pure
+     *  grouping header. */
+    href?: string;
+    /** Trailing tagline on the trigger row, right-aligned like a leaf's. */
+    description?: string;
+    /** Flags the trigger as the user's current location (aria-current). */
+    current?: boolean;
 };
 /** Imperative handle handed to slot render-props so they can close the menu —
  *  optionally WITHOUT restoring focus to the trigger, when they're handing focus

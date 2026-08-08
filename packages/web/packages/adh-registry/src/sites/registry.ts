@@ -85,6 +85,22 @@ export interface SiteDef {
   hasTesting: boolean
   /** Site exposes the shared auth-gated /home route (drives route carry). */
   hasHome: boolean
+  /** Shape of the site's authenticated WORKSPACE route — the path a cross-site
+   *  switch carries the active workspace slug onto (see {@link siteWorkspaceHref}).
+   *  The three shapes exist because the PR #197 rollout could not use one:
+   *   - `'root'`   → `/<slug>`      — 33 sites (`app/[workspace]/[[...path]]`).
+   *   - `'nested'` → `/home/<slug>` — cookbook, personaregistry, research, whose
+   *     one-segment routes a root `/<slug>` would swallow.
+   *   - `'hub'`    → `/<slug>/home` — the hub's own pre-existing shape.
+   *  Absent ⇒ the site has NO workspace route, and a switch from a workspace
+   *  falls back to its landing.
+   *
+   *  ⚠️ This is NOT derivable from `hasHome`, and must not be re-derived from it:
+   *  `community` has a `/home` (hasHome: true) but no `[workspace]` route at all,
+   *  so keying off `hasHome` would send every workspace switch to a 404. The
+   *  values are stamped from the actual route tree and held to it by
+   *  `registry.test.ts` ("workspaceRoute matches the route tree"). */
+  workspaceRoute?: 'root' | 'nested' | 'hub'
   /** Shown in the site-switcher dropdown. Defaults to true; set false to keep a
    *  site in the registry (so its own header still resolves a label) while
    *  hiding it from the cross-site switcher list. */
@@ -136,9 +152,9 @@ export const SITES: SiteDef[] = [
   // "Core platform" group in the footer sites-overview popover. ---
   { id: 'bitbag', label: 'Bitbag', fullLabel: 'Bitbag', description: 'The Agentic Developer persona', prodHost: 'bitbag.ai', hasStaging: true, hasTesting: true, hasHome: false, sectionLabel: 'Core platform' },
   // --- the core site family ---
-  { id: 'hub', label: 'Hub', fullLabel: 'Agentic Developer Hub', description: 'The Agentic Developer Hub', prodHost: 'agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: true, dividerBefore: true },
-  { id: 'cookbook', label: 'Cookbook', fullLabel: 'Agentic Developer Cookbook', description: 'Recipes & patterns', prodHost: 'agenticdevelopercookbook.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'projects', label: 'Projects', fullLabel: 'Agentic Developer Projects', description: 'Project planning', prodHost: 'agenticdeveloperprojects.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'hub', label: 'Hub', fullLabel: 'Agentic Developer Hub', description: 'The Agentic Developer Hub', prodHost: 'agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'hub', dividerBefore: true },
+  { id: 'cookbook', label: 'Cookbook', fullLabel: 'Agentic Developer Cookbook', description: 'Recipes & patterns', prodHost: 'agenticdevelopercookbook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'projects', label: 'Projects', fullLabel: 'Agentic Developer Projects', description: 'Project planning', prodHost: 'agenticdeveloperprojects.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // narratives: the ecosystem-story site at agenticdevelopernarratives.com
   // (deployed in a later phase). It's ALSO an in-hub feature workspace at
   // /<slug>/narratives (see HUB_FEATURE_SEGMENT + the [slug]/(workspace)/narratives
@@ -148,60 +164,60 @@ export const SITES: SiteDef[] = [
   // Its prod domain is live now, so it is crawlable (the default) and carries a
   // real description rather than its own host — it is a footer interlink like
   // every other content site.
-  { id: 'narratives', label: 'Narratives', fullLabel: 'Agentic Developer Narratives', description: 'Ecosystem stories', prodHost: 'agenticdevelopernarratives.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'devteam', label: 'Team', fullLabel: 'Agentic Developer Team', description: 'Your agentic dev team', prodHost: 'agenticdeveloperteam.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'toolkit', label: 'Toolkit', fullLabel: 'Agentic Developer Toolkit', description: 'The developer toolkit', prodHost: 'agenticdevelopertoolkit.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'narratives', label: 'Narratives', fullLabel: 'Agentic Developer Narratives', description: 'Ecosystem stories', prodHost: 'agenticdevelopernarratives.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'devteam', label: 'Team', fullLabel: 'Agentic Developer Team', description: 'Your agentic dev team', prodHost: 'agenticdeveloperteam.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'toolkit', label: 'Toolkit', fullLabel: 'Agentic Developer Toolkit', description: 'The developer toolkit', prodHost: 'agenticdevelopertoolkit.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // myagenticteams: off-pattern consumer brand (not agenticdeveloper<x>.com), so
   // `fullLabel` is required — siteHeaderTitle can't derive the brand from the host.
-  { id: 'myagenticteams', label: 'My Teams', fullLabel: 'My Agentic Teams', description: 'Build your own agentic teams', prodHost: 'myagenticteams.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'myagenticteams', label: 'My Teams', fullLabel: 'My Agentic Teams', description: 'Build your own agentic teams', prodHost: 'myagenticteams.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'mcp', label: 'MCP', fullLabel: 'Agentic Developer MCP', description: 'MCP server', prodHost: 'mcp.agenticdeveloperhub.com', hasStaging: true, hasTesting: false, hasHome: false, crawlable: false },
   // <gen:sites> managed by scaffold-sites.py — do not edit by hand
   { id: 'community', label: 'Community', fullLabel: 'Agentic Developer Community', description: 'Forums & discussion', prodHost: 'agenticdevelopercommunity.com', hasStaging: true, hasTesting: true, hasHome: true, dividerBefore: true, sectionLabel: 'Developer platform' },
-  { id: 'support', label: 'Support', fullLabel: 'Agentic Developer Support', description: 'Get support', prodHost: 'agenticdevelopersupport.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'support', label: 'Support', fullLabel: 'Agentic Developer Support', description: 'Get support', prodHost: 'agenticdevelopersupport.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // agenticdeveloperhelp.com — a landing-only site now (its guide/reference/chat surface moved to
   // help.adh.com, id 'hub-help'). listed:false: stays registered (its own header resolves, the
   // landing keeps serving and links across to hub-help), but every family "Help" link — switcher,
   // footer, story next-steps — points at hub-help instead. Mirrored in adh's `.shipr`
   // ([adh.sites.help]), which is what scaffold-sites.py generates this row from.
-  { id: 'help', label: 'Help', fullLabel: 'Agentic Developer Help', description: 'Help topics', prodHost: 'agenticdeveloperhelp.com', hasStaging: true, hasTesting: true, hasHome: true, listed: false },
+  { id: 'help', label: 'Help', fullLabel: 'Agentic Developer Help', description: 'Help topics', prodHost: 'agenticdeveloperhelp.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', listed: false },
   // help.adh.com — the consolidated SSR help surface (chat, quickstart, reference, rest-api, mcp,
   // hub), duplicated from the agenticdeveloperhelp.com app (id 'help') into frontend/src/sites/hub-help.
   // LISTED: this is the family's Help destination (the landing above is delisted). HAND-MANAGED
   // inside the gen block: adh's `.shipr` marks it `core`, not `generated`, so scaffold-sites.py
   // does not emit this row — and re-running that generator DELETES it. Restore it by hand.
   { id: 'hub-help', label: 'Help', fullLabel: 'Agentic Developer Hub Help', description: 'Help topics', prodHost: 'help.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false },
-  { id: 'news', label: 'News', fullLabel: 'Agentic Developer News', description: 'News & updates', prodHost: 'agenticdevelopernews.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'academy', label: 'Academy', fullLabel: 'Agentic Developer Academy', description: 'Learn agentic dev', prodHost: 'agenticdeveloperacademy.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'dashboards', label: 'Dashboards', fullLabel: 'Agentic Developer Dashboards', description: 'Status dashboards', prodHost: 'agenticdeveloperdashboards.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'recipes', label: 'Recipes', fullLabel: 'Agentic Developer Recipes', description: 'Developer recipes', prodHost: 'agenticdeveloperrecipes.com', hasStaging: true, hasTesting: true, hasHome: true, listed: false },
-  { id: 'personas', label: 'Personas', fullLabel: 'Agentic Developer Personas', description: 'Define your personas', prodHost: 'agenticdeveloperpersonas.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'communities', label: 'Communities', fullLabel: 'Agentic Developer Communities', description: 'Build communities', prodHost: 'agenticdevelopercommunities.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'ecosystems', label: 'Ecosystems', fullLabel: 'Agentic Developer Ecosystems', description: 'Build ecosystems', prodHost: 'agenticdeveloperecosystems.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'registries', label: 'Registries', fullLabel: 'Agentic Developer Registries', description: 'Build registries', prodHost: 'agenticdeveloperregistries.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'storage', label: 'Storage', fullLabel: 'Agentic Developer Storage', description: 'Manage storage', prodHost: 'agenticdeveloperstorage.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'customers', label: 'Customers', fullLabel: 'Agentic Developer Customers', description: 'Manage customers', prodHost: 'agenticdevelopercustomers.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'products', label: 'Products', fullLabel: 'Agentic Developer Products', description: 'Define products', prodHost: 'agenticdeveloperproducts.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'billing', label: 'Billing', fullLabel: 'Agentic Developer Billing', description: 'Customer billing', prodHost: 'agenticdeveloperbilling.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'domains', label: 'Domains', fullLabel: 'Agentic Developer Domains', description: 'Custom domains', prodHost: 'agenticdeveloperdomains.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'authentication', label: 'Authentication', fullLabel: 'Agentic Developer Authentication', description: 'Customer auth', prodHost: 'agenticdeveloperauthentication.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'sites', label: 'Sites', fullLabel: 'Agentic Developer Sites', description: 'Quick landing pages', prodHost: 'agenticdevelopersites.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'devices', label: 'Devices', fullLabel: 'Agentic Developer Devices', description: 'Connect devices', prodHost: 'agenticdeveloperdevices.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'notifications', label: 'Notifications', fullLabel: 'Agentic Developer Notifications', description: 'Send notifications', prodHost: 'agenticdevelopernotifications.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'knowledgebases', label: 'Knowledge Bases', fullLabel: 'Agentic Developer Knowledge Bases', description: 'Knowledge bases', prodHost: 'agenticdeveloperknowledgebases.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'tools', label: 'Tools', fullLabel: 'Agentic Developer Tools', description: 'Developer tools', prodHost: 'agenticdevelopertools.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'education', label: 'Education', fullLabel: 'Agentic Developer Education', description: 'Educational products', prodHost: 'agenticdevelopereducation.com', hasStaging: true, hasTesting: true, hasHome: true, listed: false },
-  { id: 'teamregistry', label: 'Team Registry', fullLabel: 'Agentic Team Registry', description: 'Register agentic teams', prodHost: 'agenticteamregistry.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'teambuilder', label: 'Team Builder', fullLabel: 'Agentic Team Builder', description: 'Build agentic teams', prodHost: 'agenticteambuilder.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'codereviews', label: 'Code Reviews', fullLabel: 'Agentic Developer Code Reviews', description: 'Code reviews', prodHost: 'agenticdevelopercodereviews.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'personabuilder', label: 'Persona Builder', fullLabel: 'Agentic Persona Builder', description: 'Configure personas', prodHost: 'agenticpersonabuilder.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true },
-  { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true },
+  { id: 'news', label: 'News', fullLabel: 'Agentic Developer News', description: 'News & updates', prodHost: 'agenticdevelopernews.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'academy', label: 'Academy', fullLabel: 'Agentic Developer Academy', description: 'Learn agentic dev', prodHost: 'agenticdeveloperacademy.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'dashboards', label: 'Dashboards', fullLabel: 'Agentic Developer Dashboards', description: 'Status dashboards', prodHost: 'agenticdeveloperdashboards.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'recipes', label: 'Recipes', fullLabel: 'Agentic Developer Recipes', description: 'Developer recipes', prodHost: 'agenticdeveloperrecipes.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', listed: false },
+  { id: 'personas', label: 'Personas', fullLabel: 'Agentic Developer Personas', description: 'Define your personas', prodHost: 'agenticdeveloperpersonas.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'communities', label: 'Communities', fullLabel: 'Agentic Developer Communities', description: 'Build communities', prodHost: 'agenticdevelopercommunities.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'ecosystems', label: 'Ecosystems', fullLabel: 'Agentic Developer Ecosystems', description: 'Build ecosystems', prodHost: 'agenticdeveloperecosystems.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'registries', label: 'Registries', fullLabel: 'Agentic Developer Registries', description: 'Build registries', prodHost: 'agenticdeveloperregistries.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'storage', label: 'Storage', fullLabel: 'Agentic Developer Storage', description: 'Manage storage', prodHost: 'agenticdeveloperstorage.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'customers', label: 'Customers', fullLabel: 'Agentic Developer Customers', description: 'Manage customers', prodHost: 'agenticdevelopercustomers.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'products', label: 'Products', fullLabel: 'Agentic Developer Products', description: 'Define products', prodHost: 'agenticdeveloperproducts.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'billing', label: 'Billing', fullLabel: 'Agentic Developer Billing', description: 'Customer billing', prodHost: 'agenticdeveloperbilling.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'domains', label: 'Domains', fullLabel: 'Agentic Developer Domains', description: 'Custom domains', prodHost: 'agenticdeveloperdomains.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'authentication', label: 'Authentication', fullLabel: 'Agentic Developer Authentication', description: 'Customer auth', prodHost: 'agenticdeveloperauthentication.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'sites', label: 'Sites', fullLabel: 'Agentic Developer Sites', description: 'Quick landing pages', prodHost: 'agenticdevelopersites.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'devices', label: 'Devices', fullLabel: 'Agentic Developer Devices', description: 'Connect devices', prodHost: 'agenticdeveloperdevices.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'notifications', label: 'Notifications', fullLabel: 'Agentic Developer Notifications', description: 'Send notifications', prodHost: 'agenticdevelopernotifications.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'knowledgebases', label: 'Knowledge Bases', fullLabel: 'Agentic Developer Knowledge Bases', description: 'Knowledge bases', prodHost: 'agenticdeveloperknowledgebases.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'tools', label: 'Tools', fullLabel: 'Agentic Developer Tools', description: 'Developer tools', prodHost: 'agenticdevelopertools.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'education', label: 'Education', fullLabel: 'Agentic Developer Education', description: 'Educational products', prodHost: 'agenticdevelopereducation.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', listed: false },
+  { id: 'teamregistry', label: 'Team Registry', fullLabel: 'Agentic Team Registry', description: 'Register agentic teams', prodHost: 'agenticteamregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'teambuilder', label: 'Team Builder', fullLabel: 'Agentic Team Builder', description: 'Build agentic teams', prodHost: 'agenticteambuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'codereviews', label: 'Code Reviews', fullLabel: 'Agentic Developer Code Reviews', description: 'Code reviews', prodHost: 'agenticdevelopercodereviews.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'personabuilder', label: 'Persona Builder', fullLabel: 'Agentic Persona Builder', description: 'Configure personas', prodHost: 'agenticpersonabuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
   // pruning) — stays registered (its own header resolves, /details keep serving)
   // but it leaves the switcher + footer. ---
-  { id: 'consulting', label: 'Consulting', description: 'Let us help you', prodHost: 'agenticdeveloperconsulting.com', hasStaging: true, hasTesting: true, hasHome: true, listed: false },
+  { id: 'consulting', label: 'Consulting', description: 'Let us help you', prodHost: 'agenticdeveloperconsulting.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', listed: false },
   // --- FishLamp Design: the studio the whole family sits under, and the name in
   // every footer's copyright. Featured (centered, gold, italic, name-only) in the
   // switcher; carries a description for the overview popover. Opens the
@@ -520,6 +536,73 @@ export function hubWorkspaceSlug(pathname: string): string | null {
 export function hubSwitchHref(slug: string, target: SiteDef): string | undefined {
   const seg = HUB_FEATURE_SEGMENT[target.id]
   return seg ? `/${slug}/${seg}` : undefined
+}
+
+/** The path of `target`'s OWN authenticated workspace, scoped to `slug` — the
+ *  destination the site menu carries a signed-in visitor to when they switch
+ *  sites from a workspace route, so they land in the SAME workspace on the site
+ *  they picked. Returns undefined when `target` has no workspace route, and the
+ *  caller falls back to the site's landing.
+ *
+ *  This is the CROSS-SITE counterpart to {@link hubSwitchHref}: that one keeps
+ *  the visitor inside the hub at `/<slug>/<feature>`, this one sends them to the
+ *  site itself. The site menu is a cross-site navigator, so it uses this one.
+ *  The shape per site comes from {@link SiteDef.workspaceRoute}. */
+export function siteWorkspaceHref(target: SiteDef, slug: string): string | undefined {
+  if (!slug) return undefined
+  switch (target.workspaceRoute) {
+    case 'root':
+      return `/${slug}`
+    case 'nested':
+      return `/home/${slug}`
+    case 'hub':
+      return `/${slug}/home`
+    default:
+      return undefined
+  }
+}
+
+/** The top-level path segments a `workspaceRoute: 'root'` site owns that are NOT a
+ *  workspace slug. Those sites put their workspace at `/<slug>`, so its segment sits
+ *  in the same position as every public page they ship — this is the set that tells
+ *  the two apart, and it is exactly the static top-level routes those 33 sites have
+ *  (asserted against the generated route map by registry.test's lockstep case, so a
+ *  page added at a site's root fails there until it is listed here).
+ *
+ *  Only the STATIC ones can be listed, so an unknown segment (`/typo`) reads as a
+ *  workspace slug. That is deliberate rather than tolerated: a slug the destination
+ *  cannot resolve is repaired on arrival by `useWorkspaceRoute`, which replaces an
+ *  unknown slug with the user's real workspace. A wrong guess here costs a redirect;
+ *  the alternative — refusing to carry any slug — costs the carry on every site. */
+export const SITE_LANDING_SEGMENTS = new Set<string>([
+  'auth',
+  'demo',
+  'details',
+  'home',
+  'privacy',
+  'terms',
+  'tour',
+])
+
+/** The workspace slug `pathname` names on `site`, or null when it names none — the
+ *  exact inverse of {@link siteWorkspaceHref}, and what the site menu reads to carry
+ *  the visitor's CURRENT workspace across a site switch.
+ *
+ *  Only meaningful for an authenticated visitor: every workspace route in the family
+ *  sits behind an auth gate, so a signed-out path that happens to parse is not one.
+ *  The caller owns that check (see useSiteMenu). */
+export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | null {
+  const segs = (pathname || '/').split('/').filter(Boolean)
+  switch (site.workspaceRoute) {
+    case 'hub':
+      return hubWorkspaceSlug(pathname)
+    case 'nested':
+      return segs[0] === 'home' && segs[1] ? segs[1] : null
+    case 'root':
+      return segs[0] && !SITE_LANDING_SEGMENTS.has(segs[0]) ? segs[0] : null
+    default:
+      return null
+  }
 }
 
 /** Resolve an absolute URL to a specific path on another site, in the current

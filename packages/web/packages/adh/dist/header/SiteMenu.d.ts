@@ -11,6 +11,11 @@ export type MenuLink = {
     route: string;
     label: string;
     description?: string;
+} | {
+    href: string;
+    label: string;
+    description?: string;
+    iconKey?: string;
 };
 export type MenuGroup = {
     kind: 'leaf';
@@ -27,6 +32,9 @@ export type MenuGroup = {
     section: number;
     label: string;
     links: MenuLink[];
+    link?: MenuLink;
+    description?: string;
+    iconKey?: string;
 };
 /** The header-chrome props every site menu (and the dispatcher) carry. */
 export type SiteMenuChromeProps = {

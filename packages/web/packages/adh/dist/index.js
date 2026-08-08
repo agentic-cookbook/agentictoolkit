@@ -190,6 +190,16 @@ function IconSlot({ icon: Icon }) {
   if (!Icon) return null;
   return /* @__PURE__ */ jsx4(Icon, { className: "adh-dropdown-menu__item-icon adh-nav-popover__icon", "aria-hidden": true });
 }
+function topicItem(entry) {
+  return {
+    key: `topic:${entry.label}`,
+    label: entry.label,
+    description: entry.description,
+    href: entry.href,
+    icon: entry.icon,
+    current: entry.current
+  };
+}
 function isModifiedClick(event) {
   return event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }
@@ -331,6 +341,10 @@ function NavigationPopover({
     if (!entry) return;
     if (nav.kind === "top") {
       if (entry.kind === "topic") {
+        if (entry.href) {
+          chooseItem(topicItem(entry));
+          return;
+        }
         discloseRight();
         return;
       }
@@ -520,9 +534,23 @@ function NavigationPopover({
                           /* @__PURE__ */ jsxs3(
                             DropdownMenuSubTrigger,
                             {
+                              render: entry.href !== void 0 ? /* @__PURE__ */ jsx4(
+                                "a",
+                                {
+                                  href: entry.href,
+                                  "aria-current": entry.current ? "page" : void 0,
+                                  ...GUARDED_NAV_PROPS,
+                                  onClick: (event) => {
+                                    if (isModifiedClick(event)) return;
+                                    event.preventDefault();
+                                    chooseItem(topicItem(entry));
+                                  }
+                                }
+                              ) : void 0,
                               "data-nav": `e${index}`,
                               className: cn("adh-nav-popover__topic", {
                                 "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
+                                "adh-nav-popover__item--current": entry.current,
                                 "adh-nav-popover__item--indent": entry.indent
                               }),
                               onMouseDown: (event) => event.preventDefault(),
@@ -532,7 +560,8 @@ function NavigationPopover({
                               },
                               children: [
                                 /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
-                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, children: entry.label })
+                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, className: "adh-nav-popover__link-name", children: entry.label }),
+                                entry.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.description })
                               ]
                             }
                           ),

@@ -1,44 +1,143 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Users, Network } from 'lucide-react'
+import { Users, Hexagon, Puzzle } from 'lucide-react'
 import { DEV_DEPLOYMENT_ENVS } from '@agentic-toolkit/adh-registry/deployment-env'
 
-// useSiteMenu resolves the declarative config into PopoverEntry rows — this covers
-// the enhanced bits (recipe T4/T5): `inline` groups become INDENTED leaf entries,
-// and every row's icon resolves from the menu-icons single source of truth.
+// useSiteMenu resolves the declarative config into PopoverEntry rows: icons from the
+// menu-icons single source of truth, hrefs per DEPLOYMENT_ENV, the SSO wrap, the
+// cross-site theme carry — and the WORKSPACE carry, which is what makes picking a site
+// from inside a workspace land in that same workspace rather than on a landing page.
 
+const path = { current: '/' }
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/',
+  usePathname: () => path.current,
   useRouter: () => ({ push: vi.fn() }),
 }))
 
 import { useSiteMenu } from '../useSiteMenu'
-import { hubCoreGroups } from '../hubCoreGroups'
-import { type PopoverEntry } from '@agentic-toolkit/adh/header'
+import { FLEET_MENU_GROUPS } from '../fleetMenuGroups'
+import { type PopoverEntry, type PopoverItem } from '@agentic-toolkit/adh/header'
 
-const leaf = (entries: PopoverEntry[], key: string) =>
-  entries.find((e): e is Extract<PopoverEntry, { kind: 'leaf' }> => e.kind === 'leaf' && e.item.key === key)
+/** A row anywhere in the resolved tree — top level or inside a flyout. */
+const row = (entries: PopoverEntry[], key: string): PopoverItem | undefined =>
+  entries
+    .flatMap((e) => (e.kind === 'topic' ? e.items : [e.item]))
+    .find((i) => i.key === key)
+
+const topic = (entries: PopoverEntry[], label: string) =>
+  entries.find((e): e is Extract<PopoverEntry, { kind: 'topic' }> => e.kind === 'topic' && e.label === label)
+
+/** Render at a given location, restoring whatever jsdom had. */
+function at<T>(hostname: string, pathname: string, fn: () => T): T {
+  const loc = Object.getOwnPropertyDescriptor(window, 'location')
+  Object.defineProperty(window, 'location', { configurable: true, value: { host: hostname, hostname } })
+  const before = path.current
+  path.current = pathname
+  try {
+    return fn()
+  } finally {
+    path.current = before
+    if (loc) Object.defineProperty(window, 'location', loc)
+  }
+}
+
+afterEach(() => {
+  path.current = '/'
+})
 
 describe('useSiteMenu', () => {
-  it('renders inline groups as indented leaf entries and resolves icons from the SoT (T4/T5)', () => {
-    const { result } = renderHook(() => useSiteMenu(hubCoreGroups(true), { currentSiteId: 'hub' }))
+  it('resolves every row\'s icon from the menu-icons SoT, submenu children included', () => {
+    const { result } = renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub' }))
     const entries = result.current.entries
+    // A registry site inside a flyout takes the glyph the platform already uses for it.
+    expect(row(entries, 'community')?.icon).toBe(Users)
+    // A topic that IS a site wears that site's glyph without restating it.
+    expect(topic(entries, 'Hub')?.icon).toBe(Hexagon)
+    // A row with no registry site keys its own (see MenuLink's `href` variant).
+    expect(row(entries, 'href:https://agenticdeveloperintegrations.com')?.icon).toBe(Puzzle)
+  })
 
-    // The Hub row is a leaf and NOT indented (it's the parent).
-    expect(leaf(entries, 'hub')?.indent).toBeFalsy()
+  it('marks the current site, and points its row at a bare same-origin path', () => {
+    const { result } = renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub' }))
+    expect(topic(result.current.entries, 'Hub')?.current).toBe(true)
+    expect(topic(result.current.entries, 'Hub')?.href).toBe('/')
+    expect(row(result.current.entries, 'cookbook')?.current).toBeFalsy()
+  })
 
-    // An inline SITE sub-item is indented and carries its reused icon (Community → Users).
-    const community = leaf(entries, 'community')
-    expect(community?.indent).toBe(true)
-    expect(community?.item.icon).toBe(Users)
+  it('leaves a row with no registry site unmarked and unwrapped', () => {
+    const resolveHref = vi.fn((href: string) => `https://as.test/authorize?return=${href}`)
+    const { result } = renderHook(() =>
+      useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', resolveHref }),
+    )
+    const integrations = row(result.current.entries, 'href:https://agenticdeveloperintegrations.com')
+    expect(integrations?.href).toBe('https://agenticdeveloperintegrations.com')
+    expect(integrations?.current).toBeUndefined()
+    // Verbatim means verbatim: the wrap runs for its neighbours in the same submenu
+    // (see the SSO case below), so this is the row opting out, not the wrap being off.
+    expect(resolveHref).not.toHaveBeenCalledWith('https://agenticdeveloperintegrations.com')
+  })
 
-    // An inline ROUTE sub-item resolves its icon by route path (Products → Network).
-    const eco = leaf(entries, 'route:/products')
-    expect(eco?.indent).toBe(true)
-    expect(eco?.item.icon).toBe(Network)
+  // ── The workspace carry ────────────────────────────────────────────────────────
+  // This menu is a cross-site navigator: from inside a workspace, picking another site
+  // lands in the SAME workspace on THAT site, at that site's own workspace route.
+  describe('workspace carry', () => {
+    it('carries the slug to each site shape, from a `root` site', () => {
+      // storage puts its workspace at /<slug>; the row for a 'nested' site must arrive
+      // at /home/<slug> and the hub at /<slug>/home — never at the raw path we came from.
+      const entries = at('agenticdeveloperstorage.com', '/acme/buckets', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage', authenticated: true }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'projects')?.href).toBe('https://agenticdeveloperprojects.com/acme')
+      expect(row(entries, 'cookbook')?.href).toBe('https://agenticdevelopercookbook.com/home/acme')
+      expect(topic(entries, 'Hub')?.href).toBe('https://agenticdeveloperhub.com/acme/home')
+      // The site we are already on stays a bare path — and stays IN the workspace.
+      expect(row(entries, 'storage')?.href).toBe('/acme')
+    })
+
+    it('carries the slug off a hub workspace path too', () => {
+      const entries = at('agenticdeveloperhub.com', '/acme/products', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', authenticated: true }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+    })
+
+    it('carries nothing to a site that has no workspace of its own', () => {
+      const entries = at('agenticdeveloperstorage.com', '/acme/buckets', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage', authenticated: true }),
+        ).result.current.entries,
+      )
+      // community has a /home but no [workspace] route — the reason `workspaceRoute`
+      // exists as a field rather than being read off `hasHome`.
+      expect(row(entries, 'community')?.href).toBe('https://agenticdevelopercommunity.com/')
+    })
+
+    it('carries nothing signed OUT, where a first segment is only a public page', () => {
+      // Same path, no session. Every workspace route in the family is auth-gated, so
+      // without one this is a public page that merely shares the shape — guessing a
+      // slug from it would send an anonymous visitor to a stranger's workspace URL.
+      const entries = at('agenticdeveloperstorage.com', '/acme/buckets', () =>
+        renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage' })).result
+          .current.entries,
+      )
+      expect(row(entries, 'projects')?.href).toBe('https://agenticdeveloperprojects.com/')
+    })
+
+    it('carries nothing from a landing path, even signed in', () => {
+      const entries = at('agenticdeveloperstorage.com', '/details', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage', authenticated: true }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'projects')?.href).toBe('https://agenticdeveloperprojects.com/')
+    })
   })
 
   // The SSO wrap is what makes a cross-site hop land ALREADY signed in (the AS bounces
@@ -47,30 +146,32 @@ describe('useSiteMenu', () => {
   // deployed one — skipping it is why switching to a satellite showed a logged-out
   // header until the destination probed for itself.
   it('SSO-wraps a cross-site hop in the local dev suite (same env as the current site)', () => {
-    const loc = Object.getOwnPropertyDescriptor(window, 'location')
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: { host: 'hub-mybranch.dev.local', hostname: 'hub-mybranch.dev.local' },
-    })
-    try {
+    at('hub-mybranch.dev.local', '/', () => {
       const resolveHref = vi.fn((href: string) => `https://as.test/authorize?return=${encodeURIComponent(href)}`)
       const { result } = renderHook(() =>
-        useSiteMenu(hubCoreGroups(true), { currentSiteId: 'hub', resolveHref }),
+        useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', resolveHref }),
       )
 
-      const href = leaf(result.current.entries, 'community')?.item.href
+      const href = row(result.current.entries, 'community')?.href
       expect(resolveHref).toHaveBeenCalled()
       expect(href).toContain('https://as.test/authorize?return=')
       expect(decodeURIComponent(href ?? '')).toContain('community.hub-mybranch.dev.local')
-    } finally {
-      if (loc) Object.defineProperty(window, 'location', loc)
-    }
+    })
   })
 
   it('exposes a homeHref for the auth top section', () => {
-    const { result } = renderHook(() => useSiteMenu(hubCoreGroups(true), { currentSiteId: 'hub' }))
+    const { result } = renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub' }))
     expect(typeof result.current.homeHref).toBe('string')
     expect(result.current.homeHref.length).toBeGreaterThan(0)
+  })
+
+  it('resolves homeHref against personalSlug off a hub workspace path (the apex)', () => {
+    // usePathname is '/' (the apex) — no active workspace slug — so the hub's Home must
+    // fall back to the personal slug instead of a slug-less /home, which redirects blind.
+    const { result } = renderHook(() =>
+      useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', personalSlug: 'me' }),
+    )
+    expect(result.current.homeHref).toBe('/me/home')
   })
 
   // The cross-site theme carry: picking a theme on one site and hopping to another keeps
@@ -121,14 +222,14 @@ describe('useSiteMenu', () => {
     async function communityHrefIn(env: string): Promise<string | undefined> {
       vi.resetModules()
       vi.stubEnv('NEXT_PUBLIC_DEPLOYMENT_ENV', env)
-      const [{ useSiteMenu: hook }, { hubCoreGroups: groups }, { renderHook: render }] =
+      const [{ useSiteMenu: hook }, { FLEET_MENU_GROUPS: groups }, { renderHook: render }] =
         await Promise.all([
           import('../useSiteMenu'),
-          import('../hubCoreGroups'),
+          import('../fleetMenuGroups'),
           import('@testing-library/react'),
         ])
-      const { result } = render(() => hook(groups(true), { currentSiteId: 'hub' }))
-      return leaf(result.current.entries, 'community')?.item.href
+      const { result } = render(() => hook(groups, { currentSiteId: 'hub' }))
+      return row(result.current.entries, 'community')?.href
     }
 
     afterEach(() => {
@@ -180,7 +281,7 @@ describe('useSiteMenu', () => {
       // chunk-gate contract in adh-registry's deployment-env, and productionBundleGates.test.ts for
       // the rest of the mechanism).
       const here = dirname(fileURLToPath(import.meta.url))
-      const src = readFileSync(resolve(here, '../useSiteMenu.ts'), 'utf8').replace(/\s+/g, ' ')
+      const src = readFileSync(resolvePath(here, '../useSiteMenu.ts'), 'utf8').replace(/\s+/g, ' ')
       const fold = DEV_DEPLOYMENT_ENVS.map(
         (env) => `process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === '${env}'`,
       ).join(' || ')
@@ -192,14 +293,5 @@ describe('useSiteMenu', () => {
         )
       }
     })
-  })
-
-  it('resolves authed in-hub route rows against personalSlug off a workspace path (hub apex)', () => {
-    // usePathname is mocked to '/' (the apex) — no active workspace slug — so the shared authed
-    // rows must fall back to the personal slug instead of a slug-less /products (which 404s).
-    const { result } = renderHook(() =>
-      useSiteMenu(hubCoreGroups(true), { currentSiteId: 'hub', personalSlug: 'me' }),
-    )
-    expect(leaf(result.current.entries, 'route:/products')?.item.href).toBe('/me/products')
   })
 })

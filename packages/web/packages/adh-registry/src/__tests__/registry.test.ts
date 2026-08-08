@@ -2,7 +2,11 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, isHubWorkspacePath, hubWorkspaceSlug, hubSwitchHref } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, isHubWorkspacePath, hubWorkspaceSlug, hubSwitchHref, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
+// The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
+// set as a hand-written literal so the always-loaded header never pulls the family's
+// whole route inventory into its bundle; this is the oracle that keeps the two equal.
+import { SITE_ROUTES } from '../sites/routes.generated'
 
 const hub = getSite('hub')!
 const cookbook = getSite('cookbook')!
@@ -407,6 +411,135 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     const all = [...MAIN_SITE_IDS, ...MARKETING_SITE_IDS]
     expect(new Set(all).size).toBe(all.length) // no dupes within or across the two lists
     for (const id of all) expect(getSite(id), `${id} must be a registry site`).toBeTruthy()
+  })
+
+  // `workspaceRoute` is the site menu's cross-site workspace destination, and a wrong
+  // value is a 404 the menu serves confidently — the exact failure `hasHome` would have
+  // caused for `community` (a /home, no [workspace] route). So it is held to the ROUTE
+  // TREE, the only thing that actually decides whether the path resolves. Same anchor +
+  // skip as the family-folder guard above: absent marker ⇒ standalone toolkit checkout.
+  it.skipIf(STANDALONE)('workspaceRoute matches the route tree for every site folder', () => {
+    const root = resolve(frontendSrcDir as string, 'sites')
+    const shapeOnDisk = (name: string): 'root' | 'nested' | undefined => {
+      if (existsSync(resolve(root, name, 'app', '[workspace]'))) return 'root'
+      if (existsSync(resolve(root, name, 'app', 'home', '[workspace]'))) return 'nested'
+      return undefined
+    }
+    const folders = siteFolders()
+    expect(folders.length).toBeGreaterThan(0) // non-vacuity, as above
+    // Non-vacuity for the assertion itself: if NO folder had a workspace route the
+    // loop below would pass while proving nothing.
+    expect(folders.filter((n) => shapeOnDisk(n) !== undefined).length).toBeGreaterThan(0)
+
+    for (const name of folders) {
+      const site = getSite(name as never)
+      if (!site) continue // covered by the family-folder guard above
+      // The hub predates the rollout and mounts /<slug>/home, which is neither
+      // on-disk shape — it is asserted explicitly below rather than by the walk.
+      if (site.id === 'hub') continue
+      expect(site.workspaceRoute, `${name}: registry vs route tree`).toBe(shapeOnDisk(name))
+    }
+
+    // The hub's own shape, and the three sites that had to nest — stated literally so
+    // a change to either is a deliberate edit here, not a silent re-derivation.
+    expect(hub.workspaceRoute).toBe('hub')
+    expect(SITES.filter((s) => s.workspaceRoute === 'nested').map((s) => s.id).sort()).toEqual([
+      'cookbook',
+      'personaregistry',
+      'research',
+    ])
+    // The trap this field exists to avoid: hasHome true, no workspace route.
+    expect(getSite('community')!.hasHome).toBe(true)
+    expect(getSite('community')!.workspaceRoute).toBeUndefined()
+  })
+})
+
+describe('siteWorkspaceHref (cross-site workspace destination)', () => {
+  it('builds each shape from the active slug', () => {
+    expect(siteWorkspaceHref(getSite('storage')!, 'acme')).toBe('/acme')
+    expect(siteWorkspaceHref(cookbook, 'acme')).toBe('/home/acme')
+    expect(siteWorkspaceHref(hub, 'acme')).toBe('/acme/home')
+  })
+  it('returns undefined when the site has no workspace route, so the caller falls back', () => {
+    expect(siteWorkspaceHref(getSite('community')!, 'acme')).toBeUndefined()
+    expect(siteWorkspaceHref(getSite('bitbag')!, 'acme')).toBeUndefined()
+    expect(siteWorkspaceHref(getSite('status')!, 'acme')).toBeUndefined()
+    expect(siteWorkspaceHref(hubHelp, 'acme')).toBeUndefined()
+  })
+  it('returns undefined for an empty slug rather than minting `//` or `/home/`', () => {
+    expect(siteWorkspaceHref(getSite('storage')!, '')).toBeUndefined()
+    expect(siteWorkspaceHref(cookbook, '')).toBeUndefined()
+  })
+})
+
+describe('siteWorkspaceSlug (the inverse: which workspace a path names)', () => {
+  it('reads each shape back out of the path siteWorkspaceHref built', () => {
+    for (const id of ['storage', 'cookbook', 'hub'] as const) {
+      const site = getSite(id)!
+      expect(siteWorkspaceSlug(site, siteWorkspaceHref(site, 'acme')!), id).toBe('acme')
+    }
+  })
+  it('reads a deeper path inside the workspace, not just its root', () => {
+    expect(siteWorkspaceSlug(getSite('storage')!, '/acme/buckets/logs')).toBe('acme')
+    expect(siteWorkspaceSlug(cookbook, '/home/acme/recipes')).toBe('acme')
+    expect(siteWorkspaceSlug(hub, '/acme/knowledgebases/facts')).toBe('acme')
+  })
+  it('returns null on a landing path, so nothing public is carried as a workspace', () => {
+    const storage = getSite('storage')!
+    expect(siteWorkspaceSlug(storage, '/')).toBeNull()
+    for (const seg of SITE_LANDING_SEGMENTS) {
+      expect(siteWorkspaceSlug(storage, `/${seg}`), seg).toBeNull()
+      // …and everything below it: `/details/topic` is a details page, not workspace
+      // `details` — the first segment is what decides.
+      expect(siteWorkspaceSlug(storage, `/${seg}/anything`), seg).toBeNull()
+    }
+  })
+  it("returns null on a 'nested' site's own root segment, which is not its workspace", () => {
+    // research's `/[userSlug]` is a public author profile; its workspace is /home/<slug>.
+    expect(siteWorkspaceSlug(getSite('research')!, '/someone')).toBeNull()
+    expect(siteWorkspaceSlug(cookbook, '/home')).toBeNull() // shell, no slug segment
+  })
+  it('returns null for a site with no workspace route at all', () => {
+    expect(siteWorkspaceSlug(getSite('community')!, '/acme')).toBeNull()
+    expect(siteWorkspaceSlug(getSite('status')!, '/acme')).toBeNull()
+  })
+  // The deliberate one: an unknown first segment on a 'root' site READS as a slug,
+  // because only the static routes can be listed. The destination repairs it — the
+  // hub's useWorkspaceRoute swaps an unresolvable slug for the user's real workspace —
+  // so a wrong guess costs one redirect, where refusing to guess would cost the carry
+  // on all 33 of those sites.
+  it('reads an unknown segment as a slug rather than refusing', () => {
+    expect(siteWorkspaceSlug(getSite('storage')!, '/not-a-real-page')).toBe('not-a-real-page')
+  })
+
+  // LOCKSTEP. `SITE_LANDING_SEGMENTS` is a hand-written literal in registry.ts (see the
+  // bundle reason at the import above), so nothing but this stops it drifting from the
+  // routes it claims to name. `gen-site-routes.py --check` holds SITE_ROUTES to the app
+  // trees in CI, which makes it a real oracle rather than a second copy of the same guess:
+  // a page added at a 'root' site's top level fails HERE until it is listed there.
+  //
+  // No standalone skip, unlike the route-tree walks above: both sides are committed
+  // files inside this package, so nothing here reaches for adh's `frontend/src/sites`.
+  it("covers every static top-level route of every 'root' site", () => {
+    const roots = SITES.filter((s) => s.workspaceRoute === 'root')
+    expect(roots.length).toBeGreaterThan(0) // non-vacuity
+    const seen = new Set<string>()
+    for (const site of roots) {
+      for (const route of SITE_ROUTES[site.id] ?? []) {
+        const seg = route.split('/').filter(Boolean)[0]
+        // `/` has no segment, and the workspace's own `[workspace]` IS the slug.
+        if (!seg || seg.startsWith('[')) continue
+        seen.add(seg)
+        expect(
+          SITE_LANDING_SEGMENTS.has(seg),
+          `${site.id} serves /${seg}, so SITE_LANDING_SEGMENTS must list it — otherwise ` +
+            `the site menu carries "${seg}" to the next site as a workspace slug`,
+        ).toBe(true)
+      }
+    }
+    // …and the other way, so a retired page doesn't leave a segment listed here
+    // forever, quietly refusing to carry a workspace whose slug happens to match it.
+    expect([...SITE_LANDING_SEGMENTS].sort()).toEqual([...seen].sort())
   })
 })
 

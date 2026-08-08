@@ -73,7 +73,24 @@ export type PopoverItem = {
  *  a topic's `icon` is its own leading glyph. */
 export type PopoverEntry =
   | { kind: 'leaf'; section: number; item: PopoverItem; blurb?: boolean; indent?: boolean }
-  | { kind: 'topic'; section: number; label: string; items: PopoverItem[]; icon?: PopoverIcon; indent?: boolean }
+  | {
+      kind: 'topic'
+      section: number
+      label: string
+      items: PopoverItem[]
+      icon?: PopoverIcon
+      indent?: boolean
+      /** Makes the topic's own trigger a destination as well as a disclosure: the
+       *  row becomes a real `<a>` (middle-click / open-in-new-tab work), a plain
+       *  click navigates, and Enter on the highlighted row navigates instead of
+       *  opening. Hover and → still open the flyout either way. Omit for a pure
+       *  grouping header. */
+      href?: string
+      /** Trailing tagline on the trigger row, right-aligned like a leaf's. */
+      description?: string
+      /** Flags the trigger as the user's current location (aria-current). */
+      current?: boolean
+    }
 
 /** Imperative handle handed to slot render-props so they can close the menu —
  *  optionally WITHOUT restoring focus to the trigger, when they're handing focus
@@ -152,6 +169,21 @@ function highlightMatch(text: string, query: string): ReactNode {
 function IconSlot({ icon: Icon }: { icon?: PopoverIcon }): ReactNode {
   if (!Icon) return null
   return <Icon className="adh-dropdown-menu__item-icon adh-nav-popover__icon" aria-hidden />
+}
+
+/** A navigable topic's TRIGGER, expressed as an ordinary row. Selecting it runs
+ *  through the same `chooseItem` path as every other destination — so SPA
+ *  navigation and SSO href rewriting apply identically — instead of a second,
+ *  divergent navigation path that would drift from the leaves. */
+function topicItem(entry: Extract<PopoverEntry, { kind: 'topic' }>): PopoverItem {
+  return {
+    key: `topic:${entry.label}`,
+    label: entry.label,
+    description: entry.description,
+    href: entry.href,
+    icon: entry.icon,
+    current: entry.current,
+  }
 }
 
 /** Should a row click be left to the browser (new tab / download) rather than
@@ -418,7 +450,16 @@ export function NavigationPopover({
     if (!entry) return
     if (nav.kind === 'top') {
       if (entry.kind === 'topic') {
-        discloseRight() // Enter on a highlighted (closed) topic opens it
+        // A NAVIGABLE topic is a destination that also groups: Enter goes there,
+        // matching both the leaf row below and what clicking the row does. → still
+        // opens the flyout (discloseRight is bound to ArrowRight), so disclosure
+        // stays reachable from the keyboard. A pure grouping header has nowhere of
+        // its own to go, so Enter opens it, as it always did.
+        if (entry.href) {
+          chooseItem(topicItem(entry))
+          return
+        }
+        discloseRight()
         return
       }
       chooseItem(entry.item) // leaf
@@ -649,6 +690,35 @@ export function NavigationPopover({
                       }}
                     >
                       <DropdownMenuSubTrigger
+                        // A navigable topic renders as a real <a>, so the row is a
+                        // link: middle-click and open-in-new-tab work on it exactly
+                        // as on a leaf. This is Base UI, not Radix — there is no
+                        // `asChild`; `render` clones the given element with the
+                        // trigger's merged props, and the children below (plus the
+                        // wrapper's chevron) become its children. Omitted for a
+                        // grouping-only topic, which keeps the primitive's default
+                        // element.
+                        render={
+                          entry.href !== undefined ? (
+                            <a
+                              href={entry.href}
+                              aria-current={entry.current ? 'page' : undefined}
+                              {...GUARDED_NAV_PROPS}
+                              onClick={(event) => {
+                                if (isModifiedClick(event)) return
+                                // Navigate instead of following the href, so this
+                                // takes the same chooseItem path (SPA + SSO) as every
+                                // other row. Nothing has to suppress the disclosure a
+                                // click would otherwise trigger: the trigger opens on
+                                // `useClick({ event: 'mousedown', ignoreMouse: true })`
+                                // — ignoreMouse because it opens on HOVER — so a mouse
+                                // click never reaches that handler at all.
+                                event.preventDefault()
+                                chooseItem(topicItem(entry))
+                              }}
+                            />
+                          ) : undefined
+                        }
                         // No custom `id` here: the engine owns the SubTrigger id
                         // and links the flyout to it (the submenu's accessible
                         // name). The scroll/aria-active id lives on the inner
@@ -657,19 +727,28 @@ export function NavigationPopover({
                         className={cn('adh-nav-popover__topic', {
                           'adh-nav-popover__item--active':
                             nav.kind === 'top' && nav.entry === index,
+                          'adh-nav-popover__item--current': entry.current,
                           'adh-nav-popover__item--indent': entry.indent,
                         })}
                         // Keep focus in the command input (matches every other
                         // row) so a mousedown on a topic header can't hand the
-                        // keyboard to Radix's roving focus.
+                        // keyboard to the menu's own roving focus.
                         onMouseDown={(event) => event.preventDefault()}
                         onMouseMove={() => {
                           navByKeyboard.current = false
                           setNav({ kind: 'top', entry: index, open: true })
                         }}
                       >
+                        {/* Identical for both kinds of topic — a grouping header is
+                            still a row with an icon, a name and a tagline; only the
+                            element it renders as differs. */}
                         <IconSlot icon={entry.icon} />
-                        <span id={`${uid}-e${index}`}>{entry.label}</span>
+                        <span id={`${uid}-e${index}`} className="adh-nav-popover__link-name">
+                          {entry.label}
+                        </span>
+                        {entry.description && (
+                          <span className="adh-dropdown-menu__shortcut">{entry.description}</span>
+                        )}
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="adh-nav-popover__submenu">
                         {entry.items.map((item, j) => renderItem(item, index, j))}

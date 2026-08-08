@@ -33,11 +33,15 @@ describe('recents store', () => {
     expect(list.some((r) => r.url === '/p0')).toBe(false) // oldest evicted
   })
 
-  it('stamps each entry with a numeric ts', () => {
-    recordRecent({ url: '/a', label: 'A', iconKey: '/personas' })
+  it('stamps each entry with a numeric ts, and carries the row fields through', () => {
+    recordRecent({ url: '/a', label: 'A', description: 'Personas · Bob', iconKey: '/personas' })
     const first = readRecents()[0]
     expect(typeof first?.ts).toBe('number')
+    // Both are opaque here — the store neither resolves the icon key nor reads the
+    // tagline — but both have to survive the round trip through localStorage, which
+    // is the only reason they are asserted at this level at all.
     expect(first?.iconKey).toBe('/personas')
+    expect(first?.description).toBe('Personas · Bob')
   })
 
   it('persists to localStorage and re-hydrates on a fresh load (T11)', async () => {

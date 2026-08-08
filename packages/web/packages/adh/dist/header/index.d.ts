@@ -27,7 +27,7 @@ export { SiteMenu } from './SiteMenu';
 export type { SiteMenuProps, SiteMenuChromeProps, MenuGroup, MenuLink } from './SiteMenu';
 export { MarketingSiteMenu } from './MarketingSiteMenu';
 export { WorkspaceSiteMenu } from './WorkspaceSiteMenu';
-export { hubCoreGroups } from './hubCoreGroups';
+export { FLEET_MENU_GROUPS, FLEET_SECTION } from './fleetMenuGroups';
 export { buildDebugSiteGroups, DEBUG_SECTION } from './debugSiteGroups';
 export { buildDevToolsEntries, DEV_TOOLS_BUILD_ENABLED } from './devToolsEntries';
 export { isWorkspaceMenuRoute } from './activeMenuGroups';

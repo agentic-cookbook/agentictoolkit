@@ -15,6 +15,11 @@ export type UseSiteMenuOpts = {
      *  so the workspace menu resolves its feature links against the user's own slug
      *  instead of degrading to slug-less (broken) links. */
     personalSlug?: string;
+    /** Whether a user is signed in. Gates the workspace CARRY below: every workspace
+     *  route in the family sits behind an auth gate, so a path that merely parses as
+     *  one on a signed-out visitor is a public page that happens to share its shape,
+     *  and carrying its first segment as a slug would be a guess. */
+    authenticated?: boolean;
 };
 /**
  * The shared menu engine: turns a declarative {@link MenuGroup} config into the
@@ -22,15 +27,13 @@ export type UseSiteMenuOpts = {
  * the navigation handler. Extracted from {@link SiteMenu} as the single source of
  * truth for the switcher's link logic.
  */
-export declare function useSiteMenu(groups: MenuGroup[], { currentSiteId, resolveHref, personalSlug }: UseSiteMenuOpts): {
+export declare function useSiteMenu(groups: MenuGroup[], { currentSiteId, resolveHref, personalSlug, authenticated }: UseSiteMenuOpts): {
     entries: PopoverEntry[];
     navigate: (item: PopoverItem) => void;
+    /** The signed-in Home destination, resolved by the same route logic as every
+     *  config-driven row. The one row SiteMenu still builds by hand that needs a
+     *  resolved href — everything else it renders is either a plain action (Help) or a
+     *  {@link MenuGroup} the `entries` above already resolved. */
     homeHref: string;
-    /** Resolve an arbitrary hub route to its href with the same env/SSO logic the
-     *  config-driven rows get. For the handful of rows SiteMenu builds by hand rather
-     *  than declaring as a {@link MenuGroup} — `homeHref` below is one such call, and
-     *  the Contact row is another. Exposed so those rows can't drift into resolving a
-     *  destination differently from every row beside them. */
-    routeHref: (route: string) => string;
 };
 //# sourceMappingURL=useSiteMenu.d.ts.map

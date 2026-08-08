@@ -505,9 +505,11 @@
 
 /* All menu rows — the top-level entries, the flat search results, AND the flyout
    submenu site rows — read at one size (a couple points under the base item) and
-   one line-height. The topic rows are <button>s carrying `font: inherit`, whose
-   shorthand resets line-height back to the body's 1.7 and made them taller than
-   the leaf/submenu rows; pin 1.2 here so the main-menu rows match the submenu. */
+   one line-height. A grouping-only topic row is the menu primitive's own element (a
+   <div>) carrying `font: inherit`, whose shorthand resets line-height back to the
+   body's 1.7 and made it taller than the leaf/submenu rows; pin 1.2 here so the
+   main-menu rows match the submenu. (A NAVIGABLE topic renders as an <a> instead —
+   see below — and is already covered by the second selector.) */
 .adh-nav-popover__list .adh-nav-popover__topic,
 .adh-nav-popover__list > a.adh-dropdown-menu__item,
 .adh-nav-popover__submenu .adh-dropdown-menu__item {
@@ -516,17 +518,32 @@
 }
 
 /* Blurbs (the right-aligned site taglines, everywhere in the switcher) read
-   smaller and italic. Scoped to <a> rows so it never touches topic triggers.
+   smaller and italic. Every top-level row carries them, topic triggers included —
+   the menu's contract is that each row reads `[icon] [name] [tagline]`, and a
+   grouping header is a row like any other. The first selector is therefore no
+   longer scoped to <a> (it was, while topic triggers had no tagline to place);
+   `.adh-dropdown-menu__item` is on every top-level row because the SubTrigger
+   wrapper applies it to a topic just as the leaf branch does to a link.
    `margin-left: auto` pushes the tagline to the row's right edge: the switcher
    loads @agentic-toolkit/ui's components.css, which carries the flex
    .adh-dropdown-menu__item base but NOT a .adh-dropdown-menu__shortcut rule (that
    right-align lives only in @agentic-toolkit/adh, which this chain doesn't import),
    so the switcher owns its own right-align here rather than inheriting one. */
-.adh-nav-popover__list a.adh-dropdown-menu__item .adh-dropdown-menu__shortcut,
+.adh-nav-popover__list .adh-dropdown-menu__item .adh-dropdown-menu__shortcut,
 .adh-nav-popover__submenu a.adh-dropdown-menu__item .adh-dropdown-menu__shortcut {
   margin-left: auto;
   font-size: 0.65rem;
   font-style: italic;
+}
+
+/* …but on a TOPIC row that auto margin cannot do the job alone: the SubTrigger
+   wrapper appends a chevron whose own `margin-left: auto` would SPLIT the leftover
+   space with the tagline's (flexbox distributes free space evenly across auto
+   margins), parking the tagline mid-row instead of at the right edge. Growing the
+   name to eat the free space leaves both margins nothing to divide, so the tagline
+   and the chevron end up flush right, in that order. */
+.adh-nav-popover__list .adh-nav-popover__topic .adh-nav-popover__link-name {
+  flex: 1 1 auto;
 }
 
 /* Tighter rows — less vertical padding than the base dropdown item so the menu
@@ -546,7 +563,7 @@
 /* Inline sub-item — an always-visible row indented under the row above it (Hub's
    ecosystem sites; Workspaces under Home). Extra left padding past the base row
    inset (0.75rem); the icon slot stays the first flex child so icons line up in a
-   single indented column. Applies to both leaf <a> rows and topic <button>s. */
+   single indented column. Applies to leaf <a> rows and topic triggers alike. */
 .adh-nav-popover__list .adh-nav-popover__item--indent {
   padding-left: 1.75rem;
 }
@@ -591,8 +608,10 @@
 }
 
 /* Hovering a destination link underlines its name (the part that navigates) —
-   submenu sites, leaf links, autocomplete matches. Topic/consulting submenu
-   triggers (which only disclose) are buttons, so they're unaffected. */
+   submenu sites, leaf links, autocomplete matches, and a NAVIGABLE topic trigger
+   (an <a>, so it underlines like the destination it is). A grouping-only topic
+   renders as the primitive's own element, not an <a>, so it stays unaffected —
+   which is the point: nothing underlines that has nowhere to go. */
 a.adh-dropdown-menu__item:hover .adh-nav-popover__link-name {
   text-decoration: underline;
 }
