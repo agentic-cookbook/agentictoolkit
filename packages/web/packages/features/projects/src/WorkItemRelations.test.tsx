@@ -71,7 +71,7 @@ function workItem(id: string, itemKey: string, title: string): WorkItem {
     dueDate: null,
     labels: [],
     parentId: null,
-    position: 1,
+    rank: "V1",
     createdAt: "c",
     updatedAt: "u",
   };

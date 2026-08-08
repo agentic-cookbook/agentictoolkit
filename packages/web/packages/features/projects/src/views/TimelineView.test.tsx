@@ -27,7 +27,7 @@ function makeItem(over: Partial<WorkItem> & Pick<WorkItem, "id" | "title">): Wor
     dueDate: null,
     labels: [],
     parentId: null,
-    position: 0,
+    rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
     updatedAt: "2026-07-03T00:00:00Z",
     ...over,

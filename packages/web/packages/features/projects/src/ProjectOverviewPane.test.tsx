@@ -116,7 +116,7 @@ function item(over: Partial<WorkItem>): WorkItem {
     dueDate: null,
     estimate: null,
     labels: [],
-    position: 0,
+    rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
     updatedAt: "2026-07-03T00:00:00Z",
     ...over,

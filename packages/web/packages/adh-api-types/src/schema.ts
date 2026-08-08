@@ -20851,7 +20851,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List a project's work items (non-deleted, by position) */
+        /** List a project's work items (non-deleted, in board order) */
         get: {
             parameters: {
                 query?: never;
@@ -21137,6 +21137,82 @@ export interface paths {
         };
         trace?: never;
     };
+    "/project/work-items/{id}/move": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reorder a card among its siblings (+ a work_item.moved activity) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description the card this one goes below (id or key); null = nothing above it */
+                        afterId?: string | null;
+                        /** @description the card this one goes above (id or key); null = nothing below it */
+                        beforeId?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Work item (with its new rank) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkItem"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/project/work-items/{id}/children": {
         parameters: {
             query?: never;
@@ -21146,7 +21222,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A work item's direct children (non-deleted, by position) */
+        /** A work item's direct children (non-deleted, in board order) */
         get: {
             parameters: {
                 query?: never;
@@ -55385,8 +55461,8 @@ export interface components {
             labels: string[];
             /** @description a parent work item in the same project */
             parentId?: string | null;
-            /** @description board order within the project (ascending) */
-            position: number;
+            /** @description board order within the project — an opaque key that sorts ascending by BYTE, so a client compares two cards with `<` and never parses one. Set only by the server (a create appends; POST /project/work-items/{id}/move reorders), so there is no way — and no need — to send one. */
+            rank: string;
             createdBy?: string | null;
             createdAt: string;
             updatedAt: string;

@@ -22,6 +22,7 @@ import type {
   DependencyEdge,
   WorkItemCreateBody,
   WorkItemPatchBody,
+  WorkItemMoveTarget,
   WorkItemFieldValuesPutBody,
   WorkItemDependencyAddBody,
   WorkItemRelationAddBody,
@@ -54,8 +55,9 @@ export interface WorkItem {
   labels: string[];
   /** a parent work item in the same project. */
   parentId: string | null;
-  /** board order within the project (ascending). */
-  position: number;
+  /** where the card sits among its siblings, as an OPAQUE key: compare two with `<`, never
+   *  subtract. Ascending is board order. Server-set — reorder with {@link projectWorkItemsApi.move}. */
+  rank: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -75,10 +77,22 @@ export function toWorkItem(r: WorkItemRow): WorkItem {
     dueDate: r.dueDate ?? null,
     labels: r.labels,
     parentId: r.parentId ?? null,
-    position: r.position,
+    rank: r.rank,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };
+}
+
+/**
+ * Comparator for {@link WorkItem.rank} — ascending is board order.
+ *
+ * The backend's column is `COLLATE "C"`, i.e. it sorts by BYTES, and the rank alphabet is
+ * `0-9A-Za-z`, whose UTF-16 code units are those same bytes in the same order. So a plain JS
+ * `<` reproduces the server's order exactly; this exists so that fact is written down once and
+ * no caller reaches for `a.rank - b.rank` on what looks like a position.
+ */
+export function compareRank(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /* ── Field values ─────────────────────────────────────────────────────── */
@@ -172,7 +186,7 @@ export const projectWorkItemsApi = {
     const rows = await authedJson<WorkItemRow[]>(
       `${PROJECTS}/${enc(projectId)}/work-items`,
     );
-    return rows.map(toWorkItem); // server orders by position
+    return rows.map(toWorkItem); // server orders by rank
   },
 
   async get(id: string): Promise<WorkItem | null> {
@@ -250,6 +264,25 @@ export const projectWorkItemsApi = {
     );
   },
 
+  /**
+   * Reorder a card among its siblings by naming a NEIGHBOUR — see {@link WorkItemMoveTarget} for
+   * the five shapes. Returns the moved card carrying its new `rank`; no other card changes, so
+   * a caller re-sorts the list it already holds rather than refetching it.
+   *
+   * `compact` keeps an explicit null (it drops only undefined), which is the whole point here:
+   * `{ afterId: null }` means "to the top" and must reach the server, while an omitted
+   * `afterId` means "I didn't say".
+   */
+  async move(id: string, target: WorkItemMoveTarget): Promise<WorkItem> {
+    const body: WorkItemMoveTarget = compact(target);
+    return toWorkItem(
+      await authedJson<WorkItemRow>(`${ITEMS}/${enc(id)}/move`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      }),
+    );
+  },
+
   remove(id: string): Promise<void> {
     return authedRequest(`${ITEMS}/${enc(id)}`, { method: "DELETE" });
   },
@@ -258,7 +291,7 @@ export const projectWorkItemsApi = {
     const rows = await authedJson<WorkItemRow[]>(
       `${ITEMS}/${enc(id)}/children`,
     );
-    return rows.map(toWorkItem); // server orders by position
+    return rows.map(toWorkItem); // server orders by rank
   },
 
   async getValues(id: string): Promise<WorkItemFieldValue[]> {

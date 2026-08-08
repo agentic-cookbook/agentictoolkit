@@ -7,6 +7,10 @@ export type { StatusCategory } from "./wire";
 // Likewise the link vocabulary: a consumer switching on how two cards are related needs to name
 // the set in a signature, not only reach it through a relation it already holds.
 export type { RelationKind } from "./wire";
+// And the shape a reorder names its destination with. Public because a UI hands a move DOWNWARD
+// through props — a row's "move up" button raises `(id, target)` to whoever owns the list — and
+// those signatures need to name the target without already holding one.
+export type { WorkItemMoveTarget } from "./wire";
 export * from "./projects";
 export * from "./work-items";
 export * from "./activity";

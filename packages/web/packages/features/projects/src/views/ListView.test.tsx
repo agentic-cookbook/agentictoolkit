@@ -14,6 +14,7 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => {
     projectWorkItemsApi: {
       update: vi.fn(),
       remove: vi.fn(),
+      move: vi.fn(),
       // The details pane reads a card's links. Stubbed rather than left off: without it the
       // relations section renders its error state in every test that opens a detail, which
       // would make a genuine failure there indistinguishable from the wiring being absent.
@@ -28,6 +29,7 @@ import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/da
 
 const update = vi.mocked(projectWorkItemsApi.update);
 const remove = vi.mocked(projectWorkItemsApi.remove);
+const move = vi.mocked(projectWorkItemsApi.move);
 const listRelations = vi.mocked(projectWorkItemsApi.relations.list);
 
 const TODO: ProjectStatus = {
@@ -58,7 +60,7 @@ const ITEM: WorkItem = {
   dueDate: "2026-08-01",
   labels: ["design"],
   parentId: null,
-  position: 0,
+  rank: "V0",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
 };
@@ -80,6 +82,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   update.mockImplementation((id, patch) => Promise.resolve({ ...ITEM, id, ...patch } as WorkItem));
   remove.mockResolvedValue(undefined);
+  move.mockImplementation((id) => Promise.resolve({ ...ITEM, id } as WorkItem));
   listRelations.mockResolvedValue([]);
 });
 
@@ -196,7 +199,7 @@ describe("ListView sub-item tree", () => {
     title: "Write the hero copy",
     description: "",
     parentId: "w1",
-    position: 0,
+    rank: "V0",
   };
   const SIBLING: WorkItem = {
     ...ITEM,
@@ -204,7 +207,7 @@ describe("ListView sub-item tree", () => {
     title: "Pick the pricing table",
     description: "",
     parentId: "w1",
-    position: 1,
+    rank: "V1",
   };
   /** A root that sorts AFTER the parent, so "the child follows its parent" is a claim about the
    *  tree rather than a coincidence of the input order. */
@@ -214,7 +217,7 @@ describe("ListView sub-item tree", () => {
     title: "Ship it",
     description: "",
     parentId: null,
-    position: 1,
+    rank: "V1",
   };
 
   /** The titles in the order the table renders them. Reads the inputs, since every title cell in
@@ -226,7 +229,7 @@ describe("ListView sub-item tree", () => {
   }
 
   it("puts a child under its parent, before the next root", () => {
-    // Deliberately shuffled: the order on screen must come from parentId + position, not from
+    // Deliberately shuffled: the order on screen must come from parentId + rank, not from
     // the order the API happened to return.
     renderList([OTHER_ROOT, SIBLING, ITEM, CHILD]);
 
@@ -294,5 +297,78 @@ describe("ListView sub-item tree", () => {
     expect(titleOrder()).toEqual(["Write the hero copy"]);
     // No toggles anywhere: a filtered list is a list of matches, not a hierarchy.
     expect(screen.queryByRole("button", { name: /^(Expand|Collapse) / })).toBeNull();
+  });
+});
+
+/* ── Reordering ───────────────────────────────────────────────────────────── */
+
+// ListView is the only view whose order is the BOARD order, so it is the only one that can move a
+// card. These pin the three things the ↑/↓ pair has to get right: it names a NEIGHBOUR (never an
+// index), that neighbour is a SIBLING (never whatever row happens to be above on screen), and the
+// affordance stands down when the list is a filtered selection rather than the list.
+describe("ListView reordering", () => {
+  const FIRST: WorkItem = { ...ITEM, id: "w1", title: "Design the landing page", rank: "V0" };
+  const SECOND: WorkItem = { ...ITEM, id: "w4", title: "Ship it", rank: "V1" };
+  const CHILD_A: WorkItem = {
+    ...ITEM, id: "w2", title: "Write the hero copy", parentId: "w1", rank: "V0",
+  };
+  const CHILD_B: WorkItem = {
+    ...ITEM, id: "w3", title: "Pick the pricing table", parentId: "w1", rank: "V1",
+  };
+
+  const up = (title: string) => screen.getByRole("button", { name: `Move up work item ${title}` });
+  const down = (title: string) =>
+    screen.getByRole("button", { name: `Move down work item ${title}` });
+
+  it("moves a card DOWN by naming the sibling it should land after", async () => {
+    const { onChanged } = renderList([FIRST, SECOND]);
+
+    fireEvent.click(down("Design the landing page"));
+
+    await waitFor(() => expect(move).toHaveBeenCalledWith("w1", { afterId: "w4" }));
+    // The surface re-reads, so every view repaints on the new order together.
+    await waitFor(() => expect(onChanged).toHaveBeenCalled());
+  });
+
+  it("moves a card UP by naming the sibling it should land before", async () => {
+    renderList([FIRST, SECOND]);
+
+    fireEvent.click(up("Ship it"));
+
+    await waitFor(() => expect(move).toHaveBeenCalledWith("w4", { beforeId: "w1" }));
+  });
+
+  it("disables the arrow at each end of the list, and leaves it rendered", () => {
+    renderList([FIRST, SECOND]);
+
+    expect(up("Design the landing page")).toHaveProperty("disabled", true);
+    expect(down("Design the landing page")).toHaveProperty("disabled", false);
+    expect(up("Ship it")).toHaveProperty("disabled", false);
+    expect(down("Ship it")).toHaveProperty("disabled", true);
+  });
+
+  it("moves a child among its SIBLINGS, not against the row above it on screen", async () => {
+    // The first child's row is preceded by its PARENT's row, which is not a sibling and not a
+    // legal neighbour — so its ↑ is dead, and its ↓ names the other child rather than anything
+    // at the root.
+    renderList([FIRST, CHILD_A, CHILD_B, SECOND]);
+
+    expect(up("Write the hero copy")).toHaveProperty("disabled", true);
+    fireEvent.click(down("Write the hero copy"));
+
+    await waitFor(() => expect(move).toHaveBeenCalledWith("w2", { afterId: "w3" }));
+  });
+
+  it("drops the reorder column entirely while a filter is on", () => {
+    renderList([FIRST, SECOND]);
+    expect(screen.queryAllByRole("button", { name: /^Move (up|down) / })).not.toHaveLength(0);
+
+    fireEvent.change(screen.getByPlaceholderText("Filter work items…"), {
+      target: { value: "ship" },
+    });
+
+    // What is on screen is now a selection, not the list: "up" would move the card above a
+    // sibling that is filtered out, and the row would sit exactly where it already was.
+    expect(screen.queryAllByRole("button", { name: /^Move (up|down) / })).toHaveLength(0);
   });
 });

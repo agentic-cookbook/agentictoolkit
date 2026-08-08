@@ -9,6 +9,7 @@ import {
   InlineEditableText,
   inlineCommitDeletingClass,
 } from "@agentic-toolkit/ui/components/inline-commit-control";
+import { ReorderControl } from "@agentic-toolkit/ui/components/reorder-control";
 import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import { useInlineDrafts } from "@agentic-toolkit/ui/hooks/useInlineDrafts";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -17,7 +18,7 @@ import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
 import { cn } from "@agentic-toolkit/ui/lib/utils";
-import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
+import { compareRank, projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
 import { PRIORITIES } from "../WorkItemEditor";
 import { participantLabel, toOptionValue, fromOptionValue } from "../AssigneePicker";
@@ -29,7 +30,7 @@ import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
  * The List VIEW of the work-items surface: a LIST WITH DETAILS — the items as a table on top, the
  * selected item's full record below.
  *
- * Three things it owns that the sibling views don't:
+ * Four things it owns that the sibling views don't:
  *
  *  - **In-place row editing.** Every column is a control over a per-row PATCH (`useInlineDrafts`),
  *    and the row's trailing `InlineCommitControl` commits (✓) or discards (✕) it; the same control
@@ -45,7 +46,12 @@ import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
  *    re-ordering the rows by any column, which would scatter a hierarchy the first time anyone
  *    used it. Board, Calendar and Timeline place an item by a field, not by a position in a list,
  *    so there is nowhere for a child to be "under" its parent at all.
+ *  - **REORDERING.** ↑/↓ on each row move a card among its SIBLINGS — the same reason as the
+ *    tree: this is the only view whose order is the board order rather than a sort over some
+ *    column, so it is the only one where moving a row means anything durable. A move names the
+ *    neighbour it should land beside, so the server rewrites one card's `rank` and nobody else's.
  *
+
  * Selecting a row shows its whole record below — including the fields that are NOT columns
  * (description, labels, parent, timestamps). The row edits; the details pane reads.
  *
@@ -153,7 +159,7 @@ export function ListView({
             expanded: new Set(items.map((w) => w.id).filter((id) => !collapsed.has(id))),
             // Siblings in board order, so a child's place among its siblings reads the same here
             // as it does on the Board.
-            compare: (a, b) => a.position - b.position,
+            compare: (a, b) => compareRank(a.rank, b.rank),
           }),
     [items, collapsed, filtering],
   );
@@ -162,6 +168,45 @@ export function ListView({
     () => new Map(tree?.map((t) => [t.row.id, t] as const) ?? []),
     [tree],
   );
+
+  // Every item's immediate SIBLINGS in board order — the two cards a reorder is allowed to name.
+  // Derived from `parentId` + `rank` and not from the flattened tree, for two reasons: the tree
+  // is null while filtering, and a neighbour has to be a real sibling. A child's row on screen is
+  // preceded by its parent, but "move up" past a parent is meaningless and the backend refuses it
+  // — so the row above and the sibling above are different questions, and this answers the second.
+  const neighbours = useMemo(() => {
+    const byParent = new Map<string | null, WorkItem[]>();
+    for (const w of items) {
+      const siblings = byParent.get(w.parentId);
+      if (siblings) siblings.push(w);
+      else byParent.set(w.parentId, [w]);
+    }
+    const near = new Map<string, { prev?: string; next?: string }>();
+    for (const siblings of byParent.values()) {
+      // The server already returns rank order; re-sorting costs nothing and keeps this honest
+      // if ListView is ever handed an unsorted array.
+      const ordered = [...siblings].sort((a, b) => compareRank(a.rank, b.rank));
+      ordered.forEach((w, i) => {
+        near.set(w.id, { prev: ordered[i - 1]?.id, next: ordered[i + 1]?.id });
+      });
+    }
+    return near;
+  }, [items]);
+
+  // A move names the card it should land BESIDE, never an index — "up" is "put me before whoever
+  // is above me right now". That is the same request whether or not the list shifted under us
+  // since it was read, and two people moving different cards can't renumber each other.
+  function moveRow(w: WorkItem, direction: "up" | "down") {
+    const beside = direction === "up" ? neighbours.get(w.id)?.prev : neighbours.get(w.id)?.next;
+    if (beside === undefined) return; // already at that end; the button is disabled anyway
+    void rows.runCommit(w.id, async () => {
+      await projectWorkItemsApi.move(
+        w.id,
+        direction === "up" ? { beforeId: beside } : { afterId: beside },
+      );
+      await onChanged();
+    });
+  }
 
   function commitRow(w: WorkItem) {
     // The ✓ commits whichever pending state the row is in: an armed delete destroys it, otherwise
@@ -316,6 +361,32 @@ export function ListView({
           />
         ),
       },
+      // Reorder — dropped entirely while FILTERING, because what is on screen is then a selection
+      // rather than the list. "Up" would still move the card above its real sibling, but that
+      // sibling may be filtered out, so the row would sit exactly where it was and read as a
+      // button that does nothing.
+      ...(filtering
+        ? []
+        : [
+            {
+              key: "order",
+              header: "",
+              align: "end",
+              // Fixed like the commit cell beside it: two fixed-size icons, nothing to size to.
+              width: "5rem",
+              resizable: false,
+              render: (w: WorkItem) => (
+                <ReorderControl
+                  canMoveUp={neighbours.get(w.id)?.prev !== undefined}
+                  canMoveDown={neighbours.get(w.id)?.next !== undefined}
+                  onMoveUp={() => moveRow(w, "up")}
+                  onMoveDown={() => moveRow(w, "down")}
+                  busy={rows.isBusy(w.id)}
+                  subject={`work item ${w.title}`}
+                />
+              ),
+            } satisfies DataTableColumn<WorkItem>,
+          ]),
       {
         key: "commit",
         header: "",
@@ -339,9 +410,10 @@ export function ListView({
         ),
       },
     ];
-    // `commitRow` closes over `rows` + `onChanged`, both stable enough for the row controls.
+    // `commitRow` and `moveRow` close over `rows` + `onChanged`, both stable enough for the row
+    // controls.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, statuses, participants, treeMeta, collapsed, toggleCollapsed]);
+  }, [rows, statuses, participants, treeMeta, collapsed, toggleCollapsed, neighbours, filtering]);
 
   // Leaving with an uncommitted row edit (or an armed delete) would silently lose it.
   const pending = items.some((w) => rows.isDirty(w.id, draftFrom(w)) || rows.isArmed(w.id));

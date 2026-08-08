@@ -133,7 +133,13 @@ export interface WorkItemRow {
   dueDate?: string | null;
   labels: string[];
   parentId?: string | null;
-  position: number;
+  /** the card's place in its sibling list, as an OPAQUE sort key — compare two of them with
+   *  `<`, never subtract them. It is a fractional index, so a card moved between two others
+   *  gets a key strictly between theirs and nothing else is rewritten; the backend sorts by
+   *  its bytes (the column is `COLLATE "C"`), which is what a plain JS `<` does too.
+   *  Server-set: it is never sent back on a patch — a move goes through
+   *  `POST /project/work-items/{id}/move`. */
+  rank: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -224,6 +230,27 @@ export interface WorkItemPatchBody {
   dueDate?: string | null;
   labels?: string[];
   parentId?: string | null;
+}
+
+/**
+ * `POST /project/work-items/{id}/move` body — a move names its NEIGHBOURS, never an index.
+ *
+ * Both fields address a SIBLING (same project, same parent) by id or by rendered key, and the
+ * distinction between "absent" and "explicitly null" is load-bearing:
+ *
+ * - `{ afterId: X }`             → directly after X
+ * - `{ beforeId: X }`            → directly before X
+ * - `{ afterId: X, beforeId: Y }` → between the two, which must already be in that order
+ * - `{ afterId: null }`          → to the TOP (nothing sorts before it)
+ * - `{ beforeId: null }`         → to the BOTTOM
+ *
+ * Naming neither is a 400: a move with no neighbour has not said where to. Indices are absent
+ * on purpose — two clients sending "index 3" race, whereas two clients naming the same
+ * neighbour both land beside it.
+ */
+export interface WorkItemMoveTarget {
+  afterId?: string | null;
+  beforeId?: string | null;
 }
 
 /** `PUT /project/work-items/{id}/fields` body. */

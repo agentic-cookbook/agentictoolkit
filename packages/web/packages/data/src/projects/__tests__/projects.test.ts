@@ -15,7 +15,7 @@ vi.mock("../../http", async (importOriginal) => ({
 }));
 
 import { projectsApi, validateKeyPrefix } from "../projects";
-import { projectWorkItemsApi } from "../work-items";
+import { compareRank, projectWorkItemsApi } from "../work-items";
 import { projectActivityApi } from "../activity";
 import { projectArtifactsApi } from "../artifacts";
 import { projectCommentsApi, threadOf, type ProjectComment } from "../comments";
@@ -134,10 +134,27 @@ const WORK_ITEM = {
   assigneeId: "cust1",
   priority: 0,
   labels: [],
-  position: 0,
+  rank: "V0",
   createdAt: "c",
   updatedAt: "u",
 };
+
+describe("compareRank", () => {
+  it("sorts by BYTES, so a capital letter sorts before every lower-case one", () => {
+    // The half a locale comparator gets wrong: `localeCompare` treats case as a tertiary weight
+    // and answers "aZ" > "az", while the backend's `COLLATE \"C\"` column answers the opposite.
+    // A client that disagreed with the server here would render its own list out of order.
+    expect(compareRank("aZ", "az")).toBeLessThan(0);
+    expect("aZ".localeCompare("az")).toBeGreaterThan(0);
+  });
+
+  it("orders the keys the backend actually mints", () => {
+    // 'V0' is the first key; appends grow the integer part, and an insert lengthens the fraction.
+    const minted = ["V1", "V0", "V0V", "V2"];
+    expect([...minted].sort(compareRank)).toEqual(["V0", "V0V", "V1", "V2"]);
+    expect(compareRank("V0", "V0")).toBe(0);
+  });
+});
 
 describe("projectWorkItemsApi", () => {
   it("listForProject GETs the per-project collection", async () => {
@@ -177,6 +194,29 @@ describe("projectWorkItemsApi", () => {
     expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1", {
       method: "PATCH",
       body: JSON.stringify({ title: "New", priority: 3 }),
+    });
+  });
+
+  it("move POSTs the named neighbour to the item's move stem", async () => {
+    mockedJson.mockResolvedValueOnce({ ...WORK_ITEM, rank: "V05" });
+    const out = await projectWorkItemsApi.move("w1", { beforeId: "w2" });
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/move", {
+      method: "POST",
+      body: JSON.stringify({ beforeId: "w2" }),
+    });
+    // The moved card comes back carrying its NEW key — that is what lets a caller re-sort the
+    // list it already holds instead of refetching it.
+    expect(out.rank).toBe("V05");
+  });
+
+  it("move to an END sends an explicit null rather than stripping it", async () => {
+    // `{ afterId: null }` is "to the top" and `{}` is "you didn't say where" — a 400. So the
+    // null has to survive `compact`, exactly as the PATCH clears do.
+    mockedJson.mockResolvedValueOnce(WORK_ITEM);
+    await projectWorkItemsApi.move("w1", { afterId: null, beforeId: undefined });
+    expect(mockedJson).toHaveBeenCalledWith("/api/project/work-items/w1/move", {
+      method: "POST",
+      body: JSON.stringify({ afterId: null }),
     });
   });
 
