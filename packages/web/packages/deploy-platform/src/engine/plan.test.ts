@@ -11,6 +11,8 @@ const ep = (o: Partial<EndpointLite> & { id: string; siteId: string; url: string
   ...o,
 });
 const proj = (projectName: string, domain: string | null, platform = "vercel"): ProjectLite => ({ platform, projectName, domain });
+/** A Railway per-environment entry (carries an explicit environment + provider host). */
+const projEnv = (projectName: string, domain: string | null, environment: string, platform = "railway"): ProjectLite => ({ platform, projectName, domain, environment });
 
 describe("planAddProject — decision table", () => {
   it("exact-host match on a deploy-backed endpoint → wire-endpoint (its id + site)", () => {
@@ -169,6 +171,64 @@ describe("planAddProject — decision table", () => {
     const eps = [ep({ id: "e1", siteId: "s1", url: "https://x-a.vercel.app", platform: "vercel", deployProject: "x", environment: "production" })];
     const plan = planAddProject({ platform: "vercel", projectName: "x-staging", domain: "x-b.vercel.app", environment: "staging" }, eps);
     expect(plan).toMatchObject({ kind: "add-endpoint", siteId: "s1", environment: "staging" });
+  });
+
+  it("does not confuse a subdomain site with the apex site", () => {
+    // App site owns the hub apex; admin must NOT match it.
+    const eps = [ep({ id: "e1", siteId: "app", url: "https://agenticdeveloperhub.com" })];
+    const plan = planAddProject(proj("hub-admin-production", "admin.agenticdeveloperhub.com"), eps);
+    expect(plan.kind).toBe("new-site");
+  });
+
+  it("canonicalizes the platform (cloudflare-pages → cloudflare)", () => {
+    const plan = planAddProject(proj("temporal-web", "temporal.today", "cloudflare-pages"), []);
+    expect(plan.kind === "new-site" && plan.platform).toBe("cloudflare");
+  });
+
+  it("preserves an operator-set environment when wiring an existing endpoint", () => {
+    // Apex host has no env prefix (hostEnv → 'production'), but the operator tagged
+    // it 'testing'; wiring must keep 'testing', not overwrite to 'production'.
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://agenticdeveloperhelp.com", environment: "testing" })];
+    const plan = planAddProject(proj("help-production", "agenticdeveloperhelp.com"), eps);
+    expect(plan).toEqual({ kind: "wire-endpoint", endpointId: "e1", siteId: "s1", platform: "vercel", deployProject: "help-production", environment: "testing" });
+  });
+
+  it("matches the exact host even when the endpoint URL carries a port", () => {
+    const eps = [ep({ id: "e1", siteId: "s1", url: "https://agenticdeveloperhelp.com:443/health" })];
+    const plan = planAddProject(proj("help-production", "agenticdeveloperhelp.com"), eps);
+    expect(plan.kind === "wire-endpoint" && plan.endpointId).toBe("e1");
+  });
+
+  it("does not wire a health probe sharing the exact host — adds a proper endpoint to its site", () => {
+    // A health probe lives on the apex host; Add must NOT graft frontend wiring onto
+    // it (step 1 skips non-deploy kinds), and instead add a deploy-backed endpoint.
+    const eps = [ep({ id: "h", siteId: "s1", url: "https://agenticdeveloperhelp.com/health", kind: "health" })];
+    const plan = planAddProject(proj("help-production", "agenticdeveloperhelp.com"), eps);
+    expect(plan).toEqual({ kind: "add-endpoint", siteId: "s1", url: "https://agenticdeveloperhelp.com", environment: "production", platform: "vercel", deployProject: "help-production" });
+  });
+
+  it("prefers a deploy-backed apex owner over a health/backend endpoint", () => {
+    const eps = [
+      ep({ id: "h", siteId: "backend", url: "https://agenticdeveloperhelp.com", kind: "health" }),
+      ep({ id: "f", siteId: "web", url: "https://agenticdeveloperhelp.com", kind: "frontend" }),
+    ];
+    const plan = planAddProject(proj("help-staging", "staging.agenticdeveloperhelp.com"), eps);
+    expect(plan.kind === "add-endpoint" && plan.siteId).toBe("web");
+  });
+
+  it("prefers an explicit environment over host-parsing (Railway provider host has no env prefix)", () => {
+    // hostEnv('adh-backend-testing.up.railway.app') can't read the env (no leading
+    // 'testing.'), so it would default to production — the explicit env must win.
+    const plan = planAddProject(projEnv("adh-backend", "adh-backend-testing.up.railway.app", "testing"), []);
+    expect(plan).toEqual({
+      kind: "new-site",
+      siteName: "adh-backend",
+      siteSlug: "adh-backend",
+      url: "https://adh-backend-testing.up.railway.app",
+      environment: "testing",
+      platform: "railway",
+      deployProject: "adh-backend",
+    });
   });
 });
 

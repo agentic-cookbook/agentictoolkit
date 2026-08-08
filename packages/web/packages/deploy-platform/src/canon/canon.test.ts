@@ -29,6 +29,21 @@ describe("canon helpers", () => {
     expect(projectBaseName("mysite")).toBe("mysite");
   });
 
+  it("envFromProject reads BOTH name shapes this fleet uses, and defaults to production", () => {
+    // The current shape: env as a `-staging` SUFFIX.
+    expect(envFromProject("docs-staging")).toBe("staging");
+    expect(envFromProject("docs-testing")).toBe("testing");
+    expect(envFromProject("docs-production")).toBe("production");
+    expect(envFromProject("hub-staging")).toBe("staging");
+    // The legacy shape: env as a `staging.` PREFIX.
+    expect(envFromProject("staging.adh")).toBe("staging");
+    expect(envFromProject("testing.admin.adh")).toBe("testing");
+    // No marker at all is production — the un-suffixed project IS the prod one in this
+    // fleet, so reading it as anything else would leave every prod deploy unclassified.
+    expect(envFromProject("adh")).toBe("production");
+    expect(envFromProject("agenticcookbook")).toBe("production");
+  });
+
   it("siteApex collapses www AND env labels onto one apex", () => {
     // The whole point: a product served at `www.x` in production and `staging.x` in
     // staging must resolve to ONE site key. Stripping env labels alone leaves them different.

@@ -23,8 +23,10 @@ import { platformCanon } from "../canon/index.js";
 
 // Backend-infra kinds (health probes, MCP, DNS) that are legitimately NOT tied to
 // a deploy project, so they never raise the "unconfigured" warning. The engine owns
-// this vocabulary; the status app's endpoint-kinds re-exports the same set.
-const NON_DEPLOY_KINDS = new Set<string>(["health", "custom", "dns"]);
+// this vocabulary because `endpointNeedsWiring` is what acts on it; a consumer that
+// needs the set itself (the status app's endpoint-kinds, on both its server and its
+// web side) RE-EXPORTS this one rather than restating the members.
+export const NON_DEPLOY_KINDS: ReadonlySet<string> = new Set<string>(["health", "custom", "dns"]);
 
 // ── Per-endpoint ─────────────────────────────────────────────────────────────
 
@@ -33,8 +35,15 @@ export interface EndpointLike {
   kind: string;
   platform: string | null;
   deployProject: string | null;
-  // Operator opt-out: when true the "no deploy project" warning is suppressed even
-  // if platform/project are missing (the per-endpoint "Ignore" button persists this).
+  // "Leave this monitor alone": when true the "no deploy project" warning is suppressed
+  // even if platform/project are missing (the per-endpoint "Ignore" button persists this).
+  //
+  // ONE flag on purpose. A host whose board has a second way to say the same thing folds
+  // it in when it maps its rows onto this view — the status monitor's `isActive: false`
+  // (monitoring paused, so out of the auto-configure conversation) becomes this, on its
+  // server (`autoConfigureOptedOut`) and in its browser alike. Adding a member per host
+  // vocabulary would put the fold in the classifier, where every OTHER host would then
+  // have to know about a field that means nothing to it.
   ignoreProjectWarning?: boolean;
 }
 
@@ -56,7 +65,13 @@ export type EndpointConfigStatus = "configured" | "unconfigured" | "ignored";
  *     needs no deploy project at all (health / DNS / MCP probes);
  *   • `unconfigured` — a deploy-backed endpoint missing its platform/project that
  *     the operator has NOT dismissed (this IS the `endpointUnconfigured` set);
- *   • `ignored`      — the same gap, but the operator opted out of the warning.
+ *   • `ignored`      — the same gap, but the operator opted out of the warning (see
+ *     {@link EndpointLike.ignoreProjectWarning}, which every way a host lets them say
+ *     that folds into).
+ *
+ * A paused monitor that IS wired still reads `configured` — the opt-out is only consulted
+ * in the unwired branch, so pausing a site does not un-configure it. (Its deploy project
+ * likewise stays claimed; see the status app's `listEndpointsForWiring`.)
  */
 export function endpointConfigStatus(e: EndpointLike): EndpointConfigStatus {
   if (!endpointNeedsWiring(e.kind)) return "configured"; // infra kind — nothing to wire

@@ -43,6 +43,13 @@ export interface EndpointLite {
   environment: string | null;
   platform: string | null;
   deployProject: string | null;
+  /** The operator opt-out, exactly as {@link EndpointLike} defines it (this type is the
+   *  `StatusAddApi` view of an endpoint, and is passed straight to `endpointUnconfigured`
+   *  by `wireMatchingEndpoints`). Declared HERE because it was NOT, so a host that mapped
+   *  its rows onto this type dropped the flag and the endpoint axis wired every opted-out
+   *  monitor anyway — a silent bug the type could have refused. Optional, and every reader
+   *  checks it against `true`: a caller with no such vocabulary means "not opted out". */
+  ignoreProjectWarning?: boolean;
 }
 export interface ProjectLite {
   platform: string;

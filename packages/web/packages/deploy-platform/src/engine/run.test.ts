@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import { indexLiveProjects, type EndpointLite, type ProjectLite } from "./plan.js";
-import { runAutoConfigure, uniqueSiteIdentity, type SiteLite, type StatusAddApi } from "./run.js";
+import {
+  indexEndpointWiring,
+  runAutoConfigure,
+  summarizeAutoConfigure,
+  uniqueSiteIdentity,
+  wireMatchingEndpoints,
+  type SiteLite,
+  type StatusAddApi,
+  type WireableProject,
+} from "./run.js";
 
 const proj = (projectName: string, domain: string | null, platform = "vercel"): ProjectLite => ({ platform, projectName, domain });
 
@@ -314,5 +323,210 @@ describe("runAutoConfigure — a renamed deploy project", () => {
 
     expect(a.updateEndpoint).not.toHaveBeenCalled();
     expect(res.skipped[0]!.reason).toContain("already wired to mikefullerton-com");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A mutable in-memory fleet, for the cases whose POINT is what the store looks like
+// afterwards (nothing created; a later item still processed). The vi.fn `makeApi` above
+// asserts on CALLS; these assert on STATE.
+// ---------------------------------------------------------------------------
+function makeStore(initial: EndpointLite[] = []): { api: StatusAddApi; endpoints: EndpointLite[]; sites: SiteLite[] } {
+  const endpoints = [...initial];
+  const sites: SiteLite[] = [];
+  let n = 0;
+  const api: StatusAddApi = {
+    listAllEndpoints: async () => endpoints,
+    listSites: async () => sites,
+    updateEndpoint: async (id, b) => {
+      const e = endpoints.find((x) => x.id === id);
+      if (!e) throw new Error(`no endpoint ${id}`);
+      Object.assign(e, b);
+      return e;
+    },
+    createSite: async (body) => {
+      n += 1;
+      const site = { id: `s${n}`, slug: body.slug, groupId: body.groupId };
+      sites.push(site);
+      return { id: site.id };
+    },
+    createEndpoint: async (siteId, body) => {
+      n += 1;
+      const e = { id: `e${n}`, siteId, kind: "frontend", ...body } as EndpointLite;
+      endpoints.push(e);
+      return e;
+    },
+    deleteSite: async (id) => {
+      const i = sites.findIndex((s) => s.id === id);
+      if (i >= 0) sites.splice(i, 1);
+    },
+  };
+  return { api, endpoints, sites };
+}
+
+describe("runAutoConfigure — match-only (no `create`)", () => {
+  it("does NOT create a site/endpoint for a project no site monitors — it's left for the operator", async () => {
+    // The per-platform "Match" buttons omit `create` for exactly this reason: a browser
+    // can't answer which group a new site belongs to, and a phantom site is worse than a
+    // leftover. Asserting the STORE, not just the result, is what pins it.
+    const { api, endpoints, sites } = makeStore();
+
+    const res = await runAutoConfigure([proj("help-production", "agenticdeveloperhelp.com")], { api });
+
+    expect(res.added).toHaveLength(0);
+    expect(res.created).toHaveLength(0);
+    expect(endpoints).toHaveLength(0);
+    expect(sites).toHaveLength(0);
+    expect(res.skipped[0]!.reason).toContain("no site monitors this domain");
+  });
+
+  it("reports progress once per project", async () => {
+    const { api } = makeStore();
+    const seen: [number, number][] = [];
+
+    await runAutoConfigure([proj("a-production", "a.com"), proj("b-production", "b.com")], {
+      api,
+      onProgress: (done, total) => seen.push([done, total]),
+    });
+
+    expect(seen).toEqual([
+      [1, 2],
+      [2, 2],
+    ]);
+  });
+
+  it("keeps going after one match errors and records the failure", async () => {
+    // The batch is SEQUENTIAL, so an unhandled throw would abandon every project after the
+    // failing one — silently, since the run still resolves.
+    const { api } = makeStore([
+      { id: "e1", siteId: "s1", url: "https://a.com", kind: "frontend", environment: null, platform: null, deployProject: null },
+      { id: "e2", siteId: "s2", url: "https://b.com", kind: "frontend", environment: null, platform: null, deployProject: null },
+    ]);
+    const orig = api.updateEndpoint;
+    let n = 0;
+    api.updateEndpoint = async (id, b) => {
+      n += 1;
+      if (n === 1) throw new Error("boom");
+      return orig(id, b);
+    };
+
+    const res = await runAutoConfigure([proj("a-production", "a.com"), proj("b-production", "b.com")], { api });
+
+    expect(res.added).toHaveLength(1); // the SECOND project still ran
+    expect(res.skipped.map((s) => s.reason)).toEqual(["boom"]);
+  });
+});
+
+describe("wireMatchingEndpoints — endpoint-axis wiring by full domain list", () => {
+  const wp = (projectName: string, domains: string[], platform = "vercel"): WireableProject => ({ platform, projectName, domains });
+  const ep = (o: Partial<EndpointLite> & { id: string; url: string }): EndpointLite => ({
+    siteId: "s1",
+    kind: "frontend",
+    environment: null,
+    platform: null,
+    deployProject: null,
+    ...o,
+  });
+
+  it("wires the apex endpoint to the project whose CANONICAL domain is a subdomain of it", async () => {
+    // The project is ALREADY monitored via its canonical host; the apex (a redirect, also
+    // one of its domains) is what the project axis can never reach — it matches on the
+    // canonical domain alone, so the apex endpoint stays unconfigured forever.
+    const { api, endpoints } = makeStore([
+      ep({ id: "e-apex", url: "https://olylo.ai", environment: "production" }),
+      ep({ id: "e-ia", siteId: "s2", url: "https://ia.olylo.ai", environment: "production", platform: "vercel", deployProject: "olylo.ai-production" }),
+    ]);
+
+    const res = await wireMatchingEndpoints([wp("olylo.ai-production", ["olylo.ai", "www.olylo.ai", "ia.olylo.ai"])], { api });
+
+    expect(res.wired).toBe(1);
+    expect(res.skipped).toEqual([]);
+    const apex = endpoints.find((e) => e.id === "e-apex")!;
+    expect(apex.platform).toBe("vercel");
+    expect(apex.deployProject).toBe("olylo.ai-production");
+    // The already-wired canonical endpoint is untouched.
+    expect(endpoints.find((e) => e.id === "e-ia")!.deployProject).toBe("olylo.ai-production");
+  });
+
+  it("leaves an endpoint alone when its host matches no project domain", async () => {
+    const { api } = makeStore([ep({ id: "e1", url: "https://unknown.example" })]);
+    expect((await wireMatchingEndpoints([wp("p", ["other.com"])], { api })).wired).toBe(0);
+  });
+
+  it("respects the operator opt-out (does not wire an ignored endpoint)", async () => {
+    const { api } = makeStore([ep({ id: "e1", url: "https://olylo.ai", ignoreProjectWarning: true })]);
+    expect((await wireMatchingEndpoints([wp("olylo.ai-production", ["olylo.ai"])], { api })).wired).toBe(0);
+  });
+
+  it("indexEndpointWiring: a host claimed by two different projects is ambiguous (null)", () => {
+    expect(indexEndpointWiring([wp("p1", ["shared.com"]), wp("p2", ["shared.com"])]).get("shared.com")).toBeNull();
+  });
+
+  it("indexEndpointWiring: platform is canonicalized (cloudflare-pages → cloudflare)", () => {
+    expect(indexEndpointWiring([wp("worker", ["w.example"], "cloudflare-pages")]).get("w.example")).toEqual({
+      platform: "cloudflare",
+      deployProject: "worker",
+    });
+  });
+});
+
+describe("summarizeAutoConfigure", () => {
+  it("matched many, some have no site yet", () => {
+    const msg = summarizeAutoConfigure({ added: 100, wired: 0, noDomain: 21, skipped: 0 });
+    expect(msg).toContain("Matched 100 projects to their sites");
+    expect(msg).toContain("21 projects have no site yet");
+    expect(msg).not.toContain("Nothing");
+  });
+
+  it("everything matched (plural)", () => {
+    expect(summarizeAutoConfigure({ added: 5, wired: 0, noDomain: 0, skipped: 0 })).toBe("Matched 5 projects to their sites.");
+  });
+
+  it("singular uses 'its site'", () => {
+    expect(summarizeAutoConfigure({ added: 1, wired: 0, noDomain: 0, skipped: 0 })).toBe("Matched 1 project to its site.");
+  });
+
+  it("reports wired sites (endpoint axis) alongside matched projects", () => {
+    expect(summarizeAutoConfigure({ added: 2, wired: 3, noDomain: 0, skipped: 0 })).toBe("Matched 2 projects to their sites, wired 3 sites.");
+  });
+
+  it("reports created sites alongside matched + wired", () => {
+    expect(summarizeAutoConfigure({ added: 2, created: 3, wired: 1, noDomain: 0, skipped: 0 })).toBe(
+      "Matched 2 projects to their sites, created 3 sites, wired 1 site.",
+    );
+  });
+
+  it("created only (singular)", () => {
+    expect(summarizeAutoConfigure({ added: 0, created: 1, wired: 0, noDomain: 0, skipped: 0 })).toBe("Created 1 site.");
+  });
+
+  it("reports ONLY wired sites when no projects were matched", () => {
+    expect(summarizeAutoConfigure({ added: 0, wired: 1, noDomain: 0, skipped: 0 })).toBe("Wired 1 site.");
+  });
+
+  it("nothing to do because every site is already wired", () => {
+    expect(summarizeAutoConfigure({ added: 0, wired: 0, noDomain: 0, skipped: 0 })).toBe(
+      "Nothing to match — every monitored site is already wired to its deploy project.",
+    );
+  });
+
+  it("no matches but projects remain (no domain + conflict)", () => {
+    const msg = summarizeAutoConfigure({ added: 0, wired: 0, noDomain: 3, skipped: 1 });
+    expect(msg).toContain("No new matches");
+    expect(msg).toContain("4 projects have no site yet");
+    expect(msg).toContain("3 with no domain");
+    expect(msg).toContain("1 unmatched");
+  });
+
+  it("matched some, some remain — the count matches the banner's residual", () => {
+    const msg = summarizeAutoConfigure({ added: 116, wired: 0, noDomain: 5, skipped: 0 });
+    expect(msg).toContain("Matched 116 projects to their sites");
+    expect(msg).toContain("5 projects have no site yet");
+  });
+
+  it("singular verb for a single leftover", () => {
+    expect(summarizeAutoConfigure({ added: 3, wired: 0, noDomain: 1, skipped: 0 })).toBe(
+      "Matched 3 projects to their sites; 1 project has no site yet (1 with no domain).",
+    );
   });
 });
