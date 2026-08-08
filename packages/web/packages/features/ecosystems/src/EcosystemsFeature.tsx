@@ -442,6 +442,16 @@ export function EcosystemsFeature({
     dividerAfter: t.dividerAfter,
     render: (ecoId, titleFor, leaf, subLeafFor) => {
       if (!canManageScoped(ecoId)) return notManageablePane;
+      // FIRST refusal goes to the host, for EVERY topic id — including the four this package
+      // can render itself. A host mounting this feature under its own concept may legitimately
+      // put its OWN pane behind a reserved-looking id: the gamification site's rail is
+      // Catalog / Levels / Custom Events / Settings, where "settings" means the realm config,
+      // not the ecosystem record. Reserving ids here would have forced that site to misname a
+      // topic in its URL to dodge a collision the toolkit invented. Everything a host declines
+      // (returns null for) still lands on the in-package panes below, so the hub — whose
+      // renderProductTopicPane claims none of these four ids — behaves exactly as before.
+      const hostPane = renderTopicPane(t.id, { ecosystemId: ecoId, title: titleFor(t.label), leaf });
+      if (hostPane) return hostPane;
       if (t.id === "settings") {
         return (
           <EcosystemSettingsPane
@@ -509,17 +519,14 @@ export function EcosystemsFeature({
           />
         );
       }
-      // Everything else is host-owned. First chance goes to the host's renderTopicPane —
-      // its top-level config panes (Applications / Integrations / Auth / Sign-in apps /
-      // whatever it adds next) — with the URL leaf threaded so a selected entity
-      // deep-links (/ecosystems/<id>/<topic>/<entityId>). Topics the host doesn't claim
-      // (it returns null) are its workspace features (Billing / Communities / Messaging /
-      // Research / Dashboards) → renderFeaturePanel. Dispatching on the host's answer
-      // instead of a topic-id list here means the host can add a config topic without a
-      // toolkit change (and can't have one silently fall through, the Phase-2 port bug
-      // that blanked Auth / Sign-in apps).
-      const pane = renderTopicPane(t.id, { ecosystemId: ecoId, title: titleFor(t.label), leaf });
-      return pane ?? renderFeaturePanel(t.id);
+      // Everything left is host-owned and NOT claimed by renderTopicPane above (which already
+      // had its chance, with the URL leaf threaded so a selected entity deep-links
+      // /ecosystems/<id>/<topic>/<entityId>): the host's workspace features — Billing /
+      // Communities / Messaging / Research / Dashboards → renderFeaturePanel. Dispatching on
+      // the host's answer instead of a topic-id list means the host can add a config topic
+      // without a toolkit change (and can't have one silently fall through, the Phase-2 port
+      // bug that blanked Auth / Sign-in apps).
+      return renderFeaturePanel(t.id);
     },
   }));
 

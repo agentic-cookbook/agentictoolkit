@@ -76,3 +76,14 @@ export { MasterDetailLeaf } from "./master-detail/MasterDetailLeaf";
 export { useMasterDetailLevel } from "./master-detail/useMasterDetailLevel";
 export { useMasterDetailForm } from "./master-detail/useMasterDetailForm";
 export type { MasterDetailForm, MasterDetailFormConfig } from "./master-detail/useMasterDetailForm";
+
+// Single-record editing: the Cancel/Save bar a config pane wears, and the registry that
+// carries "this pane has unsaved edits" to the exits a pane cannot guard for itself. Both
+// were hub-local until a feature package needed them; the hub keeps its old import paths
+// through shims.
+export { EditActionBar } from "./edit-action-bar";
+export {
+  SettingsDirtyProvider,
+  useSettingsDirty,
+  useReportSettingsDirty,
+} from "./settings-dirty";

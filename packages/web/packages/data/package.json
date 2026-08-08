@@ -72,6 +72,11 @@
       "development": "./src/integrations/index.ts",
       "import": "./dist/integrations/index.js"
     },
+    "./gamification": {
+      "types": "./dist/gamification/index.d.ts",
+      "development": "./src/gamification/index.ts",
+      "import": "./dist/gamification/index.js"
+    },
     "./invitations": {
       "types": "./dist/invitations/index.d.ts",
       "development": "./src/invitations/index.ts",
