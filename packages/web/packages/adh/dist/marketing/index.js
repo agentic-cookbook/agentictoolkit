@@ -205,6 +205,7 @@ function MarketingLanding({ siteId, focusId }) {
 import { MarketingSiteHeader as MarketingSiteHeader2 } from "@agentic-toolkit/adh/marketing/MarketingSiteHeader";
 
 // src/marketing/MarketingRootHtml.tsx
+import { Fragment as Fragment3 } from "react";
 import { AdhThemeStyle } from "@agentic-toolkit/adh/server";
 import { AppShell } from "@agentic-toolkit/adh/layout";
 import { getLocale, htmlLang, localeDir } from "@agentic-toolkit/adh/concepts";
@@ -217,19 +218,22 @@ function MarketingRootHtml({
   trailingNavLinks,
   footerLinks,
   silentSso = true,
+  header,
+  providers,
   children
 }) {
   const loc = getLocale();
+  const SiteProviders = providers ?? Fragment3;
   return (
     // suppressHydrationWarning: AdhThemeStyle's appearance pre-paint script sets class/data-*
     // on <html> before hydration (the user's colour mode), so the client tree legitimately
     // differs from the server's here. Same contract next-themes has.
     /* @__PURE__ */ jsxs4("html", { lang: htmlLang(loc), dir: localeDir(loc), suppressHydrationWarning: true, children: [
       /* @__PURE__ */ jsx4("head", { children: /* @__PURE__ */ jsx4(AdhThemeStyle, {}) }),
-      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(
+      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(SiteProviders, { children: /* @__PURE__ */ jsx4(
         AppShell,
         {
-          header: /* @__PURE__ */ jsx4(
+          header: header ?? /* @__PURE__ */ jsx4(
             MarketingSiteHeader,
             {
               siteId,
@@ -240,7 +244,7 @@ function MarketingRootHtml({
           footer: { links: footerLinks ?? [] },
           children
         }
-      ) }) })
+      ) }) }) })
     ] })
   );
 }
