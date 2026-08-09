@@ -16710,11 +16710,9 @@ export interface paths {
                     "application/json": {
                         preferences: {
                             /** @enum {string} */
-                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
+                            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
                             email: boolean;
                             sms: boolean;
-                            /** @default true */
-                            inApp?: boolean;
                         }[];
                     };
                 };
@@ -16763,11 +16761,9 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
+                        category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
                         email: boolean;
                         sms: boolean;
-                        /** @default true */
-                        inApp?: boolean;
                     };
                 };
             };
@@ -18347,15 +18343,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List all reactions on one target, or a batch of them (public within the ecosystem) */
+        /** List all reactions on a target (public within the ecosystem) */
         get: {
             parameters: {
                 query: {
                     targetKind: string;
-                    /** @description One subject. Supply this OR targetIds; one of the two is required. */
-                    targetId?: string;
-                    /** @description Up to 200 comma-separated subject ids, so a surface showing many subjects reads them in ONE request — each item carries its own targetId for grouping. Supply this OR targetId; one of the two is required. Over 200 is a 400. */
-                    targetIds?: string;
+                    targetId: string;
                 };
                 header?: never;
                 path?: never;
@@ -18363,7 +18356,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Reactions on the target(s) */
+                /** @description Reactions on the target */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -20154,7 +20147,7 @@ export interface paths {
                         key: string;
                         label: string;
                         /** @enum {string} */
-                        category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category: "todo" | "in_progress" | "done";
                         /** @description explicit column order; defaults to append (max+1) */
                         position?: number;
                     };
@@ -20294,7 +20287,7 @@ export interface paths {
                     "application/json": {
                         label?: string;
                         /** @enum {string} */
-                        category?: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+                        category?: "todo" | "in_progress" | "done";
                         position?: number;
                     };
                 };
@@ -20781,67 +20774,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/project/projects/{id}/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * The label vocabulary this project's cards draw on
-         * @description Every live label the project's OWNING principal has used — on a research document as readily as on a card, because both sides use the one tagging system (content.keywords). Distinct and alphabetical: the autocomplete/browse source for a card's labels field.
-         */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Distinct labels, sorted alphabetically */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["StringList"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/projects/{id}/work-items": {
         parameters: {
             query?: never;
@@ -20851,7 +20783,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** List a project's work items (non-deleted, in board order) */
+        /** List a project's work items (non-deleted, by position) */
         get: {
             parameters: {
                 query?: never;
@@ -20919,7 +20851,6 @@ export interface paths {
                         startDate?: string;
                         /** @description date (YYYY-MM-DD) */
                         dueDate?: string;
-                        /** @description labels for the card; each is trimmed, blanks are dropped, and a repeat keeps its first position. A label not yet in the owner's vocabulary is created there. */
                         labels?: string[];
                         /** @description a live work item in the same project (not self) */
                         parentId?: string;
@@ -21089,7 +21020,6 @@ export interface paths {
                         priority?: number;
                         startDate?: string | null;
                         dueDate?: string | null;
-                        /** @description replaces the card's whole label set (an empty array clears it) */
                         labels?: string[];
                         /** @description null detaches the parent */
                         parentId?: string | null;
@@ -21137,82 +21067,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/project/work-items/{id}/move": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Reorder a card among its siblings (+ a work_item.moved activity) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description the card this one goes below (id or key); null = nothing above it */
-                        afterId?: string | null;
-                        /** @description the card this one goes above (id or key); null = nothing below it */
-                        beforeId?: string | null;
-                    };
-                };
-            };
-            responses: {
-                /** @description Work item (with its new rank) */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItem"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/work-items/{id}/children": {
         parameters: {
             query?: never;
@@ -21222,7 +21076,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A work item's direct children (non-deleted, in board order) */
+        /** A work item's direct children (non-deleted, by position) */
         get: {
             parameters: {
                 query?: never;
@@ -21578,214 +21432,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/project/work-items/{id}/relations": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /** Every live link touching this work item, both directions (by createdAt) */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Narrow to one relationship; omitted returns all. An unknown kind is a 400. */
-                    kind?: "depends_on" | "duplicates" | "relates_to";
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Relations */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["WorkItemRelation"][];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        /** Link this work item to another (+ a dependency.added activity) */
-        post: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description a live work item in the same project (not self; must not already be linked to this one) */
-                        relatedId: string;
-                        /**
-                         * @description which relationship this edge asserts; only depends_on is cycle-checked, because only it claims an order
-                         * @enum {string}
-                         */
-                        kind: "depends_on" | "duplicates" | "relates_to";
-                    };
-                };
-            };
-            responses: {
-                /** @description Created relation edge */
-                201: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            id: string;
-                            ecosystemId: string;
-                            /** @description the subject item (the path {id}) */
-                            workItemId: string;
-                            /** @description the object item — read as a prerequisite only for kind depends_on */
-                            dependsOnId: string;
-                            /** @enum {string} */
-                            kind: "depends_on" | "duplicates" | "relates_to";
-                            createdAt: string;
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/work-items/{id}/relations/{relatedId}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-                relatedId: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Unlink two work items, from either end (+ a dependency.removed activity) */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                    relatedId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Deleted */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/project/projects/{id}/research": {
         parameters: {
             query?: never;
@@ -21957,11 +21603,8 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         direction: "ingested" | "produced";
-                        /**
-                         * @description the target's registry, e.g. 'content.markdown'. Must be a kind the target registry knows (400 otherwise), and the target itself must exist within the PROJECT owner's reach (404 otherwise) — an unreachable id is indistinguishable from an absent one. GET /project/projects/{id}/attachable lists the ids that will be accepted.
-                         * @enum {string}
-                         */
-                        targetKind: "content.markdown" | "content.urls";
+                        /** @description the target's registry, e.g. 'content.markdown' */
+                        targetKind: string;
                         targetId: string;
                     };
                 };
@@ -22005,85 +21648,6 @@ export interface paths {
                 };
             };
         };
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/project/projects/{id}/attachable": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        /**
-         * Targets this project could attach — the candidate list an attach picker reads
-         * @description Everything the project OWNER can reach, of every registered target kind (or one, via `kind`), most recently touched first. Returned through the same owner scope the link write checks against, so every row here is one POST /artifacts will accept. Requires the project 'C' verb — the same gate as the attach itself, so this is not a read-only route for enumerating a workspace.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    /** @description Restrict to one target kind. Omit for every registered kind — which is how a client builds the picker without hard-coding the vocabulary. An unregistered value is a 400 naming the known set. */
-                    kind?: "content.markdown" | "content.urls";
-                    /** @description Free-text narrowing. Matches a document title, and for a saved URL either its title or the address it was saved as (so a not-yet-unfurled URL is still findable). */
-                    q?: string;
-                    /** @description Max rows PER KIND (not per response), so no one kind can crowd the others out of the picker. Default 20, max 100; a non-numeric or out-of-range value is clamped. */
-                    limit?: number;
-                };
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Attachable targets */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": {
-                            items: components["schemas"]["TargetDescriptor"][];
-                        };
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22281,49 +21845,9 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** A work item's comments, oldest first (the order a conversation is read in) */
-        get: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Comments */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectComment"][];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
+        get?: never;
         put?: never;
-        /** Add a comment to a work item (also appends a comment.added activity) */
+        /** Append a comment to a work item (a comment.added activity) */
         post: {
             parameters: {
                 query?: never;
@@ -22337,19 +21861,17 @@ export interface paths {
                 content: {
                     "application/json": {
                         body: string;
-                        /** @description reply to this comment. Must be a comment on the SAME work item (400 otherwise); a reply to a reply is stored against that reply's root, so threads stay one level deep */
-                        parentId?: string | null;
                     };
                 };
             };
             responses: {
-                /** @description Created comment */
+                /** @description Created comment (activity row) */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["ProjectComment"];
+                        "application/json": components["schemas"]["ProjectActivity"];
                     };
                 };
                 /** @description Error */
@@ -22363,15 +21885,6 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -22394,135 +21907,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/project/comments/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove a comment (soft delete; appends comment.deleted) */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Removed */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        /** Rewrite a comment's body (author only) */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    id: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        body: string;
-                    };
-                };
-            };
-            responses: {
-                /** @description Updated comment */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["ProjectComment"];
-                    };
-                };
-                /** @description Error */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-                /** @description Error */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["Error"];
-                    };
-                };
-            };
-        };
         trace?: never;
     };
     "/persona-memory/global": {
@@ -55278,10 +54662,9 @@ export interface components {
         };
         NotificationPreference: {
             /** @enum {string} */
-            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message" | "project_assigned" | "project_mention" | "project_comment" | "project_status";
+            category: "account" | "community_reply" | "community_mention" | "admin_announcement" | "direct_message";
             email: boolean;
             sms: boolean;
-            inApp: boolean;
         };
         Friendship: {
             id: string;
@@ -55408,7 +54791,7 @@ export interface components {
             key: string;
             label: string;
             /** @enum {string} */
-            category: "backlog" | "todo" | "in_progress" | "done" | "canceled";
+            category: "todo" | "in_progress" | "done";
             /** @description column order (ascending) */
             position: number;
             createdAt: string;
@@ -55457,12 +54840,11 @@ export interface components {
             startDate?: string | null;
             /** @description date (YYYY-MM-DD) */
             dueDate?: string | null;
-            /** @description the card's labels, from the owner's shared tag vocabulary (the same one research documents draw on), in authored order */
             labels: string[];
             /** @description a parent work item in the same project */
             parentId?: string | null;
-            /** @description board order within the project — an opaque key that sorts ascending by BYTE, so a client compares two cards with `<` and never parses one. Set only by the server (a create appends; POST /project/work-items/{id}/move reorders), so there is no way — and no need — to send one. */
-            rank: string;
+            /** @description board order within the project (ascending) */
+            position: number;
             createdBy?: string | null;
             createdAt: string;
             updatedAt: string;
@@ -55489,26 +54871,6 @@ export interface components {
             status: string;
             createdAt: string;
         };
-        WorkItemRelation: {
-            /** @description the relation edge id */
-            id: string;
-            /** @enum {string} */
-            kind: "depends_on" | "duplicates" | "relates_to";
-            /**
-             * @description outgoing = this item is the subject of the edge (it depends on / duplicates the other); incoming = the other item is
-             * @enum {string}
-             */
-            direction: "outgoing" | "incoming";
-            /** @description the work item at the far end */
-            relatedId: string;
-            /** @description the far item's rendered key (ADH-42); '' when the project has no prefix */
-            relatedKey: string;
-            /** @description the far item title (joined) */
-            title: string;
-            /** @description the far item statusId (joined) */
-            status: string;
-            createdAt: string;
-        };
         ProjectActivity: {
             id: string;
             ecosystemId: string;
@@ -55518,42 +54880,13 @@ export interface components {
             actorKind?: string | null;
             actorId?: string | null;
             actorLabel?: string | null;
-            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/deleted, comment.added/edited/deleted */
+            /** @description the event, e.g. project.created/updated/deleted, status.*, participant.*, work_item.created/updated/status_changed/assigned/deleted, comment.added */
             action: string;
             /** @description action-specific payload (jsonb) */
             detail?: {
                 [key: string]: unknown;
             } | null;
             createdAt: string;
-        };
-        ProjectComment: {
-            id: string;
-            ecosystemId: string;
-            projectId: string;
-            workItemId: string;
-            /** @description the comment this one replies to; null for a top-level comment */
-            parentId?: string | null;
-            /** @enum {string|null} */
-            authorKind?: "customer" | "persona" | "team" | null;
-            authorId?: string | null;
-            authorLabel?: string | null;
-            body: string;
-            /** @description set the first time the body changes; the prior text is in the trail */
-            editedAt?: string | null;
-            createdAt: string;
-            updatedAt?: string;
-        };
-        TargetDescriptor: {
-            /** @description the target's registry, e.g. 'content.markdown' */
-            kind: string;
-            /** @description the opaque target id */
-            id: string;
-            /** @description the row's display title; never empty */
-            title: string;
-            /** @description one supporting line, or null */
-            subtitle: string | null;
-            /** @description set only when the target is a link OUT of the platform (a saved URL) */
-            url: string | null;
         };
         ProjectArtifact: {
             id: string;
@@ -55572,7 +54905,6 @@ export interface components {
             deletedAt?: string | null;
             createdAt: string;
             updatedAt: string;
-            target: components["schemas"]["TargetDescriptor"] | null;
         };
         PersonaMemory: {
             id: string;
