@@ -110,7 +110,10 @@ describe('SiteHeader', () => {
     )
     // The switcher gets the current site and the registry-resolved settings target.
     expect(switcherProps.current?.currentSiteId).toBe('products')
-    expect(switcherProps.current?.settingsHref).toContain('/home/settings')
+    // `/settings` — the hub's account pages, which used to hang off `/home` and moved when
+    // that segment became the family's workspace redirect. Asserted as a substring because
+    // this is a satellite, so the value is the hub's absolute URL for it.
+    expect(switcherProps.current?.settingsHref).toContain('/settings')
   })
 
   it('adds the "Details" link on a concept site and omits it elsewhere', () => {

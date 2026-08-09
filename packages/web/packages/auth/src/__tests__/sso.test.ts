@@ -91,9 +91,9 @@ describe('beginLogin', () => {
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.hub.example.com'
     stubLocation('https://site.example.com')
 
-    beginLogin({ returnTo: '/home/settings' })
+    beginLogin({ returnTo: '/settings' })
 
-    expect(window.sessionStorage.getItem(RETURN_TO_KEY)).toBe('/home/settings')
+    expect(window.sessionStorage.getItem(RETURN_TO_KEY)).toBe('/settings')
   })
 
   it('does not stash anything when returnTo is omitted', () => {

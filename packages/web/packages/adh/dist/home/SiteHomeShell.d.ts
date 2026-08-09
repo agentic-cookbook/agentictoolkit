@@ -10,8 +10,8 @@ import type { SiteHomeScope } from './SiteHomeModel';
  *
  *   - The ONE workspacesApi.list() fetch. The bar and the resolution read it.
  *   - Resolution, the URL-as-truth replace, and persistence of an explicit choice — all of it
- *     useWorkspaceRoute's, which the hub mounts too (its workspace lives at `/<slug>/home`, so
- *     it cannot use this shell's URL shape, but the behaviour behind the bar is the same one).
+ *     useWorkspaceRoute's, which the hub mounts too (it needs a different LIST — the fetch on the
+ *     line above drops teams — but the behaviour behind the bar is the same one).
  *   - Holding `children` until resolution, so no feature mounts unscoped and fires a list
  *     request the backend would answer with the wrong reach. `children` is a FUNCTION for that
  *     reason: a node would be CONSTRUCTED on every render, including the ones before a workspace

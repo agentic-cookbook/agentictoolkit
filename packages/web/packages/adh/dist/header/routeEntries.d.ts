@@ -14,8 +14,8 @@ export type RouteSection = {
 };
 /**
  * The listed route the user is currently "on": the longest navigable path that
- * is `pathname` exactly, or a path-segment prefix of it (so `/home/settings`
- * lights up on `/home/settings/profile`). `/` only matches `/` exactly, never as
+ * is `pathname` exactly, or a path-segment prefix of it (so `/settings`
+ * lights up on `/settings/profile`). `/` only matches `/` exactly, never as
  * a prefix (else it would claim every path). Returns the single best match, or
  * null — so at most one row is marked current.
  */

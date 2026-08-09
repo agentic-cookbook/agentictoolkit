@@ -16,3 +16,8 @@ export {
   SITE_ROUTE_SEGMENTS,
   RESERVED_HANDLE_WORDS,
 } from './reservedSlugs'
+// Which hub URLs are the signed-in workspace. Here, beside the list it reads, rather than in
+// `@agentic-toolkit/adh-registry` where it used to live: since the hub's root became
+// `[workspace]` the answer is "the first segment is not one of the site's own routes", and that
+// list is this module's. The registry cannot import it without depending on this package.
+export { isHubWorkspacePath, hubWorkspaceSlug } from './hubWorkspacePath'

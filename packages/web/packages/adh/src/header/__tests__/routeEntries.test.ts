@@ -4,7 +4,10 @@ import { describe, it, expect } from 'vitest'
 import { buildRouteItems, currentRoutePath, type RouteSection } from '../routeEntries'
 
 describe('currentRoutePath', () => {
-  const paths = ['/', '/home', '/home/settings', '/storage']
+  // Real hub paths: `/home` is the workspace redirect (a leaf — it carries no children any
+  // more), `/settings` is the account tree it used to nest under, `/storage` a workspace
+  // feature. The fixture used `/home/settings` until that route moved.
+  const paths = ['/', '/home', '/settings', '/storage']
 
   it('matches an exact path', () => {
     expect(currentRoutePath(paths, '/storage')).toBe('/storage')
@@ -18,8 +21,8 @@ describe('currentRoutePath', () => {
   })
 
   it('picks the longest path-segment prefix for nested locations', () => {
-    expect(currentRoutePath(paths, '/home/settings/profile')).toBe('/home/settings')
-    expect(currentRoutePath(paths, '/home/teams')).toBe('/home') // /home/teams unlisted → /home
+    expect(currentRoutePath(paths, '/settings/profile')).toBe('/settings')
+    expect(currentRoutePath(paths, '/storage/buckets')).toBe('/storage') // unlisted child → /storage
   })
 
   it('requires a segment boundary (not a bare string prefix)', () => {
@@ -37,7 +40,10 @@ describe('buildRouteItems', () => {
     { label: 'App', routes: [{ path: '/home', description: 'workspace' }, { path: '/', description: 'landing' }] },
     { label: 'Empty', routes: [] },
     { label: 'Auth', routes: [{ path: '/login' }, { path: '/about' }] },
-    { label: 'Dynamic', routes: [{ path: '/[slug]', description: 'profile' }] },
+    // The hub's public profile. It was the bare `/[slug]` until `[workspace]` claimed the root
+    // segment; the path is what matters here (any `[…]` is non-navigable), but a fixture that
+    // names a route no site has reads as one that does.
+    { label: 'Dynamic', routes: [{ path: '/user/[slug]', description: 'profile' }] },
   ]
 
   it('arranges the routes alphabetically by path, across section boundaries', () => {
@@ -62,7 +68,7 @@ describe('buildRouteItems', () => {
   })
 
   it('renders dynamic-segment routes non-navigable (no href) and never current', () => {
-    const dyn = buildRouteItems(sections, '/[slug]').find((i) => i.label === '/[slug]')!
+    const dyn = buildRouteItems(sections, '/user/[slug]').find((i) => i.label === '/user/[slug]')!
     expect(dyn.href).toBeUndefined()
     expect(dyn.current).toBe(false)
   })

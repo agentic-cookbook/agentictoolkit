@@ -125,8 +125,8 @@ export type SiteMenuChromeProps = {
    *  ('/') is never passed through. */
   resolveHref?: (defaultHref: string) => string
   /** The signed-in user's personal workspace slug, forwarded to {@link useSiteMenu}
-   *  as the in-hub slug fallback on the slug-less workspace shell routes (`/home`,
-   *  `/home/settings`, …). Supplied by the auth-aware header on the hub. */
+   *  as the in-hub slug fallback on the slug-less workspace routes (`/home`,
+   *  `/settings/*`). Supplied by the auth-aware header on the hub. */
   personalSlug?: string
   /** When signed in, the command row swaps the "?" help button for a settings
    *  gear. `onSettings` (preferred) opens an in-app overlay over the current

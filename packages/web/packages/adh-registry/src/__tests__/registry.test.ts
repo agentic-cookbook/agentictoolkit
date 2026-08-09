@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, isHubWorkspacePath, hubWorkspaceSlug, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
+// isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
+// @agentic-toolkit/adh/site, whose reserved-slug list is what now answers them, and their cases
+// went with them (`adh/src/site/__tests__/hubWorkspacePath.test.ts`).
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -690,66 +693,19 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
   it('contributes every segment to HUB_WORKSPACE_SEGMENTS', () => {
     const segs = Object.values(HUB_FEATURE_SEGMENT).filter((s): s is string => s !== undefined)
     expect(segs.length).toBeGreaterThan(0) // non-vacuity
-    for (const seg of segs) expect(isHubWorkspacePath(`/acme/${seg}`), seg).toBe(true)
+    // Asserted against the SET, not `isHubWorkspacePath`: that predicate answers from
+    // @agentic-toolkit/adh/site now, which this package cannot import (adh depends on
+    // adh-registry, not the other way round). The set is what it reads anyway.
+    for (const seg of segs) expect(HUB_WORKSPACE_SEGMENTS.has(seg), seg).toBe(true)
   })
 })
 
-describe('isHubWorkspacePath (/<slug>/<home|feature>)', () => {
-  it('matches /<slug>/home and deeper home routes', () => {
-    expect(isHubWorkspacePath('/acme/home')).toBe(true)
-    expect(isHubWorkspacePath('/acme/home/persona-services')).toBe(true)
-  })
-  it('matches /<slug>/<feature> routes and their subpaths', () => {
-    expect(isHubWorkspacePath('/acme/knowledgebases')).toBe(true)
-    expect(isHubWorkspacePath('/acme/knowledgebases/facts')).toBe(true)
-    expect(isHubWorkspacePath('/acme/billing')).toBe(true)
-    // the persona-data CRUD segment
-    expect(isHubWorkspacePath('/acme/all-data')).toBe(true)
-  })
-  it('matches the site-less workspace features (direct-URL only)', () => {
-    expect(isHubWorkspacePath('/acme/teams')).toBe(true)
-    expect(isHubWorkspacePath('/acme/teams/some-id/members')).toBe(true)
-    expect(isHubWorkspacePath('/acme/projects')).toBe(true)
-  })
-  it('matches the persona-editor route (a workspace route, distinct from the all-data CRUD)', () => {
-    // /<slug>/personas is a first-class workspace route; the personas registry site's
-    // own hub view is /<slug>/all-data (see HUB_FEATURE_SEGMENT). Both chrome surfaces
-    // (the switcher/drawer and the app header's FEATURE_META) must agree it's one.
-    expect(isHubWorkspacePath('/acme/personas')).toBe(true)
-    expect(hubWorkspaceSlug('/acme/personas')).toBe('acme')
-  })
-  it('matches the slug-less workspace shell routes (/home and /home/*)', () => {
-    // The signed-in workspace shell lives at the slug-less /home, /home/settings,
-    // /home/persona-services; the switcher keeps the in-hub menu there (useSiteMenu
-    // falls back to the personal slug for the feature links). segs[0] === 'home'.
-    expect(isHubWorkspacePath('/home')).toBe(true)
-    expect(isHubWorkspacePath('/home/settings')).toBe(true)
-    expect(isHubWorkspacePath('/home/persona-services')).toBe(true)
-  })
-  it('rejects marketing, root, and bare top-level paths', () => {
-    expect(isHubWorkspacePath('/')).toBe(false)
-    expect(isHubWorkspacePath('/details')).toBe(false)
-    expect(isHubWorkspacePath('/about')).toBe(false)
-    // a bare top-level feature segment is no longer a workspace path (it now lives
-    // under a slug) — these are marketing / redirect routes
-    expect(isHubWorkspacePath('/storage')).toBe(false)
-    // the second segment must be a known workspace feature
-    expect(isHubWorkspacePath('/acme/about')).toBe(false)
-    expect(isHubWorkspacePath('/acme/store')).toBe(false)
-  })
-})
-
-describe('hubWorkspaceSlug', () => {
-  it('extracts the active slug from a workspace path', () => {
-    expect(hubWorkspaceSlug('/acme/home')).toBe('acme')
-    expect(hubWorkspaceSlug('/acme/products')).toBe('acme')
-    expect(hubWorkspaceSlug('/acme/knowledgebases/facts')).toBe('acme')
-    expect(hubWorkspaceSlug('/acme/all-data')).toBe('acme')
-  })
-  it('returns null off a workspace path', () => {
-    expect(hubWorkspaceSlug('/')).toBeNull()
-    expect(hubWorkspaceSlug('/details')).toBeNull()
-    expect(hubWorkspaceSlug('/acme/about')).toBeNull()
-    expect(hubWorkspaceSlug('/storage')).toBeNull()
+describe('HUB_WORKSPACE_SEGMENTS', () => {
+  it('holds no `home`: a workspace landing is the bare /<workspace>', () => {
+    // The set is what useSiteMenu's routeHref prefixes with the active slug, so a `home` member
+    // minted `/<slug>/home` — a URL the hub answers only by redirecting it back to `/<slug>`.
+    // The hub's own reverse-lockstep test used to have to exempt this one entry by name.
+    expect(HUB_WORKSPACE_SEGMENTS.has('home')).toBe(false)
+    expect(HUB_WORKSPACE_SEGMENTS.has('products')).toBe(true)
   })
 })

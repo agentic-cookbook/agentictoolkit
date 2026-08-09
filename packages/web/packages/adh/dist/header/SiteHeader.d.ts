@@ -48,9 +48,9 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
      *  when a site passes none it falls back to the generated per-site route map. */
     routes?: RouteSection[];
     /** The signed-in user's personal workspace slug, forwarded to the site-switcher as
-     *  the in-hub slug fallback on the slug-less workspace shell routes (`/home`,
-     *  `/home/settings`, …). The hub's header passes the signed-in `user.slug`;
-     *  harmless (and ignored) off the hub. */
+     *  the in-hub slug fallback on the slug-less workspace routes (`/home`, `/settings/*`).
+     *  The hub's header passes the signed-in `user.slug`; harmless (and ignored) off
+     *  the hub. */
     personalSlug?: string;
     /** OAuth client id for the login redirect (default 'adh', the shared brand-site
      *  client). Forwarded to the auth source, which decides what to do with it. */

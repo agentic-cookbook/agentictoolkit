@@ -10,9 +10,9 @@ export type UseSiteMenuOpts = {
      *  `resolveHref` for the full contract. */
     resolveHref?: (defaultHref: string) => string;
     /** The signed-in user's personal workspace slug, threaded from the auth-aware
-     *  header. Used as the in-hub slug fallback on the slug-less workspace shell
-     *  routes (`/home`, `/home/settings`, …), where there's no slug segment to read —
-     *  so the workspace menu resolves its feature links against the user's own slug
+     *  header. Used as the in-hub slug fallback on the slug-less workspace routes
+     *  (`/home`, `/settings/*`), where there's no slug segment to read — so the
+     *  workspace menu resolves its feature links against the user's own slug
      *  instead of degrading to slug-less (broken) links. */
     personalSlug?: string;
     /** Whether a user is signed in. Gates the workspace CARRY below: every workspace

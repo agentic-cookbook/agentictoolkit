@@ -73,9 +73,9 @@ export type SiteHeaderProps = Omit<
    *  when a site passes none it falls back to the generated per-site route map. */
   routes?: RouteSection[]
   /** The signed-in user's personal workspace slug, forwarded to the site-switcher as
-   *  the in-hub slug fallback on the slug-less workspace shell routes (`/home`,
-   *  `/home/settings`, …). The hub's header passes the signed-in `user.slug`;
-   *  harmless (and ignored) off the hub. */
+   *  the in-hub slug fallback on the slug-less workspace routes (`/home`, `/settings/*`).
+   *  The hub's header passes the signed-in `user.slug`; harmless (and ignored) off
+   *  the hub. */
   personalSlug?: string
   /** OAuth client id for the login redirect (default 'adh', the shared brand-site
    *  client). Forwarded to the auth source, which decides what to do with it. */
@@ -202,9 +202,12 @@ export function SiteHeader({
   // (onSettings); otherwise make the gear a link — to the site's own settingsHref
   // if it set one, else the hub's settings page (satellites redirect there). Only
   // a link target here; the switcher gates its visibility on `user != null`.
-  const switcherSettingsHref = onSettings
-    ? undefined
-    : (settingsHref ?? resolveHubHref('/home/settings'))
+  //
+  // `/settings`, not `/home/settings`: the account pages moved off `/home` when that segment
+  // became the family's workspace redirect. The old path is still a redirect source in the hub's
+  // next.config.ts, so this kept working — one wasted hop, and a link that reads as a route the
+  // hub no longer has.
+  const switcherSettingsHref = onSettings ? undefined : (settingsHref ?? resolveHubHref('/settings'))
 
   return (
     <AdhHeader

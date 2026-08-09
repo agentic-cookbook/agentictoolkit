@@ -13,10 +13,14 @@
 // the model exists to own.
 //
 // `WorkspaceBar` and `useWorkspaceRoute` are the two halves SiteHomeShell composes, exported for
-// ONE caller with a legitimate need: the hub, whose workspace is `/<slug>/home` rather than
-// `/<slug>` — a URL shape the shell cannot express, since the hub's bare `/<slug>` is a public
-// profile page. It mounts these directly so the bar and its behaviour stay the fleet's, not a
-// second implementation. A feature site never needs them.
+// ONE caller with a legitimate need: the hub. Not the URL any more — its workspace is the bare
+// `/<slug>` like everyone's since the route convergence — but the ROWS. The shell fills its picker
+// from `workspacesApi.list()`, which returns the caller's own workspace and their organizations;
+// the hub's list also carries teams and the per-workspace feature grants that decide which of its
+// topics a row may open. Feeding those through the shell would mean either every site grows teams
+// or the hub loses them, which is a product decision and not this module's to take. It mounts these
+// directly so the bar and its behaviour stay the fleet's, not a second implementation. A feature
+// site never needs them.
 export { SiteHomeRoute } from './SiteHomeRoute'
 export { defineSiteHome, noSubPath } from './SiteHomeModel'
 export type { SiteHomeModel, SiteHomeContext, SiteHomeScope } from './SiteHomeModel'

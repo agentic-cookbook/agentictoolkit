@@ -25,7 +25,6 @@
  * Adding a name here narrows what the forms will accept; it does not evict a slug already
  * stored, on either side — both are mint-time refusals.
  */
-
 /**
  * Top-level route segments the site template itself owns.
  *
@@ -36,28 +35,7 @@
  * slug reserved slightly early costs a handle nobody has, while one reserved slightly late
  * costs a principal their address on 38 sites at once.
  */
-export const FAMILY_ROUTE_SEGMENTS: readonly string[] = [
-  'auth', // app/auth — the SSO callback
-  'home', // app/home — the workspace-resolving redirect
-  'details', // app/details/[topic] — the shared concept pages
-  'privacy',
-  'terms',
-  'tour', // the landing deck's second route
-  // Not a directory on any site: `marketingNextConfig` rewrites `/api/*` to the backend, so
-  // the segment is spoken for on all 38 without appearing in any `app/` tree.
-  'api',
-  // Next serves these from FILES at the root of `app/`, so they occupy the same segment as a
-  // slug even though no directory names them.
-  'favicon.ico',
-  'icon.svg',
-  'apple-icon.png',
-  'opengraph-image.png',
-  'robots.txt',
-  'sitemap.xml',
-  // The framework's own namespace.
-  '_next',
-]
-
+export declare const FAMILY_ROUTE_SEGMENTS: readonly string[];
 /**
  * First URL segments an individual site adds beyond the template.
  *
@@ -73,64 +51,7 @@ export const FAMILY_ROUTE_SEGMENTS: readonly string[] = [
  * redirect source occupies its segment as surely as a directory does. Regenerate the reading
  * rather than editing from memory; the sites move.
  */
-export const SITE_ROUTE_SEGMENTS: readonly string[] = [
-  // community — app/{categories,discussions,forum,people,topics}. (`admin` is below.) `forum` is
-  // the board: it was this site's `/home` until `/home` became the family's workspace redirect,
-  // and it is the one segment the convergence itself minted.
-  'categories',
-  'discussions',
-  'forum',
-  'people',
-  'topics',
-  // cookbook — the corpus lives under `docs` (below), but its nine section words are still
-  // spoken for: `next.config.ts` 308s `/<section>/:path*` into `/docs/<section>/:path*` so the
-  // book's original URLs keep resolving, and a redirect answers before any route does. This is
-  // the cost recorded in that site's `.claude/rules/site-design.md` — adding a section to the
-  // book adds a reserved slug for the whole family.
-  'introduction',
-  'principles',
-  'guidelines',
-  'ingredients',
-  'recipes',
-  'compliance',
-  'reference',
-  'appendix',
-  // hub — app/{features,integrations,old-landing}, app/(auth)/{join,oidc}, app/(hub)/explore.
-  // (`login`, `signup`, `contact`, `settings` and `user` are below.) `old-landing` is the
-  // superseded hero page, still routable and deliberately kept so, which makes it a segment
-  // like any other. `features` is where the eight marketing pages moved to when the root
-  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`.
-  'features',
-  'integrations',
-  'join',
-  'oidc',
-  'explore',
-  'old-landing',
-  // hub — the marketing feature pages. These are not directories either: they were served
-  // by `app/[slug]/page.tsx`, which dispatched on the slug ahead of a user profile, and the
-  // root segment is `[workspace]` now — so each is a permanent REDIRECT source in the hub's
-  // `next.config.ts` (`/<id>` → `/features/<id>`), derived from the same list the route's
-  // generateStaticParams reads. A redirect answers before any route does, so the segment is
-  // spoken for exactly as a directory's is, and these stay here rather than moving down to
-  // RESERVED_HANDLE_WORDS: they are addressable URLs, not merely words a handle may not take.
-  'agentic-personas',
-  'persona-data-store',
-  'user-data-store',
-  'status-pages',
-  'rest-api',
-  'mcp',
-  'applications',
-  'projects',
-  // personaregistry — app/{org,persona}. (`user` is below.)
-  'org',
-  'persona',
-  // research — app/{papers,search}.
-  'papers',
-  'search',
-  // toolkit — app/demo.
-  'demo',
-]
-
+export declare const SITE_ROUTE_SEGMENTS: readonly string[];
 /**
  * Names refused for a reason other than shadowing.
  *
@@ -149,67 +70,7 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
  * own consequences — someone claims it, and it can never be taken back — so the merge keeps
  * both sides rather than trimming to what is provably needed.
  */
-export const RESERVED_HANDLE_WORDS: readonly string[] = [
-  'about',
-  'admin',
-  'assets',
-  'billing',
-  'blog',
-  'contact',
-  'dashboard',
-  'docs',
-  'help',
-  'legal',
-  'login',
-  'logout',
-  'me',
-  'monitoring',
-  'pricing',
-  'profile',
-  'public',
-  'register',
-  'session',
-  'sessions',
-  'settings',
-  'signin',
-  'signout',
-  'signup',
-  'static',
-  'status',
-  'support',
-  'user',
-  'users',
-  // The hub's feature vocabulary. Every one of these is a SECOND segment — `/<workspace>/teams`,
-  // `/<workspace>/tokens` — so none of them shadows a slug, and that is why they sit here rather
-  // than in SITE_ROUTE_SEGMENTS. The hub refused them anyway, on the grounds that a profile slug
-  // reading as one of its own feature words is a URL nobody can parse at a glance, and that
-  // judgement is kept. The first group mirrors `FEATURES` in the hub's `data/feature-routes.ts`;
-  // the rest are rail routes listed outside it, plus `ecosystems`, the retired segment Products
-  // replaced, held back so stale links resolve predictably instead of landing on a profile.
-  'all-data',
-  'communities',
-  'dashboards',
-  'ecosystems',
-  'email-signup',
-  'feature-flags',
-  'gamification',
-  'invitations',
-  'knowledgebases',
-  'llm-providers',
-  'members',
-  'messaging',
-  'narratives',
-  'persona-services',
-  'personas',
-  'products',
-  'research',
-  'server-bags',
-  'signin-apps',
-  'storage',
-  'teams',
-  'tokens',
-]
-
+export declare const RESERVED_HANDLE_WORDS: readonly string[];
 /**
  * Every name a workspace slug may not take, on any site in the family.
  *
@@ -222,7 +83,5 @@ export const RESERVED_HANDLE_WORDS: readonly string[] = [
  * Everything is lowercased on the way out, because the callers lowercase the slug before the
  * lookup and a mixed-case entry would sit in the set matching nothing.
  */
-export function reservedWorkspaceSlugs(): ReadonlySet<string> {
-  const all = [...FAMILY_ROUTE_SEGMENTS, ...SITE_ROUTE_SEGMENTS, ...RESERVED_HANDLE_WORDS]
-  return new Set(all.map((s) => s.toLowerCase()))
-}
+export declare function reservedWorkspaceSlugs(): ReadonlySet<string>;
+//# sourceMappingURL=reservedSlugs.d.ts.map

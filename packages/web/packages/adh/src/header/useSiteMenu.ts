@@ -7,8 +7,6 @@ import {
   buildSiteHref,
   detectEnv,
   getSite,
-  hubWorkspaceSlug,
-  isHubWorkspacePath,
   siteWorkspaceHref,
   siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
@@ -16,6 +14,10 @@ import {
   type SiteDef,
   type SiteId,
 } from '@agentic-toolkit/adh-registry'
+// From `site`, not the registry: which URLs are the hub's workspace is now decided by the first
+// segment against the reserved-slug list, which lives there. By the SUBPATH so this pulls in the
+// word lists alone — `@agentic-toolkit/adh/site`'s barrel also carries `defineSite`.
+import { hubWorkspaceSlug, isHubWorkspacePath } from '../site/hubWorkspacePath'
 // By the theme-preview SUBPATH, not the `@agentic-toolkit/adh/themes` barrel and not
 // '../themes/theme-preview': the subpath has its own entry and is listed `external`, so it
 // stays a preserved import in this dist instead of being inlined into the header bundle
@@ -39,9 +41,9 @@ export type UseSiteMenuOpts = {
    *  `resolveHref` for the full contract. */
   resolveHref?: (defaultHref: string) => string
   /** The signed-in user's personal workspace slug, threaded from the auth-aware
-   *  header. Used as the in-hub slug fallback on the slug-less workspace shell
-   *  routes (`/home`, `/home/settings`, …), where there's no slug segment to read —
-   *  so the workspace menu resolves its feature links against the user's own slug
+   *  header. Used as the in-hub slug fallback on the slug-less workspace routes
+   *  (`/home`, `/settings/*`), where there's no slug segment to read — so the
+   *  workspace menu resolves its feature links against the user's own slug
    *  instead of degrading to slug-less (broken) links. */
   personalSlug?: string
   /** Whether a user is signed in. Gates the workspace CARRY below: every workspace
@@ -188,9 +190,9 @@ export function useSiteMenu(
       // stays as-is rather than being mis-prefixed with the active slug.
       if (currentSiteId === 'hub') {
         const seg = route.split('/').filter(Boolean)[0]
-        // Off a workspace path (the hub apex `/`, a slug-less shell) there's no active
+        // Off a workspace path (the hub apex `/`, a slug-less route) there's no active
         // slug, so fall back to the signed-in user's personal slug — otherwise these
-        // now-shared authed rows resolve slug-less (`/ecosystems`) and the `[slug]`
+        // now-shared authed rows resolve slug-less (`/ecosystems`) and the `[workspace]`
         // route treats the segment as a workspace slug and 404s.
         const slug = workspaceSlug ?? personalSlug
         return slug && seg != null && HUB_WORKSPACE_SEGMENTS.has(seg)
@@ -327,9 +329,12 @@ export function useSiteMenu(
     [router],
   )
 
-  // The signed-in "Home" destination for the auth top section: the user's workspace
-  // home, resolved with the same in-hub/cross-site logic as every other route link
-  // (on the hub → `/<slug>/home`; a satellite → the hub's `/home`, SSO-wrapped).
+  // The signed-in "Home" destination for the auth top section: `/home`, resolved with the same
+  // in-hub/cross-site logic as every other route link (on the hub → `/home` verbatim; a satellite
+  // → the hub's `/home`, SSO-wrapped). It stays `/home` on the hub rather than being prefixed to
+  // the active slug, because `/home` is precisely the family's "take me to my workspace" URL:
+  // it resolves the stored preference and replaces itself with `/<workspace>`. `home` left
+  // HUB_WORKSPACE_SEGMENTS for that reason, so routeHref no longer prefixes it.
   const homeHref = routeHref('/home')
 
   return { entries, navigate, homeHref }

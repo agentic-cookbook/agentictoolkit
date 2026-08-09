@@ -75,17 +75,24 @@ var SITE_ROUTE_SEGMENTS = [
   "compliance",
   "reference",
   "appendix",
-  // hub — app/{integrations,old-landing}, app/(auth)/{join,oidc}, app/(hub)/explore.
-  // (`login`, `signup` and `contact` are below.) `old-landing` is the superseded hero page,
-  // still routable and deliberately kept so, which makes it a segment like any other.
+  // hub — app/{features,integrations,old-landing}, app/(auth)/{join,oidc}, app/(hub)/explore.
+  // (`login`, `signup`, `contact`, `settings` and `user` are below.) `old-landing` is the
+  // superseded hero page, still routable and deliberately kept so, which makes it a segment
+  // like any other. `features` is where the eight marketing pages moved to when the root
+  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`.
+  "features",
   "integrations",
   "join",
   "oidc",
   "explore",
   "old-landing",
-  // hub — the marketing feature pages. These are not directories: `app/[slug]/page.tsx`
-  // dispatches on the slug and serves the feature page ahead of a user profile, so the
-  // shadowing is done in code rather than by the router. It shadows exactly the same.
+  // hub — the marketing feature pages. These are not directories either: they were served
+  // by `app/[slug]/page.tsx`, which dispatched on the slug ahead of a user profile, and the
+  // root segment is `[workspace]` now — so each is a permanent REDIRECT source in the hub's
+  // `next.config.ts` (`/<id>` → `/features/<id>`), derived from the same list the route's
+  // generateStaticParams reads. A redirect answers before any route does, so the segment is
+  // spoken for exactly as a directory's is, and these stay here rather than moving down to
+  // RESERVED_HANDLE_WORDS: they are addressable URLs, not merely words a handle may not take.
   "agentic-personas",
   "persona-data-store",
   "user-data-store",
@@ -167,12 +174,34 @@ function reservedWorkspaceSlugs() {
   const all = [...FAMILY_ROUTE_SEGMENTS, ...SITE_ROUTE_SEGMENTS, ...RESERVED_HANDLE_WORDS];
   return new Set(all.map((s) => s.toLowerCase()));
 }
+
+// src/site/hubWorkspacePath.ts
+var SLUGLESS_APP_SEGMENTS = /* @__PURE__ */ new Set(["home", "settings"]);
+var reserved = null;
+function isRouteSegment(segment) {
+  reserved ??= reservedWorkspaceSlugs();
+  return reserved.has(segment.toLowerCase());
+}
+function firstSegment(pathname) {
+  return (pathname || "/").split("/").filter(Boolean)[0];
+}
+function isHubWorkspacePath(pathname) {
+  const first = firstSegment(pathname);
+  if (first === void 0) return false;
+  return SLUGLESS_APP_SEGMENTS.has(first) || !isRouteSegment(first);
+}
+function hubWorkspaceSlug(pathname) {
+  const first = firstSegment(pathname);
+  return first !== void 0 && !isRouteSegment(first) ? first : null;
+}
 export {
   FAMILY_ROBOTS_DISALLOW,
   FAMILY_ROUTE_SEGMENTS,
   RESERVED_HANDLE_WORDS,
   SITE_ROUTE_SEGMENTS,
   defineSite,
+  hubWorkspaceSlug,
+  isHubWorkspacePath,
   reservedWorkspaceSlugs,
   siteSitemapRoutes
 };

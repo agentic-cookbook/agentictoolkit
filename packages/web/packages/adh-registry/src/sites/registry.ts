@@ -522,36 +522,33 @@ const HUB_EXTRA_FEATURE_SEGMENTS: string[] = [
   'email-signup',
 ]
 
-// The set of second-path segments that mark a hub workspace route. Object.values
-// of a Partial record is (string | undefined)[] under strict mode, so the
-// type-guard filter is required to narrow. Plus `home` (the workspace landing).
-// Exported as the single source of truth for "is this a hub workspace segment?":
-// useSiteMenu's routeHref guards on it (#8) and the hub's workspace-features
-// reverse-lockstep test asserts every segment maps to a known feature (#9).
+// The set of SECOND-path segments that name a hub workspace feature — `/<workspace>/<segment>`.
+// Object.values of a Partial record is (string | undefined)[] under strict mode, so the
+// type-guard filter is required to narrow.
+//
+// `home` was a member until the route convergence, and its removal is the same fact from two
+// directions. A workspace's landing IS the bare `/<workspace>` now, so `home` names no route
+// under a slug — `useSiteMenu`'s routeHref would have minted `/<slug>/home`, a URL that only
+// still resolves because next.config.ts redirects it back. And the other reason it was here —
+// letting the switcher recognize the slug-less `/home` — went with `isHubWorkspacePath` (below).
+//
+// Exported as the single source of truth for "is this a hub workspace FEATURE segment?":
+// useSiteMenu's routeHref guards on it (#8), and the hub's workspace-features test asserts the
+// lockstep both ways against FEATURE_META (#9). It is NOT what decides whether a path is a
+// workspace path — see the note further down where that pair used to live.
 export const HUB_WORKSPACE_SEGMENTS = new Set<string>([
-  'home',
   ...HUB_EXTRA_FEATURE_SEGMENTS,
   ...Object.values(HUB_FEATURE_SEGMENT).filter((s): s is string => s !== undefined),
 ])
 
-/** True when `pathname` is inside the hub's authenticated workspace — a
- *  `/<slug>/<home|feature>` route (or deeper). Also true for the slug-less
- *  workspace shell routes `/home`, `/home/settings`
- *  (segs[0] === 'home'), so the switcher keeps the in-hub menu there even though
- *  there's no slug segment to read (useSiteMenu falls back to the personal slug).
- *  Drives the switcher's in-hub mode; only meaningful on the hub itself. */
-export function isHubWorkspacePath(pathname: string): boolean {
-  const segs = (pathname || '/').split('/').filter(Boolean)
-  if (segs[0] === 'home') return true
-  return segs.length >= 2 && HUB_WORKSPACE_SEGMENTS.has(segs[1]!)
-}
-
-/** Extract the active workspace slug from a hub workspace pathname, or null when
- *  `pathname` isn't a `/<slug>/<home|feature>` route. */
-export function hubWorkspaceSlug(pathname: string): string | null {
-  const segs = (pathname || '/').split('/').filter(Boolean)
-  return segs.length >= 2 && HUB_WORKSPACE_SEGMENTS.has(segs[1]!) ? segs[0]! : null
-}
+// `isHubWorkspacePath` and `hubWorkspaceSlug` used to sit here, deciding by the SECOND path
+// segment — the hub's root was `[slug]`, a public profile, so a workspace URL was only
+// recognizable by the known feature that followed it. The root is `[workspace]` now, which makes
+// the FIRST segment the whole answer, and answering it means reading the reserved-slug list. That
+// list lives in `@agentic-toolkit/adh/site`, which depends on this package — so the pair moved
+// there rather than inverting the dependency. `HUB_WORKSPACE_SEGMENTS` stays: it is data about
+// which features exist, which is this package's job, and `useSiteMenu` still needs it to decide
+// whether a hand-built row is an in-hub destination.
 
 /** The path of `target`'s OWN authenticated workspace, scoped to `slug` — the
  *  destination the site menu carries a signed-in visitor to when they switch

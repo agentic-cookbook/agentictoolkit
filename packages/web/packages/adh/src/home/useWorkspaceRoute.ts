@@ -36,11 +36,12 @@ export function __resetSeededWorkspace(): void {
 /**
  * Which workspace this URL means, and how picking another one is remembered.
  *
- * Extracted from SiteHomeShell so the hub can mount the same behaviour: the hub's workspace lives
- * at `/<slug>/home` rather than `/<slug>`, and it lists rows (teams) the feature sites'
- * client drops — two differences that are entirely expressed by `hrefFor` and `canPersist`. The
- * resolution order, the write-ordering guards and the races they exist for are NOT duplicated:
- * this is the one copy.
+ * Extracted from SiteHomeShell so the hub can mount the same behaviour: it lists rows (teams) the
+ * feature sites' client drops, and grants some of them fewer topics than others — differences that
+ * are entirely expressed by `workspaces` and `canPersist`. (`hrefFor` used to carry a third: the
+ * hub's workspace sat at `/<slug>/home`. It is the bare `/<slug>` now, like every other site's, so
+ * the hub passes what the shell would have.) The resolution order, the write-ordering guards and
+ * the races they exist for are NOT duplicated: this is the one copy.
  *
  * What it owns:
  *   - Resolution: a slug already in the URL decides on its own. Otherwise it seeds one — but only
