@@ -135,6 +135,9 @@ importers:
       '@agentic-toolkit/crud':
         specifier: workspace:*
         version: link:../crud
+      '@agentic-toolkit/data':
+        specifier: workspace:*
+        version: link:../data
       '@types/node':
         specifier: ^24.0.0
         version: 24.13.2
@@ -400,9 +403,6 @@ importers:
         specifier: ^19.0.0
         version: 19.2.7
     devDependencies:
-      '@agentic-toolkit/adh-api-types':
-        specifier: workspace:*
-        version: link:../adh-api-types
       '@testing-library/jest-dom':
         specifier: ^6.9.1
         version: 6.9.1

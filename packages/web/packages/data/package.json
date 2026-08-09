@@ -130,7 +130,6 @@
     "react": "^19.0.0"
   },
   "devDependencies": {
-    "@agentic-toolkit/adh-api-types": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",

@@ -2,12 +2,13 @@
 // `@agentic-toolkit/adh-api-types` — the convention every client in this package follows, so a
 // consumer needs one dependency to talk to the API rather than two that must agree.
 //
-// `__tests__/wire.test-d.ts` is what CHECKS the transcription — it measures every shape below
-// against the generated types and fails `tsc` on a rename, a removal or a retype. The generated
-// package is a devDependency reached only from that file, which the build excludes, so the rule
-// above still holds for everything that ships. Read the two together: without the gate, a
-// backend column rename leaves every consumer compiling and the field reading `undefined` in the
-// Profile editor and the public UserCard.
+// `adh-api-types/src/data-profile-wire.test-d.ts` is what CHECKS the transcription — it measures
+// every shape below against the generated types and fails `tsc` on a rename, a removal or a
+// retype. The gate lives in THAT package, not next to this file, because the dependency it needs
+// runs the wrong way for a portable one: `scripts/check_boundaries.py` refuses any import of the
+// adh vocabulary tier from here, so the side that may depend on the other holds the file. Read
+// the two together: without the gate, a backend column rename leaves every consumer compiling and
+// the field reading `undefined` in the Profile editor and the public UserCard.
 //
 // Sources, and the operation the gate measures each against:
 //   SocialLink / Address   backend `db/schema/content.ts` (socialLinksInContent /

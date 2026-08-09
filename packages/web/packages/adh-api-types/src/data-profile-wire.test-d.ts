@@ -1,19 +1,29 @@
-// The drift gate for ../wire.ts — the thing its header's "Sources, so a drift can be checked
-// against something" list could not do on its own. A list of filenames in a comment is a
-// citation, not a check: a backend column rename regenerates the OpenAPI types, every consumer
-// still compiles against the hand-transcribed interface, and the field simply reads `undefined`
-// in the Profile editor and the public UserCard. Nothing errors, on any site.
+// The drift gate for `@agentic-toolkit/data`'s profile wire shapes — the thing that package's
+// header could not do on its own. It transcribes the backend's rows by hand and CITES its
+// sources in a comment, and a citation is not a check: a backend column rename regenerates
+// ./schema.ts, every consumer still compiles against the hand-written interface, and the field
+// simply reads `undefined` in the Profile editor and the public UserCard. Nothing errors, on
+// any site.
 //
-// So the transcription is measured against the GENERATED types here, and only here.
-// `@agentic-toolkit/adh-api-types` is a devDependency and this file lives under `__tests__`,
-// which `tsconfig.build.json` excludes — so the adh-specific package is a TEST ORACLE and never
-// enters `dist`, keeping the rule the rest of this package follows (a generic data client ships
-// one dependency to talk to the API, not two that must agree).
+// IT LIVES HERE, NOT THERE, and that is the whole reason this file moved. `data` is a PORTABLE
+// package, and `scripts/check_boundaries.py` (adh runs it as verify_toolkit_boundary.py) refuses
+// any import of the adh vocabulary tier from one — the direction is one-way by design, because
+// such an import resolves fine inside adh's workspace and fails only in a consumer. A gate is
+// not a reason to open a hole in that: this package IS the adh tier, it already devDepends on
+// portable siblings (`crud`, `api-explorer`), and measuring a transcription needs both sides
+// regardless of which one holds the file. So the dependency points the sanctioned way and the
+// guard needs no exemption.
 //
-// Run by `tsc --noEmit` (`pnpm lint`), not by vitest: `.test-d.ts` is outside vitest's include
-// glob, exactly as `adh-api-types/src/index.test-d.ts` is. Every entry in `Checks` must be
+// Consequence worth knowing: `moduleResolution: "bundler"` with no `customConditions` takes
+// `data`'s `types` condition, so the shapes below are read from its BUILT `dist/*.d.ts`, not
+// from `src/`. That is fail-closed rather than silent — an unbuilt `data` makes this file fail
+// to resolve — and it does not weaken what the gate is for: a backend rename regenerates
+// ./schema.ts, which is read straight from source here, so it reddens on the same run.
+//
+// Run by `tsc --noEmit` (`pnpm lint` / `pnpm test`), not by vitest: `.test-d.ts` is outside
+// vitest's include glob, exactly as ./index.test-d.ts is. Every entry in `Checks` must be
 // literally `true`, or `Expect<… extends true>` fails and the package stops type-checking.
-import type { RequestBody, SuccessBody } from "@agentic-toolkit/adh-api-types";
+import type { RequestBody, SuccessBody } from "./index";
 import type {
   SocialLink,
   SocialLinkWrite,
@@ -22,9 +32,9 @@ import type {
   PrivacyGrant,
   PrivacyTargetTable,
   UsageRow,
-} from "../wire";
+} from "@agentic-toolkit/data/profile";
 
-// ── assertion utilities (same set as adh-api-types/src/index.test-d.ts) ──────────────────
+// ── assertion utilities (same set as ./index.test-d.ts) ──────────────────────────────────
 type Expect<T extends true> = T;
 type Equal<A, B> =
   (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
@@ -79,7 +89,8 @@ export type Checks = [
   Expect<Equal<WireUsageRow, UsageRow>>,
 
   // ── THE ONE DELIBERATE DIVERGENCE ───────────────────────────────────────────────────
-  // `PrivacyTargetTable` widens the generated enum to `string` on purpose (see ../wire.ts:
+  // `PrivacyTargetTable` widens the generated enum to `string` on purpose (see `data`'s
+  // src/profile/wire.ts:
   // a client that hard-coded the members would refuse a target the backend later adds). That
   // is why the read-side check above runs one way only, and pinning the asymmetry here keeps
   // it a stated decision — if someone narrows the alias back to the union, this entry flips

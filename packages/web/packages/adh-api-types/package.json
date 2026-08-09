@@ -23,6 +23,7 @@
   "devDependencies": {
     "@agentic-toolkit/api-explorer": "workspace:*",
     "@agentic-toolkit/crud": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
     "@types/node": "^24.0.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
