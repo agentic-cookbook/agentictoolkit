@@ -7,6 +7,23 @@
 // package barrel's dist carries "use client", so an RSC importing the parser from there would
 // throw on a render-only client reference.
 
+/**
+ * The landing's own segment, matched LITERALLY ahead of reading the first segment as an
+ * organization slug — the same shadowing a route directory does, with this parser as the matcher
+ * instead of Next's router.
+ *
+ * That makes it a word no organization may be minted with, and it is refused at the mint boundary
+ * (`RESERVED_ROUTE_SLUGS` in backend/src/adh/src/lib/rdid.ts) for the same reason `details` and
+ * `home` are: the collision is between a database slug and a matcher, so no uniqueness constraint
+ * spans both. Sibling grammars (Teams, Projects, Ecosystems) match the identical word without
+ * needing that, because their first segment is an opaque id — only THIS feature addresses its
+ * resource by a slug the user chose (`getId={(w) => w.slug}`).
+ *
+ * `frontend/tools/verify_reserved_route_slugs.py` re-derives this from the source and fails when
+ * the backend stops refusing it, so the two cannot drift apart.
+ */
+const ALL_SEGMENT = "all";
+
 /** The selection OrganizationsFeature renders, parsed from a route's path segments. Maps 1:1
  *  onto its props (the host supplies `basePath`). Unlike Ecosystems there IS an "All" landing —
  *  the organization list is the first rail level, and a bare path shows the org cards. */
@@ -40,11 +57,16 @@ export interface OrganizationsPathSelection {
  *   [slug]                 → { activeOrgSlug }              (that org, no topic selected)
  *   [slug, topic]          → { …, activeTopic }
  *   [slug, topic, ...rest] → { …, topicPath: rest }         (the topic's own grammar, untouched)
+ *
+ * Empty segments are dropped so a trailing or doubled slash lands on the same selection as the
+ * tidy URL — the same reading `parseNotebookPath` and `parseIntegrationsPath` give them. It
+ * matters more here than there: a leading empty segment would shift the ORG slug into the topic
+ * position, so `//acme/members` would parse as the org named "" with topic "acme".
  */
 export function parseOrganizationsPath(path?: string[]): OrganizationsPathSelection {
-  const [first, second, ...rest] = path ?? [];
+  const [first, second, ...rest] = (path ?? []).filter(Boolean);
   if (!first) return { topicPath: [] };
-  if (first === "all") return { all: true, topicPath: [] };
+  if (first === ALL_SEGMENT) return { all: true, topicPath: [] };
   return {
     activeOrgSlug: first,
     activeTopic: second,
