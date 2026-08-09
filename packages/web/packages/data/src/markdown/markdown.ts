@@ -81,6 +81,30 @@ export function withTags<T extends { tags: string[] }>(doc: T): T {
   return Array.isArray(tags) ? doc : { ...doc, tags: [] };
 }
 
+/** Fold the categories response into the rows a hierarchical consumer walks.
+ *
+ *  Same skew as `withTags`, one migration later: a backend deploy OLDER than this
+ *  frontend (before categories became rows) answers with `items` alone — the flat NAMES —
+ *  and an unguarded `res.nodes` crashes the notebook rail. Those names are the entire
+ *  category set such a backend HAS, so the degrade rebuilds them as roots instead of
+ *  yielding an empty rail. Nothing else about the notebook needs the missing structure:
+ *  every use of a category is BY NAME — notes are filtered with `?category=<name>` (an
+ *  exact match) and the URL segment is `slugFor(name, id)`.
+ *
+ *  The id it synthesizes is the name, which is not a fabricated row id: a name is unique
+ *  per owner (see {@link MarkdownCategoryTreeBody}), so it is the only identity that
+ *  backend has and the one it filters by. It also never travels back — the single write
+ *  taking an id is `createCategory({ parentId })`, and a flat list has no children, so
+ *  the rail never publishes a level with a parent to create under (`NotebookPane` breaks
+ *  its level loop on `children.length === 0`).
+ *
+ *  Exported for the unit test. */
+export function categoryNodes(res: MarkdownCategoryTreeBody): MarkdownCategoryNode[] {
+  if (Array.isArray(res.nodes)) return res.nodes;
+  const items = Array.isArray(res.items) ? res.items : [];
+  return items.map((name, i) => ({ id: name, name, parentId: null, sortOrder: i }));
+}
+
 export const markdownApi = {
   // `workspace` on every op pins it to the WORKSPACE'S owning principal (backend
   // `?workspace=<slug>`): list returns only documents that principal OWNS, create
@@ -180,14 +204,15 @@ export const markdownApi = {
 
   /** The same categories WITH their structure — `parentId` makes them a tree. The flat
    *  `categories()` above is the autocomplete's view of this one set; a hierarchical
-   *  browser needs the ids and parents, which names alone cannot carry. */
+   *  browser needs the ids and parents, which names alone cannot carry.
+   *
+   *  Against a backend too old to send `nodes`, {@link categoryNodes} rebuilds the flat
+   *  names it DID send as roots, so the rail degrades to one level instead of crashing
+   *  or emptying. */
   async categoryTree(opts?: { workspace?: string }): Promise<MarkdownCategoryNode[]> {
-    const res = await authedJson<MarkdownCategoryTreeBody>(
-      `${BASE}/categories${workspaceQuery(opts)}`,
+    return categoryNodes(
+      await authedJson<MarkdownCategoryTreeBody>(`${BASE}/categories${workspaceQuery(opts)}`),
     );
-    // A backend older than this client answers with `items` alone; an unguarded `.nodes`
-    // would then crash the rail rather than degrade to a flat list.
-    return Array.isArray(res.nodes) ? res.nodes : [];
   },
 
   /** Create a category, optionally under another (POST /content/markdown/categories).
