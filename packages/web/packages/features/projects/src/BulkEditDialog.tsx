@@ -15,6 +15,7 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
 import { projectWorkItemsApi } from "@agentic-toolkit/data/projects";
 import type {
+  PriorityScale,
   ProjectStatus,
   ProjectParticipant,
   WorkItem,
@@ -76,8 +77,10 @@ export function bulkPatchOf(draft: BulkDraft): WorkItemBulkPatch {
 export function BulkEditDialog({
   count,
   noun,
+  nounPlural,
   statuses,
   participants,
+  priorityScale = "standard",
   onCancel,
   onApply,
 }: {
@@ -86,8 +89,14 @@ export function BulkEditDialog({
   count: number;
   /** What the rows are called, singular (e.g. "work item"). */
   noun: string;
+  /** And plural. A separate prop rather than `noun + "s"` because a board renames its cards to
+   *  whatever it likes, and "storys" is the shape that bug takes. Defaults to the suffixed form
+   *  for a caller whose noun is regular. */
+  nounPlural?: string;
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
+  /** `none` drops the Priority field: the board does not rank, so there is nothing to set. */
+  priorityScale?: PriorityScale;
   onCancel: () => void;
   /** Apply the patch to every selected row. Rejecting keeps the dialog open with the message,
    *  so a partial failure is visible rather than swallowed by a close. */
@@ -121,8 +130,7 @@ export function BulkEditDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle className="text-apt-gold">
-            Update {count} {noun}
-            {count === 1 ? "" : "s"}
+            Update {count} {count === 1 ? noun : nounPlural ?? `${noun}s`}
           </DialogTitle>
         </DialogHeader>
 
@@ -160,20 +168,22 @@ export function BulkEditDialog({
           </Select>
         </Field>
 
-        <Field label="Priority">
-          <Select
-            value={draft.priority}
-            onChange={(e) => set("priority", e.target.value)}
-            aria-label="Priority for every selected row"
-          >
-            <option value="">Leave unchanged</option>
-            {PRIORITIES.map((p) => (
-              <option key={p.value} value={String(p.value)}>
-                {p.label}
-              </option>
-            ))}
-          </Select>
-        </Field>
+        {priorityScale !== "none" && (
+          <Field label="Priority">
+            <Select
+              value={draft.priority}
+              onChange={(e) => set("priority", e.target.value)}
+              aria-label="Priority for every selected row"
+            >
+              <option value="">Leave unchanged</option>
+              {PRIORITIES.map((p) => (
+                <option key={p.value} value={String(p.value)}>
+                  {p.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
+        )}
 
         <ErrorText error={error} />
 

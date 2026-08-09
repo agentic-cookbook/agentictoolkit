@@ -7,10 +7,12 @@ import type {
   ProjectHealth,
   ProjectStatus,
   ProjectParticipant,
+  PriorityScale,
   RelationKind,
   StatusCategory,
 } from "@agentic-toolkit/data/projects";
 import { participantLabel } from "./AssigneePicker";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * Shared view helpers for the projects panes. These were byte-identical private
@@ -206,6 +208,27 @@ export function estimateScaleOptionLabel(scale: EstimateScale): string {
  */
 export function estimateScaleIsSummable(scale: EstimateScale): boolean {
   return scale !== "none" && scale !== "tshirt";
+}
+
+/** How a RANKING setting reads to someone choosing one. A total Record over the closed set for the
+ *  same reason the estimate one is: a scale the backend adds later is a type error here rather
+ *  than an option that silently goes unnamed. The labels the values themselves carry live in
+ *  `PRIORITIES` — this names the SETTING, not the ranks. */
+const PRIORITY_SCALE_META: Record<PriorityScale, { label: string; hint: string }> = {
+  standard: { label: "Standard", hint: "None, Low, Medium, High, Urgent" },
+  none: { label: "Don't rank", hint: "no priority field on this project's cards" },
+};
+
+/** Every priority scale, in the order a chooser lists them. `standard` leads — the OPPOSITE way
+ *  round from {@link ESTIMATE_SCALES}, and for the same reason: each list opens on the state most
+ *  boards are already in, and ranking is the DB default while estimating is not. */
+export const PRIORITY_SCALES: PriorityScale[] = ["standard", "none"];
+
+/** A ranking setting's name with what picking it does, e.g. `Standard (None, Low, Medium, High,
+ *  Urgent)` — so choosing never requires opening a card to find out what it did. */
+export function priorityScaleOptionLabel(scale: PriorityScale): string {
+  const meta = PRIORITY_SCALE_META[scale];
+  return `${meta.label} (${meta.hint})`;
 }
 
 /**
@@ -464,10 +487,15 @@ function healthPhrase(
  *  that separates a prerequisite from a duplicate), a reorder, a batch of field values, and a
  *  saved-view edit that may be a rename or a re-point. Each of those reads its distinguishing fact
  *  out of `detail`, so a caller with the row in hand passes it; one without still gets a sentence,
- *  just the more general one. */
+ *  just the more general one.
+ *
+ *  `words` is the BOARD's noun for its cards. Optional, and defaulted, because a trail is also read
+ *  where no single board is in hand — and the actions that name a card are a minority of this
+ *  switch: the rest name the project's own parts, which a rename does not touch. */
 export function actionPhrase(
   action: string,
   detail?: Record<string, unknown> | null,
+  words: ItemWords = DEFAULT_ITEM_WORDS,
 ): string {
   // The link kinds, phrased from the acting card's side — the activity row hangs off the card
   // that filed the link, so "added a dependency" is read from the end that now waits.
@@ -494,9 +522,9 @@ export function actionPhrase(
     case "project.deleted":
       return "deleted the project";
     case "work_item.created":
-      return "created a work item";
+      return `created a ${words.one}`;
     case "work_item.updated":
-      return "updated a work item";
+      return `updated a ${words.one}`;
     case "work_item.status_changed":
       return "changed status";
     case "work_item.assigned":
@@ -510,9 +538,9 @@ export function actionPhrase(
     // server reads `{ after: null }` as the top of the list and `{ before: null }` as the bottom —
     // and those two are the only placements worth a sentence of their own.
     case "work_item.moved":
-      if (detail?.after === null) return "moved a work item to the top";
-      if (detail?.before === null) return "moved a work item to the bottom";
-      return "reordered a work item";
+      if (detail?.after === null) return `moved a ${words.one} to the top`;
+      if (detail?.before === null) return `moved a ${words.one} to the bottom`;
+      return `reordered a ${words.one}`;
     // One row covers a whole batch of set-or-cleared values, so the count is the only thing that
     // distinguishes them and `detail.fieldIds` is the only place it is written down.
     case "work_item.fields_updated":
@@ -529,10 +557,10 @@ export function actionPhrase(
     // plan a card counts toward, and a card off every milestone is not "in a backlog".
     case "work_item.milestone_changed":
       return detail?.to === null
-        ? "removed a work item from a milestone"
-        : "moved a work item to a milestone";
+        ? `removed a ${words.one} from a milestone`
+        : `moved a ${words.one} to a milestone`;
     case "work_item.deleted":
-      return "deleted a work item";
+      return `deleted a ${words.one}`;
     case "comment.added":
       return "commented";
     case "comment.edited":

@@ -38,6 +38,7 @@ import {
   type MilestoneDraft,
 } from "./MilestoneDetail";
 import { dateLabel, daysUntil, statusMeta } from "./helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * MILESTONES — the project's own plan, as a master/detail topic.
@@ -79,11 +80,14 @@ function MilestoneCards({
   milestone,
   items,
   statuses,
+  words,
 }: {
   milestone: Milestone;
   /** the project's cards, already loaded by the shared list cache. */
   items: WorkItem[] | null;
   statuses: ProjectStatus[];
+  /** what this board calls those cards. */
+  words: ItemWords;
 }): ReactElement {
   const cards = useMemo(
     () => (items ?? []).filter((w) => w.milestoneId === milestone.id),
@@ -95,7 +99,7 @@ function MilestoneCards({
 
   return (
     <DetailSection
-      title="Cards"
+      title={words.manyTitle}
       action={
         milestone.targetDate ? (
           <span className="text-sm text-apt-text-muted">{dateLabel(milestone.targetDate)}</span>
@@ -113,8 +117,10 @@ function MilestoneCards({
           <div className="flex flex-col gap-1.5">
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="text-apt-text">
+                {/* `words.count`, not `card${n === 1 ? "" : "s"}`: the suffix idiom is correct for
+                    exactly one noun and wrong for every board with an irregular plural. */}
                 {progress === null
-                  ? `${cards.length} card${cards.length === 1 ? "" : "s"}`
+                  ? words.count(cards.length)
                   : `${progress.done} of ${progress.total} done`}
               </span>
               {/* Canceled cards are outside the bar entirely, so the count that IS shown has to
@@ -128,13 +134,13 @@ function MilestoneCards({
             </div>
             <Progress
               value={pct}
-              aria-label={`${pct}% of the cards counting toward ${milestone.name} are done`}
+              aria-label={`${pct}% of the ${words.many} counting toward ${milestone.name} are done`}
             />
           </div>
           {cards.length === 0 ? (
             <EmptyState
               title="Nothing counts toward this milestone yet."
-              description="Point work at it from a card's Milestone field."
+              description={`Point work at it from a ${words.one}'s Milestone field.`}
             />
           ) : (
             <List>
@@ -187,11 +193,14 @@ export function MilestonesPane({
   projectId,
   title,
   leaf,
+  words = DEFAULT_ITEM_WORDS,
 }: {
   projectId: string;
   title: string;
   /** The deep-linkable selection — which point is open (`…/milestones/<id>`). */
   leaf: TopicLeaf;
+  /** What this board calls the cards that count toward a point. */
+  words?: ItemWords;
 }): ReactElement {
   const renderRecordAffordance = useRecordAffordance();
   const [newOpen, setNewOpen] = useState(false);
@@ -239,7 +248,7 @@ export function MilestonesPane({
     // are DETACHED, not deleted. "Counts toward no milestone" is an ordinary state for a card —
     // which is why this delete never refuses the way deleting a board COLUMN must.
     confirmDelete: (m) =>
-      `Delete "${m.name}"? Its cards are not deleted — they stop counting toward any milestone.`,
+      `Delete "${m.name}"? Its ${words.many} are not deleted — they stop counting toward any milestone.`,
     refresh: reload,
     createLabel: "New milestone",
   });
@@ -258,8 +267,7 @@ export function MilestonesPane({
     leaf,
     emptyLabel: milestones === null ? "Loading…" : "No milestones yet.",
     onNew: () => setNewOpen(true),
-    overviewHelp:
-      "A point in this project's plan — what has to be true, and when. Cards count toward it.",
+    overviewHelp: `A point in this project's plan — what has to be true, and when. ${words.manyCap} count toward it.`,
   });
 
   const selected = form.selected;
@@ -294,6 +302,7 @@ export function MilestonesPane({
                 milestone={selected}
                 items={workItems}
                 statuses={statusRows ?? []}
+                words={words}
               />
             )}
           </div>

@@ -11,11 +11,13 @@ import { ListChooser } from "@agentic-toolkit/ui/components/list-chooser";
 import type {
   Iteration,
   Milestone,
+  PriorityScale,
   ProjectParticipant,
   ProjectStatus,
 } from "@agentic-toolkit/data/projects";
 import { participantLabel, toOptionValue } from "./AssigneePicker";
 import { PRIORITIES } from "./WorkItemEditor";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 import {
   EMPTY_FILTER,
   NO_ITERATION,
@@ -55,6 +57,8 @@ export function WorkItemFilterBar({
   iterations,
   milestones,
   labelOptions,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
 }: {
   filter: WorkItemFilter;
   onChange: (next: WorkItemFilter) => void;
@@ -66,6 +70,13 @@ export function WorkItemFilterBar({
   milestones: Milestone[];
   /** The project's label vocabulary — the same suggestions the editor offers. */
   labelOptions: string[];
+  /** Whether this board ranks at all. `"none"` drops the priority axis for the same reason an
+   *  empty milestone list drops that one: every card answers the same, so the control cannot
+   *  narrow. Defaults to `"standard"` so the axis is present while the project is still loading —
+   *  the common board ranks, and a control that blinks in is worse than one that blinks out. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
 }): ReactElement {
   const set = <K extends keyof WorkItemFilter>(key: K, value: WorkItemFilter[K]): void =>
     onChange({ ...filter, [key]: value });
@@ -88,6 +99,25 @@ export function WorkItemFilterBar({
     ],
     [participants],
   );
+
+  // The priority axis, or null on a board that does not rank — dropped for the same reason the
+  // milestone axis below is: on an unranked board every card carries the same rank, so the
+  // control cannot narrow anything. And kept anyway while the FILTER names one, for that axis's
+  // second reason too: a saved view written before the board turned ranking off still narrows
+  // the list, and hiding the control would do it with nothing on screen to say so or undo it.
+  //
+  // Not memoised, and deliberately, for the reason spelled out under the milestone axis.
+  const priorityAxis =
+    priorityScale !== "none" || filter.priority !== ""
+      ? {
+          name: "priority",
+          label: "Filter by priority",
+          value: filter.priority,
+          options: PRIORITIES.map((p) => ({ value: String(p.value), label: p.label })),
+          allLabel: "Any priority",
+          onChange: (v: string) => set("priority", v),
+        }
+      : null;
 
   // The milestone axis's answers, or null when the board has no milestone axis to offer.
   //
@@ -139,12 +169,12 @@ export function WorkItemFilterBar({
   return (
     <div className="flex flex-col gap-2">
       <SearchFilterBar
-        aria-label="Filter work items"
+        aria-label={`Filter ${words.many}`}
         orientation="inline"
         search={{
           value: filter.text,
           onChange: (text) => set("text", text),
-          label: "Search work items",
+          label: `Search ${words.many}`,
           placeholder: "Search by key, title or description…",
         }}
         filters={[
@@ -156,14 +186,7 @@ export function WorkItemFilterBar({
             allLabel: "All statuses",
             onChange: (v) => set("statusId", v),
           },
-          {
-            name: "priority",
-            label: "Filter by priority",
-            value: filter.priority,
-            options: PRIORITIES.map((p) => ({ value: String(p.value), label: p.label })),
-            allLabel: "Any priority",
-            onChange: (v) => set("priority", v),
-          },
+          ...(priorityAxis ? [priorityAxis] : []),
           {
             name: "iteration",
             label: "Filter by iteration",
@@ -216,7 +239,7 @@ export function WorkItemFilterBar({
         <div className="flex flex-wrap items-start gap-4">
           <Field
             label="Labels"
-            hint="An item must carry every label listed."
+            hint={`A ${words.one} must carry every label listed.`}
             className="min-w-64"
           >
             <EntityChooser
@@ -243,7 +266,7 @@ export function WorkItemFilterBar({
           </Field>
           <Field
             label="Due on or before"
-            hint="Items with no due date are outside any window."
+            hint={`${words.manyCap} with no due date are outside any window.`}
             className="w-44"
           >
             <Input

@@ -19,6 +19,7 @@ import {
 } from "@agentic-toolkit/data/projects";
 import { ItemKey } from "./ItemKey";
 import { RELATION_CHOICES, itemLabel, relationLabel, statusMeta } from "./helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * HOW THIS CARD IS LINKED TO OTHERS — the relations section of the work-item detail pane.
@@ -88,11 +89,14 @@ export function WorkItemRelations({
   item,
   statuses,
   workItems,
+  words = DEFAULT_ITEM_WORDS,
 }: {
   item: WorkItem;
   statuses: ProjectStatus[];
   /** The project's items — the candidates a link can be made to. */
   workItems: WorkItem[];
+  /** What this board calls its cards; the chooser below picks one of THIS board's. */
+  words?: ItemWords;
 }): ReactElement {
   const [kind, setKind] = useState<RelationKind>("depends_on");
   const [pick, setPick] = useState<string | null>(null);
@@ -214,7 +218,7 @@ export function WorkItemRelations({
             ))}
           </Select>
         </Field>
-        <Field label="Work item" className="min-w-48 flex-1">
+        <Field label={words.oneCap} className="min-w-48 flex-1">
           <ListChooser
             items={candidates}
             value={pick}
@@ -228,8 +232,8 @@ export function WorkItemRelations({
             // The accessible name matches the Field's visible caption on purpose — the
             // trigger's aria-label overrides the wrapping Label, so letting the two say
             // different things is how a control ends up unaddressable by its own caption.
-            ariaLabel="Work item"
-            inputLabel="Filter work items"
+            ariaLabel={words.oneCap}
+            inputLabel={`Filter ${words.many}`}
             triggerPlaceholder="Choose an item…"
             placeholder="Filter…"
             emptyLabel="Nothing left to link"

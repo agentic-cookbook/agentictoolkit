@@ -15,6 +15,11 @@ export type { WorkItemMoveTarget } from "./wire";
 // both are closed sets a renderer switches on exhaustively — which numbers a picker offers, and
 // how a box's badge reads — and a signature that takes one rarely already holds a project.
 export type { EstimateScale, IterationState } from "./wire";
+// Whether a board ranks its work, and the bounds a rank is written within. Public for the same
+// reason the scales above are: a control decides whether to render itself from the scale alone,
+// and a form clamping a rank needs the range without holding the project that spells it.
+export type { PriorityScale } from "./wire";
+export { WORK_ITEM_PRIORITY_MIN, WORK_ITEM_PRIORITY_MAX } from "./wire";
 // A project's reported health, and the per-category tally a milestone reports its progress as.
 // Public for the same reason: both are closed shapes a renderer switches on or indexes into, and
 // a signature that takes one (a badge's tone, a progress bar's props) rarely already holds the

@@ -31,12 +31,15 @@ import {
   projectActivityApi,
   projectProgramsApi,
   validateKeyPrefix,
+  DEFAULT_ITEM_NOUN,
+  DEFAULT_ITEM_NOUN_PLURAL,
   type Program,
   type Project,
   type ProjectActivity,
   type ProjectArtifact,
   type ProjectParticipant,
   type EstimateScale,
+  type PriorityScale,
   type ProjectStatus,
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
@@ -56,8 +59,11 @@ import {
   todayIndex,
   ESTIMATE_SCALES,
   estimateScaleOptionLabel,
+  PRIORITY_SCALES,
+  priorityScaleOptionLabel,
   type BadgeVariant,
 } from "./helpers";
+import { itemWordsOf } from "./vocabulary";
 
 /**
  * WHAT THE PROJECT IS — the Overview topic.
@@ -266,6 +272,12 @@ export function ProjectOverviewPane({
   const [color, setColor] = useState("");
   const [keyPrefix, setKeyPrefix] = useState("");
   const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
+  const [priorityScale, setPriorityScale] = useState<PriorityScale>("standard");
+  // What this board CALLS its cards. Two fields rather than one plus a suffix: English does not
+  // pluralise reliably enough to guess ("story" → "storys"), and a board renaming its items is
+  // exactly the moment a guess would be visible. They travel together — see the patch below.
+  const [itemNoun, setItemNoun] = useState(DEFAULT_ITEM_NOUN);
+  const [itemNounPlural, setItemNounPlural] = useState(DEFAULT_ITEM_NOUN_PLURAL);
   // The PLAN half of the same draft. Flat scalars like the rest of it: the two dates are the
   // native inputs' own "" -or- YYYY-MM-DD strings, the lead is the assignee picker's composite
   // `${kind}:${id}` codec, and the program is a bare id. Every one of the four is CLEARABLE, which
@@ -386,6 +398,11 @@ export function ProjectOverviewPane({
     setColor(p.color);
     setKeyPrefix(p.keyPrefix);
     setEstimateScale(p.estimateScale);
+    setPriorityScale(p.priorityScale);
+    // Already defaulted by the mapper, so the draft never holds "" — an empty box here would read
+    // as "this board has no word for its cards", which is not a state the record can be in.
+    setItemNoun(p.itemNoun);
+    setItemNounPlural(p.itemNounPlural);
     setStartDate(p.startDate ?? "");
     setTargetDate(p.targetDate ?? "");
     // The two halves of a lead are always both set or both null — the backend refuses half a
@@ -424,6 +441,9 @@ export function ProjectOverviewPane({
       color?: string;
       keyPrefix?: string;
       estimateScale?: EstimateScale;
+      priorityScale?: PriorityScale;
+      itemNoun?: string;
+      itemNounPlural?: string;
       startDate?: string | null;
       targetDate?: string | null;
       leadKind?: Project["leadKind"];
@@ -435,6 +455,16 @@ export function ProjectOverviewPane({
     if (status !== project.status) next.status = status;
     if (color.trim() !== project.color) next.color = color.trim();
     if (estimateScale !== project.estimateScale) next.estimateScale = estimateScale;
+    if (priorityScale !== project.priorityScale) next.priorityScale = priorityScale;
+    // The two nouns travel as a PAIR, always both or neither — the backend refuses one without the
+    // other, exactly as it refuses half a lead. So editing only the singular still sends both, and
+    // the untouched half arrives unchanged rather than as a 400 about a field nobody touched.
+    const nextNoun = itemNoun.trim();
+    const nextNounPlural = itemNounPlural.trim();
+    if (nextNoun !== project.itemNoun || nextNounPlural !== project.itemNounPlural) {
+      next.itemNoun = nextNoun;
+      next.itemNounPlural = nextNounPlural;
+    }
     // Upper-cased on the way out, because `adh` and `ADH` are the same claim and the backend
     // stores only the upper form — sending the raw text would make the field look dirty forever.
     const nextPrefix = keyPrefix.trim().toUpperCase();
@@ -468,6 +498,9 @@ export function ProjectOverviewPane({
     color,
     keyPrefix,
     estimateScale,
+    priorityScale,
+    itemNoun,
+    itemNounPlural,
     startDate,
     targetDate,
     lead,
@@ -487,8 +520,25 @@ export function ProjectOverviewPane({
       ? "The target date is before the start date."
       : null;
 
+  // Both words or neither, and neither of them blank. Like the key prefix, it complains only once
+  // the pair has been TOUCHED into the patch — a board that has never been renamed must not open
+  // its settings already showing an error. The pair is checked together because the patch sends it
+  // together: an empty half would be a 400 the reader could have been spared.
+  const nounsError =
+    patch.itemNoun === undefined
+      ? null
+      : !patch.itemNoun || !patch.itemNounPlural
+        ? "A singular and a plural are both required."
+        : null;
+
   const dirty = Object.keys(patch).length > 0;
-  const canSave = dirty && name.trim().length > 0 && !keyPrefixError && !datesError && !saving;
+  const canSave =
+    dirty && name.trim().length > 0 && !keyPrefixError && !datesError && !nounsError && !saving;
+
+  // The activity trail's word, read from the SAVED record rather than the draft: typing a new
+  // noun into the settings form must not rewrite the history above it. It changes when the save
+  // lands, which is when the rename is true.
+  const words = itemWordsOf(project);
 
   async function save() {
     if (!project || !dirty) return;
@@ -500,6 +550,10 @@ export function ProjectOverviewPane({
     // and nothing stops a future keyboard path from calling straight through.
     if (datesError) {
       setSaveError(datesError);
+      return;
+    }
+    if (nounsError) {
+      setSaveError(nounsError);
       return;
     }
     setSaving(true);
@@ -664,8 +718,8 @@ export function ProjectOverviewPane({
                 ]}
                 footnote={
                   work.total === 0
-                    ? "no work items yet"
-                    : `${work.total} item${work.total === 1 ? "" : "s"} · ${Math.round(
+                    ? `no ${words.many} yet`
+                    : `${words.count(work.total)} · ${Math.round(
                         (work.done / work.total) * 100,
                       )}% done`
                 }
@@ -711,9 +765,9 @@ export function ProjectOverviewPane({
                         // A comment's own words say more than "commented" does, so when there
                         // is a body it IS the line — same precedence the full feed uses.
                         label={`${actorText(row)} ${
-                          commentBody(row) ?? actionPhrase(row.action, row.detail)
+                          commentBody(row) ?? actionPhrase(row.action, row.detail, words)
                         }`}
-                        labelTitle={`${actorText(row)} ${actionPhrase(row.action, row.detail)}`}
+                        labelTitle={`${actorText(row)} ${actionPhrase(row.action, row.detail, words)}`}
                         trailing={
                           <time dateTime={row.createdAt} className="text-apt-text-dim">
                             {relativeTime(row.createdAt)}
@@ -896,7 +950,7 @@ export function ProjectOverviewPane({
                     the row it sits in. */}
                 <Field
                   label="Key prefix"
-                  hint="Names this project's work items — ADH gives ADH-1, ADH-2, … Renaming it renames every key."
+                  hint={`Names this project's ${words.many} — ADH gives ADH-1, ADH-2, … Renaming it renames every key.`}
                   error={keyPrefixError ?? undefined}
                 >
                   <Input
@@ -932,6 +986,68 @@ export function ProjectOverviewPane({
                     ))}
                   </Select>
                 </Field>
+                {/* The same switch for RANKING, and it behaves the same way: turning it off hides
+                    the priority field, the column, the board badge and the filter, and rewrites
+                    nothing. A rank already set stays on the card and comes back untouched if the
+                    board turns ranking on again — which is what makes this a setting rather than a
+                    migration. It differs from the estimate one in which end is the default:
+                    boards rank unless told otherwise, and do not estimate unless told to. */}
+                <Field
+                  label="Priority scale"
+                  hint="Whether this project's cards carry a priority. Turning it off leaves ranks already set alone."
+                >
+                  <Select
+                    value={priorityScale}
+                    onChange={(e) => {
+                      setSaveError(null);
+                      setPriorityScale(e.target.value as PriorityScale);
+                    }}
+                  >
+                    {PRIORITY_SCALES.map((s) => (
+                      <option key={s} value={s}>
+                        {priorityScaleOptionLabel(s)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {/* What this board CALLS its cards — the word every surface in the project reads,
+                    from the rail row down to a bulk dialog's "Update 3 …". Two boxes, not one plus
+                    a rule: English does not pluralise reliably enough to guess, and "storys" would
+                    be visible on every screen the rename was made to fix. The pair saves together
+                    (see the patch), so the plural is never left describing the previous word. */}
+                <div className="flex flex-wrap gap-4">
+                  <Field
+                    label="Item name"
+                    className="min-w-44 flex-1"
+                    hint="What one card is called here — story, task, recipe."
+                    error={nounsError ?? undefined}
+                  >
+                    <Input
+                      value={itemNoun}
+                      onChange={(e) => {
+                        setSaveError(null);
+                        setItemNoun(e.target.value);
+                      }}
+                      maxLength={32}
+                      placeholder={DEFAULT_ITEM_NOUN}
+                    />
+                  </Field>
+                  <Field
+                    label="Item name (plural)"
+                    className="min-w-44 flex-1"
+                    hint="And what several are called."
+                  >
+                    <Input
+                      value={itemNounPlural}
+                      onChange={(e) => {
+                        setSaveError(null);
+                        setItemNounPlural(e.target.value);
+                      }}
+                      maxLength={32}
+                      placeholder={DEFAULT_ITEM_NOUN_PLURAL}
+                    />
+                  </Field>
+                </div>
                 {/* ── The plan ───────────────────────────────────────────
                     Four fields that say when this board runs, who answers for it, and what it
                     belongs to. They live in the SAME draft and the same Save as the rest — a plan

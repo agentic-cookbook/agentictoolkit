@@ -19,6 +19,10 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
   projectWorkItemsApi: {
     relations: { list: vi.fn(), add: vi.fn(), remove: vi.fn() },
   },
+  // Plain data, but `./vocabulary` imports them from this module — a whole-module mock that omits
+  // them breaks the import chain, not just the value.
+  DEFAULT_ITEM_NOUN: "work item",
+  DEFAULT_ITEM_NOUN_PLURAL: "work items",
 }));
 
 import { WorkItemRelations } from "./WorkItemRelations";

@@ -4,6 +4,7 @@ import { useCallback, type ReactElement } from "react";
 import { projectActivityApi } from "@agentic-toolkit/data/projects";
 import { FeatureTitle, useRecordAffordance } from "@agentic-toolkit/resource";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * The Activity topic for the active project (T6): the project's audit trail +
@@ -15,9 +16,12 @@ import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 export function ProjectActivityPane({
   projectId,
   title,
+  words = DEFAULT_ITEM_WORDS,
 }: {
   projectId: string;
   title: string;
+  /** What this board calls its cards — the trail's verbs name them ("created a story"). */
+  words?: ItemWords;
 }): ReactElement {
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.
@@ -42,7 +46,7 @@ export function ProjectActivityPane({
         })}
       />
       <section className="flex min-w-0 flex-1 flex-col overflow-y-auto px-6 py-4">
-        <ActivityFeed load={load} />
+        <ActivityFeed load={load} words={words} />
       </section>
     </div>
   );

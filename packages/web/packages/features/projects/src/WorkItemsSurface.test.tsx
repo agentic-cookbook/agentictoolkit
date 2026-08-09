@@ -129,7 +129,8 @@ const TODO_COL = status({ id: "s1", key: "todo", label: "To do", category: "todo
 const DOING = status({ id: "s2", key: "doing", label: "In progress", category: "in_progress", position: 1 });
 const DONE = status({ id: "s3", key: "done", label: "Done", category: "done", position: 2 });
 
-/** The project's own record. Only `estimateScale` is read here — the rest is what a Project is. */
+/** The project's own record. Only the board SETTINGS are read here — the rest is what a Project
+ *  is. All three are at their defaults, which is also the shape `toProject` guarantees. */
 const PROJECT: Project = {
   id: "p1",
   name: "Website",
@@ -140,6 +141,9 @@ const PROJECT: Project = {
   ecosystemId: "eco-1",
   archivedAt: null,
   estimateScale: "none",
+  priorityScale: "standard",
+  itemNoun: "work item",
+  itemNounPlural: "work items",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
 };

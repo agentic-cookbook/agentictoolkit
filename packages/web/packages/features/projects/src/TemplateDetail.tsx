@@ -15,14 +15,24 @@ import { DetailSection } from "@agentic-toolkit/resource";
 import {
   projectBodyOf,
   workItemBodyOf,
+  DEFAULT_ITEM_NOUN,
+  DEFAULT_ITEM_NOUN_PLURAL,
+  WORK_ITEM_PRIORITY_MAX,
+  WORK_ITEM_PRIORITY_MIN,
   type EstimateScale,
+  type PriorityScale,
   type StatusCategory,
   type ProjectTemplateBody,
   type Template,
   type TemplateKind,
   type WorkItemTemplateBody,
 } from "@agentic-toolkit/data/projects";
-import { ESTIMATE_SCALES, estimateScaleOptionLabel } from "./helpers";
+import {
+  ESTIMATE_SCALES,
+  estimateScaleOptionLabel,
+  PRIORITY_SCALES,
+  priorityScaleOptionLabel,
+} from "./helpers";
 
 /**
  * The controlled form for ONE template — its identity, and the SHAPE it stamps out.
@@ -84,6 +94,11 @@ export interface TemplateDraft {
   boardDescription: string;
   color: string;
   estimateScale: EstimateScale;
+  priorityScale: PriorityScale;
+  /** what the boards this stamps out call their cards. Held as two strings and saved as a PAIR —
+   *  "" for both means the template says nothing and the boards it makes use the defaults. */
+  itemNoun: string;
+  itemNounPlural: string;
   statuses: TemplateStatusDraft[];
   milestones: TemplateMilestoneDraft[];
 }
@@ -121,6 +136,12 @@ export function templateBlank(): TemplateDraft {
     boardDescription: "",
     color: DEFAULT_COLOR,
     estimateScale: "none",
+    priorityScale: "standard",
+    // Blank, NOT the default words: "" is the template saying nothing about the noun, which is a
+    // different claim from stamping "work item" onto every board it makes — and it is the one that
+    // keeps following the platform's default if that ever moves.
+    itemNoun: "",
+    itemNounPlural: "",
     // A board template that names NO columns opens its boards on the platform's own defaults
     // (To do / In progress / Done), which is what a blank list means here — not "a board with no
     // columns", which is not a thing that can exist.
@@ -162,6 +183,9 @@ export function templateToInput(t: Template): TemplateDraft {
           boardDescription: board.description ?? "",
           color: board.color || DEFAULT_COLOR,
           estimateScale: board.estimateScale ?? "none",
+          priorityScale: board.priorityScale ?? "standard",
+          itemNoun: board.itemNoun ?? "",
+          itemNounPlural: board.itemNounPlural ?? "",
           statuses: (board.statuses ?? []).map((s) => ({ ...s })),
           milestones: (board.milestones ?? []).map((m) => ({
             name: m.name,
@@ -193,6 +217,9 @@ export function templateNormalize(d: TemplateDraft): TemplateDraft {
     boardDescription: d.boardDescription.trim(),
     color: d.color.trim(),
     estimateScale: d.estimateScale,
+    priorityScale: d.priorityScale,
+    itemNoun: d.itemNoun.trim(),
+    itemNounPlural: d.itemNounPlural.trim(),
     statuses: d.statuses.map((s) => ({
       key: s.key.trim(),
       label: s.label.trim(),
@@ -224,8 +251,13 @@ function intOrNull(text: string, min: number): number | null {
 
 function cardProblem(c: TemplateCardDraft, where: string): string | null {
   if (!c.title) return `${where} needs a title.`;
-  if (c.priority && intOrNull(c.priority, 0) === null) {
-    return `${where}: priority must be a whole number.`;
+  // The LADDER's rungs, not merely "a whole number": the backend bounds a template's card the same
+  // way it bounds a real one, precisely so a template cannot store a rank that 500s the day someone
+  // instantiates it. Restating the bound here is what turns that into a sentence before the round
+  // trip rather than a rejection after it.
+  const rank = c.priority ? intOrNull(c.priority, WORK_ITEM_PRIORITY_MIN) : null;
+  if (c.priority && (rank === null || rank > WORK_ITEM_PRIORITY_MAX)) {
+    return `${where}: priority must be a whole number from ${WORK_ITEM_PRIORITY_MIN} to ${WORK_ITEM_PRIORITY_MAX}.`;
   }
   if (c.estimate && intOrNull(c.estimate, 0) === null) {
     return `${where}: estimate must be a whole number, zero or more.`;
@@ -270,6 +302,16 @@ export function templateValidate(
   }
 
   if (d.color.length > 20) return "Color is too long (20 characters at most).";
+  // Both words or neither — the backend's own rule, and the one place a template can hold a
+  // half-answer the boards it makes would read as "recipe"/"work items". Caught here rather than
+  // dropped quietly at `templateToBody`, because a silently discarded word is a rename that looks
+  // saved and is not.
+  if (Boolean(d.itemNoun) !== Boolean(d.itemNounPlural)) {
+    return "Give both the singular and plural item name, or neither.";
+  }
+  if (d.itemNoun.length > 32 || d.itemNounPlural.length > 32) {
+    return "An item name is too long (32 characters at most).";
+  }
   if (d.statuses.length > MAX_STATUSES) {
     return `A board may open with at most ${MAX_STATUSES} columns.`;
   }
@@ -293,7 +335,7 @@ export function templateValidate(
 }
 
 function cardToWire(c: TemplateCardDraft) {
-  const priority = c.priority ? intOrNull(c.priority, 0) : null;
+  const priority = c.priority ? intOrNull(c.priority, WORK_ITEM_PRIORITY_MIN) : null;
   const estimate = c.estimate ? intOrNull(c.estimate, 0) : null;
   return {
     title: c.title,
@@ -325,7 +367,17 @@ export function templateToBody(
   return {
     ...(d.boardDescription ? { description: d.boardDescription } : {}),
     ...(d.color ? { color: d.color } : {}),
+    // Each scale is omitted at ITS OWN default — the value the boards would take anyway — so a
+    // template only ever carries a setting it actually has an opinion about. The two defaults sit
+    // at opposite ends (boards rank unless told not to, and do not estimate unless told to), which
+    // is why these two lines do not read the same way.
     ...(d.estimateScale === "none" ? {} : { estimateScale: d.estimateScale }),
+    ...(d.priorityScale === "standard" ? {} : { priorityScale: d.priorityScale }),
+    // BOTH or NEITHER: the backend 400s a half, because a body is read against the defaults and a
+    // lone singular would mint "recipe"/"work items" on every board this ever makes.
+    ...(d.itemNoun && d.itemNounPlural
+      ? { itemNoun: d.itemNoun, itemNounPlural: d.itemNounPlural }
+      : {}),
     ...(d.statuses.length ? { statuses: d.statuses } : {}),
     ...(d.milestones.length
       ? {
@@ -391,7 +443,14 @@ function CardFields({
         />
       </Field>
       <div className="flex flex-wrap gap-4">
-        <Field label="Priority" className="min-w-32 flex-1" hint="Optional.">
+        {/* The rank is a LADDER POSITION, not a free number, so the hint names its ends — and a
+            board that turns ranking off simply ignores what a template stamped, the same way it
+            ignores a rank a card already carried. */}
+        <Field
+          label="Priority"
+          className="min-w-32 flex-1"
+          hint={`Optional — ${WORK_ITEM_PRIORITY_MIN} (none) to ${WORK_ITEM_PRIORITY_MAX} (urgent).`}
+        >
           <Input
             inputMode="numeric"
             value={card.priority}
@@ -593,6 +652,51 @@ export function TemplateDetail({
               ))}
             </Select>
           </Field>
+          <Field
+            label="Priority scale"
+            hint="Whether cards on these boards carry a priority."
+          >
+            <Select
+              value={draft.priorityScale}
+              onChange={(e) => set("priorityScale", e.target.value as PriorityScale)}
+            >
+              {PRIORITY_SCALES.map((s) => (
+                <option key={s} value={s}>
+                  {priorityScaleOptionLabel(s)}
+                </option>
+              ))}
+            </Select>
+          </Field>
+          {/* Both boxes or neither: a template that names only the singular would stamp out boards
+              reading "recipe" and "work items", which is worse than one that renames nothing. Left
+              empty the boards it makes use the platform's own words — the template simply has no
+              opinion, which is a different claim from stamping the default onto every board. */}
+          <div className="flex flex-wrap gap-4">
+            <Field
+              label="Item name"
+              className="min-w-44 flex-1"
+              hint="Optional — what one card is called on these boards."
+            >
+              <Input
+                value={draft.itemNoun}
+                onChange={(e) => set("itemNoun", e.target.value)}
+                maxLength={32}
+                placeholder={DEFAULT_ITEM_NOUN}
+              />
+            </Field>
+            <Field
+              label="Item name (plural)"
+              className="min-w-44 flex-1"
+              hint="Required if the singular is given."
+            >
+              <Input
+                value={draft.itemNounPlural}
+                onChange={(e) => set("itemNounPlural", e.target.value)}
+                maxLength={32}
+                placeholder={DEFAULT_ITEM_NOUN_PLURAL}
+              />
+            </Field>
+          </div>
         </FieldGroup>
 
         {/* The array IS the column order, which is why there are no positions to disagree with

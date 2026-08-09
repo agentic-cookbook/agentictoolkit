@@ -8,11 +8,13 @@ import {
   type EstimateScale,
   type Iteration,
   type Milestone,
+  type PriorityScale,
   type ProjectParticipant,
   type ProjectStatus,
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "./WorkItemEditor";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 import { ItemKey } from "./ItemKey";
 import { WorkItemComments } from "./WorkItemComments";
 import { WorkItemRelations } from "./WorkItemRelations";
@@ -64,6 +66,8 @@ export function WorkItemDetail({
   iterations,
   milestones,
   estimateScale,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
 }: {
   item: WorkItem;
   statuses: ProjectStatus[];
@@ -78,6 +82,12 @@ export function WorkItemDetail({
   /** The owning project's scale, which is what an estimate's digits MEAN (`2` is "M" on a
    *  t-shirt board). No scale, no row — see below. */
   estimateScale: EstimateScale;
+  /** The owning project's priority scale. `none` drops the row — with the same exception the
+   *  Milestone row makes for an orphan: a card that was RANKED before the board turned ranking
+   *  off keeps its row, because a value nothing on screen mentions cannot be corrected. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards — the relations picker names them. */
+  words?: ItemWords;
 }): ReactElement {
   const status = statusMeta(item.statusId, statuses);
   const priority = priorityMeta(item.priority);
@@ -120,9 +130,11 @@ export function WorkItemDetail({
         <Badge variant={status.variant}>{status.label}</Badge>
       </Row>
       <Row label="Assignee">{assigneeLabel(item, participants)}</Row>
-      <Row label="Priority">
-        <Badge variant={priority.variant}>{priority.label}</Badge>
-      </Row>
+      {priorityScale !== "none" || item.priority !== 0 ? (
+        <Row label="Priority">
+          <Badge variant={priority.variant}>{priority.label}</Badge>
+        </Row>
+      ) : null}
       {/* "Backlog" rather than a dash: a card with no iteration is not missing a value, it is in
           the one place the board puts work nobody has committed to yet. An id that resolves to
           nothing falls back to the id, the same way Parent does — better an opaque reference than
@@ -198,7 +210,7 @@ export function WorkItemDetail({
           cards and one is a conversation, each with its own controls. Comments come LAST because
           they grow without bound — the card's own facts must not be pushed off the top of the
           pane by a long thread. */}
-      <WorkItemRelations item={item} statuses={statuses} workItems={workItems} />
+      <WorkItemRelations item={item} statuses={statuses} workItems={workItems} words={words} />
       <WorkItemComments workItemId={item.id} />
     </div>
   );

@@ -24,20 +24,34 @@ import { AuthHttpError } from "@agentic-toolkit/auth/client";
 // The Overview summarises four lists it does not own, so their clients are stubbed alongside the
 // two it does. Each defaults to empty in beforeEach — a test that cares about a figure says so.
 // Only the CLIENTS are stubbed: `validateKeyPrefix` is a pure rule the module also exports, and
-// the point of the field's inline error is that the real rule decides it.
-vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
-  validateKeyPrefix: (await importOriginal<typeof import("@agentic-toolkit/data/projects")>())
-    .validateKeyPrefix,
-  projectsApi: {
-    get: vi.fn(),
-    update: vi.fn(),
-    statuses: { list: vi.fn() },
-    participants: { list: vi.fn(), add: vi.fn(), remove: vi.fn() },
-  },
-  projectWorkItemsApi: { listForProject: vi.fn() },
-  projectArtifactsApi: { list: vi.fn() },
-  projectActivityApi: { projectActivity: vi.fn() },
-}));
+// the point of the field's inline error is that the real rule decides it. The two default nouns
+// come through for the same reason — they are data, `./vocabulary` reads them from here, and a
+// mock that omits them breaks the import chain rather than the value.
+vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@agentic-toolkit/data/projects")>();
+  return {
+    validateKeyPrefix: actual.validateKeyPrefix,
+    DEFAULT_ITEM_NOUN: actual.DEFAULT_ITEM_NOUN,
+    DEFAULT_ITEM_NOUN_PLURAL: actual.DEFAULT_ITEM_NOUN_PLURAL,
+    projectsApi: {
+      get: vi.fn(),
+      update: vi.fn(),
+      statuses: { list: vi.fn() },
+      participants: { list: vi.fn(), add: vi.fn(), remove: vi.fn() },
+    },
+    projectWorkItemsApi: { listForProject: vi.fn() },
+    projectArtifactsApi: { list: vi.fn() },
+    projectActivityApi: { projectActivity: vi.fn() },
+    // The programs read behind the membership picker. Listed because the pane imports it: a
+    // whole-module mock missing one export fails at IMPORT, so the pane never renders and every
+    // assertion in the file reads as a missing element rather than a missing stub.
+    projectProgramsApi: { list: vi.fn() },
+    // Same reason, one level down: the overview embeds ProjectStatusUpdates, whose list read runs
+    // on mount. Missing, it throws inside that child's render rather than at this file's import —
+    // which shows up as the SUMMARY assertions failing, nowhere near the health log.
+    projectStatusUpdatesApi: { list: vi.fn(), create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  };
+});
 
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import {
@@ -45,6 +59,8 @@ import {
   projectWorkItemsApi,
   projectArtifactsApi,
   projectActivityApi,
+  projectProgramsApi,
+  projectStatusUpdatesApi,
   type Project,
   type ProjectActivity,
   type ProjectArtifact,
@@ -62,6 +78,8 @@ const remove = vi.mocked(projectsApi.participants.remove);
 const listForProject = vi.mocked(projectWorkItemsApi.listForProject);
 const artifactsList = vi.mocked(projectArtifactsApi.list);
 const projectActivity = vi.mocked(projectActivityApi.projectActivity);
+const programsList = vi.mocked(projectProgramsApi.list);
+const statusUpdatesList = vi.mocked(projectStatusUpdatesApi.list);
 
 const PROJECT: Project = {
   id: "p1",
@@ -75,6 +93,13 @@ const PROJECT: Project = {
   archivedAt: null,
   // The DB default: a project does not estimate until someone says it does.
   estimateScale: "none",
+  // The other two board settings, both at THEIR defaults — and both always present on a Project,
+  // because `toProject` fills them in. A fixture without them is a shape the client never hands
+  // out, and the pane that seeds its form from one would read `undefined` where a string is
+  // guaranteed.
+  priorityScale: "standard",
+  itemNoun: "work item",
+  itemNounPlural: "work items",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
 };
@@ -162,11 +187,13 @@ beforeEach(() => {
   );
   add.mockResolvedValue(structuredClone(PARTICIPANT));
   remove.mockResolvedValue(undefined);
-  // The four summary reads default to "nothing here", so a test only stubs the list it is about.
+  // The summary reads default to "nothing here", so a test only stubs the list it is about.
   statusesList.mockResolvedValue([]);
   listForProject.mockResolvedValue([]);
   artifactsList.mockResolvedValue([]);
   projectActivity.mockResolvedValue({ rows: [], nextBefore: null });
+  programsList.mockResolvedValue([]);
+  statusUpdatesList.mockResolvedValue([]);
 });
 
 /** Open the settings Disclosure — the pane starts with it CLOSED (a project's front door is not
@@ -404,6 +431,125 @@ describe("ProjectOverviewPane", () => {
   });
 });
 
+/* ── The two board settings the settings form owns ─────────────────────────── */
+
+// Ranking and the item nouns. Both are edited here and read EVERYWHERE else, which is why the
+// save shape matters more than the controls do: the nouns travel as a pair the backend refuses to
+// take half of, and the scale is a display switch that must never rewrite a stored rank.
+describe("ProjectOverviewPane board settings", () => {
+  // Field wraps its control in the <Label>, so a control's accessible name is the caption PLUS
+  // the hint (or the error) below it — which is why the key-prefix tests above anchor with `^`
+  // rather than matching exactly. The singular needs a lookahead on top of that, since "Item name"
+  // is a prefix of "Item name (plural)" and a bare anchor would match both.
+  const nounField = () => screen.getByLabelText(/^Item name(?! \(plural\))/) as HTMLInputElement;
+  const pluralField = () => screen.getByLabelText(/^Item name \(plural\)/) as HTMLInputElement;
+  const scaleField = async () =>
+    (await screen.findByLabelText(/^Priority scale/)) as HTMLSelectElement;
+
+  it("seeds both controls from the SAVED record", async () => {
+    get.mockResolvedValue({
+      ...structuredClone(PROJECT),
+      priorityScale: "none",
+      itemNoun: "story",
+      itemNounPlural: "stories",
+    });
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    expect(await scaleField()).toHaveProperty("value", "none");
+    expect(nounField()).toHaveProperty("value", "story");
+    expect(pluralField()).toHaveProperty("value", "stories");
+  });
+
+  it("saves the ranking switch on its own", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    fireEvent.change(await scaleField(), { target: { value: "none" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // ONLY the scale: a display switch must not carry the nouns — or anything else — along with it.
+    await waitFor(() => expect(update).toHaveBeenCalledWith("p1", { priorityScale: "none" }));
+  });
+
+  it("sends BOTH nouns when only the singular was edited", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await scaleField(); // the settings form has rendered
+    fireEvent.change(nounField(), { target: { value: "story" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    // The backend refuses one without the other, exactly as it refuses half a lead. So the
+    // untouched half rides along unchanged rather than coming back as a 400 about a field nobody
+    // touched.
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith("p1", {
+        itemNoun: "story",
+        itemNounPlural: "work items",
+      }),
+    );
+  });
+
+  it("refuses to save a half-blank pair, and says which rule was broken", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await scaleField(); // the settings form has rendered
+    fireEvent.change(pluralField(), { target: { value: "" } });
+
+    expect(screen.getByText("A singular and a plural are both required.")).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Save changes" })).toHaveProperty("disabled", true);
+    // Nothing left for the server to reject.
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("does not open ALREADY complaining about a board that was never renamed", async () => {
+    // The same rule the key prefix follows: the error appears once the field is TOUCHED into the
+    // patch, not because a default happens to be present.
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await scaleField(); // the settings form has rendered
+    expect(nounField()).toHaveProperty("value", "work item");
+    expect(screen.queryByText("A singular and a plural are both required.")).toBeNull();
+  });
+
+  it("trims the rename rather than storing the padding a paste brings in", async () => {
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+    await openSettings();
+
+    await scaleField(); // the settings form has rendered
+    fireEvent.change(nounField(), { target: { value: "  story " } });
+    fireEvent.change(pluralField(), { target: { value: " stories  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(update).toHaveBeenCalledWith("p1", { itemNoun: "story", itemNounPlural: "stories" }),
+    );
+  });
+
+  it("leaves the trail's words on the SAVED noun while a rename is being typed", async () => {
+    // Typing into the form must not retroactively rewrite the history above it — the rename is
+    // true when the save lands, not while it is being composed.
+    listForProject.mockResolvedValue([item({ id: "w1", statusId: "s-todo" })]);
+    statusesList.mockResolvedValue([
+      status({ id: "s-todo", key: "todo", label: "To do", category: "todo" }),
+    ]);
+    render(<ProjectOverviewPane projectId="p1" title="Overview" />);
+
+    const card = (await screen.findByRole("region", { name: "Work" })) as HTMLElement;
+    await waitFor(() => expect(within(card).getByText("1 work item · 0% done")).not.toBeNull());
+
+    await openSettings();
+    await scaleField(); // the settings form has rendered
+    fireEvent.change(nounField(), { target: { value: "story" } });
+    fireEvent.change(pluralField(), { target: { value: "stories" } });
+
+    expect(within(card).getByText("1 work item · 0% done")).not.toBeNull();
+  });
+});
+
 /* ── The host-injected Transfer Ownership seam ────────────────────────────── */
 
 // Echoes back what the seam was handed, so "called with the LOADED project" is directly
@@ -533,7 +679,9 @@ describe("ProjectOverviewPane summary", () => {
     );
     expect(within(card).getByText("In progress").nextElementSibling?.textContent).toBe("2");
     expect(within(card).getByText("Done").nextElementSibling?.textContent).toBe("1");
-    expect(within(card).getByText("5 items · 20% done")).not.toBeNull();
+    // The board's own word for its cards, not a generic "items" — this fixture leaves the noun at
+    // its default, so the footnote reads "work items". A board that renamed them says "5 stories".
+    expect(within(card).getByText("5 work items · 20% done")).not.toBeNull();
   });
 
   // A stale statusId must not make an item disappear from the count — the parts sum to the whole
@@ -547,7 +695,7 @@ describe("ProjectOverviewPane summary", () => {
     render(<ProjectOverviewPane projectId="sum-2" title="Overview" />);
 
     const card = (await screen.findByRole("region", { name: "Work" })) as HTMLElement;
-    await waitFor(() => expect(within(card).getByText("2 items · 50% done")).not.toBeNull());
+    await waitFor(() => expect(within(card).getByText("2 work items · 50% done")).not.toBeNull());
     // Not done and not canceled ⇒ it counts as open, which is the safe reading of "unknown".
     expect(within(card).getByText("Open").nextElementSibling?.textContent).toBe("1");
   });
@@ -576,7 +724,7 @@ describe("ProjectOverviewPane summary", () => {
     render(<ProjectOverviewPane projectId="sum-4" title="Overview" />);
 
     const card = (await screen.findByRole("region", { name: "Work" })) as HTMLElement;
-    await waitFor(() => expect(within(card).getByText("1 item · 0% done")).not.toBeNull());
+    await waitFor(() => expect(within(card).getByText("1 work item · 0% done")).not.toBeNull());
     expect(within(card).queryByText("Overdue")).toBeNull();
   });
 

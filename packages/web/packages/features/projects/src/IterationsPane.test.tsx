@@ -102,6 +102,9 @@ function card(over: Partial<IterationWorkItem>): IterationWorkItem {
     // The board's own scale, which defaults to "does not estimate" for the same reason the
     // column does: a size rollup must stay silent until some board opts in.
     estimateScale: "none",
+    // The board's RANKING setting, carried per row for the same reason the estimate scale is: a
+    // box holds cards from several boards, and each row's rank means what ITS board says.
+    priorityScale: "standard",
     ...over,
   };
 }

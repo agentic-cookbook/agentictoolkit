@@ -35,6 +35,7 @@ vi.mock("@agentic-toolkit/data/reactions", async (importOriginal) => ({
 }));
 
 import { WorkItemEditor } from "./WorkItemEditor";
+import { itemWordsOf } from "./vocabulary";
 import {
   projectActivityApi,
   projectCommentsApi,
@@ -135,6 +136,9 @@ function renderEditor(
     milestones?: Milestone[];
     estimateScale?: EstimateScale;
   } = {},
+  // The per-board settings, defaulted to the shape every test below assumes. Only the
+  // "board settings" block passes anything here.
+  settings: Partial<React.ComponentProps<typeof WorkItemEditor>> = {},
 ) {
   return render(
     <WorkItemEditor
@@ -149,6 +153,7 @@ function renderEditor(
       estimateScale={planning.estimateScale ?? "none"}
       onSaved={() => {}}
       onCancel={() => {}}
+      {...settings}
     />,
   );
 }
@@ -539,5 +544,27 @@ describe("WorkItemEditor status field with a statusless item", () => {
     fireEvent.click(save);
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(update).toHaveBeenNthCalledWith(1, "w1", { statusId: "s1" });
+  });
+});
+
+describe("WorkItemEditor — board settings", () => {
+  it("omits the Priority field on a board that does not rank", () => {
+    renderEditor(ITEM, {}, { priorityScale: "none" });
+
+    // Not disabled, not zeroed — absent. A rank the board does not use is a question the form has
+    // no business asking, and the stored value is left exactly as it was.
+    expect(screen.queryByLabelText("Priority")).toBeNull();
+    // The rest of the form is untouched.
+    expect(screen.getByLabelText("Title")).not.toBeNull();
+  });
+
+  it("shows the Priority field at the default scale", () => {
+    renderEditor();
+    expect(screen.getByLabelText("Priority")).not.toBeNull();
+  });
+
+  it("names the board's own card in the Parent hint", () => {
+    renderEditor(ITEM, {}, { words: itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" }) });
+    expect(screen.getByText("An optional parent story in this project.")).not.toBeNull();
   });
 });

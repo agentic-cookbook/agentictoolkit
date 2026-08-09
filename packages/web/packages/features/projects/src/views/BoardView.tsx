@@ -15,12 +15,14 @@ import { cn } from "@agentic-toolkit/ui/lib/utils";
 import { compareRank, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type EstimateScale,
+  type PriorityScale,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import { ItemKey } from "../ItemKey";
 import { assigneeLabel, categoryVariant, estimateLabel, type BadgeVariant } from "../helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../vocabulary";
 
 /**
  * The Board VIEW of the work-items surface: the work items laid out as a
@@ -85,6 +87,7 @@ function BoardCard({
   statuses,
   known,
   estimateScale,
+  priorityScale,
   onMove,
 }: {
   item: WorkItem;
@@ -95,6 +98,9 @@ function BoardCard({
   known: Set<string>;
   /** the project's scale — what the size chip's digits mean. */
   estimateScale: EstimateScale;
+  /** whether the board ranks — `none` drops the priority badge, for the same reason an unsized
+   *  card shows no size chip: a column of identical "None" badges is a column of noise. */
+  priorityScale: PriorityScale;
   onMove: (itemId: string, statusId: string) => void;
 }): ReactElement {
   const priority = priorityMeta(item.priority);
@@ -134,7 +140,9 @@ function BoardCard({
                     {estimate}
                   </Badge>
                 ) : null}
-                <Badge variant={priority.variant}>{priority.label}</Badge>
+                {priorityScale === "none" ? null : (
+                  <Badge variant={priority.variant}>{priority.label}</Badge>
+                )}
               </span>
             </div>
             <Select
@@ -173,6 +181,8 @@ export function BoardView({
   statuses,
   participants,
   estimateScale,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onMove,
   onCardDrop,
 }: {
@@ -181,6 +191,10 @@ export function BoardView({
   participants: ProjectParticipant[];
   /** The project's estimate scale; `none` means no card carries a size chip. */
   estimateScale: EstimateScale;
+  /** The project's priority scale; `none` means no card carries a priority badge. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
   /** The Select's status-only move. */
   onMove: (itemId: string, statusId: string) => void;
   /** A drag landed. `statusId` may be unchanged (a reorder within one column). */
@@ -274,7 +288,7 @@ export function BoardView({
     return (
       <EmptyState
         title="No board columns yet."
-        description="This project has no statuses to group work items by."
+        description={`This project has no statuses to group ${words.many} by.`}
       />
     );
   }
@@ -320,7 +334,7 @@ export function BoardView({
                 </div>
                 <div className="flex flex-col gap-2 overflow-y-auto">
                   {col.items.length === 0 ? (
-                    <EmptyState title="No items" className="min-h-[80px]" />
+                    <EmptyState title={`No ${words.many}`} className="min-h-[80px]" />
                   ) : (
                     col.items.map((item) => (
                       <BoardCard
@@ -330,6 +344,7 @@ export function BoardView({
                         statuses={sortedStatuses}
                         known={known}
                         estimateScale={estimateScale}
+                        priorityScale={priorityScale}
                         onMove={onMove}
                       />
                     ))

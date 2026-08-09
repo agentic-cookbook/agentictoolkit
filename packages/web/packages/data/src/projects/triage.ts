@@ -20,7 +20,13 @@
 import { authedJson } from "../http";
 import { compact, enc, workspaceQuery } from "../client-helpers";
 import { toWorkItem, type WorkItem } from "./work-items";
-import type { WorkItemRow, TriageHitRow, TriagePageRow, TriageAcceptBody } from "./wire";
+import type {
+  WorkItemRow,
+  TriageHitRow,
+  TriagePageRow,
+  TriageAcceptBody,
+  PriorityScale,
+} from "./wire";
 
 const PROJECTS = "/api/project/projects";
 const ITEMS = "/api/project/work-items";
@@ -48,6 +54,11 @@ export interface TriageHit {
   description: string;
   statusId: string;
   priority: number;
+  /** the OWNING board's ranking setting. Carried per HIT for the same reason `itemKey` arrives
+   *  pre-rendered: an inbox crossing boards crosses their settings, so a card from a board that
+   *  turned ranking off must not show a rank here — the one place its owner cannot see that the
+   *  board stopped asking. */
+  priorityScale: PriorityScale;
   createdBy: string | null;
   /** when it was FILED. The queue is ordered by this, oldest first, and it is the age a person
    *  triaging is really reading. */
@@ -64,6 +75,8 @@ export function toTriageHit(r: TriageHitRow): TriageHit {
     description: r.description,
     statusId: r.statusId,
     priority: r.priority,
+    // The board's default when a backend that predates the column answered.
+    priorityScale: r.priorityScale ?? "standard",
     createdBy: r.createdBy ?? null,
     createdAt: r.createdAt,
   };

@@ -15,10 +15,12 @@ import type {
   EstimateScale,
   Iteration,
   Milestone,
+  PriorityScale,
   ProjectStatus,
   ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
 import { IterationPicker, NO_ITERATION } from "./IterationPicker";
 import { MilestonePicker, NO_MILESTONE } from "./MilestonePicker";
@@ -147,7 +149,13 @@ function draftFromItem(item: WorkItem): WorkItemDraft {
  * doors into one room, and the narrower one at that (a single-line Input for prose, no reply, no
  * edit, no way to take a comment back). What is left is what a trail is for: the record of what
  * happened, in the order it happened, which nothing types INTO. */
-function ItemActivitySection({ workItemId }: { workItemId: string }): ReactElement {
+function ItemActivitySection({
+  workItemId,
+  words,
+}: {
+  workItemId: string;
+  words: ItemWords;
+}): ReactElement {
   const load = useCallback(
     (before?: string) =>
       projectActivityApi.workItemActivity(workItemId, {
@@ -163,7 +171,7 @@ function ItemActivitySection({ workItemId }: { workItemId: string }): ReactEleme
           two section headings stacked in one pane have to read as siblings, and the louder of the
           two must not be the reference material. */}
       <h3 className="font-mono text-xs tracking-[0.02em] text-apt-text-dim">Activity</h3>
-      <ActivityFeed load={load} />
+      <ActivityFeed load={load} words={words} />
     </div>
   );
 }
@@ -178,6 +186,8 @@ export function WorkItemEditor({
   iterations,
   milestones,
   estimateScale,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onSaved,
   onCancel,
 }: {
@@ -199,6 +209,14 @@ export function WorkItemEditor({
   milestones: Milestone[];
   /** the owning project's estimate scale; `none` renders no estimate field at all. */
   estimateScale: EstimateScale;
+  /** the owning project's priority scale; `none` renders no priority field at all — the same
+   *  call the estimate field above makes, for the same reason: a board that does not rank has
+   *  no use for a control whose every card answers the same. A card that was ranked BEFORE the
+   *  board turned ranking off keeps its stored rank; it simply stops being editable here, which
+   *  is what makes turning the scale back on lossless. */
+  priorityScale?: PriorityScale;
+  /** what this board calls its cards. */
+  words?: ItemWords;
   onSaved: (saved: WorkItem) => void;
   onCancel: () => void;
 }): ReactElement {
@@ -261,7 +279,7 @@ export function WorkItemEditor({
       commit(draftFromItem(saved));
       onSaved(saved);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to save work item.");
+      setError(e instanceof Error ? e.message : `Failed to save ${words.one}.`);
     } finally {
       setSaving(false);
     }
@@ -386,18 +404,21 @@ export function WorkItemEditor({
         onChange={(v) => set("assigneeOption", toOptionValue(v))}
       />
 
-      <Field label="Priority">
-        <Select
-          value={String(draft.priority)}
-          onChange={(e) => set("priority", Number(e.target.value))}
-        >
-          {PRIORITIES.map((p) => (
-            <option key={p.value} value={p.value}>
-              {p.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      {/* Absent on a board that does not rank — see the prop's docs. */}
+      {priorityScale !== "none" && (
+        <Field label="Priority">
+          <Select
+            value={String(draft.priority)}
+            onChange={(e) => set("priority", Number(e.target.value))}
+          >
+            {PRIORITIES.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      )}
 
       {/* Which cycle the card is committed to, and how big it is — the two planning answers, kept
           next to Priority rather than beside the dates below. A start date is a fact about one
@@ -452,7 +473,7 @@ export function WorkItemEditor({
         </Field>
       </div>
 
-      <Field label="Parent" hint="An optional parent work item in this project.">
+      <Field label="Parent" hint={`An optional parent ${words.one} in this project.`}>
         <Select value={draft.parentId} onChange={(e) => set("parentId", e.target.value)}>
           <option value="">None</option>
           {/* Named by key AND title, so a long list of similar titles is still tellable apart —
@@ -489,7 +510,7 @@ export function WorkItemEditor({
       <div className="border-t border-apt-border pt-5">
         <WorkItemComments workItemId={item.id} />
       </div>
-      <ItemActivitySection workItemId={item.id} />
+      <ItemActivitySection workItemId={item.id} words={words} />
     </div>
   );
 }

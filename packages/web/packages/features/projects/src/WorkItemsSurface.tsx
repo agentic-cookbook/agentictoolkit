@@ -33,6 +33,8 @@ import {
   type EstimateScale,
   type Iteration,
   type Milestone,
+  type PriorityScale,
+  type Project,
   type ProjectStatus,
   type ProjectParticipant,
   type Template,
@@ -48,6 +50,7 @@ import { useViewMemory } from "./view-memory";
 import { EMPTY_VIEW_CONFIG, type WorkItemViewConfig } from "./saved-views";
 import { applyWorkItemFilter, isFilterActive, type WorkItemFilter } from "./filters";
 import { WORK_ITEM_PARAM } from "./work-item-link";
+import { itemWordsOf } from "./vocabulary";
 import { ListView } from "./views/ListView";
 import { BoardView, type BoardCardDrop } from "./views/BoardView";
 import { TableView, type SortState } from "./views/TableView";
@@ -254,23 +257,31 @@ export function WorkItemsSurface({
   const milestones = milestoneRows ?? [];
   const templates = templateRows ?? [];
 
-  // The project's OWN estimate scale — what an estimate's digits mean here. Read from the record
-  // rather than passed in by the host, because both hosts would otherwise have to carry it and the
-  // one that forgot would silently render an unestimatable board. It is a single record, so it is
-  // the plain get-with-an-alive-flag the Overview pane uses, not the list cache.
+  // The project's OWN settings — what an estimate's digits mean here, whether this board ranks at
+  // all, and what it calls its items. Read from the record rather than passed in by the host,
+  // because both hosts would otherwise have to carry them and the one that forgot would silently
+  // render an unestimatable board. It is a single record, so it is the plain get-with-an-alive-flag
+  // the Overview pane uses, not the list cache.
   //
-  // `none` until the record answers, which is the safe way round: the pickers and columns appear
-  // when the project is known to estimate, rather than flashing on a project that does not.
-  const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
+  // Null until the record answers, and the two scales below read their SAFE side out of that: the
+  // estimate pickers appear once the board is known to estimate rather than flashing on a board
+  // that does not, and ranking — which every board had before it could be turned off — stays
+  // visible rather than blinking out and back on the common board that still ranks.
+  const [project, setProject] = useState<Project | null>(null);
   useEffect(() => {
     let alive = true;
     void projectsApi.get(projectId).then((p) => {
-      if (alive && p) setEstimateScale(p.estimateScale);
+      if (alive && p) setProject(p);
     });
     return () => {
       alive = false;
     };
   }, [projectId]);
+  const estimateScale: EstimateScale = project?.estimateScale ?? "none";
+  const priorityScale: PriorityScale = project?.priorityScale ?? "standard";
+  // What this board calls its items. Identity-stable per word pair (see vocabulary.ts), so it is
+  // safe in the dependency lists below.
+  const words = itemWordsOf(project);
 
   // Move a card to another status: optimistic (repaint immediately), then settle
   // per-item and GUARDED so overlapping moves on the SAME card never clobber each
@@ -530,7 +541,7 @@ export function WorkItemsSurface({
   // `+` opens the create MODAL, exactly like every other list's create affordance.
   useStackLevel({
     id: "work-items-view",
-    title: "Work Items",
+    title: words.manyTitle,
     items: VIEW_ITEMS,
     selectedId: view,
     // Choosing Work Items lands on the List view rather than an empty pane asking which view you
@@ -542,7 +553,7 @@ export function WorkItemsSurface({
     onSelect: (id, opts) => leaf.onSelect(id, opts),
     onClear: () => leaf.onSelect(null),
     onNew: () => setNewOpen(true),
-    newLabel: "New work item",
+    newLabel: `New ${words.one}`,
     newActive: newOpen,
   });
 
@@ -564,6 +575,8 @@ export function WorkItemsSurface({
             iterations={iterations}
             milestones={milestones}
             estimateScale={estimateScale}
+            priorityScale={priorityScale}
+            words={words}
             onChanged={reload}
           />
         );
@@ -574,6 +587,8 @@ export function WorkItemsSurface({
             statuses={statuses}
             participants={participants}
             estimateScale={estimateScale}
+            priorityScale={priorityScale}
+            words={words}
             onMove={onMove}
             onCardDrop={onCardDrop}
           />
@@ -590,6 +605,8 @@ export function WorkItemsSurface({
             iterations={iterations}
             milestones={milestones}
             estimateScale={estimateScale}
+            priorityScale={priorityScale}
+            words={words}
             onOpenItem={onOpenItem}
             onChanged={reload}
             defaultSort={sort}
@@ -600,6 +617,8 @@ export function WorkItemsSurface({
         return (
           <TimelineView
             items={items}
+            priorityScale={priorityScale}
+            words={words}
             onOpenItem={onOpenItem}
             onSetSpan={(id, startDate, dueDate) => onSetDates(id, { startDate, dueDate })}
           />
@@ -608,6 +627,8 @@ export function WorkItemsSurface({
         return (
           <CalendarView
             items={items}
+            priorityScale={priorityScale}
+            words={words}
             onOpenItem={onOpenItem}
             onSetDueDate={(id, dueDate) => onSetDates(id, { dueDate })}
           />
@@ -623,6 +644,8 @@ export function WorkItemsSurface({
     iterations,
     milestones,
     estimateScale,
+    priorityScale,
+    words,
     onOpenItem,
     onMove,
     onCardDrop,
@@ -654,6 +677,8 @@ export function WorkItemsSurface({
               iterations={iterations}
               milestones={milestones}
               estimateScale={estimateScale}
+              priorityScale={priorityScale}
+              words={words}
               onSaved={() => void onSaved()}
               onCancel={closeEditor}
             />
@@ -661,12 +686,12 @@ export function WorkItemsSurface({
         ) : view === null ? (
           // No view chosen yet — the stack never auto-selects, so the leaf holds the hint until the
           // user picks one from the Work Items list.
-          <TopicSelectHint title="Select a view to see this project's work items." />
+          <TopicSelectHint title={`Select a view to see this project's ${words.many}.`} />
         ) : (
           <>
             {/* Above the filter bar, because it is the coarser choice: a saved view SETS the
                 controls below it, and a control that rearranges the one above it reads backwards. */}
-            <SavedViewBar controller={savedViews} />
+            <SavedViewBar controller={savedViews} words={words} />
             <WorkItemFilterBar
               filter={filter}
               onChange={setFilter}
@@ -675,6 +700,8 @@ export function WorkItemsSurface({
               iterations={iterations}
               milestones={milestones}
               labelOptions={labelOptions}
+              priorityScale={priorityScale}
+              words={words}
             />
             <div className="flex items-center justify-end">
               <span className="text-sm text-apt-text-muted">
@@ -684,10 +711,8 @@ export function WorkItemsSurface({
                 {items === null || visibleItems === null
                   ? ""
                   : isFilterActive(filter)
-                    ? `${visibleItems.length} of ${items.length} work item${
-                        items.length === 1 ? "" : "s"
-                      }`
-                    : `${items.length} work item${items.length === 1 ? "" : "s"}`}
+                    ? `${visibleItems.length} of ${words.count(items.length)}`
+                    : words.count(items.length)}
               </span>
             </div>
             {activeView}
@@ -703,6 +728,7 @@ export function WorkItemsSurface({
           projectId={projectId}
           statuses={statuses}
           templates={templates}
+          words={words}
           onClose={() => setNewOpen(false)}
           onCreated={(created) => void onCreated(created)}
         />

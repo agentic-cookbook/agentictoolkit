@@ -18,6 +18,7 @@ import {
   type EstimateScale,
   type Iteration,
   type Milestone,
+  type Project,
   type ProjectParticipant,
   type ProjectStatus,
   type TriageAcceptBody,
@@ -30,6 +31,7 @@ import { IterationPicker, NO_ITERATION } from "./IterationPicker";
 import { MilestonePicker, NO_MILESTONE } from "./MilestonePicker";
 import { ItemKey } from "./ItemKey";
 import { relativeTime, statusMeta } from "./helpers";
+import { DEFAULT_ITEM_WORDS, itemWordsOf, type ItemWords } from "./vocabulary";
 
 /**
  * TRIAGE — the queue of cards nobody has accepted onto this board yet.
@@ -118,6 +120,7 @@ function TriageDecision({
   milestones,
   iterations,
   estimateScale,
+  words = DEFAULT_ITEM_WORDS,
   onAccepted,
 }: {
   item: WorkItem;
@@ -126,6 +129,9 @@ function TriageDecision({
   milestones: Milestone[];
   iterations: Iteration[];
   estimateScale: EstimateScale;
+  /** What THIS board calls its cards. The queue holds one board's intake, so it speaks that
+   *  board's word — unlike the cross-board queue, which spans boards that disagree. */
+  words?: ItemWords;
   /** The card left the queue — the pane refreshes and clears the selection. */
   onAccepted: (accepted: WorkItem) => void;
 }): ReactElement {
@@ -154,7 +160,7 @@ function TriageDecision({
     try {
       onAccepted(await projectTriageApi.accept(item.id, toAcceptBody(placement, override)));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to accept this card.");
+      setError(err instanceof Error ? err.message : `Failed to accept this ${words.one}.`);
     } finally {
       setBusy(false);
     }
@@ -162,7 +168,7 @@ function TriageDecision({
 
   return (
     <div className="flex flex-col gap-6">
-      <DetailSection title="The card">
+      <DetailSection title={`The ${words.one}`}>
         <Card>
           <CardContent className="flex flex-col gap-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -253,7 +259,7 @@ function TriageDecision({
               )}
               <span className="text-sm text-apt-text-muted">
                 {declineStatus
-                  ? "Declining keeps the card, in a canceled column — it never disappears."
+                  ? `Declining keeps the ${words.one}, in a canceled column — it never disappears.`
                   : "This board has no canceled column, so there is nowhere to file a decline."}
               </span>
             </div>
@@ -324,19 +330,23 @@ export function TriagePane({
   const rows = useMemo(() => queue ?? [], [queue]);
   const statuses = statusRows ?? [];
 
-  // The board's own estimate scale — what an estimate's digits mean here. `none` until the record
-  // answers, which is the safe way round: the picker appears when the board is known to estimate
-  // rather than flashing on one that does not.
-  const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
+  // The board's own SETTINGS: what an estimate's digits mean here, and what it calls its cards.
+  // Both fall back while the record is outstanding, and each falls back to its own safe side —
+  // `none` so the estimate picker appears when the board is KNOWN to estimate rather than flashing
+  // on one that does not, and the default noun because the rail is titled before the read lands
+  // and a title that changes under the reader is worse than one that was never renamed.
+  const [project, setProject] = useState<Project | null>(null);
   useEffect(() => {
     let alive = true;
     void projectsApi.get(projectId).then((p) => {
-      if (alive && p) setEstimateScale(p.estimateScale);
+      if (alive) setProject(p);
     });
     return () => {
       alive = false;
     };
   }, [projectId]);
+  const estimateScale: EstimateScale = project?.estimateScale ?? "none";
+  const words = itemWordsOf(project);
 
   const selected = rows.find((r) => r.id === leaf.leafId) ?? null;
 
@@ -358,9 +368,8 @@ export function TriagePane({
     onSelect: (id) => leaf.onSelect(id),
     onClear: () => leaf.onSelect(null),
     emptyLabel: queue === null ? "Loading…" : "Nothing waiting — the inbox is clear.",
-    itemNoun: "card",
-    overviewHelp:
-      "Cards filed into this board but not yet accepted onto it. Open one to place it, or decline it.",
+    itemNoun: words.one,
+    overviewHelp: `${words.manyCap} filed into this board but not yet accepted onto it. Open one to place it, or decline it.`,
   });
 
   return (
@@ -377,6 +386,7 @@ export function TriagePane({
             milestones={milestoneRows ?? []}
             iterations={iterationRows ?? []}
             estimateScale={estimateScale}
+            words={words}
             onAccepted={() => {
               // It has left the queue, so the selection it was pointing at is gone: clear the leaf
               // BEFORE the refetch, or the pane spends a frame selecting a row that no longer
@@ -393,7 +403,7 @@ export function TriagePane({
                 ? "Loading…"
                 : rows.length === 0
                   ? "Nothing is waiting to be triaged."
-                  : "Select a card to place it on the board."
+                  : `Select a ${words.one} to place it on the board.`
             }
           />
         )}

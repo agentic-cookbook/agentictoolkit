@@ -18,6 +18,7 @@ import type {
   ProjectStatus,
 } from "@agentic-toolkit/data/projects";
 import { WorkItemFilterBar } from "./WorkItemFilterBar";
+import { itemWordsOf } from "./vocabulary";
 import { EMPTY_FILTER, type WorkItemFilter } from "./filters";
 
 afterEach(cleanup);
@@ -76,7 +77,13 @@ const MILESTONES: Milestone[] = [
 
 /** The milestone list is a PARAMETER, not a constant like the others: its axis is the one that
  *  disappears when the board has no plan, so half the cases below need to hand in an empty list. */
-function renderBar(filter: Partial<WorkItemFilter> = {}, milestones: Milestone[] = MILESTONES) {
+function renderBar(
+  filter: Partial<WorkItemFilter> = {},
+  milestones: Milestone[] = MILESTONES,
+  // The per-board settings, defaulted to the shape every test below assumes. Only the
+  // "board settings" block passes anything here.
+  settings: Partial<React.ComponentProps<typeof WorkItemFilterBar>> = {},
+) {
   const onChange = vi.fn();
   render(
     <WorkItemFilterBar
@@ -87,6 +94,7 @@ function renderBar(filter: Partial<WorkItemFilter> = {}, milestones: Milestone[]
       iterations={ITERATIONS}
       milestones={milestones}
       labelOptions={["bug", "ui"]}
+      {...settings}
     />,
   );
   return onChange;
@@ -227,5 +235,32 @@ describe("WorkItemFilterBar", () => {
     renderBar({ milestoneId: "gone" }, []);
     const axis = screen.getByRole("combobox", { name: "Filter by milestone" }) as HTMLSelectElement;
     expect(axis.value).toBe("gone");
+  });
+});
+
+describe("WorkItemFilterBar — board settings", () => {
+  it("drops the priority axis on a board that does not rank", () => {
+    // Same rule as the milestone axis: present only where it can narrow anything. On an unranked
+    // board every card carries the same rank, so the control is a dead end.
+    renderBar({}, MILESTONES, { priorityScale: "none" });
+    expect(screen.queryByRole("combobox", { name: "Filter by priority" })).toBeNull();
+    // The other everyday axes are untouched — this drops ONE control, not the bar.
+    expect(screen.getByRole("combobox", { name: "Filter by status" })).not.toBeNull();
+  });
+
+  it("keeps the priority axis when the FILTER names one, even on an unranked board", () => {
+    // The escape hatch, and the reason the condition is an OR rather than a plain flag check: a
+    // saved view or a URL written before the board turned ranking off still narrows the list, and
+    // hiding the control would leave that narrowing on screen with no way to see or undo it.
+    renderBar({ priority: "3" }, MILESTONES, { priorityScale: "none" });
+    const axis = screen.getByRole("combobox", { name: "Filter by priority" }) as HTMLSelectElement;
+    expect(axis.value).toBe("3");
+  });
+
+  it("names the board's own cards in the search field", () => {
+    renderBar({}, MILESTONES, {
+      words: itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" }),
+    });
+    expect(screen.getByLabelText("Search stories")).not.toBeNull();
   });
 });

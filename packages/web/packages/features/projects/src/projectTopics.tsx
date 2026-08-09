@@ -24,6 +24,7 @@ import { ProgramsPane } from "./ProgramsPane";
 import { TemplatesPane } from "./TemplatesPane";
 import { ProjectContentsPane } from "./ProjectContentsPane";
 import { ProjectActivityPane } from "./ProjectActivityPane";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * WHAT A PROJECT IS MADE OF — the one declaration of its topic set.
@@ -98,51 +99,68 @@ const OVERVIEW: ProjectTopicDef = {
   ),
 };
 
-const WORK_ITEMS: ProjectTopicDef = {
-  id: "work-items",
-  label: "Work Items",
-  icon: <ListTodo size={16} aria-hidden />,
-  description: "The work — list, board, table, timeline, and calendar views.",
-  render: (ctx) => (
-    <WorkItemsSurface
-      projectId={ctx.projectId}
-      title={ctx.title}
-      leaf={ctx.leaf}
-      workspaceSlug={ctx.workspaceSlug}
-    />
-  ),
-};
+/**
+ * The two topics that NAME the cards, so both are built from the board's own word rather than
+ * declared flat like their neighbours.
+ *
+ * The rail row is the loudest place that word appears — a board that renamed its items and still
+ * read "Work Items" here would have renamed nothing anyone looks at. The `id` never moves: it is
+ * the URL segment, and a link into a board must not stop resolving because someone changed a
+ * label. The rest of the topics name the project's own parts (Milestones, Programs, Contents),
+ * which the rename does not touch.
+ */
+function workItemsTopic(words: ItemWords): ProjectTopicDef {
+  return {
+    id: "work-items",
+    label: words.manyTitle,
+    icon: <ListTodo size={16} aria-hidden />,
+    description: "The work — list, board, table, timeline, and calendar views.",
+    render: (ctx) => (
+      <WorkItemsSurface
+        projectId={ctx.projectId}
+        title={ctx.title}
+        leaf={ctx.leaf}
+        workspaceSlug={ctx.workspaceSlug}
+      />
+    ),
+  };
+}
 
-const TRIAGE: ProjectTopicDef = {
-  id: "triage",
-  label: "Triage",
-  icon: <Inbox size={16} aria-hidden />,
-  description:
-    "The inbox — cards filed into this project that nobody has accepted onto the board yet.",
-  // No `leadsTo` — deliberately, and the same as Milestones / Iterations / Programs, every one of
-  // which also publishes a deeper rail level. Declaring `"list"` on this one alone would make
-  // Triage the only topic that HOLDS the previous pane until a card is picked, and a single row
-  // that navigates differently from its four neighbours reads as a bug whichever behaviour is
-  // right. If the run wants the cascading hold, it wants it together.
-  render: (ctx) => (
-    <TriagePane
-      projectId={ctx.projectId}
-      title={ctx.title}
-      leaf={ctx.leaf}
-      workspaceSlug={ctx.workspaceSlug}
-    />
-  ),
-};
+function triageTopic(words: ItemWords): ProjectTopicDef {
+  return {
+    id: "triage",
+    label: "Triage",
+    icon: <Inbox size={16} aria-hidden />,
+    description: `The inbox — ${words.many} filed into this project that nobody has accepted onto the board yet.`,
+    // No `leadsTo` — deliberately, and the same as Milestones / Iterations / Programs, every one of
+    // which also publishes a deeper rail level. Declaring `"list"` on this one alone would make
+    // Triage the only topic that HOLDS the previous pane until a card is picked, and a single row
+    // that navigates differently from its four neighbours reads as a bug whichever behaviour is
+    // right. If the run wants the cascading hold, it wants it together.
+    render: (ctx) => (
+      <TriagePane
+        projectId={ctx.projectId}
+        title={ctx.title}
+        leaf={ctx.leaf}
+        workspaceSlug={ctx.workspaceSlug}
+      />
+    ),
+  };
+}
 
-const MILESTONES: ProjectTopicDef = {
-  id: "milestones",
-  label: "Milestones",
-  icon: <Flag size={16} aria-hidden />,
-  description: "The plan — the points this project is aimed at, and what counts toward each.",
-  render: (ctx) => (
-    <MilestonesPane projectId={ctx.projectId} title={ctx.title} leaf={ctx.leaf} />
-  ),
-};
+/** Milestones keeps its own LABEL — a point in a plan is not one of the board's cards — but its
+ *  pane names the cards that count toward each point, so it takes the word. */
+function milestonesTopic(words: ItemWords): ProjectTopicDef {
+  return {
+    id: "milestones",
+    label: "Milestones",
+    icon: <Flag size={16} aria-hidden />,
+    description: "The plan — the points this project is aimed at, and what counts toward each.",
+    render: (ctx) => (
+      <MilestonesPane projectId={ctx.projectId} title={ctx.title} leaf={ctx.leaf} words={words} />
+    ),
+  };
+}
 
 const ITERATIONS: ProjectTopicDef = {
   id: "iterations",
@@ -186,13 +204,19 @@ const CONTENTS: ProjectTopicDef = {
   render: (ctx) => <ProjectContentsPane projectId={ctx.projectId} title={ctx.title} />,
 };
 
-const ACTIVITY: ProjectTopicDef = {
-  id: "activity",
-  label: "Activity",
-  icon: <Activity size={16} aria-hidden />,
-  description: "The audit trail — everything that happened in this project.",
-  render: (ctx) => <ProjectActivityPane projectId={ctx.projectId} title={ctx.title} />,
-};
+/** The trail's rows are SENTENCES about the cards ("created a story"), which is why the audit
+ *  topic takes the word even though its own label never does. */
+function activityTopic(words: ItemWords): ProjectTopicDef {
+  return {
+    id: "activity",
+    label: "Activity",
+    icon: <Activity size={16} aria-hidden />,
+    description: "The audit trail — everything that happened in this project.",
+    render: (ctx) => (
+      <ProjectActivityPane projectId={ctx.projectId} title={ctx.title} words={words} />
+    ),
+  };
+}
 
 const ACCESS: ProjectTopicDef = {
   id: "access",
@@ -245,17 +269,25 @@ const ACCESS: ProjectTopicDef = {
  * caller's own reach — the same fallback the project list itself uses — so each pane still has
  * something true to show, which is the test Access fails and these pass.
  */
-export function projectTopics(opts: { workspaceSlug?: string }): ProjectTopicDef[] {
+export function projectTopics(opts: {
+  workspaceSlug?: string;
+  /** What THIS board calls its cards, for the four topics that name them. Omitted — or supplied
+   *  before the project record has landed — the rail reads the default noun, which is the right
+   *  way round: a row that renames itself under the reader is worse than one that was never
+   *  renamed, and the row's `id` is stable either way. */
+  words?: ItemWords;
+}): ProjectTopicDef[] {
+  const words = opts.words ?? DEFAULT_ITEM_WORDS;
   return [
     OVERVIEW,
-    WORK_ITEMS,
-    TRIAGE,
-    MILESTONES,
+    workItemsTopic(words),
+    triageTopic(words),
+    milestonesTopic(words),
     ITERATIONS,
     PROGRAMS,
     TEMPLATES,
     CONTENTS,
-    ACTIVITY,
+    activityTopic(words),
     ...(opts.workspaceSlug ? [ACCESS] : []),
   ];
 }

@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 
 import { TableView } from "./TableView";
+import { itemWordsOf } from "../vocabulary";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type Iteration,
@@ -491,5 +492,85 @@ describe("TableView", () => {
     expect(screen.getByText("No work items yet.")).not.toBeNull();
     // The empty branch is the EmptyState, not a DataTable grid.
     expect(screen.queryByRole("grid")).toBeNull();
+  });
+});
+
+// The two per-board SETTINGS this view reads, both exercised at their NON-default value — the
+// default shape is what every test above already covers.
+describe("TableView — board settings", () => {
+  it("drops the Priority COLUMN on a board that does not rank", () => {
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        iterations={[]}
+        milestones={[]}
+        estimateScale="none"
+        priorityScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    // The header goes, not just the badge: a column whose every cell answers a question this board
+    // declined to ask is width spent on nothing. `FULL` is priority 3, so the value is there to
+    // render — the SETTING is what suppresses it.
+    expect(screen.queryByRole("button", { name: "Priority" })).toBeNull();
+    expect(screen.queryByText("High")).toBeNull();
+    // …and the row itself survives, with its other columns intact.
+    expect(screen.getByText("Design the landing page")).not.toBeNull();
+    expect(screen.getByText("To do")).not.toBeNull();
+  });
+
+  it("keeps the Priority column at the default scale", () => {
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[PARTICIPANT]}
+        iterations={[]}
+        milestones={[]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Priority" })).not.toBeNull();
+  });
+
+  it("names the board's own cards in the empty state and the table's accessible name", () => {
+    render(
+      <TableView
+        items={[]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        milestones={[]}
+        estimateScale="none"
+        words={itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" })}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("No stories yet.")).not.toBeNull();
+    expect(screen.getByText("Create a story to start tracking work in this project.")).not.toBeNull();
+  });
+
+  it("labels the grid with the board's word, so a screen reader hears what it holds", () => {
+    render(
+      <TableView
+        items={[FULL]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        milestones={[]}
+        estimateScale="none"
+        words={itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" })}
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("grid", { name: "Stories table" })).not.toBeNull();
   });
 });

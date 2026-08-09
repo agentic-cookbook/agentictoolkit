@@ -5,6 +5,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
 import { StackGroupDetail, type GroupTopicItem, type TopicLeaf } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
+import { itemWordsOf } from "./vocabulary";
 
 /**
  * The "Project" topic of a product (ecosystem) or persona: resolves the subject's
@@ -88,7 +89,12 @@ export function SubjectProjectPane({
   // the plain label as the title (the stack already shows the project's name above it) and a
   // LOCAL leaf, so Work Items' view switcher still works where the host's URL grammar has
   // already ended at the member segment.
-  const members: GroupTopicItem[] = projectTopics({ workspaceSlug }).map((topic) => ({
+  const members: GroupTopicItem[] = projectTopics({
+    workspaceSlug,
+    // The record is already resolved by here — the pane returns early while it is outstanding —
+    // so this rail is never labelled with the default and then relabelled.
+    words: itemWordsOf(project),
+  }).map((topic) => ({
     ...topic,
     render: () =>
       topic.render({

@@ -15,6 +15,7 @@ import { authedJson, authedRequest } from "../http";
 import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
   EstimateScale,
+  PriorityScale,
   ProjectHealth,
   StatusCategory,
   ProjectRow,
@@ -59,6 +60,17 @@ export function validateKeyPrefix(prefix: string): string | null {
   return null;
 }
 
+/* ── What a board calls its items ─────────────────────────────────────── */
+
+/**
+ * The words a board uses when it has not chosen its own — the same pair the backend's column
+ * defaults spell, restated here so a response from a server that predates the columns renders
+ * identically to one that has them, and so a surface with no project in hand (a cross-board
+ * queue, a template that names no noun) has something to say.
+ */
+export const DEFAULT_ITEM_NOUN = "work item";
+export const DEFAULT_ITEM_NOUN_PLURAL = "work items";
+
 /* ── Projects ─────────────────────────────────────────────────────────── */
 
 export interface Project {
@@ -80,6 +92,15 @@ export interface Project {
    *  this project does not estimate, and is why the field is never optional here: "no scale"
    *  is an answer a renderer can act on, whereas `undefined` is one it has to guess about. */
   estimateScale: EstimateScale;
+  /** whether this board ranks its work. `'none'` hides every ranking control without touching
+   *  the ranks already stored, so it is never optional here for the same reason the scale above
+   *  is not: "this board does not rank" is an answer a renderer acts on. */
+  priorityScale: PriorityScale;
+  /** what this board calls its items, singular and plural — "work item"/"work items" unless the
+   *  board says otherwise. Always both, never derived one from the other: no client can turn
+   *  "story" into "stories" reliably, so the plural is stored beside the singular. */
+  itemNoun: string;
+  itemNounPlural: string;
   /** the plan's two ends (YYYY-MM-DD), each null when unset. Independent: a board may know its
    *  target long before its start, and a standing board has neither. */
   startDate: string | null;
@@ -112,6 +133,11 @@ export function toProject(r: ProjectRow): Project {
     ecosystemId: r.ecosystemId,
     archivedAt: r.archivedAt ?? null,
     estimateScale: r.estimateScale ?? "none",
+    // The defaults a backend that predates these columns implies — and the same ones its DB
+    // defaults spell, so a project read from an old server renders exactly as a new one does.
+    priorityScale: r.priorityScale ?? "standard",
+    itemNoun: r.itemNoun || DEFAULT_ITEM_NOUN,
+    itemNounPlural: r.itemNounPlural || DEFAULT_ITEM_NOUN_PLURAL,
     startDate: r.startDate ?? null,
     targetDate: r.targetDate ?? null,
     // A lead is only a lead when BOTH halves arrived. A row carrying one and not the other is

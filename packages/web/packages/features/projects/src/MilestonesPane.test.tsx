@@ -214,7 +214,7 @@ describe("MilestonesPane", () => {
     expect(await screen.findByText("1 of 4 done")).not.toBeNull();
     expect(
       screen.getByRole("progressbar", {
-        name: "25% of the cards counting toward Public beta are done",
+        name: "25% of the work items counting toward Public beta are done",
       }),
     ).not.toBeNull();
   });
@@ -301,7 +301,7 @@ describe("MilestonesPane", () => {
     // board COLUMN must: "counts toward no milestone" is an ordinary state for a card.
     expect(
       await screen.findByText(
-        'Delete "Public beta"? Its cards are not deleted — they stop counting toward any milestone.',
+        'Delete "Public beta"? Its work items are not deleted — they stop counting toward any milestone.',
       ),
     ).not.toBeNull();
   });

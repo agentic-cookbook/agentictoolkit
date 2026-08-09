@@ -9,7 +9,7 @@ import {
   DropTarget,
   type DragDropEvent,
 } from "@agentic-toolkit/ui/components/dnd";
-import { type WorkItem } from "@agentic-toolkit/data/projects";
+import { type PriorityScale, type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import {
   MS_PER_DAY,
@@ -19,6 +19,7 @@ import {
   todayIndex,
   type BadgeVariant,
 } from "../helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../vocabulary";
 
 /**
  * The Calendar VIEW of the work-items surface: a month grid (weekday header +
@@ -126,14 +127,26 @@ const DAY_TARGET = "day:";
 
 export function CalendarView({
   items,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onOpenItem,
   onSetDueDate,
 }: {
   items: WorkItem[];
+  /** The board's priority scale. `none` drops the coloured rank dot from every chip — and the
+   *  rank out of every chip's accessible name, which would otherwise read "None priority" on a
+   *  board that never asked the question. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
   onOpenItem: (id: string) => void;
   /** A chip was dropped on a day: this item is now due on that "YYYY-MM-DD". */
   onSetDueDate: (itemId: string, dueDate: string) => void;
 }): ReactElement {
+  // "— High priority, " or nothing at all, so the two chip labels below (and the dot beside
+  // them) read the board's own answer in one place rather than three.
+  const rankPhrase = (item: WorkItem): string =>
+    priorityScale === "none" ? "" : `${priorityMeta(item.priority).label} priority, `;
   // Today is fixed for the lifetime of the mount (a fake clock in tests pins it).
   const today = useMemo(() => todayIndex(), []);
   const [visibleMonth, setVisibleMonth] = useState<Month>(() => monthOfDay(today));
@@ -223,8 +236,8 @@ export function CalendarView({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No work items yet."
-        description="Create a work item to start tracking work in this project."
+        title={`No ${words.many} yet.`}
+        description={`Create a ${words.one} to start tracking work in this project.`}
       />
     );
   }
@@ -317,7 +330,7 @@ export function CalendarView({
                           {cell.dayNum}
                         </div>
                         {cell.items.map((it) => {
-                          const { variant, label } = priorityMeta(it.priority);
+                          const { variant } = priorityMeta(it.priority);
                           return (
                             <DragItem key={it.id} id={it.id}>
                               {({ setNodeRef: setChipRef, style, handleProps, dragging }) => (
@@ -328,15 +341,17 @@ export function CalendarView({
                                   onClick={() => onOpenItem(it.id)}
                                   {...handleProps}
                                   title={itemLabel(it)}
-                                  aria-label={`${itemLabel(it)} — ${label} priority, due ${cell.label}`}
+                                  aria-label={`${itemLabel(it)} — ${rankPhrase(it)}due ${cell.label}`}
                                   className={`flex w-full touch-none items-center gap-1 rounded px-1 py-0.5 text-left hover:bg-apt-surface-2 ${
                                     dragging ? "cursor-grabbing bg-apt-surface-2 shadow" : "cursor-grab"
                                   }`}
                                 >
-                                  <span
-                                    aria-hidden
-                                    className={`size-1.5 shrink-0 rounded-full ${DOT_TONE[variant]}`}
-                                  />
+                                  {priorityScale === "none" ? null : (
+                                    <span
+                                      aria-hidden
+                                      className={`size-1.5 shrink-0 rounded-full ${DOT_TONE[variant]}`}
+                                    />
+                                  )}
                                   <span className="truncate text-xs text-apt-text">{it.title}</span>
                                 </button>
                               )}
@@ -354,7 +369,7 @@ export function CalendarView({
 
         {!hasDueThisMonth && (
           <p className="text-xs text-apt-text-dim">
-            No work items due in {monthLabel(visibleMonth)}.
+            No {words.many} due in {monthLabel(visibleMonth)}.
           </p>
         )}
 
@@ -365,7 +380,7 @@ export function CalendarView({
             </p>
             <div data-testid="calendar-undated" className="flex flex-wrap gap-1">
               {undated.map((it) => {
-                const { variant, label } = priorityMeta(it.priority);
+                const { variant } = priorityMeta(it.priority);
                 return (
                   // Draggable too — and this is the strip where dragging earns the most: an item
                   // with no due date is scheduled by putting it on a day, which is exactly the
@@ -381,15 +396,17 @@ export function CalendarView({
                         onClick={() => onOpenItem(it.id)}
                         {...handleProps}
                         title={itemLabel(it)}
-                        aria-label={`${itemLabel(it)} — ${label} priority, no due date`}
+                        aria-label={`${itemLabel(it)} — ${rankPhrase(it)}no due date`}
                         className={`flex touch-none items-center gap-1 rounded border border-apt-border px-2 py-0.5 text-left hover:bg-apt-surface-2 ${
                           dragging ? "cursor-grabbing bg-apt-surface-2 shadow" : "cursor-grab"
                         }`}
                       >
-                        <span
-                          aria-hidden
-                          className={`size-1.5 shrink-0 rounded-full ${DOT_TONE[variant]}`}
-                        />
+                        {priorityScale === "none" ? null : (
+                          <span
+                            aria-hidden
+                            className={`size-1.5 shrink-0 rounded-full ${DOT_TONE[variant]}`}
+                          />
+                        )}
                         <span className="truncate text-xs text-apt-text">{it.title}</span>
                       </button>
                     )}

@@ -7,6 +7,7 @@ import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import type { ActivityPage, ProjectActivity } from "@agentic-toolkit/data/projects";
 import { actorText, actionPhrase, commentBody, relativeTime } from "./helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * A reusable keyset-paginated activity feed — the hub's first cursor-paginated UI.
@@ -32,14 +33,14 @@ export const ACTIVITY_PAGE_SIZE = 20;
  * The phrasing itself lives in ./helpers, shared with Overview's recent-activity
  * summary; this file owns the row's LAYOUT. */
 
-function ActivityRow({ row }: { row: ProjectActivity }): ReactElement {
+function ActivityRow({ row, words }: { row: ProjectActivity; words: ItemWords }): ReactElement {
   const body = commentBody(row);
   return (
     <ListItem className="flex-col items-start gap-1 py-2">
       <div className="flex w-full items-baseline justify-between gap-2">
         <span className="min-w-0 truncate text-sm text-apt-text">
           <span className="font-medium">{actorText(row)}</span>{" "}
-          <span className="text-apt-text-muted">{actionPhrase(row.action, row.detail)}</span>
+          <span className="text-apt-text-muted">{actionPhrase(row.action, row.detail, words)}</span>
         </span>
         <time
           dateTime={row.createdAt}
@@ -59,8 +60,12 @@ function ActivityRow({ row }: { row: ProjectActivity }): ReactElement {
 
 export function ActivityFeed({
   load,
+  words = DEFAULT_ITEM_WORDS,
 }: {
   load: (before?: string) => Promise<ActivityPage>;
+  /** What the board these rows come from calls its cards. Every feed is scoped to ONE board —
+   *  a project's trail or one card's — so a single word is always the right one here. */
+  words?: ItemWords;
 }): ReactElement {
   const [rows, setRows] = useState<ProjectActivity[]>([]);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
@@ -126,7 +131,7 @@ export function ActivityFeed({
         <>
           <List>
             {rows.map((row) => (
-              <ActivityRow key={row.id} row={row} />
+              <ActivityRow key={row.id} row={row} words={words} />
             ))}
           </List>
           {nextBefore !== null && (

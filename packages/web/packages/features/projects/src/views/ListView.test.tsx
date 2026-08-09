@@ -24,6 +24,7 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => {
 });
 
 import { ListView } from "./ListView";
+import { itemWordsOf } from "../vocabulary";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus, type ProjectParticipant } from "@agentic-toolkit/data/projects";
 
@@ -68,7 +69,13 @@ const ITEM: WorkItem = {
   updatedAt: "2026-07-03T00:00:00Z",
 };
 
-function renderList(items: WorkItem[] = [ITEM], onChanged = vi.fn().mockResolvedValue(undefined)) {
+function renderList(
+  items: WorkItem[] = [ITEM],
+  onChanged = vi.fn().mockResolvedValue(undefined),
+  // The per-board settings, defaulted to the shape every test below assumes. Only the
+  // "board settings" block passes anything here.
+  settings: Partial<React.ComponentProps<typeof ListView>> = {},
+) {
   render(
     <ListView
       projectId="p1"
@@ -79,6 +86,7 @@ function renderList(items: WorkItem[] = [ITEM], onChanged = vi.fn().mockResolved
       milestones={[]}
       estimateScale="none"
       onChanged={onChanged}
+      {...settings}
     />,
   );
   return { onChanged };
@@ -376,5 +384,41 @@ describe("ListView reordering", () => {
     // What is on screen is now a selection, not the list: "up" would move the card above a
     // sibling that is filtered out, and the row would sit exactly where it already was.
     expect(screen.queryAllByRole("button", { name: /^Move (up|down) / })).toHaveLength(0);
+  });
+});
+
+// The two per-board SETTINGS, each at its NON-default value. Ranking defaults ON and the nouns
+// default to "work item(s)", which is what every test above already exercises.
+describe("ListView — board settings", () => {
+  it("drops the Priority editor entirely on a board that does not rank", () => {
+    renderList([ITEM], vi.fn(), { priorityScale: "none" });
+
+    // The whole column goes, editor and header alike: a select whose every row answers a question
+    // this board declined to ask is a fifth of the table's width spent on nothing. ITEM is
+    // priority 3, so the value is present to render — the SETTING is what suppresses it.
+    expect(screen.queryByLabelText("Priority — Design the landing page")).toBeNull();
+    expect(screen.queryByText("Priority")).toBeNull();
+    // The row survives with its other editors intact.
+    expect(screen.getByLabelText("Status — Design the landing page")).not.toBeNull();
+  });
+
+  it("keeps the Priority editor at the default scale", () => {
+    renderList();
+    expect(screen.getByLabelText("Priority — Design the landing page")).not.toBeNull();
+  });
+
+  it("calls the rows by the board's OWN word, in the filter box and the empty state", () => {
+    renderList([], vi.fn(), { words: itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" }) });
+
+    expect(screen.getByPlaceholderText("Filter stories…")).not.toBeNull();
+    // Not "No storys" — the plural is the author's, never derived from the singular.
+    expect(screen.getByText("No stories yet.")).not.toBeNull();
+  });
+
+  it("names the board's card in the unselected details prompt", () => {
+    renderList([ITEM], vi.fn(), {
+      words: itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" }),
+    });
+    expect(screen.getByText("Select a story to see its full record.")).not.toBeNull();
   });
 });

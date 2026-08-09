@@ -16,6 +16,7 @@ import {
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
 import { templateSublabel } from "./TemplatesPane";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * The "New work item" MODAL — the create affordance for the Work Items level's header `+`.
@@ -62,6 +63,7 @@ export function NewWorkItemDialog({
   projectId,
   statuses,
   templates,
+  words = DEFAULT_ITEM_WORDS,
   onClose,
   onCreated,
 }: {
@@ -72,6 +74,10 @@ export function NewWorkItemDialog({
    *  rather than re-read so the two share one cached read. Card templates are selected out here;
    *  omit for a host that does not offer templates at all (the picker then does not render). */
   templates?: Template[];
+  /** What this board calls its items. Defaulted rather than required so a host that has not
+   *  loaded the project still opens a working dialog — with the default noun, which is what the
+   *  overwhelming majority of boards say anyway. */
+  words?: ItemWords;
   onClose: () => void;
   /** The created item — the caller refreshes the views and opens its detail. */
   onCreated: (item: WorkItem) => void;
@@ -82,8 +88,8 @@ export function NewWorkItemDialog({
 
   return (
     <CreateResourceDialog<WorkItemInput, WorkItem>
-      ariaLabel="New work item"
-      heading="New work item"
+      ariaLabel={`New ${words.one}`}
+      heading={`New ${words.one}`}
       blank={() => ({
         templateId: NO_TEMPLATE,
         title: "",
@@ -124,13 +130,13 @@ export function NewWorkItemDialog({
             {cardTemplates.length > 0 && (
               <Field
                 label="Template"
-                hint="Stamp out a card this workspace makes often, with its checklist."
+                hint={`Stamp out a ${words.one} this workspace makes often, with its checklist.`}
               >
                 <Select
                   value={draft.templateId}
                   onChange={(e) => onChange({ ...draft, templateId: e.target.value })}
                 >
-                  <option value={NO_TEMPLATE}>Blank card</option>
+                  <option value={NO_TEMPLATE}>{`Blank ${words.one}`}</option>
                   {cardTemplates.map((t) => (
                     <option key={t.id} value={t.id}>
                       {`${t.name} — ${templateSublabel(t)}`}

@@ -3,8 +3,13 @@
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import type { ListAction } from "@agentic-toolkit/ui/blocks/selection-actions";
 import { projectWorkItemsApi } from "@agentic-toolkit/data/projects";
-import type { ProjectStatus, ProjectParticipant } from "@agentic-toolkit/data/projects";
+import type {
+  PriorityScale,
+  ProjectStatus,
+  ProjectParticipant,
+} from "@agentic-toolkit/data/projects";
 import { BulkEditDialog } from "./BulkEditDialog";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /**
  * What a multi-selection DOES to work items — Update… and Delete — as one hook, so the List and
@@ -30,6 +35,7 @@ async function forEachRow(
   ids: string[],
   op: (id: string) => Promise<unknown>,
   verb: string,
+  words: ItemWords,
 ): Promise<void> {
   const results = await Promise.allSettled(ids.map(op));
   const failed = results.filter((r) => r.status === "rejected");
@@ -37,7 +43,7 @@ async function forEachRow(
   const first = failed[0] as PromiseRejectedResult;
   const reason = first.reason instanceof Error ? first.reason.message : String(first.reason);
   throw new Error(
-    `${failed.length} of ${ids.length} work items could not be ${verb}: ${reason}`,
+    `${failed.length} of ${ids.length} ${words.many} could not be ${verb}: ${reason}`,
   );
 }
 
@@ -55,10 +61,16 @@ export interface BulkWorkItemActions {
 export function useBulkWorkItemActions({
   statuses,
   participants,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onChanged,
 }: {
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
+  /** The board's priority scale; `none` drops the dialog's Priority field. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards — every string below reads it. */
+  words?: ItemWords;
   /** Re-read the shared items, so every view repaints on what the server now holds. */
   onChanged: () => Promise<void>;
 }): BulkWorkItemActions {
@@ -74,14 +86,14 @@ export function useBulkWorkItemActions({
       setError(null);
       void (async () => {
         try {
-          await forEachRow(ids, (id) => projectWorkItemsApi.remove(id), "deleted");
+          await forEachRow(ids, (id) => projectWorkItemsApi.remove(id), "deleted", words);
         } catch (e) {
           setError(e instanceof Error ? e.message : String(e));
         }
         await onChanged();
       })();
     },
-    [onChanged],
+    [onChanged, words],
   );
 
   const actions = useMemo<ListAction[]>(
@@ -103,13 +115,20 @@ export function useBulkWorkItemActions({
     editing === null ? null : (
       <BulkEditDialog
         count={editing.length}
-        noun="work item"
+        noun={words.one}
+        nounPlural={words.many}
         statuses={statuses}
         participants={participants}
+        priorityScale={priorityScale}
         onCancel={() => setEditing(null)}
         onApply={async (patch) => {
           try {
-            await forEachRow(editing, (id) => projectWorkItemsApi.update(id, patch), "updated");
+            await forEachRow(
+              editing,
+              (id) => projectWorkItemsApi.update(id, patch),
+              "updated",
+              words,
+            );
           } finally {
             // Whether or not every row took the patch, some may have — the views must not keep
             // showing the pre-patch rows. The reload happens before the throw propagates.
@@ -124,7 +143,7 @@ export function useBulkWorkItemActions({
     actions,
     onDelete,
     deleteConfirm: {
-      title: "Delete the selected work items?",
+      title: `Delete the selected ${words.many}?`,
       // Both sentences are what the code does, not a guess. The route soft-deletes (the row stays,
       // hidden), and `flattenTree` roots a row whose parent is not among the visible ones — so a
       // deleted parent's children survive and climb to the top level rather than vanishing with it.

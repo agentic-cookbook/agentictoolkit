@@ -41,6 +41,25 @@ export type EstimateScale =
   | "tshirt";
 
 /**
+ * Whether a project RANKS its work — the same advisory contract {@link EstimateScale} is, and
+ * for the same reason: it says which control to render, never what the API accepts. A board
+ * that turns ranking off keeps every rank it recorded, so turning it back on restores the order
+ * rather than an empty one.
+ *
+ * Only the DEFAULT differs. Estimates default to `"none"` because a board opting IN to
+ * estimating is a new decision; ranking defaults to `"standard"` because every card has carried
+ * a priority since the feature shipped, so a board opting OUT is a change of mind.
+ */
+export type PriorityScale = "standard" | "none";
+
+/** The bounds `WorkItemRow.priority` is written and read within — the range the standard scale
+ *  spells (none / low / medium / high / urgent), enforced by the backend's body schemas and by
+ *  `work_items_priority_chk`. Here so a client can clamp a value before sending it rather than
+ *  learning the range from a 400. */
+export const WORK_ITEM_PRIORITY_MIN = 0;
+export const WORK_ITEM_PRIORITY_MAX = 4;
+
+/**
  * Where an iteration sits relative to today — DERIVED by the backend from `startDate`/`endDate`
  * (UTC, inclusive at both ends), never stored. It arrives on every iteration row, so a client
  * neither computes it nor has to agree with the server about what day it is.
@@ -80,6 +99,14 @@ export interface ProjectRow {
   /** which numbers this project's estimate picker offers, or `none` to not estimate at all
    *  (the DB default). Absent on a bundle read from a backend that predates estimates. */
   estimateScale?: EstimateScale;
+  /** whether this board ranks its work, or `none` to hide ranking entirely (see
+   *  {@link PriorityScale}). Absent on a response from a backend that predates it. */
+  priorityScale?: PriorityScale;
+  /** what this board CALLS its items, singular and plural — "work item"/"work items" by
+   *  default. Two stored words rather than one and a rule: English pluralisation is not
+   *  something a client can derive ("story" → "storys"), so the plural is the author's. */
+  itemNoun?: string;
+  itemNounPlural?: string;
   /** the plan's two ends (YYYY-MM-DD), independent and both optional — a standing board has
    *  neither, and a delivery board usually knows its target long before its start. Unlike an
    *  iteration, which must have both because its state is derived from the pair. */
@@ -195,6 +222,14 @@ export interface ProjectPatchBody {
    *  estimates already stored — a project that turns estimation off keeps them for the day it
    *  turns it back on. */
   estimateScale?: EstimateScale;
+  /** turn ranking on or off. Like the scale above, never touches the ranks already stored. */
+  priorityScale?: PriorityScale;
+  /** rename what this board calls its items. Either word may travel ALONE — correcting a plural
+   *  the client guessed is a real edit — which is the one place this differs from a project
+   *  TEMPLATE body, where a lone singular would mint "recipe"/"work items" on every board the
+   *  template ever makes and is therefore refused. Non-empty: a blank noun is not a rename. */
+  itemNoun?: string;
+  itemNounPlural?: string;
   /** move either end of the plan; `null` clears that end. Validated against the pair the project
    *  will END UP as, not the pair that was sent — so extending a target on a board that already
    *  has a start is the ordinary one-field patch, and only a start AFTER the target is a 400. */
@@ -465,6 +500,11 @@ export interface IterationWorkItemRow extends WorkItemRow {
   statusName: string;
   statusCategory: StatusCategory;
   estimateScale: EstimateScale;
+  /** the owning board's ranking setting, carried per ROW for the same reason the scale above
+   *  is: a box spans boards, so there is no single project to read it off, and without it a
+   *  card from a board that turned ranking off would still show a rank in the one place its
+   *  owner cannot see that the board stopped asking. */
+  priorityScale: PriorityScale;
 }
 
 /** `POST /project/iterations` body — created against a `?workspace=` slug, not under a
@@ -668,6 +708,13 @@ export interface ProjectTemplateBody {
   description?: string;
   color?: string;
   estimateScale?: EstimateScale;
+  priorityScale?: PriorityScale;
+  /** what the boards this template stamps out call their items. BOTH or NEITHER — the backend
+   *  400s a half, because a body is read against the DEFAULTS and a lone singular would mint
+   *  "recipe"/"work items" on every board the template ever makes. (A project PATCH accepts
+   *  either alone; there the board already has both words and one is being corrected.) */
+  itemNoun?: string;
+  itemNounPlural?: string;
   statuses?: Array<{ key: string; label: string; category: StatusCategory }>;
   milestones?: Array<{ name: string; description?: string }>;
 }
@@ -766,6 +813,10 @@ export interface TriageHitRow {
   description: string;
   statusId: string;
   priority: number;
+  /** the OWNING board's ranking setting, for the same reason `itemKey` arrives pre-rendered: an
+   *  inbox crossing boards crosses their settings, and a rank shown on a card whose board turned
+   *  ranking off is a control nobody on that board can see is gone. */
+  priorityScale: PriorityScale;
   createdBy?: string | null;
   /** when it was filed. The queue is ordered by this, oldest first. */
   createdAt: string;

@@ -10,6 +10,7 @@ import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
 
 import { BoardView } from "./BoardView";
+import { itemWordsOf } from "../vocabulary";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import { type ProjectStatus } from "@agentic-toolkit/data/projects";
 
@@ -95,7 +96,7 @@ describe("BoardView", () => {
     );
 
     const done = screen.getByRole("listitem", { name: "Done" });
-    within(done).getByText("No items");
+    within(done).getByText("No work items");
   });
 
   it("calls onMove(itemId, statusId) when a card's Move select changes", () => {
@@ -150,5 +151,70 @@ describe("BoardView", () => {
   it("renders an empty state when the project has no statuses (no columns)", () => {
     render(<BoardView items={[]} statuses={[]} participants={[]} estimateScale="none" onMove={vi.fn()} />);
     expect(screen.getByText("No board columns yet.")).not.toBeNull();
+  });
+});
+
+// The two per-board SETTINGS this view reads. Both default to the shape every existing test above
+// uses, so the assertions here are all about the non-default board — the one nothing else covers.
+describe("BoardView — board settings", () => {
+  it("shows NO priority badge when the board does not rank", () => {
+    render(
+      <BoardView
+        items={[W1, W2]}
+        statuses={[TODO, DOING, DONE]}
+        participants={[]}
+        estimateScale="none"
+        priorityScale="none"
+        onMove={vi.fn()}
+      />,
+    );
+
+    // W1 is priority 3 — the row still carries the value, the board just refuses to render a rank
+    // it was told it does not use. Turning ranking off must not hide the CARD.
+    expect(screen.queryByText("High")).toBeNull();
+    expect(screen.queryByText("Low")).toBeNull();
+    within(screen.getByRole("listitem", { name: "To do" })).getByText("Design the landing page");
+  });
+
+  it("still shows the badge at the default scale — the flag is what hides it, not the value", () => {
+    render(
+      <BoardView
+        items={[W1]}
+        statuses={[TODO]}
+        participants={[]}
+        estimateScale="none"
+        onMove={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("High")).not.toBeNull();
+  });
+
+  it("calls an empty column by the board's OWN word", () => {
+    render(
+      <BoardView
+        items={[]}
+        statuses={[TODO]}
+        participants={[]}
+        estimateScale="none"
+        words={itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" })}
+        onMove={vi.fn()}
+      />,
+    );
+    // Not "No storys": the plural is the author's, taken from the stored pair.
+    within(screen.getByRole("listitem", { name: "To do" })).getByText("No stories");
+  });
+
+  it("names the board's cards in the no-columns empty state too", () => {
+    render(
+      <BoardView
+        items={[]}
+        statuses={[]}
+        participants={[]}
+        estimateScale="none"
+        words={itemWordsOf({ itemNoun: "story", itemNounPlural: "stories" })}
+        onMove={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("This project has no statuses to group stories by.")).not.toBeNull();
   });
 });

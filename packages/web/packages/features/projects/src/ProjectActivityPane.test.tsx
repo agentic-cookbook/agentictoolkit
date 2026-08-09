@@ -13,6 +13,10 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
     workItemActivity: vi.fn(),
     addComment: vi.fn(),
   },
+  // The default nouns are plain data, but `./vocabulary` imports them from this module — so a
+  // whole-module mock that omits them breaks the import chain, not just the value.
+  DEFAULT_ITEM_NOUN: "work item",
+  DEFAULT_ITEM_NOUN_PLURAL: "work items",
 }));
 
 import { ProjectActivityPane } from "./ProjectActivityPane";

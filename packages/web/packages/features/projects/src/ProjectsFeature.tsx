@@ -19,6 +19,7 @@ import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@age
 import { projectTopics } from "./projectTopics";
 import { ProjectsCommandPalette } from "./ProjectsCommandPalette";
 import { type BadgeVariant } from "./helpers";
+import { itemWordsOf } from "./vocabulary";
 
 /**
  * The Projects feature workspace (FTD model, mirroring TeamsTab): a project rail
@@ -206,7 +207,14 @@ export function ProjectsFeature({
   // drift apart. All this adapter adds is the explorer's own vocabulary: the breadcrumbed
   // title, the URL-backed leaf, and the fact that a topic pane is only ever rendered with a
   // project selected (`projectId` is defined here; the guard keeps the type honest).
-  const topics: ResourceTopic[] = projectTopics({ workspaceSlug }).map((topic) => ({
+  // The OPEN board's word for its cards, from the list that is already loaded — no second read,
+  // and null while the list is outstanding or on the "All" landing, where the default is the only
+  // honest answer anyway (no board is open to have renamed anything).
+  const openProject = (projects ?? []).find((p) => p.id === activeProjectId) ?? null;
+  const topics: ResourceTopic[] = projectTopics({
+    workspaceSlug,
+    words: itemWordsOf(openProject),
+  }).map((topic) => ({
     ...topic,
     render: (projectId, titleFor, leaf) =>
       projectId

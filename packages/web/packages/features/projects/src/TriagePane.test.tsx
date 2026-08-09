@@ -318,7 +318,9 @@ describe("TriagePane", () => {
     // Asserted BEFORE the click: accepting clears the selection, so the decision unmounts and
     // every sentence on it goes with it.
     expect(
-      screen.getByText("Declining keeps the card, in a canceled column — it never disappears."),
+      screen.getByText(
+        "Declining keeps the work item, in a canceled column — it never disappears.",
+      ),
     ).not.toBeNull();
     fireEvent.click(decline);
 

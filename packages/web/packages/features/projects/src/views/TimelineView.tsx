@@ -4,9 +4,10 @@ import { useCallback, useMemo, useRef, type ReactElement } from "react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { DragItem, DragSurface, type DragDropEvent } from "@agentic-toolkit/ui/components/dnd";
-import { type WorkItem } from "@agentic-toolkit/data/projects";
+import { type PriorityScale, type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import { MS_PER_DAY, dayDate, dayIndex, itemLabel, type BadgeVariant } from "../helpers";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../vocabulary";
 
 /**
  * The Timeline VIEW of the work-items surface: a Gantt-LITE — a horizontal date
@@ -105,10 +106,18 @@ function spanOf(item: WorkItem): Span | null {
 
 export function TimelineView({
   items,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onOpenItem,
   onSetSpan,
 }: {
   items: WorkItem[];
+  /** The board's priority scale. `none` keeps the bars (they are already all one tone when
+   *  nothing is ranked) but drops the rank out of each bar's accessible name, which would
+   *  otherwise announce "None priority" on a board that never asked. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
   onOpenItem: (id: string) => void;
   /** A bar was dragged: this item's whole span now starts/ends on these "YYYY-MM-DD"
    *  dates. A date the item never had stays null — a shift can't invent an endpoint. */
@@ -197,8 +206,8 @@ export function TimelineView({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No work items yet."
-        description="Create a work item to start tracking work in this project."
+        title={`No ${words.many} yet.`}
+        description={`Create a ${words.one} to start tracking work in this project.`}
       />
     );
   }
@@ -233,8 +242,12 @@ export function TimelineView({
               </div>
 
               {spans.map((sp) => {
+                // The TONE is read whatever the scale says: an unranked board's items all sit
+                // at priority 0, which already resolves to the neutral tone, so the bars come
+                // out one colour by themselves. Only the spoken RANK has to go.
                 const { variant, label } = priorityMeta(sp.item.priority);
                 const tone = BAR_TONE[variant];
+                const rankPhrase = priorityScale === "none" ? "" : `${label} priority, `;
                 const rangeText = sp.point
                   ? dayLabel(sp.startDay)
                   : `${dayLabel(sp.startDay)} – ${dayLabel(sp.endDay)}`;
@@ -253,7 +266,7 @@ export function TimelineView({
                     key={sp.item.id}
                     type="button"
                     onClick={() => onOpenItem(sp.item.id)}
-                    aria-label={`${itemLabel(sp.item)} — ${label} priority, ${rangeText}`}
+                    aria-label={`${itemLabel(sp.item)} — ${rankPhrase}${rangeText}`}
                     className={`${grid} w-full rounded py-1 text-left hover:bg-apt-surface-2`}
                   >
                     <span className="truncate text-sm text-apt-text" title={itemLabel(sp.item)}>

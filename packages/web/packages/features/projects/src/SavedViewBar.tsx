@@ -17,6 +17,7 @@ import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import type { SavedViewsController } from "./useSavedViews";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 
 /** The all-pass row. Carried as an ITEM, exactly as the assignee filter carries "Anyone": a
  *  chooser with no way back to "everything" is a trap. */
@@ -43,15 +44,19 @@ const ALL = "";
  */
 export function SavedViewBar({
   controller,
+  words = DEFAULT_ITEM_WORDS,
 }: {
   controller: SavedViewsController;
+  /** What this board calls its cards — the all-pass row names them, and the delete confirmation
+   *  promises none of them are destroyed, which is only reassuring in the board's own word. */
+  words?: ItemWords;
 }): ReactElement {
   const { views, applied, modified, busy, error, apply, create, save, rename, remove } = controller;
   const [renaming, setRenaming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const items = [
-    { value: ALL, label: "All work items" },
+    { value: ALL, label: `All ${words.many}` },
     ...(views ?? []).map((v) => ({ value: v.id, label: v.name })),
   ];
 
@@ -119,7 +124,7 @@ export function SavedViewBar({
       <AlertModal
         open={deleting && applied !== null}
         title={applied ? `Delete “${applied.name}”?` : ""}
-        description="Everyone on this project loses the view. No work items are deleted — the board keeps showing exactly what it is showing now."
+        description={`Everyone on this project loses the view. No ${words.many} are deleted — the board keeps showing exactly what it is showing now.`}
         destructive
         confirmLabel="Delete view"
         cancelLabel="Keep"

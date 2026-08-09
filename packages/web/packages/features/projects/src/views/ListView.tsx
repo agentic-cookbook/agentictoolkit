@@ -24,10 +24,12 @@ import {
   type EstimateScale,
   type Iteration,
   type Milestone,
+  type PriorityScale,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
 import { PRIORITIES } from "../WorkItemEditor";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../vocabulary";
 import { participantLabel, toOptionValue, fromOptionValue } from "../AssigneePicker";
 import { WorkItemDetail } from "../WorkItemDetail";
 import { ItemKey } from "../ItemKey";
@@ -134,6 +136,8 @@ export function ListView({
   iterations,
   milestones,
   estimateScale,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onChanged,
 }: {
   projectId: string;
@@ -146,6 +150,10 @@ export function ListView({
   milestones: Milestone[];
   /** The project's estimate scale, which is what an estimate's digits mean. */
   estimateScale: EstimateScale;
+  /** The project's priority scale; `none` drops the Priority column entirely. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
   /** A row committed an edit or a delete — the surface re-reads the shared items so every view
    *  repaints together. */
   onChanged: () => Promise<void>;
@@ -155,7 +163,7 @@ export function ListView({
 
   // What a multi-selection does. The row's own ✓/✕/trash still edits and deletes ONE item; these
   // are the verbs that only make sense over many, and they are the same two the Table offers.
-  const bulk = useBulkWorkItemActions({ statuses, participants, onChanged });
+  const bulk = useBulkWorkItemActions({ statuses, participants, priorityScale, words, onChanged });
 
   // COLLAPSED, not expanded: a project's items are mostly flat, so the useful default is that
   // everything a project contains is on screen — and a set of collapsed ids stays correct as
@@ -425,25 +433,31 @@ export function ListView({
           </Select>
         ),
       },
-      {
-        key: "priority",
-        header: "Priority",
-        render: (w) => (
-          <Select
-            value={String(draft(w).priority)}
-            onChange={(e) => rows.edit(w.id, { priority: Number(e.target.value) })}
-            aria-label={`Priority — ${w.title}`}
-            disabled={rows.isArmed(w.id)}
-            className={cn("w-auto", armed(w))}
-          >
-            {PRIORITIES.map((p) => (
-              <option key={p.value} value={p.value}>
-                {p.label}
-              </option>
-            ))}
-          </Select>
-        ),
-      },
+      // Dropped whole on a board that does not rank: a column whose every row reads "None" is a
+      // fifth of the table's width spent on a question this board declined to ask.
+      ...(priorityScale === "none"
+        ? []
+        : [
+            {
+              key: "priority",
+              header: "Priority",
+              render: (w: WorkItem) => (
+                <Select
+                  value={String(draft(w).priority)}
+                  onChange={(e) => rows.edit(w.id, { priority: Number(e.target.value) })}
+                  aria-label={`Priority — ${w.title}`}
+                  disabled={rows.isArmed(w.id)}
+                  className={cn("w-auto", armed(w))}
+                >
+                  {PRIORITIES.map((p) => (
+                    <option key={p.value} value={p.value}>
+                      {p.label}
+                    </option>
+                  ))}
+                </Select>
+              ),
+            } satisfies DataTableColumn<WorkItem>,
+          ]),
       {
         key: "dueDate",
         header: "Due",
@@ -475,14 +489,14 @@ export function ListView({
               resizable: false,
               render: (w: WorkItem, ctx) => (
                 <div className="flex items-center justify-end gap-1">
-                  <DragGrip {...ctx.dragHandleProps} subject={`work item ${w.title}`} />
+                  <DragGrip {...ctx.dragHandleProps} subject={`${words.one} ${w.title}`} />
                   <ReorderControl
                     canMoveUp={neighbours.get(w.id)?.prev !== undefined}
                     canMoveDown={neighbours.get(w.id)?.next !== undefined}
                     onMoveUp={() => moveRow(w, "up")}
                     onMoveDown={() => moveRow(w, "down")}
                     busy={rows.isBusy(w.id)}
-                    subject={`work item ${w.title}`}
+                    subject={`${words.one} ${w.title}`}
                   />
                 </div>
               ),
@@ -506,7 +520,7 @@ export function ListView({
             onCommit={() => commitRow(w)}
             onCancel={() => rows.clear(w.id)}
             onDelete={() => rows.toggleArmed(w.id)}
-            subject={`work item ${w.title}`}
+            subject={`${words.one} ${w.title}`}
           />
         ),
       },
@@ -514,7 +528,18 @@ export function ListView({
     // `commitRow` and `moveRow` close over `rows` + `onChanged`, both stable enough for the row
     // controls.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, statuses, participants, treeMeta, collapsed, toggleCollapsed, neighbours, filtering]);
+  }, [
+    rows,
+    statuses,
+    participants,
+    treeMeta,
+    collapsed,
+    toggleCollapsed,
+    neighbours,
+    filtering,
+    priorityScale,
+    words,
+  ]);
 
   // Leaving with an uncommitted row edit (or an armed delete) would silently lose it.
   const pending = items.some((w) => rows.isDirty(w.id, draftFrom(w)) || rows.isArmed(w.id));
@@ -528,19 +553,19 @@ export function ListView({
       ))}
       <ErrorText error={bulk.error} />
       <ListWithDetailsPane<WorkItem>
-        ariaLabel="Work items"
+        ariaLabel={words.manyCap}
         className="min-h-0 flex-1"
         columns={columns}
         rows={visibleItems}
         getRowId={(w) => w.id}
-        emptyLabel="No work items yet."
-        detailsLabel="Work item"
+        emptyLabel={`No ${words.many} yet.`}
+        detailsLabel={words.oneCap}
         actions={bulk.actions}
         onDelete={bulk.onDelete}
         deleteConfirm={bulk.deleteConfirm}
         filterText={filter}
         onFilterTextChange={setFilter}
-        filterPlaceholder="Filter work items…"
+        filterPlaceholder={`Filter ${words.many}…`}
         // The key filters as readily as the title: pasting `ADH-42` out of a branch name is the
         // most direct way anyone will look for one card, and it is case-insensitive like the title.
         filterRow={(w, q) => {
@@ -575,11 +600,13 @@ export function ListView({
             iterations={iterations}
             milestones={milestones}
             estimateScale={estimateScale}
+            priorityScale={priorityScale}
+            words={words}
           />
         )}
         emptyDetail={
           <p className="text-sm text-apt-text-muted">
-            Select a work item to see its full record.
+            Select a {words.one} to see its full record.
           </p>
         }
       />

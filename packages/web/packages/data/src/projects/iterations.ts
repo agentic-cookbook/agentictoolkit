@@ -20,6 +20,7 @@ import type {
   IterationRow,
   IterationState,
   IterationWorkItemRow,
+  PriorityScale,
   StatusCategory,
   IterationCreateBody,
   IterationPatchBody,
@@ -83,6 +84,9 @@ export interface IterationWorkItem extends WorkItem {
    *  has no summable total — and only this field makes that detectable rather than reporting a
    *  fibonacci 8 added to a t-shirt 3 as if it meant something. */
   estimateScale: EstimateScale;
+  /** and whether that board ranks at all. Fourth field for the same reason as the third: a card
+   *  from a board that turned ranking off must not show a rank in a box its owner never opens. */
+  priorityScale: PriorityScale;
 }
 
 export function toIterationWorkItem(r: IterationWorkItemRow): IterationWorkItem {
@@ -92,6 +96,8 @@ export function toIterationWorkItem(r: IterationWorkItemRow): IterationWorkItem 
     statusName: r.statusName,
     statusCategory: r.statusCategory,
     estimateScale: r.estimateScale,
+    // The board's default when a backend that predates the column answered.
+    priorityScale: r.priorityScale ?? "standard",
   };
 }
 

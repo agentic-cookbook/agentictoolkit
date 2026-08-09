@@ -51,6 +51,11 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
   projectActivityApi: {
     projectActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
   },
+  projectProgramsApi: { list: vi.fn().mockResolvedValue([]) },
+  // Plain data, but `./vocabulary` imports them from this module — a whole-module mock that omits
+  // them breaks the import chain, not just the value.
+  DEFAULT_ITEM_NOUN: "work item",
+  DEFAULT_ITEM_NOUN_PLURAL: "work items",
 }));
 
 import { ProjectsFeature } from "./ProjectsFeature";
@@ -70,6 +75,12 @@ const PROJECT: Project = {
   keyPrefix: "WEB",
   ecosystemId: "eco1",
   archivedAt: null,
+  // The three board settings, each at its default. Always present on a Project — `toProject`
+  // fills them in — so a fixture without them is a shape the client never hands out.
+  estimateScale: "none",
+  priorityScale: "standard",
+  itemNoun: "work item",
+  itemNounPlural: "work items",
   createdAt: "2026-07-03T00:00:00Z",
   updatedAt: "2026-07-03T00:00:00Z",
 };

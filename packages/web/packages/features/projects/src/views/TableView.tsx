@@ -12,6 +12,7 @@ import {
   type EstimateScale,
   type Iteration,
   type Milestone,
+  type PriorityScale,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -19,6 +20,7 @@ import { priorityMeta } from "../WorkItemEditor";
 import { ItemKey } from "../ItemKey";
 import { assigneeLabel, estimateLabel, itemKeyNumber, statusMeta } from "../helpers";
 import { useBulkWorkItemActions } from "../useBulkWorkItemActions";
+import { DEFAULT_ITEM_WORDS, type ItemWords } from "../vocabulary";
 
 /**
  * The Table VIEW of the work-items surface: a DENSE spreadsheet — the List's
@@ -117,6 +119,8 @@ export function TableView({
   iterations,
   milestones,
   estimateScale,
+  priorityScale = "standard",
+  words = DEFAULT_ITEM_WORDS,
   onOpenItem,
   onChanged,
   defaultSort,
@@ -132,6 +136,11 @@ export function TableView({
   milestones: Milestone[];
   /** The project's estimate scale; `none` removes the Estimate column for the same reason. */
   estimateScale: EstimateScale;
+  /** The project's priority scale; `none` removes the Priority column, for the same reason
+   *  again — a column of "None" is a column of nothing. */
+  priorityScale?: PriorityScale;
+  /** What this board calls its cards. */
+  words?: ItemWords;
   onOpenItem: (id: string) => void;
   /** A bulk update or delete landed — the surface re-reads the shared items so every view
    *  repaints together. */
@@ -151,7 +160,7 @@ export function TableView({
   );
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
 
-  const bulk = useBulkWorkItemActions({ statuses, participants, onChanged });
+  const bulk = useBulkWorkItemActions({ statuses, participants, priorityScale, words, onChanged });
 
   // Ids of rows that have since left the table (deleted, or filtered out by a reload) are dropped
   // before they reach an action, so a bulk verb never fires at something that is not on screen.
@@ -200,15 +209,21 @@ export function TableView({
           </span>
         ),
       },
-      {
-        key: "priority",
-        header: "Priority",
-        sortable: true,
-        render: (w) => {
-          const m = priorityMeta(w.priority);
-          return <Badge variant={m.variant}>{m.label}</Badge>;
-        },
-      },
+      // Present only where the board ranks — the same call the three planning columns below make,
+      // and for the same reason.
+      ...(priorityScale !== "none"
+        ? [
+            {
+              key: "priority",
+              header: "Priority",
+              sortable: true,
+              render: (w: WorkItem) => {
+                const m = priorityMeta(w.priority);
+                return <Badge variant={m.variant}>{m.label}</Badge>;
+              },
+            } satisfies DataTableColumn<WorkItem>,
+          ]
+        : []),
       // The three PLANNING columns sit between the card's own facts and its dates, and each is
       // present only where it has an answer: a workspace with no cycles has no iteration to show,
       // a board with no plan has no milestone to show, and a project that does not estimate has
@@ -286,7 +301,7 @@ export function TableView({
         ),
       },
     ],
-    [statuses, participants, iterations, milestones, estimateScale],
+    [statuses, participants, iterations, milestones, estimateScale, priorityScale],
   );
 
   // DataTable renders `rows` in the order given — sort here (client-side) from the
@@ -307,8 +322,8 @@ export function TableView({
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No work items yet."
-        description="Create a work item to start tracking work in this project."
+        title={`No ${words.many} yet.`}
+        description={`Create a ${words.one} to start tracking work in this project.`}
       />
     );
   }
@@ -319,7 +334,7 @@ export function TableView({
       {/* The same recessed strip every list header uses — no filter field, because the Table's
           affordance is sorting and the List owns filtering. */}
       <ListHeader
-        ariaLabel="Work items table actions"
+        ariaLabel={`${words.manyCap} table actions`}
         title={selectedArr.length > 0 ? `${selectedArr.length} selected` : undefined}
         actions={
           <SelectionActions
@@ -335,7 +350,7 @@ export function TableView({
       />
       <div className="min-h-0 min-w-0 flex-1 overflow-x-auto">
         <DataTable<WorkItem>
-          ariaLabel="Work items table"
+          ariaLabel={`${words.manyCap} table`}
           className="min-w-[64rem]"
           columns={columns}
           rows={sortedItems}
