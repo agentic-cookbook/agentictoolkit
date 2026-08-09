@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
-import { afterEach, describe, expect, it } from 'vitest'
-import { useResourceList } from '../use-resource-list'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { useResourceList, revalidateResources } from '../use-resource-list'
 
 // Drive the module cache's tenant scoping through the real path: the cache is
 // keyed by the current access token's `ecosystem_id`, which useResourceList
@@ -138,5 +138,73 @@ describe('useResourceList out-of-order responses', () => {
     signInAs('A')
     render(<Probe cacheKey="/ooo-cache" load={() => new Promise<string[]>(() => {})} />)
     expect(screen.getByTestId('items')).toHaveTextContent('final')
+  })
+})
+
+// `revalidateResources` is how a live stream reaches lists it holds no reference to. What must
+// hold: it re-reads exactly the MOUNTED lists whose key the predicate accepts — a pane nobody is
+// looking at must not fetch (a wake would otherwise cost a request per list ever rendered), and a
+// list the predicate rejects must not either (that is the whole basis for scoping a board's wake
+// to the board's own keys).
+describe('revalidateResources', () => {
+  it('re-reads a matching mounted list, leaves a non-matching one alone', async () => {
+    signInAs('A')
+    const hit = vi.fn(() => Promise.resolve(['hit']))
+    const miss = vi.fn(() => Promise.resolve(['miss']))
+
+    render(
+      <>
+        <Probe cacheKey="project:p1:work-items" load={hit} />
+        <Probe cacheKey="workspace:w:templates" load={miss} />
+      </>,
+    )
+    await waitFor(() => expect(screen.getAllByTestId('items')[0]).toHaveTextContent('hit'))
+    expect(hit).toHaveBeenCalledTimes(1)
+    expect(miss).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      revalidateResources((key) => key.startsWith('project:p1:'))
+    })
+
+    expect(hit).toHaveBeenCalledTimes(2)
+    expect(miss).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not fetch for a list that has unmounted', async () => {
+    signInAs('A')
+    const load = vi.fn(() => Promise.resolve(['rows']))
+
+    render(<Probe cacheKey="project:p2:work-items" load={load} />)
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveTextContent('rows'))
+    cleanup()
+
+    await act(async () => {
+      revalidateResources(() => true)
+    })
+
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  it('survives a list whose re-read rejects', async () => {
+    signInAs('A')
+    const boom = vi.fn(() => Promise.reject(new Error('gone')))
+    const ok = vi.fn(() => Promise.resolve(['ok']))
+
+    render(
+      <>
+        <Probe cacheKey="project:p3:a" load={boom} />
+        <Probe cacheKey="project:p3:b" load={ok} />
+      </>,
+    )
+    await waitFor(() => expect(ok).toHaveBeenCalledTimes(1))
+
+    // A wake is fire-and-forget: one failing list must neither throw at the caller nor stop the
+    // others from re-reading, and must not surface as an unhandled rejection.
+    await act(async () => {
+      expect(() => revalidateResources((key) => key.startsWith('project:p3:'))).not.toThrow()
+    })
+
+    expect(boom).toHaveBeenCalledTimes(2)
+    expect(ok).toHaveBeenCalledTimes(2)
   })
 })

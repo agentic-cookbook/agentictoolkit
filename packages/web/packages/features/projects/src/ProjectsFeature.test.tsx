@@ -56,6 +56,10 @@ vi.mock("@agentic-toolkit/data/projects", () => ({
   // them breaks the import chain, not just the value.
   DEFAULT_ITEM_NOUN: "work item",
   DEFAULT_ITEM_NOUN_PLURAL: "work items",
+  // The board's live wake (useBoardLive). Stubbed to a no-op: it opens an EventSource, which jsdom
+  // does not have, and what it does when it fires is `revalidateResources`' contract, tested in
+  // @agentic-toolkit/data. Here it would only add a connection to every render.
+  useProjectLive: vi.fn(),
 }));
 
 import { ProjectsFeature } from "./ProjectsFeature";

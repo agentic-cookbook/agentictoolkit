@@ -43,7 +43,12 @@ export {
 
 // Shared, tenant-scoped list cache for a resource tab, plus the reusable
 // delete-with-confirm handler its rows wire to a trash affordance.
-export { useResourceList, makeEntityDeleteHandler, type ResourceList } from "./use-resource-list";
+export {
+  useResourceList,
+  revalidateResources,
+  makeEntityDeleteHandler,
+  type ResourceList,
+} from "./use-resource-list";
 
 // The caller's owner-scopable workspaces (personal + orgs) — the root of a feature
 // site's stack, and what `?workspace=<slug>` pins a list/create to.

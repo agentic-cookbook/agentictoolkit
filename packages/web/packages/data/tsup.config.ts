@@ -17,6 +17,7 @@ export default defineConfig({
     'src/invitations/index.ts',
     'src/access/index.ts',
     'src/ownership/index.ts',
+    'src/stream/index.ts',
   ],
   outDir: 'dist',
   format: ['esm'],

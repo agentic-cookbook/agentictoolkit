@@ -21,7 +21,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { AuthHttpError, authedJson, authedRequest } from '@agentic-toolkit/auth/client'
 import { useAuth } from '@agentic-toolkit/auth'
 
-import { connectSse, type SseHandle } from './sse'
+import { connectSse, type SseHandle } from '@agentic-toolkit/data/stream'
 import { emitLocalChange, subscribeToNotifications } from './use-notifications'
 
 /** Same-origin bases — the Next BFF proxy rewrites `/api/*` onto the backend. */

@@ -1,21 +1,25 @@
 'use client'
 
-// The shared SSE transport for the messaging hooks. Both the notification wake stream
-// (use-notifications) and the per-thread DM stream (use-dms) share this: read the
-// access token (EventSource can't set an Authorization header, so it rides the query
-// string), open the stream, listen for one event, and fall back to an interval +
-// window-focus poll when there's no live channel.
+// The shared SSE transport: read the access token (EventSource can't set an
+// Authorization header, so it rides the query string), open the stream, listen for one
+// event, and fall back to an interval + window-focus poll when there's no live channel.
+//
+// It lives in `data` rather than in a feature because a live stream is a READ of the
+// backend, the same as every client in this package — it began in `@agentic-toolkit/messaging`
+// when the inbox and DMs were its only callers, and moved down here the moment Projects
+// needed one too. A feature importing a transport from another feature is the shape this
+// avoids; the messaging hooks now import it from here and nothing else changed.
 //
 // It is SELF-HEALING: the poll fallback keeps trying to (re)open SSE with a freshly
 // read token, so it recovers from BOTH (a) a first mount that happens before the token
 // is written (post-login) — the old per-hook code latched onto polling for the session
 // — and (b) an access token that expires mid-session (the reconnect 401s → CLOSED →
-// poll → a poll tick refreshes the token and re-opens live SSE). Each hook supplies
+// poll → a poll tick refreshes the token and re-opens live SSE). Each caller supplies
 // only its url, event name, payload handler and poll action (SRP).
 
 import { readAccessToken } from '@agentic-toolkit/auth/client'
 
-/** Default poll cadence (ms) for the SSE fallback — one place, both hooks. */
+/** Default poll cadence (ms) for the SSE fallback — one place, every caller. */
 export const DEFAULT_SSE_POLL_INTERVAL_MS = 20_000
 
 /** A live SSE connection (or its poll fallback); `close()` tears down everything. */

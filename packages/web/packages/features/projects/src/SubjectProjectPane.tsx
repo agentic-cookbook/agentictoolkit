@@ -6,6 +6,7 @@ import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
 import { StackGroupDetail, type GroupTopicItem, type TopicLeaf } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
 import { itemWordsOf } from "./vocabulary";
+import { useBoardLive } from "./useBoardLive";
 
 /**
  * The "Project" topic of a product (ecosystem) or persona: resolves the subject's
@@ -57,6 +58,12 @@ export function SubjectProjectPane({
       alive = false;
     };
   }, [subjectKind, subjectId]);
+
+  // The second door into a board gets the same live wake as the first — a subject's project is a
+  // project, and a card added to it from the standalone feature must repaint here too. Called
+  // BEFORE the early returns below (hook order), and a no-op until the subject's project resolves.
+  // No rail key: this pane is not the one showing the workspace's project list.
+  useBoardLive(project?.id);
 
   if (error) {
     return (

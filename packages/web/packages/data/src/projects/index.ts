@@ -51,3 +51,6 @@ export * from "./search";
 export * from "./activity";
 export * from "./comments";
 export * from "./artifacts";
+// Not a client for a route that returns rows — the board's live wake, which tells a pane
+// WHEN to call one of the clients above.
+export * from "./live";

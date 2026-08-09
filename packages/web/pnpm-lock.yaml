@@ -1166,6 +1166,9 @@ importers:
       '@agentic-toolkit/auth':
         specifier: workspace:*
         version: link:../auth
+      '@agentic-toolkit/data':
+        specifier: workspace:*
+        version: link:../data
       '@agentic-toolkit/ui':
         specifier: workspace:*
         version: link:../ui

@@ -81,6 +81,11 @@
       "types": "./dist/access/index.d.ts",
       "development": "./src/access/index.ts",
       "import": "./dist/access/index.js"
+    },
+    "./stream": {
+      "types": "./dist/stream/index.d.ts",
+      "development": "./src/stream/index.ts",
+      "import": "./dist/stream/index.js"
     }
   },
   "scripts": {

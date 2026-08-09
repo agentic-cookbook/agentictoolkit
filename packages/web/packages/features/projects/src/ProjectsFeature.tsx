@@ -20,6 +20,7 @@ import { projectTopics } from "./projectTopics";
 import { ProjectsCommandPalette } from "./ProjectsCommandPalette";
 import { type BadgeVariant } from "./helpers";
 import { itemWordsOf } from "./vocabulary";
+import { useBoardLive } from "./useBoardLive";
 
 /**
  * The Projects feature workspace (FTD model, mirroring TeamsTab): a project rail
@@ -187,6 +188,13 @@ export function ProjectsFeature({
     [workspaceSlug],
   );
   const { items: projects, reload } = useResourceList(basePath, loadProjects);
+
+  // The open board is LIVE: someone else's edit — a teammate, an agent through the MCP tools, the
+  // due-date sweep — repaints the panes without a reload. Mounted once here, at the feature root,
+  // because the connection is the BOARD's and not any pane's: eight panes on one board share one
+  // stream, and a pane that opens later joins the one already running. `basePath` rides along so
+  // the project rail follows a rename made elsewhere.
+  useBoardLive(activeProjectId, basePath);
 
   // The workspace's TEMPLATES, for the create dialog's picker — both kinds, under the workspace
   // key the Templates pane and the card-create dialog share, so one read answers all three. The

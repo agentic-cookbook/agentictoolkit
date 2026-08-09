@@ -18,6 +18,35 @@ interface CacheBox<T> {
 }
 const caches = new Map<string, CacheBox<unknown>>();
 
+// Every MOUNTED list's `reload`, keyed by the same `cacheKey` the cache uses. The cache above
+// is only a seed — each hook instance holds its own React state — so there is no way to make a
+// mounted list re-read from outside it without one. This is that one.
+//
+// It exists for the live streams: a server-sent "something changed" arrives at the feature root
+// with no idea which panes are open, and the alternative is threading a `reload` up out of every
+// list to a coordinator that then has to be told about each new one. Registering here inverts
+// that — a list is revalidatable by virtue of being mounted, and a pane added tomorrow is live
+// without anyone remembering to wire it.
+const mounted = new Map<string, Set<() => Promise<void>>>();
+
+/**
+ * Re-read every MOUNTED list whose cache key `match` accepts. Unmounted lists are not in the
+ * map, so nothing is fetched for a pane nobody is looking at; the module cache is left alone
+ * and re-seeds on the next mount from the read that lands.
+ *
+ * Failures are swallowed HERE and only here: a revalidation nobody asked for must not surface
+ * as an unhandled rejection, and each hook has already recorded the failure in its own `error`,
+ * which is where a pane shows it. Fire-and-forget by design — the caller is a wake signal, not
+ * a transaction.
+ */
+export function revalidateResources(match: (cacheKey: string) => boolean): void {
+  for (const [cacheKey, reloads] of mounted) {
+    if (!match(cacheKey)) continue;
+    // Snapshot: a list may unmount while the set is being walked.
+    for (const reload of [...reloads]) void reload().catch(() => {});
+  }
+}
+
 // NOTE — why there is no "skip the fetch if the cache is fresh" window here.
 //
 // Next 16 REMOUNTS the page subtree on a same-segment param navigation, and everything a feature's
@@ -127,6 +156,23 @@ export function useResourceList<T>(
       throw e;
     }
   }, [fetchRows, store, cacheKey]);
+
+  // Publish this list's `reload` for as long as it is mounted, so a live wake can revalidate it
+  // without holding a reference to the component (see `revalidateResources`). Re-runs when
+  // `reload` changes identity — a new fetcher — which simply re-registers the current one.
+  useEffect(() => {
+    let set = mounted.get(cacheKey);
+    if (!set) {
+      set = new Set();
+      mounted.set(cacheKey, set);
+    }
+    const reloads = set;
+    reloads.add(reload);
+    return () => {
+      reloads.delete(reload);
+      if (reloads.size === 0) mounted.delete(cacheKey);
+    };
+  }, [cacheKey, reload]);
 
   // Refetch on mount and whenever the tenant changes (so an account switch can't leave another
   // tenant's rows on screen). The cache seeds the first paint (see the note above — that seed is
