@@ -67,9 +67,13 @@ export interface SiteHomeModel<View> {
      * shared shell would mean either every site grows teams or the hub loses them — so the shell
      * is the seam and the answer stays open.
      *
-     * A shell owns three things and a replacement owes all three: resolving `/home`'s absent
-     * workspace and replacing the URL with it, holding `children` until that resolution agrees
-     * with the URL, and drawing the chooser. See SiteHomeShell for what each is defending.
+     * A shell owns four things and a replacement owes all four: resolving `/home`'s absent
+     * workspace and replacing the URL with it, refusing a slug the caller cannot reach with a
+     * `notFound()` rather than a redirect, holding `children` until the resolution agrees with the
+     * URL, and drawing the chooser. See SiteHomeShell for what each is defending. The hub owes the
+     * refusal like everyone else and pays it ABOVE this seam — its `WorkspaceGate` matches the slug
+     * against the caller's memberships before the shell mounts at all — which is why HubHomeShell
+     * has no such check of its own.
      */
     shell?: ComponentType<SiteHomeShellProps>;
 }

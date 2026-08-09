@@ -49,9 +49,11 @@ export function __resetSeededWorkspace(): void {
  *     write a personal-workspace guess into the URL and permanently outrank the server's real
  *     answer. Once seeding is allowed: the stored preference → the first row of `workspaces`
  *     (the caller's list is priority-ordered, personal first, so this costs no extra call).
- *   - The URL as live truth: with no (or an unknown) slug, replace to `hrefFor(resolved)`. That is
- *     what makes a site's bare `/home` a redirect rather than a page of its own — it mounts with
- *     no segment, and the first thing this does is send the browser to the resolved workspace.
+ *   - The URL as live truth, for an ABSENT slug only: replace to `hrefFor(resolved)`. That is what
+ *     makes a site's bare `/home` a redirect rather than a page of its own — it mounts with no
+ *     segment, and the first thing this does is send the browser to the resolved workspace. A slug
+ *     that is present but names none of `workspaces` is NOT repaired: resolution stays `undefined`
+ *     and the caller decides (the shared shell 404s it). See the `resolved` memo for why.
  *   - Persistence, but only of an EXPLICIT act (see `pendingWrite`), and only of a slug the caller
  *     says may be persisted — and never of a slug it merely SEEDED (see `seededByUs`, which is
  *     how the mount the seeding redirect lands on still knows the slug was a guess).
@@ -78,8 +80,9 @@ export function useWorkspaceRoute({
    *
    *  Separate from `hrefFor` rather than folded into it, because the two answer different
    *  questions. `hrefFor` says where a workspace LIVES, and it is what the seeding replace above
-   *  uses: that replace repairs a URL that names no workspace (or an unreachable one), and nothing
-   *  about the path it is repairing is a selection the user made HERE. `switchHrefFor` says where
+   *  uses: that replace repairs a URL that names NO workspace, and nothing about the path it is
+   *  repairing is a selection the user made HERE. (It no longer repairs an unreachable slug —
+   *  that is a 404 now, see the `resolved` memo.) `switchHrefFor` says where
    *  a user who is looking at something and picks another workspace should land, which is the only
    *  case with a selection to preserve at all.
    *
@@ -210,7 +213,8 @@ export function useWorkspaceRoute({
     const known = (s: string | null | undefined): string | null =>
       s && workspaces.some((w) => w.slug === s) ? s : null
     // A slug in the URL is a live instruction — a deep link, a pick, the back button — and it
-    // decides on its own.
+    // decides on its own. `known` is what makes it an instruction rather than an assertion: it is
+    // honoured only if it names one of these workspaces.
     const fromUrl = known(workspaceSlug)
     // Including a slug this hook itself seeded a hop ago: a guess that has reached the URL is what
     // the user is looking at, and a late preference answer moving them off it would be a page that
@@ -218,6 +222,23 @@ export function useWorkspaceRoute({
     // not to PUT that guess back (see `pendingWrite`) — so the guess is displayed and never
     // recorded, and the next visit reads the untouched server row.
     if (fromUrl) return fromUrl
+    // A slug that IS in the URL but names none of them stays UNRESOLVED. This hook does not repair
+    // it, and the seeding below is deliberately out of reach here.
+    //
+    // Repairing it is what made `/<anything>` a silent redirect to the visitor's own workspace: a
+    // renamed or deleted workspace's links, and links to a workspace the visitor is not in, all
+    // became a different page with the address bar quietly rewritten to match — and because the
+    // workspace is the FIRST path segment on all 38 sites, `not-found.tsx` could never fire for a
+    // one-segment path anywhere in the family. The hub never had that behaviour: its
+    // WorkspaceGate (`MemberGate`) answers a settled list with no match by calling `notFound()`,
+    // and this is the family catching up to it rather than a new rule.
+    //
+    // Returning `undefined` — "not decided" — rather than deciding here, because what an
+    // unreachable slug MEANS is the caller's: the shared shell 404s it once its list has settled,
+    // and it must not do that while the list is still loading. The one slug that is still seeded
+    // is the ABSENT one: a site's bare `/home` names no workspace and is the family's redirect
+    // signal, which is exactly the case the block below exists for.
+    if (workspaceSlug !== undefined) return undefined
     // Nothing usable in the URL, so one has to be seeded. It must NOT be seeded before the
     // preference request settles: the seed goes straight into the URL, where it outranks the
     // server's answer arriving a moment later, and the personal-workspace fallback would then be
@@ -228,7 +249,10 @@ export function useWorkspaceRoute({
     return known(stored) ?? workspaces[0]?.slug ?? null
   }, [workspaces, workspaceSlug, stored, prefsSettled])
 
-  // The URL is live truth. A stale or absent slug lands somewhere real rather than nowhere.
+  // The URL is live truth for the slug it is MISSING: an absent one lands somewhere real rather
+  // than nowhere. An unreachable one never reaches here — `resolved` stays `undefined` for it, so
+  // this effect's guard is false and no replace is issued. That is the whole of "a bad slug is not
+  // silently rewritten"; the 404 itself is the caller's (SiteHomeShell).
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
       // Record the write BEFORE it happens: this replace may unmount the hook (a site's `/home` and

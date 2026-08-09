@@ -8,7 +8,7 @@ import { useParams } from "next/navigation";
 
 // src/home/SiteHomeShell.tsx
 import { useCallback as useCallback2 } from "react";
-import { usePathname } from "next/navigation";
+import { notFound, usePathname } from "next/navigation";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
 
@@ -114,6 +114,7 @@ function useWorkspaceRoute({
     const known = (s) => s && workspaces.some((w) => w.slug === s) ? s : null;
     const fromUrl = known(workspaceSlug);
     if (fromUrl) return fromUrl;
+    if (workspaceSlug !== void 0) return void 0;
     if (!prefsSettled) return void 0;
     return known(stored) ?? workspaces[0]?.slug ?? null;
   }, [workspaces, workspaceSlug, stored, prefsSettled]);
@@ -167,6 +168,9 @@ function SiteHomeShell({ workspaceSlug, children }) {
     hrefFor,
     switchHrefFor
   });
+  if (workspaceSlug !== void 0 && workspaces !== null && !workspaces.some((w) => w.slug === workspaceSlug)) {
+    notFound();
+  }
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
     error !== null && workspaces === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
@@ -188,12 +192,12 @@ function SiteHomeRoute({ model }) {
 }
 
 // src/home/SiteHomeModel.ts
-import { notFound } from "next/navigation";
+import { notFound as notFound2 } from "next/navigation";
 function defineSiteHome(model) {
   return model;
 }
 function noSubPath(segments) {
-  if (segments.length > 0) notFound();
+  if (segments.length > 0) notFound2();
   return null;
 }
 export {

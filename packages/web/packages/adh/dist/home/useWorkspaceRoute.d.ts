@@ -19,9 +19,11 @@ export declare function __resetSeededWorkspace(): void;
  *     write a personal-workspace guess into the URL and permanently outrank the server's real
  *     answer. Once seeding is allowed: the stored preference → the first row of `workspaces`
  *     (the caller's list is priority-ordered, personal first, so this costs no extra call).
- *   - The URL as live truth: with no (or an unknown) slug, replace to `hrefFor(resolved)`. That is
- *     what makes a site's bare `/home` a redirect rather than a page of its own — it mounts with
- *     no segment, and the first thing this does is send the browser to the resolved workspace.
+ *   - The URL as live truth, for an ABSENT slug only: replace to `hrefFor(resolved)`. That is what
+ *     makes a site's bare `/home` a redirect rather than a page of its own — it mounts with no
+ *     segment, and the first thing this does is send the browser to the resolved workspace. A slug
+ *     that is present but names none of `workspaces` is NOT repaired: resolution stays `undefined`
+ *     and the caller decides (the shared shell 404s it). See the `resolved` memo for why.
  *   - Persistence, but only of an EXPLICIT act (see `pendingWrite`), and only of a slug the caller
  *     says may be persisted — and never of a slug it merely SEEDED (see `seededByUs`, which is
  *     how the mount the seeding redirect lands on still knows the slug was a guess).
@@ -42,8 +44,9 @@ export declare function useWorkspaceRoute({ workspaces, workspaceSlug, hrefFor, 
      *
      *  Separate from `hrefFor` rather than folded into it, because the two answer different
      *  questions. `hrefFor` says where a workspace LIVES, and it is what the seeding replace above
-     *  uses: that replace repairs a URL that names no workspace (or an unreachable one), and nothing
-     *  about the path it is repairing is a selection the user made HERE. `switchHrefFor` says where
+     *  uses: that replace repairs a URL that names NO workspace, and nothing about the path it is
+     *  repairing is a selection the user made HERE. (It no longer repairs an unreachable slug —
+     *  that is a 404 now, see the `resolved` memo.) `switchHrefFor` says where
      *  a user who is looking at something and picks another workspace should land, which is the only
      *  case with a selection to preserve at all.
      *

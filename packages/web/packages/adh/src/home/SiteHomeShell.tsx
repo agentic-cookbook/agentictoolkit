@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, type ReactElement } from 'react'
-import { usePathname } from 'next/navigation'
+import { notFound, usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
 import { WorkspaceBar } from './WorkspaceBar'
@@ -29,6 +29,9 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  *   - Resolution, the URL-as-truth replace, and persistence of an explicit choice — all of it
  *     useWorkspaceRoute's, which the hub mounts too (it needs a different LIST — the fetch on the
  *     line above drops teams — but the behaviour behind the bar is the same one).
+ *   - Refusing a workspace this caller cannot reach: a settled list without the URL's slug is a
+ *     `notFound()`, not a redirect to some other workspace. See the check below the hook for the
+ *     three states that are NOT that.
  *   - Holding `children` until resolution, so no feature mounts unscoped and fires a list
  *     request the backend would answer with the wrong reach. `children` is a FUNCTION for that
  *     reason: a node would be CONSTRUCTED on every render, including the ones before a workspace
@@ -44,7 +47,7 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
   // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so
   // the children never mount, the empty-state hint never fires, and the page sits blank behind a
-  // chooser with nothing in it. Every one of the 35 sites' gated surface has that same failure, so
+  // chooser with nothing in it. Every one of the 38 sites' gated surface has that same failure, so
   // the shell owns saying so.
   //
   // The cache key is a bare literal, and can be: it identifies a REQUEST, not a mount point, and
@@ -90,6 +93,38 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // slug into a wrong ROW: a miss holds `children` exactly as an unresolved slug does, which is a
   // state this shell already renders (the bar, and nothing under it).
   const workspace = workspaces?.find((w) => w.slug === resolved) ?? null
+
+  // The URL names a workspace, and the list came back without it → 404. The same answer the hub's
+  // WorkspaceGate has always given (`MemberGate`: "settled success with no match → notFound()"),
+  // said here so the other 37 sites give it too.
+  //
+  // The three rungs BELOW this one are the reason it is expressed as a positive test on a settled
+  // list rather than as `resolved === undefined`:
+  //   - still loading — `workspaces` is null, so this is false and the page holds. Resolution is
+  //     `undefined` on that render too, which is why the two cannot be collapsed: they are the
+  //     same value meaning opposite things.
+  //   - the list FAILED — `useResourceList` leaves `items` at null on a cold miss, so this is
+  //     false again and the error hint below is what renders. A retryable failure must not become
+  //     a permanent-looking 404; the hub's gate draws that line in the same place, with a Retry.
+  //   - no slug at all (`/home`) — nothing to refuse. The hook seeds one and replaces the URL,
+  //     which is what makes that route the family's redirect signal.
+  //
+  // A stale-but-non-null list is the one case this treats as settled when it might not be, and
+  // that is sound HERE rather than everywhere: `useResourceList` seeds from a module cache, so
+  // rows can predate a workspace created since — but no feature site can create one (organizations
+  // are minted on the hub, whose gate carries the extra `isFetching` rung for exactly that race),
+  // and a cross-site arrival is a full page load with a cold cache. If a feature site ever grows a
+  // create flow, this needs that rung too.
+  //
+  // Placed after every hook so the hook order is identical on the render that throws; a thrown
+  // render never commits, so the replace and persistence effects above cannot fire behind it.
+  if (
+    workspaceSlug !== undefined &&
+    workspaces !== null &&
+    !workspaces.some((w) => w.slug === workspaceSlug)
+  ) {
+    notFound()
+  }
 
   return (
     <>
