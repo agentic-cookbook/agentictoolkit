@@ -1,40 +1,56 @@
 /* Charcoal — the ADH family's own palette: near-black charcoal surfaces, brand gold,
- * warm off-white text. This is the look every family site wore by default until the
- * `fishlamp` theme took over as DEFAULT_SITE_THEME, preserved here as a theme in its
- * own right so it stays pickable and, more importantly, RECOVERABLE.
+ * warm off-white text. This is DEFAULT_SITE_THEME, the look every family site wears.
+ * It exists as a theme in its own right because that is what kept it pickable — and
+ * RECOVERABLE — through the stretch when `fishlamp` held that job instead.
  *
- * It is a RECORD, not a redesign. Every value below is copied verbatim from the two
- * files that produced that look:
- *   - dark  ← adh.css's `:root` colour roles (the generated base theme)
- *   - light ← color-mode-light.css's `:root[data-color-mode]:not(.dark)` block
- * so selecting `charcoal` renders exactly what the family rendered before, in both
- * modes. Do not "improve" a value here: the base theme is still the live one, and a
- * divergence would make this file a lie about the thing it exists to remember.
+ * It is DARK-ALWAYS: the site is dark whatever the device says. The light-mode
+ * selectors are named alongside the dark one and given the dark values, so a visitor
+ * whose OS is set to light — or whose browser still holds a `colorMode: "light"` from
+ * the retired Light/Dark/System control — gets this palette anyway. One selector list
+ * over one copy of the palette: there is no second block to drift.
  *
- * Two deliberate consequences of copying faithfully, both of which look like
- * omissions and are not:
- *   - the values the base leaves dark-tuned in light mode (the --pc-* chat literals,
- *     the white footer colours) are left dark-tuned here too, in the dark block only,
- *     exactly as the base has them;
- *   - this file is TOKENS ONLY. Most full-palette themes also ship `body`,
- *     `::selection`, `.prose` and `.persona-chat` rules; the base already supplies the
- *     first two (adh.css:374,383) reading these very roles through var(), and the
- *     family has never had theme-level `.prose` or `.persona-chat` blocks. Adding any
- *     of them here would change the look this file exists to preserve.
+ * The specificity arithmetic behind the five selectors is written out once, in
+ * fishlamp.css's header. The short version: `html:root` alone (0-1-1) does NOT outrank
+ * color-mode-light's `:root[data-color-mode]:not(.dark)` (0-3-0), so reaching light
+ * mode means naming its selector, and reaching its CONTRAST rules (0-4-0 / 0-5-0)
+ * means naming those three as well — which is what obliges the `=== Contrast ===`
+ * rules below.
+ *
+ * There is no light block. There was one, a verbatim copy of color-mode-light.css,
+ * back when this theme's job was to be a faithful record of BOTH of the family's
+ * modes. color-mode-light.css is still live and still the base family's light
+ * palette, so it remains that record; deleting the copy lost nothing, and restoring a
+ * light charcoal means copying that file back in, exactly as the first version did.
+ *
+ * The values below are still a RECORD, not a redesign: copied verbatim from adh.css's
+ * `:root` colour roles (the generated base theme), so charcoal renders exactly what
+ * the family has always rendered. Do not "improve" a value here — the base theme is
+ * still the live one, and a divergence would make this file a lie about the thing it
+ * exists to remember.
+ *
+ * This file is TOKENS ONLY. Most full-palette themes also ship `body`, `::selection`,
+ * `.prose` and `.persona-chat` rules; the base already supplies the first two
+ * (adh.css:374,383) reading these very roles through var(), and the family has never
+ * had theme-level `.prose` or `.persona-chat` blocks. Adding any of them here would
+ * change the look this file exists to preserve.
  *
  * NO @import: this palette is set in Iosevka, which the adh base theme self-hosts
  * (its own @font-face block). The stack is restated so the theme reads whole; it adds
  * no webfont request. */
 
 /* === Tokens ===
- * Dark is the default (html:root); light overrides under
- * html:root[data-color-mode]:not(.dark) — the shape every full-palette theme uses.
- * The leading `html` type selector adds an element-column point so both blocks
- * outrank the always-on adh base (`:root`, 0-1-0) and color-mode-light
- * (`:root[data-color-mode]:not(.dark)`, 0-3-0) on specificity alone, independent of
+ * One rule, five selectors: the dark anchor, plus the four states color-mode-light.css
+ * can put a LIGHT document in (its base block, its two explicit `[data-contrast]`
+ * choices, and the OS "increase contrast" one). Every entry carries the leading `html`
+ * type selector, which is the element-column point that outranks the always-on adh
+ * base (`:root`, 0-1-0) and color-mode-light on specificity alone, independent of
  * stylesheet source order. */
 
-html:root {
+html:root,
+html:root[data-color-mode]:not(.dark),
+html:root[data-color-mode]:not(.dark)[data-contrast='high'],
+html:root[data-color-mode]:not(.dark)[data-contrast='extra-high'],
+html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-contrast='extra-high']) {
   color-scheme: dark;
 
   /* M3 surfaces + text + outline */
@@ -147,98 +163,52 @@ html:root {
   --pc-font: var(--font-sans);
 }
 
-html:root[data-color-mode]:not(.dark) {
-  color-scheme: light;
+/* === Contrast ===
+ * Naming the light-contrast selectors above means this theme OWNS the contrast axis,
+ * and it owes the DARK side too: accessibility.css's `html[data-contrast=high]` is
+ * (0,1,1) — one type and one attribute, with nothing to supply the second class-column
+ * unit — so it TIES the `html:root` in the list above rather than outranking it, and
+ * loses on source order. Without these rules, High Contrast is a no-op on the family
+ * default in every mode, which is precisely the failure fishlamp.css's header records
+ * arriving at by reading the arithmetic off a selector's shape instead of counting it.
+ *
+ * The values are accessibility.css's own dark ones, verbatim — they were authored for
+ * this palette, charcoal being the base's colour layer — so restating them changes
+ * nothing a high-contrast reader sees; it only makes the rules reachable. The
+ * no-divergence rule the header states for the palette holds here as well: if
+ * accessibility.css's dark contrast values move, these move with them. */
 
-  /* Primary — brand gold, deepened so it carries contrast on light surfaces. */
-  --color-primary: #8a6a14;
-  --color-on-primary: #ffffff;
-  --color-primary-container: #f3e6c2;
-  --color-on-primary-container: #4a3a0e;
-  --color-inverse-primary: #d9bb74;
-  --color-primary-bright: #a3812a;
-  --color-primary-dim: rgba(138, 106, 20, 0.14);
+html:root[data-contrast='high'],
+html:root[data-color-mode]:not(.dark)[data-contrast='high'] {
+  --color-on-surface: #f3f1ee;
+  --color-on-surface-variant: #b9b9c8;
+  --color-outline: #4a4a5a;
+  --color-outline-variant: #3a3a48;
+  --color-outline-strong: #5a5a70;
+  --focus-ring-width: 3px;
+}
 
-  /* Secondary — muted bronze. */
-  --color-secondary: #6f6450;
-  --color-on-secondary: #ffffff;
-  --color-secondary-container: #e8e1d2;
-  --color-on-secondary-container: #322d22;
+html:root[data-contrast='extra-high'],
+html:root[data-color-mode]:not(.dark)[data-contrast='extra-high'] {
+  --color-on-surface: #ffffff;
+  --color-on-surface-variant: #dcdce6;
+  --color-outline: #6c6c7e;
+  --color-outline-variant: #565666;
+  --color-outline-strong: #8a8aa0;
+  --focus-ring-width: 3px;
+}
 
-  /* Tertiary / blue. */
-  --color-tertiary: #3a5bd9;
-  --color-on-tertiary: #ffffff;
-  --color-tertiary-container: #dbe2ff;
-  --color-on-tertiary-container: #16224f;
-
-  /* Error. */
-  --color-error: #c0392b;
-  --color-on-error: #ffffff;
-  --color-error-container: #fadbd6;
-  --color-on-error-container: #5c1812;
-
-  /* Surfaces — warm off-whites, ascending containers get slightly lighter. */
-  --color-surface: #faf8f4;
-  --color-surface-dim: #ece8e0;
-  --color-surface-bright: #ffffff;
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #f5f2ea;
-  --color-surface-container: #f0ebe1;
-  --color-surface-container-high: #e9e3d7;
-  --color-surface-container-highest: #e1dacc;
-
-  /* Text + borders. */
-  --color-on-surface: #1f1d17;
-  --color-on-surface-variant: #5b5648;
-  --color-text-dim: #8a8472;
-  --color-outline: #d3ccba;
-  --color-outline-variant: #e7e1d3;
-  --color-outline-strong: #b4ab95;
-  --color-inverse-surface: #2c2c23;
-  --color-inverse-on-surface: #f2efe8;
-
-  /* Mode-INVARIANT in the base: adh.css:274 sets both and color-mode-light never
-     revisits them, so light mode gets black there too. Restated rather than left to
-     the dark block above because a full-palette theme owes every role in both blocks
-     (fullPaletteThemes.test.ts) — inheriting it happens to work here and stops working
-     the day the dark block's value changes. Same values, no behaviour change. */
-  --color-scrim: #000000;
-  --color-shadow: #000000;
-
-  /* Status colors — deepened for contrast on light. */
-  --color-success: #2e7d44;
-  --color-on-success: #ffffff;
-  --color-success-container: #d6ecd9;
-  --color-on-success-container: #11331c;
-  /* The one value here that is NOT what the family rendered before: the base had
-   * #b9701f, which is 3.89:1 under white — an AA failure the contrast gate could
-   * not see, because it discovers themes by `html:root` and color-mode-light.css
-   * anchors at a bare `:root`. Copying that block into a real theme file is what
-   * surfaced it. Corrected in BOTH files in the same commit rather than only here,
-   * so the no-divergence rule above still holds; this file remains a faithful copy
-   * of color-mode-light.css, which is now itself correct. */
-  --color-warning: #a5631a;
-  --color-on-warning: #ffffff;
-  --color-warning-container: #f6e4cc;
-  --color-on-warning-container: #4a3412;
-  --color-info: #3a5bd9;
-  --color-on-info: #ffffff;
-  --color-info-container: #dbe2ff;
-  --color-on-info-container: #16224f;
-
-  /* The settings topic rail (bg-apt-nav) is a literal in the @theme map, not a role
-     ref, so it has to be overridden explicitly or it stays dark on light. */
-  --color-apt-nav: #efe9df;
-
-  /* Categorical hues (apt-cat-*) keep their HUE in light mode — a tag's identity must
-     not change between themes — but the dark-mode values are tuned for a dark surface
-     and wash out on the cream light surface. Same hue families, darkened to clear AA
-     contrast on light. */
-  --color-apt-cat-blue: #1d63d8;
-  --color-apt-cat-violet: #7c3aed;
-  --color-apt-cat-pink: #db2777;
-  --color-apt-cat-teal: #0e7490;
-  --color-apt-cat-indigo: #4f46e5;
-  --color-apt-cat-orange: #c2410c;
-  --color-apt-cat-purple: #a21caf;
+/* Follow the OS "increase contrast" setting when no explicit choice is stored. Both
+ * entries tie the list above (0,3,1 over 0,1,1; 0,5,1 over 0,5,1) and win on source
+ * order, which is why this block sits after the palette rather than inside it. */
+@media (prefers-contrast: more) {
+  html:root:not([data-contrast='high']):not([data-contrast='extra-high']),
+  html:root[data-color-mode]:not(.dark):not([data-contrast='high']):not([data-contrast='extra-high']) {
+    --color-on-surface: #f3f1ee;
+    --color-on-surface-variant: #b9b9c8;
+    --color-outline: #4a4a5a;
+    --color-outline-variant: #3a3a48;
+    --color-outline-strong: #5a5a70;
+    --focus-ring-width: 3px;
+  }
 }

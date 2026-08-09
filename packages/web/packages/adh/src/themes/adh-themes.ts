@@ -101,7 +101,9 @@ export const DEFAULT_ADH_THEME: AdhThemeKey = 'adh'
  *  alongside the dark one and gives them the dark palette, adding the two
  *  `[data-contrast]` forms and the `:not([data-contrast])` form so it also outranks
  *  color-mode-light's contrast rules (0-4-0 / 0-5-0) rather than only its base block.
- *  `fishlamp` is the one that does this; its header comment carries the arithmetic. */
+ *  `charcoal` and `fishlamp` are the two that do this; fishlamp's header comment carries
+ *  the arithmetic. For the family's DEFAULT theme it is not optional — see
+ *  DEFAULT_SITE_THEME below, and rule 6 in fullPaletteThemes.test.ts, which asserts it. */
 export const FULL_PALETTE_THEMES = [
   'signal',
   'nord',
@@ -167,7 +169,15 @@ export type SwitcherThemeKey = AdhThemeKey | FullPaletteThemeKey
  *  that branch stays the un-taken one — `charcoal` is a full-palette theme, not the base —
  *  and the base stays emitted underneath for the `.text-*` typography utilities no
  *  full-palette theme defines. `fishlamp` remains pickable in the switcher, so swapping the
- *  family back to it is a one-word edit here. */
+ *  family back to it is a one-word edit here.
+ *
+ *  Whatever this names must be DARK-ALWAYS. The family ships one presentation and it is
+ *  dark whatever the device says, and this constant is the only thing that decides which
+ *  palette says so: Appearance has no light/dark control, so a mode-split theme here means
+ *  a light-OS visitor gets a light site with no way back. That is not a hypothetical — it
+ *  is what shipped for the window in which this pointed at a mode-split `charcoal`, in
+ *  silence. fullPaletteThemes.test.ts asserts the property off THIS constant, so the next
+ *  swap is checked rather than trusted. */
 export const DEFAULT_SITE_THEME: SwitcherThemeKey = 'charcoal'
 
 /** Themes whose `--font-*` stack IS the base theme's — the Iosevka cut adh self-hosts and

@@ -39,10 +39,20 @@
  *     theme that beats only the base block hands a user on Light + High contrast
  *     near-black text on a near-black ground. That reader sees an unreadable page, and
  *     nobody testing the default configuration ever sees it at all.
+ *
+ *  6. Whichever theme DEFAULT_SITE_THEME names must be dark-always. "The site is always
+ *     dark" is a property of the FAMILY, not of whatever theme happens to hold the
+ *     default — and the two came apart silently once already: the default moved from a
+ *     dark-always theme to a mode-split one, and from that commit every visitor whose OS
+ *     was in light mode got the light colourway, with no control left in Appearance to
+ *     override it. Nothing went red, because rules 2 and 5 are both satisfied by a
+ *     mode-split theme; being mode-split is legitimate, it just disqualifies a theme
+ *     from being the DEFAULT one. Asserting the property off DEFAULT_SITE_THEME rather
+ *     than naming the theme is what makes the next swap of that constant fail loudly.
  */
 import { describe, it, expect } from 'vitest'
 import { themes } from '@agentic-toolkit/themes/manifest'
-import { FULL_PALETTE_THEMES } from '../themes/adh-themes'
+import { DEFAULT_SITE_THEME, FULL_PALETTE_THEMES } from '../themes/adh-themes'
 
 const DARK = 'html:root'
 const LIGHT = 'html:root[data-color-mode]:not(.dark)'
@@ -191,6 +201,18 @@ describe('FULL_PALETTE_THEMES', () => {
         `${key} is dark-always but does not name \`${sel}\` — color-mode-light's contrast ` +
           `rules would paint near-black text on its dark ground`,
       ).toContain(sel)
+  })
+
+  it('DEFAULT_SITE_THEME is DARK-ALWAYS — the site is dark whatever the device says', () => {
+    expect(Object.keys(themes)).toContain(DEFAULT_SITE_THEME)
+    expect(
+      isDarkAlways(themes[DEFAULT_SITE_THEME].css),
+      `DEFAULT_SITE_THEME is \`${DEFAULT_SITE_THEME}\`, which varies by colour mode. The family ` +
+        `ships ONE presentation and it is dark, so the default theme has to give its light-mode ` +
+        `selectors the dark palette (see rule 6 above). As it stands, a visitor whose OS is in ` +
+        `light mode gets a light site and Appearance offers no control to override it. Either ` +
+        `point DEFAULT_SITE_THEME at a dark-always theme, or make this one dark-always.`,
+    ).toBe(true)
   })
 
   it.each(FULL_PALETTE_THEMES)('%s declares every M3 role in both modes', (key) => {
