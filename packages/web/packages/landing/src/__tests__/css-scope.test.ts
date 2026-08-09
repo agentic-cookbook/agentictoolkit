@@ -96,36 +96,38 @@ describe('the document-level rules are gated on the deck, at their original weig
     .filter((s) => s.includes('.lp-deck') && !s.startsWith('.lp-deck'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
 
-  // `DeckScript` stamps TWO attributes on <html>, and a gate is written against
-  // each: ARM_SNAPPING sets `data-snap` on the reader's first pointerdown/wheel/
-  // keydown (`once`), and ARM_SMOOTH sets `data-smooth` on the same three events
-  // (see DeckScript.tsx:23 and :41). So the fixture has to arm both: a document
-  // holding a deck the reader has touched is the only state in which every rule
-  // in this sheet is live, and a fixture missing one of them reports a rule that
-  // is perfectly well gated as a gate that matches nothing.
-  function armDocument(): void {
-    document.documentElement.setAttribute('data-snap', '')
-    document.documentElement.setAttribute('data-smooth', '')
-  }
+  // The gated rules that also need an ARMED attribute — `data-snap` from
+  // ARM_SNAPPING, `data-smooth` from ARM_SMOOTH on the first interaction — are
+  // stamped on <html> by `DeckScript` at runtime, never by the markup, so the probe
+  // has to stamp them itself. A gate whose flag is missing here reads as "spelled
+  // wrong", which is the very defect this probe exists to catch.
+  //
+  // DERIVED from the gates rather than listed, because a list goes stale silently
+  // and already did: `[data-smooth]` was added to base.css after this file was
+  // written, and from then on the positive probe was asserting that a real,
+  // correctly-spelled rule matches nothing.
+  const armed = [
+    ...new Set(gates.flatMap((s) => [...s.matchAll(/\[([a-z-]+)\]/g)].map((m) => m[1]))),
+  ]
+  const arm = () => armed.forEach((a) => document.documentElement.setAttribute(a, ''))
 
   it('matches the document while a deck is mounted', () => {
     expect(gates.length).toBeGreaterThan(5)
+    expect(armed).toContain('data-snap')
     document.body.innerHTML =
       '<main><div class="lp-deck"><section class="lp-screen"></section></div></main>'
-    armDocument()
+    // The fixture has to be the FULLY armed document, not a half-armed one.
+    arm()
     for (const sel of gates) expect(document.querySelector(sel), sel).not.toBeNull()
   })
 
   it('matches nothing once the deck leaves the DOM', () => {
-    // A client-side navigation off `/` unmounts the deck and runs no cleanup, so
-    // both attributes are left set here deliberately — that is the honest worst
-    // case, not an oversight. Neither is removed on a forward navigation:
-    // ARM_SNAPPING never clears `data-snap` at all, and ARM_SMOOTH clears
-    // `data-smooth` only on `popstate`, which a Link does not fire. `:has(.lp-deck)`
-    // is therefore the whole of the gate on a host route, and this asserts it
-    // holds alone.
+    // A client-side navigation off `/` unmounts the deck and runs no cleanup —
+    // `data-snap` in particular is stamped on <html> by ARM_SNAPPING and never
+    // removed, so every armed attribute is left set here deliberately. The deck
+    // is the only thing gone, which is the point: the gate is `:has(.lp-deck)`.
     document.body.innerHTML = '<main><h1>Privacy</h1><p>Some prose.</p></main>'
-    armDocument()
+    arm()
     for (const sel of gates) expect(document.querySelector(sel), sel).toBeNull()
   })
 })
