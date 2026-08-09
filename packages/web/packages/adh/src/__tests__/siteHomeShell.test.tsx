@@ -38,7 +38,13 @@ let liveSetSlug: (slug: string | undefined) => void = () => {};
 // that a switch carries the segments BELOW it (`/acme/services/s_1`). The last segment used to be
 // the slug and no longer is; taking `.pop()` here would have fed the deepest entity id back as
 // `workspaceSlug` and made a carrying test pass for the wrong reason.
-const extractSlug = (href: string): string => href.split("/").filter(Boolean)[0]!;
+// The query and the fragment are stripped first, because they are not part of any segment. The
+// real router parses the href into a path plus a search plus a hash, and `params.workspace` is a
+// path segment — feeding `acme?invite=1` back as the slug would make the shell 404 its own
+// redirect. Same reason `usePathname()` below is set from the path alone.
+const extractSlug = (href: string): string =>
+  href.split(/[?#]/)[0]!.split("/").filter(Boolean)[0]!;
+const extractPathname = (href: string): string => href.split(/[?#]/)[0]!;
 
 // What `usePathname()` answers. A module variable rather than state because nothing re-renders on
 // it alone: the shell reads it only when building the href for a click, and the render that follows
@@ -55,14 +61,14 @@ let routerFeedsBack = true;
 const replace = vi.fn((href: string) => {
   if (!routerFeedsBack) return;
   void Promise.resolve().then(() => {
-    livePathname = href;
+    livePathname = extractPathname(href);
     liveSetSlug(extractSlug(href));
   });
 });
 const push = vi.fn((href: string) => {
   if (!routerFeedsBack) return;
   void Promise.resolve().then(() => {
-    livePathname = href;
+    livePathname = extractPathname(href);
     liveSetSlug(extractSlug(href));
   });
 });
@@ -276,6 +282,10 @@ beforeEach(() => {
   seedRows = null;
   livePathname = "";
   routerFeedsBack = true;
+  // jsdom's address bar is per-FILE, not per-test, and the seeding redirect now reads
+  // `window.location` off it — so a case that sets a query would otherwise hand its query to
+  // every case that runs after it.
+  window.history.replaceState({}, "", "/");
   list.mockResolvedValue(WORKSPACES);
   prefsGet.mockResolvedValue({});
   prefsPutResult = () => Promise.resolve();
@@ -868,6 +878,126 @@ describe("SiteHomeShell resolution", () => {
       } finally {
         vi.useRealTimers();
       }
+    },
+  );
+
+  it(
+    "[max review 2, finding 4 regression] a SUPERSEDED seeding replace leaves nothing behind — a " +
+      "later deliberate arrival on that slug is still the user's, and is persisted",
+    async () => {
+      // The marker is written BEFORE the replace, because the replace may unmount the hook. So it
+      // is a promise about a mount that is not guaranteed to happen: `router.replace` can be
+      // superseded — the visitor clicks a link, or hits Back, while the transition is in flight —
+      // and then there is no arrival to consume it. Clearing it only on a MATCHING mount left it
+      // standing for the life of the tab, and every later arrival on that one slug, by link or by
+      // hand, was silently read as this hook's own old guess and never persisted.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        // Mount A — bare `/home`, cold cache, a GET that never answers, so the 5s bail seeds
+        // `/mine`. `routerFeedsBack = false` IS the supersession: the replace is issued and the
+        // arrival it was written for never comes.
+        routerFeedsBack = false;
+        prefsGet.mockReturnValueOnce(new Promise(() => {}));
+        const first = render(<Shell />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
+        first.unmount();
+
+        // Where the visitor actually went. Nothing here matches the marker — which is exactly why
+        // this mount has to consume it: a mount somewhere else is proof the hop is over.
+        routerFeedsBack = true;
+        readCached.mockReturnValue("acme");
+        prefsGet.mockReturnValueOnce(Promise.resolve({ slug: "acme" }));
+        const second = render(<Shell workspaceSlug="acme" />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        // Arriving on the workspace already stored settles nothing on its own, so the PUT counted
+        // below can only have come from the third mount.
+        expect(prefsPut).not.toHaveBeenCalled();
+        second.unmount();
+
+        // And now the arrival the stale marker used to swallow: a deliberate navigation onto the
+        // slug the shell once guessed, well inside the handoff window, with the stored row
+        // disagreeing. It is a deep link like any other.
+        prefsGet.mockReturnValueOnce(Promise.resolve({ slug: "acme" }));
+        render(<Shell workspaceSlug="mine" />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(prefsPut).toHaveBeenCalledTimes(1);
+        expect(prefsPut).toHaveBeenCalledWith({ slug: "mine" });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[max review 2, finding 4 regression] an unconsumed seed marker EXPIRES, so a return " +
+      "minutes later is an arrival and not a stale guess",
+    async () => {
+      // The other end of the same defect, and the reason consuming on every mount is not enough
+      // on its own: the superseded case may mount this hook NOWHERE at all — the visitor leaves
+      // for a route without the shell, or another site — and comes back to that same slug
+      // themselves later. There is no mount in between to spend the marker, so only the clock can.
+      vi.useFakeTimers();
+      try {
+        readCached.mockReturnValue(null);
+        routerFeedsBack = false;
+        prefsGet.mockReturnValueOnce(new Promise(() => {}));
+        const first = render(<Shell />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(5000);
+        });
+        expect(replace).toHaveBeenCalledWith("/mine", { scroll: false });
+        first.unmount();
+
+        // Five minutes of reading something else. A client route transition is sub-second, so
+        // anything on this scale is a person, not a handoff.
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(300_000);
+        });
+
+        routerFeedsBack = true;
+        readCached.mockReturnValue("acme");
+        prefsGet.mockReturnValueOnce(Promise.resolve({ slug: "acme" }));
+        render(<Shell workspaceSlug="mine" />);
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(0);
+        });
+        expect(prefsPut).toHaveBeenCalledTimes(1);
+        expect(prefsPut).toHaveBeenCalledWith({ slug: "mine" });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it(
+    "[max review 2, finding 7 regression] the seeding redirect carries the query and the fragment",
+    async () => {
+      // `/home` is the one address the whole family hands out — the header's Home link, the SSO
+      // return target, any campaign-tagged share of it — and the redirect that repairs it used to
+      // rebuild the destination from the slug alone, dropping everything after the path. The
+      // legacy `/home` → `/<workspace>` redirects in the sites' next configs preserve it, so the
+      // loss showed up as the OLD URL shape working where the new one did not.
+      window.history.replaceState({}, "", "/home?invite=abc#team");
+      readCached.mockReturnValue(null);
+      prefsGet.mockResolvedValue({ slug: "acme" });
+
+      render(<Shell />);
+      await waitFor(() =>
+        expect(replace).toHaveBeenCalledWith("/acme?invite=abc#team", { scroll: false }),
+      );
+      // And the segment the shell then reads is still just the slug: the extras ride along, they
+      // do not become part of the workspace's name.
+      await waitFor(() =>
+        expect(screen.getByTestId("feature")).toHaveAttribute("data-workspace", "acme"),
+      );
     },
   );
 

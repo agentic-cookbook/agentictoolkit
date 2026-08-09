@@ -67,6 +67,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from "@agentic-toolkit/data";
 var seededByUs = null;
+var SEED_HANDOFF_MS = 1e4;
+function withUrlExtras(href) {
+  if (typeof window === "undefined") return href;
+  if (href.includes("?") || href.includes("#")) return href;
+  return href + window.location.search + window.location.hash;
+}
 function useWorkspaceRoute({
   workspaces,
   workspaceSlug,
@@ -77,12 +83,14 @@ function useWorkspaceRoute({
   const router = useRouter();
   const [stored, setStored] = useState(() => readCachedWorkspace());
   const [prefsSettled, setPrefsSettled] = useState(false);
-  const arrivedOnOwnGuess = useRef(workspaceSlug !== void 0 && workspaceSlug === seededByUs);
+  const arrivedOnOwnGuess = useRef(
+    workspaceSlug !== void 0 && seededByUs !== null && workspaceSlug === seededByUs.slug && Date.now() - seededByUs.at <= SEED_HANDOFF_MS
+  );
   const [pendingWrite, setPendingWrite] = useState(
     () => arrivedOnOwnGuess.current ? null : workspaceSlug ?? null
   );
   useEffect(() => {
-    if (arrivedOnOwnGuess.current) seededByUs = null;
+    seededByUs = null;
   }, []);
   const wroteLocally = useRef(false);
   useEffect(() => {
@@ -120,8 +128,8 @@ function useWorkspaceRoute({
   }, [workspaces, workspaceSlug, stored, prefsSettled]);
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
-      seededByUs = resolved;
-      router.replace(hrefFor(resolved), { scroll: false });
+      seededByUs = { slug: resolved, at: Date.now() };
+      router.replace(withUrlExtras(hrefFor(resolved)), { scroll: false });
     }
   }, [resolved, workspaceSlug, hrefFor, router]);
   useEffect(() => {

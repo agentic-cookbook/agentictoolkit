@@ -23,14 +23,56 @@ import type { WorkspaceOption } from './WorkspaceOption'
  * page load resets it too, which is the same rule from the other end: arriving at `/acme` from
  * outside IS an arrival. Nothing else may set it — an explicit pick goes through `onSelect`,
  * which clears it.
+ *
+ * TWO things enforce the one-shot, because the mount the marker is written for is not guaranteed
+ * to arrive. `router.replace` can be superseded — the visitor clicks a link, or hits Back, while
+ * the transition is still in flight — and then there is no arrival to consume anything, so the
+ * marker outlives its hop with nothing to end it:
+ *
+ *   - EVERY mount consumes it, not only the one that matches. A mount that arrived somewhere else
+ *     is proof the hop the marker describes is over.
+ *   - It EXPIRES. The clicked-away case may mount this hook nowhere at all before the visitor
+ *     navigates back to that same slug themselves, minutes later — an arrival by any honest
+ *     reading, which the stale marker would silently refuse to persist. The handoff it has to
+ *     survive is one client route transition, so the window only needs to be longer than that.
  */
-let seededByUs: string | null = null
+let seededByUs: { slug: string; at: number } | null = null
+
+/** How long a seed marker may sit unconsumed. A client route transition is sub-second; ten seconds
+ *  is generous for one and short for a person, which is the whole of the reasoning. At the far end
+ *  a transition slower than this persists a workspace the visitor is already looking at, and only
+ *  when nothing was stored to begin with — the same outcome as the prefs GET timing out. */
+const SEED_HANDOFF_MS = 10_000
 
 /** Reset the seed marker, i.e. simulate the fresh page load that resets it in a browser. Tests
  *  only — a module variable outlives a test's unmount, so without this the seed one case wrote
  *  would be read back by the next case's mount as if that case had seeded it. */
 export function __resetSeededWorkspace(): void {
   seededByUs = null
+}
+
+/**
+ * Carry the current URL's query and hash onto the seeded destination.
+ *
+ * The seeding replace repairs a URL that names no workspace, and `/home` is the one address the
+ * whole family hands out — the header's Home link, the SSO return target, the registry's
+ * post-login landing, any campaign-tagged share of it. Everything after the path on that URL is
+ * the caller's, not the segment's, and rebuilding the destination from the slug alone dropped it
+ * without a trace. `marketingNextConfig`'s legacy redirects preserve it (Next redirects do), so
+ * the loss showed up as the old URL shape working where the new one did not.
+ *
+ * Appended only to a destination that carries neither of its own: `hrefFor` belongs to the caller,
+ * and a caller that has already said something about the query or the fragment has said it about
+ * the workspace it is naming, which is more specific than the address we are leaving.
+ *
+ * An explicit switch is deliberately NOT routed through here. That path has `switchHrefFor`, whose
+ * whole job is deciding what carries over, and what a destination workspace can honour is the
+ * caller's fact rather than this hook's.
+ */
+function withUrlExtras(href: string): string {
+  if (typeof window === 'undefined') return href
+  if (href.includes('?') || href.includes('#')) return href
+  return href + window.location.search + window.location.hash
 }
 
 /**
@@ -137,16 +179,27 @@ export function useWorkspaceRoute({
   // hook, which reads its own guess back as if the user had typed it. A cold localStorage plus a
   // slow prefs GET would then PUT the personal-workspace fallback over the row the user actually
   // chose — the exact destruction `pendingWrite` exists to prevent, arrived at one hop later.
-  const arrivedOnOwnGuess = useRef(workspaceSlug !== undefined && workspaceSlug === seededByUs)
+  const arrivedOnOwnGuess = useRef(
+    workspaceSlug !== undefined &&
+      seededByUs !== null &&
+      workspaceSlug === seededByUs.slug &&
+      Date.now() - seededByUs.at <= SEED_HANDOFF_MS,
+  )
   const [pendingWrite, setPendingWrite] = useState<string | null>(() =>
     arrivedOnOwnGuess.current ? null : (workspaceSlug ?? null),
   )
   // Consume the marker: it excuses the hop that just happened and nothing after it. Done in an
-  // effect, not in the render body, so a discarded render cannot spend it — and keyed on the ref
-  // rather than on the module variable, so a mount that did NOT arrive on a seed leaves a marker
-  // meant for someone else alone.
+  // effect, not in the render body, so a discarded render cannot spend it.
+  //
+  // UNCONDITIONAL, and that is the fix for a marker whose arrival never comes: a mount is a mount
+  // whether or not it landed on the seeded slug, and either way the hop the marker describes is
+  // finished. Clearing only on a match left a superseded replace's marker standing for the life of
+  // the tab, so a later deliberate navigation onto that same slug read as this hook's own old
+  // guess and was never persisted. This runs after the render that read it (`arrivedOnOwnGuess`),
+  // and before the seeding effect below can write a new one, so the marker a mount writes is never
+  // the marker it consumes.
   useEffect(() => {
-    if (arrivedOnOwnGuess.current) seededByUs = null
+    seededByUs = null
   }, [])
   // Whether this mount has already recorded a choice locally. A read must never overwrite a
   // write: the GET below was issued before that choice existed, so its answer is older than what
@@ -259,8 +312,8 @@ export function useWorkspaceRoute({
       // its `/<workspace>` are two routes), so anything set afterwards would never run. Every
       // replace from here is seed-driven — an explicit pick navigates through `onSelect`, which
       // pushes — so marking unconditionally is the whole rule, with no case to get wrong.
-      seededByUs = resolved
-      router.replace(hrefFor(resolved), { scroll: false })
+      seededByUs = { slug: resolved, at: Date.now() }
+      router.replace(withUrlExtras(hrefFor(resolved)), { scroll: false })
     }
   }, [resolved, workspaceSlug, hrefFor, router])
 
