@@ -25,9 +25,11 @@ import {
 } from "@agentic-toolkit/data/projects";
 import {
   projectIterationsApi,
+  projectMilestonesApi,
   projectsApi,
   type EstimateScale,
   type Iteration,
+  type Milestone,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -185,6 +187,14 @@ export function WorkItemsSurface({
         .catch(() => [] as Iteration[]),
     [workspaceSlug],
   );
+  // THIS board's plan — under the project, where the iterations are under the workspace, because
+  // that is the actual difference between the two: a cycle spans boards, a milestone is one
+  // board's own delivery. The SAME cache key the Milestones pane fills, so a milestone renamed
+  // there is what the pickers here offer without a second read. Fails soft for the same reason.
+  const loadMilestones = useCallback(
+    () => projectMilestonesApi.list(projectId).catch(() => [] as Milestone[]),
+    [projectId],
+  );
   const {
     items,
     setItems,
@@ -207,10 +217,15 @@ export function WorkItemsSurface({
     `workspace:${workspaceSlug ?? ""}:iterations`,
     loadIterations,
   );
+  const { items: milestoneRows } = useResourceList<Milestone>(
+    `project:${projectId}:milestones`,
+    loadMilestones,
+  );
   const statuses = statusRows ?? [];
   const participants = participantRows ?? [];
   const labelOptions = labelRows ?? [];
   const iterations = iterationRows ?? [];
+  const milestones = milestoneRows ?? [];
 
   // The project's OWN estimate scale — what an estimate's digits mean here. Read from the record
   // rather than passed in by the host, because both hosts would otherwise have to carry it and the
@@ -511,6 +526,7 @@ export function WorkItemsSurface({
             statuses={statuses}
             participants={participants}
             iterations={iterations}
+            milestones={milestones}
             estimateScale={estimateScale}
             onChanged={reload}
           />
@@ -536,6 +552,7 @@ export function WorkItemsSurface({
             statuses={statuses}
             participants={participants}
             iterations={iterations}
+            milestones={milestones}
             estimateScale={estimateScale}
             onOpenItem={onOpenItem}
             onChanged={reload}
@@ -568,6 +585,7 @@ export function WorkItemsSurface({
     statuses,
     participants,
     iterations,
+    milestones,
     estimateScale,
     onOpenItem,
     onMove,
@@ -598,6 +616,7 @@ export function WorkItemsSurface({
               workItems={items ?? []}
               labelOptions={labelOptions}
               iterations={iterations}
+              milestones={milestones}
               estimateScale={estimateScale}
               onSaved={() => void onSaved()}
               onCancel={closeEditor}
@@ -618,6 +637,7 @@ export function WorkItemsSurface({
               statuses={statuses}
               participants={participants}
               iterations={iterations}
+              milestones={milestones}
               labelOptions={labelOptions}
             />
             <div className="flex items-center justify-end">

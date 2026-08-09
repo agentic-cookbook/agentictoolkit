@@ -1,12 +1,23 @@
 "use client";
 
 import { type ReactNode } from "react";
-import { Activity, CalendarRange, FileStack, FolderKanban, KeyRound, ListTodo } from "lucide-react";
+import {
+  Activity,
+  CalendarRange,
+  FileStack,
+  Flag,
+  FolderKanban,
+  KeyRound,
+  Layers,
+  ListTodo,
+} from "lucide-react";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
+import { MilestonesPane } from "./MilestonesPane";
 import { IterationsPane } from "./IterationsPane";
+import { ProgramsPane } from "./ProgramsPane";
 import { ProjectContentsPane } from "./ProjectContentsPane";
 import { ProjectActivityPane } from "./ProjectActivityPane";
 
@@ -71,11 +82,13 @@ const OVERVIEW: ProjectTopicDef = {
   id: "overview",
   label: "Overview",
   icon: <FolderKanban size={16} aria-hidden />,
-  description: "The project's own record — name, status, color, and participants.",
+  description:
+    "The project's own record — name, status, color, participants, health, and the plan.",
   render: (ctx) => (
     <ProjectOverviewPane
       projectId={ctx.projectId}
       title={ctx.title}
+      workspaceSlug={ctx.workspaceSlug}
       renderTransferOwnership={ctx.renderTransferOwnership}
     />
   ),
@@ -96,6 +109,16 @@ const WORK_ITEMS: ProjectTopicDef = {
   ),
 };
 
+const MILESTONES: ProjectTopicDef = {
+  id: "milestones",
+  label: "Milestones",
+  icon: <Flag size={16} aria-hidden />,
+  description: "The plan — the points this project is aimed at, and what counts toward each.",
+  render: (ctx) => (
+    <MilestonesPane projectId={ctx.projectId} title={ctx.title} leaf={ctx.leaf} />
+  ),
+};
+
 const ITERATIONS: ProjectTopicDef = {
   id: "iterations",
   label: "Iterations",
@@ -103,6 +126,16 @@ const ITERATIONS: ProjectTopicDef = {
   description: "The time-boxes the workspace runs its work in — sprints and cycles.",
   render: (ctx) => (
     <IterationsPane title={ctx.title} leaf={ctx.leaf} workspaceSlug={ctx.workspaceSlug} />
+  ),
+};
+
+const PROGRAMS: ProjectTopicDef = {
+  id: "programs",
+  label: "Programs",
+  icon: <Layers size={16} aria-hidden />,
+  description: "The roll-ups above the boards — several projects read as one initiative.",
+  render: (ctx) => (
+    <ProgramsPane title={ctx.title} leaf={ctx.leaf} workspaceSlug={ctx.workspaceSlug} />
   ),
 };
 
@@ -148,26 +181,33 @@ const ACCESS: ProjectTopicDef = {
  * The topics a project publishes, in rail order.
  *
  * The order is a sentence about the project: what it IS (Overview), what it is DOING (Work
- * Items), WHEN it is doing it (Iterations), what it HOLDS (Contents), what HAPPENED (Activity),
- * and who may look (Access). Iterations sits directly under Work Items because the two are read
- * together — a cycle is a lens on the same cards — and above Contents because both are about the
- * work rather than the material around it.
+ * Items), what that work is AIMED AT (Milestones), WHEN it is being done (Iterations), what it
+ * ROLLS UP INTO (Programs), what it HOLDS (Contents), what HAPPENED (Activity), and who may look
+ * (Access). The four middle topics are all lenses on the same cards, which is why they sit
+ * together directly under Work Items and above Contents — the material around the work is a
+ * different subject.
+ *
+ * Within that run the split is by SCOPE, and it is worth knowing which way round it goes:
+ * Milestones belong to THIS board, while Iterations and Programs belong to the workspace. So the
+ * project's own plan comes first, and the two topics that reach past the board are adjacent.
  *
  * Access is present only when the host knows the owning workspace. Omitting the topic — rather
  * than listing it and rendering an empty pane — is the honest reading of "this surface cannot
  * show item-scoped roles": a rail row that opens onto nothing is a bug report waiting to be
  * filed. In practice every current host supplies one, so this is about what the next host sees.
  *
- * Iterations is listed UNCONDITIONALLY even though its boxes belong to the workspace rather than
- * the project. Without a `workspaceSlug` the API answers from the caller's own reach — the same
- * fallback the project list itself uses — so the pane still has something true to show, which is
- * the test Access fails and this passes.
+ * Iterations and Programs are listed UNCONDITIONALLY even though both belong to the workspace
+ * rather than the project. Without a `workspaceSlug` their APIs answer from the caller's own
+ * reach — the same fallback the project list itself uses — so each pane still has something true
+ * to show, which is the test Access fails and these pass.
  */
 export function projectTopics(opts: { workspaceSlug?: string }): ProjectTopicDef[] {
   return [
     OVERVIEW,
     WORK_ITEMS,
+    MILESTONES,
     ITERATIONS,
+    PROGRAMS,
     CONTENTS,
     ACTIVITY,
     ...(opts.workspaceSlug ? [ACCESS] : []),

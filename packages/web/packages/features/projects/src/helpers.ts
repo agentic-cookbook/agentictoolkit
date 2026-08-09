@@ -4,6 +4,7 @@ import type { ProjectActivity, ProjectComment, WorkItem } from "@agentic-toolkit
 import type {
   EstimateScale,
   IterationState,
+  ProjectHealth,
   ProjectStatus,
   ProjectParticipant,
   RelationKind,
@@ -262,6 +263,62 @@ export function iterationDateRange(startDate: string, endDate: string): string {
   return `${fmt(start, sameYear ? dayMonth : full)} – ${fmt(end, full)}`;
 }
 
+/* ── Dates a plan is made of ───────────────────────────────────────────── */
+
+/** One date-only value as a phrase — `16 Feb 2026`. The single-ended sibling of
+ *  {@link iterationDateRange}, for the fields that name a POINT rather than a span: a milestone's
+ *  target, a project's start, a program's end. Parsed through {@link dayIndex} and formatted from
+ *  the UTC parts for the reason `dayDate` documents — formatting locally would hand anyone west of
+ *  Greenwich the previous day. An unparseable value is echoed rather than swallowed, so a bad row
+ *  reads as its own raw text instead of silently vanishing. */
+export function dateLabel(date: string): string {
+  const day = dayIndex(date);
+  if (day === null) return date;
+  return new Intl.DateTimeFormat(undefined, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(day * MS_PER_DAY));
+}
+
+/** How many days from the viewer's own today to `date` — negative in the PAST, `0` today, `null`
+ *  for anything that is not a calendar day. The one place "is this date behind us" is computed, so
+ *  a milestone's overdue chip and a project's slipped target cannot disagree about which day it is
+ *  (both read {@link todayIndex}, which is the viewer's local day, not UTC's). */
+export function daysUntil(date: string): number | null {
+  const day = dayIndex(date);
+  return day === null ? null : day - todayIndex();
+}
+
+/* ── Health ────────────────────────────────────────────────────────────── */
+
+/**
+ * A reported health → its label and Badge tone. A total Record for the reason CATEGORY_VARIANT is
+ * one: the set is closed and the backend owns it (`status_updates_health_chk`), so a health added
+ * later is a type error here rather than an unlabelled badge.
+ *
+ * The tones are the palette's three warnings in order, and `on_track` takes "success" rather than
+ * "blue" deliberately: a health is a CLAIM about whether the plan will hold, so the tone has to
+ * carry reassurance or alarm, not activity. There is no tone for "nobody has reported" — that is
+ * the absence of a claim, not a fourth one, and the panes render it as a sentence.
+ */
+const HEALTH_META: Record<ProjectHealth, { label: string; variant: BadgeVariant }> = {
+  on_track: { label: "On track", variant: "success" },
+  at_risk: { label: "At risk", variant: "orange" },
+  off_track: { label: "Off track", variant: "error" },
+};
+
+/** Every health, in the order a reporter is offered them — best to worst, so the list reads as a
+ *  scale rather than a bag, and the least alarming answer is the one a mis-click lands on. */
+export const PROJECT_HEALTHS: ProjectHealth[] = ["on_track", "at_risk", "off_track"];
+
+export function healthMeta(health: ProjectHealth): { label: string; variant: BadgeVariant } {
+  // A row can arrive from a backend newer than this bundle, so an unrecognised health falls back
+  // to its own raw string rather than rendering `undefined` as a class.
+  return HEALTH_META[health] ?? { label: String(health), variant: "neutral" };
+}
+
 /** How a card names itself in TEXT — `ADH-42 — Fix the login redirect`, or just the title when
  *  the card has no key yet. For the places a key cannot be shown as its own element: a tooltip,
  *  an aria-label, a confirmation sentence. The dense date views (Calendar, Timeline) place a chip
@@ -356,12 +413,43 @@ export function authorText(c: ProjectComment): string {
   return principalText(c.authorKind, c.authorId, c.authorLabel);
 }
 
-/** True when a trail row's `changed` list holds the name and nothing else. Written positively —
- *  a row from before `changed` existed has no list at all, and "we do not know what changed" must
- *  not read as "only the name did". */
-function isRenameOnly(detail?: Record<string, unknown> | null): boolean {
+/** True when a trail row's `changed` list holds exactly `key` and nothing else. Written
+ *  positively — a row from before `changed` existed has no list at all, and "we do not know what
+ *  changed" must not read as "only the name did". */
+function changedOnly(detail: Record<string, unknown> | null | undefined, key: string): boolean {
   const changed = detail?.changed;
-  return Array.isArray(changed) && changed.length === 1 && changed[0] === "name";
+  return Array.isArray(changed) && changed.length === 1 && changed[0] === key;
+}
+
+/** True when a trail row's `changed` list mentions `key` at all — the weaker question, for the
+ *  fields whose movement is worth naming even when it travelled with something else. */
+function changedIncludes(
+  detail: Record<string, unknown> | null | undefined,
+  key: string,
+): boolean {
+  const changed = detail?.changed;
+  return Array.isArray(changed) && changed.includes(key);
+}
+
+/** The three healths a status update can report, phrased as the report itself. `detail.health` is
+ *  the value on the row the trail entry is about: on a post it is what was claimed, and on a
+ *  retraction it is what is being withdrawn. Anything else — including a row with no health at
+ *  all — falls back to the caller's general sentence rather than guessing a direction. */
+function healthPhrase(
+  detail: Record<string, unknown> | null | undefined,
+  verb: "reported" | "retracted",
+): string | null {
+  const said = verb === "reported" ? "reported the project" : "retracted";
+  switch (detail?.health) {
+    case "on_track":
+      return verb === "reported" ? `${said} on track` : `${said} an on-track report`;
+    case "at_risk":
+      return verb === "reported" ? `${said} at risk` : `${said} an at-risk report`;
+    case "off_track":
+      return verb === "reported" ? `${said} off track` : `${said} an off-track report`;
+    default:
+      return null;
+  }
 }
 
 /** Human phrasing of an `action` string; the raw value is the fallback.
@@ -435,6 +523,14 @@ export function actionPhrase(
     // destination, so it gets its own sentence rather than being read as an absent one.
     case "work_item.iteration_changed":
       return detail?.to === null ? "moved to the backlog" : "committed to an iteration";
+    // Same `{ from, to }` shape as the iteration move and the same reading of `to: null` — a
+    // stated destination, not a missing one. The words differ because the two mean different
+    // things: an iteration is a time-box a card is committed to, a milestone is a point in the
+    // plan a card counts toward, and a card off every milestone is not "in a backlog".
+    case "work_item.milestone_changed":
+      return detail?.to === null
+        ? "removed a work item from a milestone"
+        : "moved a work item to a milestone";
     case "work_item.deleted":
       return "deleted a work item";
     case "comment.added":
@@ -465,9 +561,38 @@ export function actionPhrase(
     // before recording anything — so a lone `name` is a rename and everything else re-points the
     // view at a different board. Two very different events under one action string.
     case "saved_view.updated":
-      return isRenameOnly(detail) ? "renamed a saved view" : "updated a saved view";
+      return changedOnly(detail, "name") ? "renamed a saved view" : "updated a saved view";
     case "saved_view.deleted":
       return "deleted a saved view";
+    case "milestone.created":
+      return "added a milestone";
+    // A milestone is a DATE with a label on it, so moving the date is the event a plan's readers
+    // are watching for — it slips the point everything else is counted against. `changed` is the
+    // only place either fact is written down; a rename gets its own sentence for the same reason
+    // a saved view's does.
+    case "milestone.updated":
+      if (changedOnly(detail, "name")) return "renamed a milestone";
+      if (changedOnly(detail, "targetDate")) return "moved a milestone's date";
+      return "updated a milestone";
+    case "milestone.deleted":
+      return "removed a milestone";
+    // The health rides along on the row precisely so this reads without a second fetch. A post
+    // with no health is a row this bundle does not understand, not a neutral report — say the
+    // general thing rather than invent a direction.
+    case "status_update.posted":
+      return healthPhrase(detail, "reported") ?? "posted a status update";
+    // `previousHealth` is what the row carries, and it is deliberately the OLD value: an edit
+    // that moved a board from on-track to off-track is a different event from a typo fix, and
+    // `changed` is what separates them.
+    case "status_update.edited":
+      return changedIncludes(detail, "health")
+        ? "revised the project's health"
+        : "edited a status update";
+    // Retracting the newest report moves the project's health backwards, so the withdrawn claim
+    // is the fact worth naming — "retracted an off-track report" and "posted a status update"
+    // are the two halves of the same swing.
+    case "status_update.deleted":
+      return healthPhrase(detail, "retracted") ?? "retracted a status update";
     default:
       return action;
   }

@@ -14,12 +14,14 @@ import { projectActivityApi } from "@agentic-toolkit/data/projects";
 import type {
   EstimateScale,
   Iteration,
+  Milestone,
   ProjectStatus,
   ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { AssigneePicker, toOptionValue, fromOptionValue, type AssigneeValue } from "./AssigneePicker";
 import { IterationPicker, NO_ITERATION } from "./IterationPicker";
+import { MilestonePicker, NO_MILESTONE } from "./MilestonePicker";
 import { EstimatePicker, fromEstimateValue, toEstimateValue } from "./EstimatePicker";
 import { ActivityFeed, ACTIVITY_PAGE_SIZE } from "./ActivityFeed";
 import { ItemKey } from "./ItemKey";
@@ -101,6 +103,9 @@ type WorkItemDraft = {
   /** the committed iteration's id, or "" for the backlog — a string for the same reason the
    *  assignee is one, and because "" is already how this form spells "no reference". */
   iterationId: string;
+  /** the milestone this card counts toward, or "" for none. Independent of the iteration above:
+   *  a card can be in this fortnight AND aimed at the beta, and neither implies the other. */
+  milestoneId: string;
   /** the estimate as the picker's string ("" = unestimated). A string rather than
    *  `number | null` so the two "empty" spellings stay one: `Object.is(null, undefined)` is
    *  false, and a Select hands back "" whatever the field means. */
@@ -128,6 +133,7 @@ function draftFromItem(item: WorkItem): WorkItemDraft {
     labels: item.labels,
     parentId: item.parentId ?? "",
     iterationId: item.iterationId ?? NO_ITERATION,
+    milestoneId: item.milestoneId ?? NO_MILESTONE,
     estimate: toEstimateValue(item.estimate),
   };
 }
@@ -170,6 +176,7 @@ export function WorkItemEditor({
   workItems,
   labelOptions,
   iterations,
+  milestones,
   estimateScale,
   onSaved,
   onCancel,
@@ -187,6 +194,9 @@ export function WorkItemEditor({
   labelOptions: string[];
   /** the WORKSPACE's time-boxes — not the project's, because a cycle spans boards. */
   iterations: Iteration[];
+  /** THIS board's milestones — the mirror image of the line above, and the one place the two
+   *  plan axes genuinely differ in shape. An empty list renders no milestone field at all. */
+  milestones: Milestone[];
   /** the owning project's estimate scale; `none` renders no estimate field at all. */
   estimateScale: EstimateScale;
   onSaved: (saved: WorkItem) => void;
@@ -297,6 +307,11 @@ export function WorkItemEditor({
     if (draft.iterationId !== baseline.iterationId) {
       patch.iterationId = draft.iterationId || null;
     }
+    // Same clear semantics for the milestone, and a separate key on purpose: detaching a card
+    // from a delivery says nothing about which fortnight it is being worked in.
+    if (draft.milestoneId !== baseline.milestoneId) {
+      patch.milestoneId = draft.milestoneId || null;
+    }
     // Likewise for the size: "" un-estimates, which the server distinguishes from 0. Both sides
     // go through the picker's codec, so `null` and `""` can never be two different answers here.
     if (draft.estimate !== baseline.estimate) {
@@ -392,6 +407,14 @@ export function WorkItemEditor({
         iterations={iterations}
         value={draft.iterationId}
         onChange={(id) => set("iterationId", id)}
+      />
+
+      {/* And what the card is FOR, directly under when it is being done. Renders nothing on a
+          board with no milestones — see MilestonePicker. */}
+      <MilestonePicker
+        milestones={milestones}
+        value={draft.milestoneId}
+        onChange={(id) => set("milestoneId", id)}
       />
 
       {/* Renders nothing when the project's scale is `none` — see EstimatePicker. */}

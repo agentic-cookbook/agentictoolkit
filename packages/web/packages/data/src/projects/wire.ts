@@ -47,6 +47,18 @@ export type EstimateScale =
  */
 export type IterationState = "upcoming" | "active" | "completed";
 
+/**
+ * How a project is GOING, as most recently REPORTED — never measured. The backend derives it
+ * from the newest live status update and stores no column for it, which is why the honest
+ * absence is `null` rather than a fourth value: a board nobody has reported on is not "on
+ * track", it is unreported, and a client that renders those the same way turns silence into
+ * reassurance.
+ *
+ * Three values and no more, spelled as they travel. `at_risk` claims the target is still
+ * reachable and something must change; `off_track` claims it is not.
+ */
+export type ProjectHealth = "on_track" | "at_risk" | "off_track";
+
 /* ── Projects (GET rows) ──────────────────────────────────────────────── */
 
 /** Backend row for `GET /project/projects` (and a single project). */
@@ -68,6 +80,32 @@ export interface ProjectRow {
   /** which numbers this project's estimate picker offers, or `none` to not estimate at all
    *  (the DB default). Absent on a bundle read from a backend that predates estimates. */
   estimateScale?: EstimateScale;
+  /** the plan's two ends (YYYY-MM-DD), independent and both optional — a standing board has
+   *  neither, and a delivery board usually knows its target long before its start. Unlike an
+   *  iteration, which must have both because its state is derived from the pair. */
+  startDate?: string | null;
+  targetDate?: string | null;
+  /** the single principal ANSWERABLE for the board — one name, distinct from the participants,
+   *  who are everyone attached to it. Both halves move together: either names a principal or
+   *  both are null. */
+  leadKind?: "customer" | "persona" | "team" | null;
+  leadId?: string | null;
+  /** the program this board rolls up into; null = it rolls up to nothing. The program belongs
+   *  to the board's OWNER, so a program never spans two workspaces. */
+  programId?: string | null;
+  /**
+   * The newest reported health, DERIVED on every read and stored nowhere — `null` means no
+   * live status update, which is a different thing from "on track" (see {@link ProjectHealth}).
+   *
+   * Present on every project a current backend returns, `null` included; absent only on a
+   * response from a backend that predates status updates. Those two are worth telling apart,
+   * which is why the key is optional here and nullable rather than one or the other.
+   */
+  health?: ProjectHealth | null;
+  /** when that report was POSTED — not when the project was last touched. Null with a null
+   *  health; a client showing "on track" without saying "as of when" is quoting a claim that
+   *  may be a quarter old. */
+  healthUpdatedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -157,6 +195,18 @@ export interface ProjectPatchBody {
    *  estimates already stored — a project that turns estimation off keeps them for the day it
    *  turns it back on. */
   estimateScale?: EstimateScale;
+  /** move either end of the plan; `null` clears that end. Validated against the pair the project
+   *  will END UP as, not the pair that was sent — so extending a target on a board that already
+   *  has a start is the ordinary one-field patch, and only a start AFTER the target is a 400. */
+  startDate?: string | null;
+  targetDate?: string | null;
+  /** set or clear the lead. Both halves travel TOGETHER: send a kind and an id, or send both as
+   *  null. Half a lead is a 400 rather than a silently-kept old value. */
+  leadKind?: "customer" | "persona" | "team" | null;
+  leadId?: string | null;
+  /** roll this board up into a program, or `null` to detach it. A program of ANOTHER workspace
+   *  is a 400 — the program's owner and the board's must match. */
+  programId?: string | null;
 }
 
 /** `POST /project/projects/{id}/statuses` body. */
@@ -206,6 +256,11 @@ export interface WorkItemRow {
    *  missing answer. The box belongs to the project's WORKSPACE, so two cards on two boards can
    *  share one. */
   iterationId?: string | null;
+  /** the milestone this card counts toward; null = none. The mirror of `iterationId` and its
+   *  deliberate opposite in scope: a time-box belongs to the WORKSPACE and is shared across
+   *  boards, a milestone is a point in THIS board's plan and must be one of its own (anything
+   *  else is a 400). */
+  milestoneId?: string | null;
   /** the card's size in whatever units its project's scale names; null is UN-estimated, which
    *  is distinct from estimated at 0. Any non-negative integer is accepted whatever the scale
    *  says, so changing a project's scale never invalidates a card. */
@@ -295,6 +350,8 @@ export interface WorkItemCreateBody {
   parentId?: string;
   /** commit the new card straight to a time-box; omitted leaves it in the backlog. */
   iterationId?: string;
+  /** count the new card toward a milestone of THIS project; omitted counts it toward none. */
+  milestoneId?: string;
   estimate?: number;
 }
 
@@ -313,6 +370,9 @@ export interface WorkItemPatchBody {
   /** `null` sends the card back to the backlog — the same explicit-null idiom the assignee and
    *  the dates use. */
   iterationId?: string | null;
+  /** `null` detaches the card from the plan — it then counts toward no milestone, which is an
+   *  ordinary state and not a missing answer. */
+  milestoneId?: string | null;
   /** `null` un-estimates the card, which is DISTINCT from estimating it at 0. */
   estimate?: number | null;
 }
@@ -421,6 +481,143 @@ export interface IterationPatchBody {
  *  which is why the key is nullable rather than the route refusing. */
 export interface IterationRolloverBody {
   toIterationId: string | null;
+}
+
+/* ── Programs (what several boards roll up into) ──────────────────────── */
+
+/**
+ * Backend row for `GET /project/programs` — a named grouping of BOARDS, owned by a workspace.
+ *
+ * Its own route stem, and no `/projects/{id}/programs`, for the reason an iteration has one: a
+ * program is not a thing a board owns. It sits ABOVE the boards, which is what makes rolling
+ * several of them up meaningful, and it is pinned with `?workspace=` exactly as the projects
+ * list is.
+ *
+ * Note what is NOT here: any rollup of the member boards' health. The list of a program's
+ * projects is a separate call precisely so a client shows the boards and their individual
+ * healths rather than a single folded verdict — three at-risk boards and one off-track board
+ * have no honest single colour.
+ */
+export interface ProgramRow {
+  id: string;
+  name: string;
+  description: string;
+  /** hex accent, same convention as a project's. */
+  color: string;
+  /** the workspace that owns it. A board may only join a program whose owner matches its own. */
+  ownerKind: string;
+  ownerId: string;
+  /** YYYY-MM-DD, both optional and independent — a standing program ("Platform") has neither. */
+  startDate?: string | null;
+  targetDate?: string | null;
+  ecosystemId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /project/programs` body — created against a `?workspace=` slug, not under a project.
+ *  A name already used by a live program in the same workspace is a 409. */
+export interface ProgramCreateBody {
+  name: string;
+  description?: string;
+  color?: string;
+  startDate?: string | null;
+  targetDate?: string | null;
+}
+
+/** `PATCH /project/programs/{id}` body. `null` on either date CLEARS it — the explicit-null
+ *  idiom, and why both columns are nullable rather than defaulted. */
+export interface ProgramPatchBody {
+  name?: string;
+  description?: string;
+  color?: string;
+  startDate?: string | null;
+  targetDate?: string | null;
+}
+
+/* ── Milestones (the points in ONE board's plan) ──────────────────────── */
+
+/**
+ * A milestone's live cards counted by status CATEGORY — every category present, `0` included,
+ * so a renderer never has to tell an absent key from an empty column.
+ *
+ * DERIVED on every read and stored nowhere, which is what keeps it from drifting: moving a card
+ * writes nothing to the milestone. There is deliberately no percentage — whether a `canceled`
+ * card belongs in the denominator is a product question, and answering it on the wire would
+ * freeze one answer for every consumer.
+ */
+export type MilestoneCounts = Record<StatusCategory, number>;
+
+/** Backend row for `GET /project/projects/{id}/milestones`.
+ *
+ *  `counts` arrives on the list and on a create, and NOT on a patch — an edit answers with the
+ *  row it wrote, and the row does not hold them. Optional here for that reason. */
+export interface MilestoneRow {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string;
+  /** YYYY-MM-DD, optional: an ordered-but-undated plan is a real thing, and requiring a date
+   *  would only get one invented. Undated milestones sort LAST in the list. */
+  targetDate?: string | null;
+  counts?: MilestoneCounts;
+  ecosystemId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /project/projects/{id}/milestones` body — 409 on a name a live milestone of the same
+ *  board already uses. */
+export interface MilestoneCreateBody {
+  name: string;
+  description?: string;
+  targetDate?: string | null;
+}
+
+/** `PATCH /project/projects/{id}/milestones/{milestoneId}` body. A milestoneId belonging to
+ *  ANOTHER board is a 404, never a cross-board edit. */
+export interface MilestonePatchBody {
+  name?: string;
+  description?: string;
+  targetDate?: string | null;
+}
+
+/* ── Status updates (where a project's health is READ from) ───────────── */
+
+/**
+ * Backend row for `GET /project/projects/{id}/status-updates` — a dated, SIGNED report on how a
+ * board is going, newest first.
+ *
+ * These are the only writable source of `ProjectRow.health`: the newest live one is what a
+ * project reports, which is why deleting the newest moves the dashboard backwards rather than
+ * leaving a stale colour behind.
+ */
+export interface StatusUpdateRow {
+  id: string;
+  projectId: string;
+  health: ProjectHealth;
+  body: string;
+  /** who signed it. Authorship is the gate on editing — not the verbs — for the same reason it
+   *  gates a comment: rewriting someone else's report over their name is a forgery, and this one
+   *  would additionally move a dashboard. */
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /project/projects/{id}/status-updates` body. Both keys REQUIRED: a health with no
+ *  explanation is a colour nobody can act on, and prose with no health does not move the
+ *  dashboard. Posting one MOVES the project's reported health. */
+export interface StatusUpdateCreateBody {
+  health: ProjectHealth;
+  body: string;
+}
+
+/** `PATCH /project/projects/{id}/status-updates/{updateId}` body — AUTHOR ONLY (403 otherwise).
+ *  Both optional, so fixing a typo does not force the author to restate the health. */
+export interface StatusUpdatePatchBody {
+  health?: ProjectHealth;
+  body?: string;
 }
 
 /* ── Artifacts (the things a project holds) ───────────────────────────── */

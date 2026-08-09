@@ -58,14 +58,23 @@ export function AssigneePicker({
   participants,
   value,
   onChange,
+  label = "Assignee",
+  noneLabel = "Unassigned",
 }: {
   participants: ProjectParticipant[];
   value: AssigneeValue | null;
   onChange: (v: AssigneeValue | null) => void;
+  /** What this reference IS on the record being edited. Defaults to a card's assignee, because
+   *  that is what the control was written for; a project's LEAD is the same question asked of the
+   *  same roster, so it is this control under another word rather than a second one. */
+  label?: string;
+  /** How the all-important empty answer reads. "Unassigned" is right for a card and wrong for a
+   *  project ("No lead"), and the sentinel it carries is `""` either way. */
+  noneLabel?: string;
 }): ReactElement {
   const items = useMemo(
     () => [
-      { value: "", label: "Unassigned" },
+      { value: "", label: noneLabel },
       ...participants.map((p) => ({
         value: toOptionValue({
           assigneeKind: p.participantKind,
@@ -74,17 +83,17 @@ export function AssigneePicker({
         label: participantLabel(p),
       })),
     ],
-    [participants],
+    [participants, noneLabel],
   );
 
   return (
-    <Field label="Assignee">
+    <Field label={label}>
       <ListChooser
         items={items}
         value={toOptionValue(value)}
         onChange={(v) => onChange(fromOptionValue(v))}
         allowCreate={false}
-        ariaLabel="Assignee"
+        ariaLabel={label}
         inputLabel="Find a participant"
         placeholder="Type a name…"
         emptyLabel="No matching participant"

@@ -9,7 +9,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { Activity, FileStack, ListTodo, Trash2, Users } from "lucide-react";
+import { Activity, FileStack, HeartPulse, ListTodo, Trash2, Users } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
@@ -29,7 +29,9 @@ import {
   projectWorkItemsApi,
   projectArtifactsApi,
   projectActivityApi,
+  projectProgramsApi,
   validateKeyPrefix,
+  type Program,
   type Project,
   type ProjectActivity,
   type ProjectArtifact,
@@ -39,12 +41,17 @@ import {
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
 import { FeatureTitle, useRecordAffordance } from "@agentic-toolkit/resource";
+import { AssigneePicker, fromOptionValue, toOptionValue } from "./AssigneePicker";
+import { ProjectStatusUpdates } from "./ProjectStatusUpdates";
 import {
   actionPhrase,
   actorText,
   categoryVariant,
   commentBody,
+  dateLabel,
   dayIndex,
+  daysUntil,
+  healthMeta,
   relativeTime,
   todayIndex,
   ESTIMATE_SCALES,
@@ -101,6 +108,18 @@ function kindVariant(kind: ProjectParticipant["participantKind"]): BadgeVariant 
 
 const KINDS: ProjectParticipant["participantKind"][] = ["customer", "persona", "team"];
 
+/** The kinds a LEAD may be — the same three, and the backend's `project_lead_kind_chk` is what
+ *  makes that list closed. Narrowing through this is what turns the assignee picker's opaque
+ *  `${kind}:${id}` string back into the union the patch body wants, instead of a cast that would
+ *  send whatever the option carried. */
+function asLeadKind(kind: string): Project["leadKind"] {
+  return (KINDS as string[]).includes(kind) ? (kind as Project["leadKind"]) : null;
+}
+
+/** "no program", as the Select's value. "" rather than a word, so it cannot collide with an id
+ *  and so an unset draft field and "rolls up into nothing" are the same thing. */
+const NO_PROGRAM = "";
+
 /* ── Derived figures ──────────────────────────────────────────────────────── */
 
 /** The work summary: how many items sit in each board CATEGORY, plus how many are past due.
@@ -148,15 +167,79 @@ function materialSummary(artifacts: ProjectArtifact[]) {
   return { ingested, produced, unresolved, total: artifacts.length };
 }
 
+/* ── The plan, read-only ──────────────────────────────────────────────────── */
+
+/**
+ * The board's plan as one line under its description: when it runs, who is answerable for it, and
+ * what it rolls up into.
+ *
+ * Read-only and up here, editable and down in the settings Disclosure — the same split the name
+ * and description already get, for the same reason: these are facts a visitor wants in the first
+ * two seconds and edits almost nobody makes. A board with none of them set renders NOTHING rather
+ * than four dashes; an empty plan is an ordinary state, and a row of placeholders would read as a
+ * form somebody failed to fill in.
+ *
+ * The target date is the one part that can carry alarm: a date already behind us on an unarchived
+ * board is a slipped plan, and it says so. Nothing else here is coloured — a lead and a program
+ * are memberships, not judgements.
+ */
+function PlanLine({
+  project,
+  programs,
+}: {
+  project: Project;
+  /** the workspace's programs, for putting a NAME to `programId`. An id this reader cannot
+   *  resolve is echoed rather than hidden — see below. */
+  programs: Program[];
+}): ReactElement | null {
+  const parts: ReactNode[] = [];
+  if (project.startDate) parts.push(`Started ${dateLabel(project.startDate)}`);
+  if (project.targetDate) {
+    const delta = daysUntil(project.targetDate);
+    const late = delta !== null && delta < 0 && !project.archivedAt;
+    parts.push(
+      <span key="target" className={late ? "text-apt-red" : undefined}>
+        {late ? `Target ${dateLabel(project.targetDate)} · overdue` : `Target ${dateLabel(project.targetDate)}`}
+      </span>,
+    );
+  }
+  if (project.leadKind && project.leadId) {
+    parts.push(`Lead ${project.leadKind} · ${project.leadId}`);
+  }
+  if (project.programId) {
+    // A program the reader cannot see still gets named by its id rather than dropped: "this board
+    // rolls up somewhere you cannot open" is true and useful, and silence would read as "nowhere".
+    const program = programs.find((p) => p.id === project.programId);
+    parts.push(program ? `In ${program.name}` : `In program ${project.programId}`);
+  }
+  if (parts.length === 0) return null;
+
+  return (
+    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-apt-text-muted">
+      {parts.map((part, i) => (
+        <span key={i} className="flex items-center gap-2">
+          {i > 0 && <span aria-hidden className="text-apt-text-dim">·</span>}
+          {part}
+        </span>
+      ))}
+    </p>
+  );
+}
+
 /* ── Pane ─────────────────────────────────────────────────────────────────── */
 
 export function ProjectOverviewPane({
   projectId,
   title,
+  workspaceSlug,
   renderTransferOwnership,
 }: {
   projectId: string;
   title: string;
+  /** The owning workspace, for the PROGRAM picker — a board may only join a program under its own
+   *  owner. Absent, the programs API answers from the caller's own reach, the same fallback the
+   *  project list uses, so the picker still offers something true. */
+  workspaceSlug?: string;
   /**
    * Host-injected Transfer Ownership section, rendered last in the pane. Absent on a standalone
    * feature site (`frontend/src/marketing/projects` mounts `ProjectsFeature` without it) — the
@@ -183,6 +266,14 @@ export function ProjectOverviewPane({
   const [color, setColor] = useState("");
   const [keyPrefix, setKeyPrefix] = useState("");
   const [estimateScale, setEstimateScale] = useState<EstimateScale>("none");
+  // The PLAN half of the same draft. Flat scalars like the rest of it: the two dates are the
+  // native inputs' own "" -or- YYYY-MM-DD strings, the lead is the assignee picker's composite
+  // `${kind}:${id}` codec, and the program is a bare id. Every one of the four is CLEARABLE, which
+  // is why "" is a meaningful value here and not merely an unfilled box.
+  const [startDate, setStartDate] = useState("");
+  const [targetDate, setTargetDate] = useState("");
+  const [lead, setLead] = useState("");
+  const [programId, setProgramId] = useState(NO_PROGRAM);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -264,6 +355,19 @@ export function ProjectOverviewPane({
     loadActivity,
   );
 
+  // The workspace's programs, for the membership picker below — the SAME cache key the Programs
+  // topic reads, so joining a program here and opening that topic do not disagree. Fails soft
+  // like the other summaries: a board is still worth editing when the roll-up list is briefly
+  // unavailable, and the picker's orphan guard keeps the current membership selectable regardless.
+  const loadPrograms = useCallback(
+    () => projectProgramsApi.list({ workspace: workspaceSlug }).catch(() => [] as Program[]),
+    [workspaceSlug],
+  );
+  const { items: programRows } = useResourceList<Program>(
+    `workspace:${workspaceSlug ?? ""}:programs`,
+    loadPrograms,
+  );
+
   const participants = participantRows;
   const work = useMemo(
     () => workSummary(itemRows ?? [], statusRows ?? []),
@@ -282,6 +386,16 @@ export function ProjectOverviewPane({
     setColor(p.color);
     setKeyPrefix(p.keyPrefix);
     setEstimateScale(p.estimateScale);
+    setStartDate(p.startDate ?? "");
+    setTargetDate(p.targetDate ?? "");
+    // The two halves of a lead are always both set or both null — the backend refuses half a
+    // lead — so one composite string is a faithful carrier and not a lossy flattening.
+    setLead(
+      p.leadKind && p.leadId
+        ? toOptionValue({ assigneeKind: p.leadKind, assigneeId: p.leadId })
+        : "",
+    );
+    setProgramId(p.programId ?? NO_PROGRAM);
   }, []);
 
   // Load the project. ResourceExplorer keys the topic pane by the project id, so a
@@ -310,6 +424,11 @@ export function ProjectOverviewPane({
       color?: string;
       keyPrefix?: string;
       estimateScale?: EstimateScale;
+      startDate?: string | null;
+      targetDate?: string | null;
+      leadKind?: Project["leadKind"];
+      leadId?: string | null;
+      programId?: string | null;
     } = {};
     if (name.trim() !== project.name) next.name = name.trim();
     if (description !== (project.description ?? "")) next.description = description;
@@ -320,20 +439,67 @@ export function ProjectOverviewPane({
     // stores only the upper form — sending the raw text would make the field look dirty forever.
     const nextPrefix = keyPrefix.trim().toUpperCase();
     if (nextPrefix !== project.keyPrefix) next.keyPrefix = nextPrefix;
+
+    // The plan. Every one of these sends an explicit `null` to CLEAR — the client's `compact`
+    // drops only `undefined`, so a null is the difference between "unset this" and "leave it".
+    if (startDate !== (project.startDate ?? "")) next.startDate = startDate || null;
+    if (targetDate !== (project.targetDate ?? "")) next.targetDate = targetDate || null;
+    // The lead travels as a PAIR, always both or neither — the backend refuses half of one, so
+    // sending `leadId` alone would be a 400 rather than a partial edit. Clearing sends two nulls.
+    const currentLead =
+      project.leadKind && project.leadId
+        ? toOptionValue({ assigneeKind: project.leadKind, assigneeId: project.leadId })
+        : "";
+    if (lead !== currentLead) {
+      const parsed = fromOptionValue(lead);
+      const kind = parsed ? asLeadKind(parsed.assigneeKind) : null;
+      next.leadKind = kind;
+      next.leadId = kind ? parsed!.assigneeId : null;
+    }
+    if (programId !== (project.programId ?? NO_PROGRAM)) {
+      next.programId = programId || null;
+    }
     return next;
-  }, [project, name, description, status, color, keyPrefix, estimateScale]);
+  }, [
+    project,
+    name,
+    description,
+    status,
+    color,
+    keyPrefix,
+    estimateScale,
+    startDate,
+    targetDate,
+    lead,
+    programId,
+  ]);
 
   // Shown (and blocking) only once the field has been TOUCHED into the patch — a project that
   // arrives with no prefix yet must not open its settings already complaining.
   const keyPrefixError = patch.keyPrefix === undefined ? null : validateKeyPrefix(patch.keyPrefix);
 
+  // The backend's own date rule, restated so the reason arrives before the round trip. It is
+  // checked against the pair the project will END UP as — exactly as the server does — which is
+  // what makes moving one end of an already-dated plan an ordinary one-field edit. `YYYY-MM-DD`
+  // sorts lexicographically as it sorts chronologically, so this needs no parsing and no timezone.
+  const datesError =
+    startDate && targetDate && targetDate < startDate
+      ? "The target date is before the start date."
+      : null;
+
   const dirty = Object.keys(patch).length > 0;
-  const canSave = dirty && name.trim().length > 0 && !keyPrefixError && !saving;
+  const canSave = dirty && name.trim().length > 0 && !keyPrefixError && !datesError && !saving;
 
   async function save() {
     if (!project || !dirty) return;
     if (!name.trim()) {
       setSaveError("Name is required.");
+      return;
+    }
+    // The Save button is disabled on this, but the guard is here too: `canSave` governs a click,
+    // and nothing stops a future keyboard path from calling straight through.
+    if (datesError) {
+      setSaveError(datesError);
       return;
     }
     setSaving(true);
@@ -442,6 +608,26 @@ export function ProjectOverviewPane({
               <div className="flex flex-wrap items-center gap-2">
                 <Badge variant="neutral">{project.status}</Badge>
                 {project.archivedAt && <Badge variant="orange">archived</Badge>}
+                {/* The health, with the DATE of the claim beside it. A colour with no date is a
+                    claim of unknown age, and "on track, six weeks ago" is a different sentence
+                    from "on track". A project nobody has reported on shows NO badge — the absence
+                    of a claim is not a fourth colour, and it is said in the Health panel below
+                    where there is room to say it properly. */}
+                {project.health && (
+                  <>
+                    <Badge variant={healthMeta(project.health).variant}>
+                      {healthMeta(project.health).label}
+                    </Badge>
+                    {project.healthUpdatedAt && (
+                      <time
+                        dateTime={project.healthUpdatedAt}
+                        className="text-xs text-apt-text-dim"
+                      >
+                        as of {relativeTime(project.healthUpdatedAt)}
+                      </time>
+                    )}
+                  </>
+                )}
               </div>
               {project.description ? (
                 <p className="text-sm whitespace-pre-wrap text-apt-text-muted">
@@ -454,6 +640,7 @@ export function ProjectOverviewPane({
                   No description yet — add one in Project settings below.
                 </p>
               )}
+              <PlanLine project={project} programs={programRows ?? []} />
             </header>
 
             {/* ── How it is doing ──────────────────────────────────────── */}
@@ -538,6 +725,30 @@ export function ProjectOverviewPane({
                 )}
               </InfoPanel>
             </div>
+
+            {/* ── How it says it is doing ──────────────────────────────── */}
+            {/* The narrative behind the badge in the header. It sits next to the derived figures
+                above rather than in settings, because a check-in is a REPORT — someone's claim
+                about whether the plan will hold — and reading it against the counts is the whole
+                point. A refetch of the project after every write is what keeps the badge and the
+                top row of this panel from disagreeing; the panel does not own `health`. */}
+            <InfoPanel
+              title="Health"
+              icon={<HeartPulse size={15} className="text-apt-text-muted" aria-hidden />}
+              className="max-w-3xl"
+            >
+              <ProjectStatusUpdates
+                projectId={projectId}
+                participants={participants ?? []}
+                onChanged={() => {
+                  void projectsApi.get(projectId).then((p) => {
+                    // Only the row, never the draft: re-seeding here would throw away whatever
+                    // someone had typed into the settings form while reporting a status.
+                    if (p && mounted.current) setProject(p);
+                  });
+                }}
+              />
+            </InfoPanel>
 
             {/* ── Who is in it ─────────────────────────────────────────── */}
             <InfoPanel
@@ -634,7 +845,7 @@ export function ProjectOverviewPane({
             {/* ── Its own record ───────────────────────────────────────── */}
             <Disclosure
               title="Project settings"
-              subtitle="Name, description, lifecycle status, board accent, key prefix, and estimate scale."
+              subtitle="Name, description, lifecycle status, board accent, key prefix, estimate scale, and the plan — dates, lead, and program."
               className="max-w-3xl"
             >
               <div className="flex max-w-xl flex-col gap-5">
@@ -717,6 +928,82 @@ export function ProjectOverviewPane({
                     {ESTIMATE_SCALES.map((s) => (
                       <option key={s} value={s}>
                         {estimateScaleOptionLabel(s)}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+                {/* ── The plan ───────────────────────────────────────────
+                    Four fields that say when this board runs, who answers for it, and what it
+                    belongs to. They live in the SAME draft and the same Save as the rest — a plan
+                    is part of the project's record, not a second object with its own button, and
+                    splitting the save would let someone leave with half an edit applied. */}
+                <div className="flex flex-wrap gap-4">
+                  <Field
+                    label="Start date"
+                    className="min-w-44 flex-1"
+                    hint="Optional — a standing board has no ends."
+                    error={datesError ?? undefined}
+                  >
+                    <Input
+                      type="date"
+                      value={startDate}
+                      onChange={(e) => {
+                        setSaveError(null);
+                        setStartDate(e.target.value);
+                      }}
+                    />
+                  </Field>
+                  <Field
+                    label="Target date"
+                    className="min-w-44 flex-1"
+                    hint="Optional, and independent of the start."
+                  >
+                    <Input
+                      type="date"
+                      value={targetDate}
+                      onChange={(e) => {
+                        setSaveError(null);
+                        setTargetDate(e.target.value);
+                      }}
+                    />
+                  </Field>
+                </div>
+                {/* The same control a card's assignee uses, over the same roster, under another
+                    word — a lead IS an assignee, of the board rather than of one card. */}
+                <AssigneePicker
+                  participants={participants ?? []}
+                  value={fromOptionValue(lead)}
+                  onChange={(v) => {
+                    setSaveError(null);
+                    setLead(toOptionValue(v));
+                  }}
+                  label="Lead"
+                  noneLabel="No lead"
+                />
+                {/* A board joins at most one program, and only one under its OWN owner — which is
+                    why the list is the workspace's and a cross-workspace id is a 400 rather than
+                    something this picker can offer. The orphan option keeps a membership this
+                    reader cannot resolve selectable, so opening settings never silently detaches
+                    the board on the next save. */}
+                <Field
+                  label="Program"
+                  hint="The roll-up this board belongs to. A program spans several boards in this workspace."
+                >
+                  <Select
+                    value={programId}
+                    onChange={(e) => {
+                      setSaveError(null);
+                      setProgramId(e.target.value);
+                    }}
+                  >
+                    <option value={NO_PROGRAM}>No program</option>
+                    {programId !== NO_PROGRAM &&
+                    !(programRows ?? []).some((p) => p.id === programId) ? (
+                      <option value={programId}>Keep current program</option>
+                    ) : null}
+                    {(programRows ?? []).map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
                       </option>
                     ))}
                   </Select>

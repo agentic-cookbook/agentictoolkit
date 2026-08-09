@@ -15,8 +15,16 @@ export type { WorkItemMoveTarget } from "./wire";
 // both are closed sets a renderer switches on exhaustively — which numbers a picker offers, and
 // how a box's badge reads — and a signature that takes one rarely already holds a project.
 export type { EstimateScale, IterationState } from "./wire";
+// A project's reported health, and the per-category tally a milestone reports its progress as.
+// Public for the same reason: both are closed shapes a renderer switches on or indexes into, and
+// a signature that takes one (a badge's tone, a progress bar's props) rarely already holds the
+// project or milestone it came off.
+export type { ProjectHealth, MilestoneCounts } from "./wire";
 export * from "./projects";
 export * from "./iterations";
+export * from "./programs";
+export * from "./milestones";
+export * from "./status-updates";
 export * from "./work-items";
 export * from "./activity";
 export * from "./comments";

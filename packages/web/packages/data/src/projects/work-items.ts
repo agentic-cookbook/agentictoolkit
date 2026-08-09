@@ -59,6 +59,11 @@ export interface WorkItem {
    *  The box belongs to the project's WORKSPACE, so it is not addressable under the project:
    *  read the candidates from {@link projectIterationsApi.list}. */
   iterationId: string | null;
+  /** the milestone this card counts toward; null = none. The mirror of {@link iterationId} and
+   *  its opposite in scope: a time-box is the WORKSPACE's and shared across boards, a milestone
+   *  is a point in THIS board's plan — read the candidates from
+   *  {@link projectMilestonesApi.list} for this card's own project. */
+  milestoneId: string | null;
   /** the card's size in the units its project's `estimateScale` names; null is UN-estimated,
    *  which is distinct from a card estimated at 0. */
   estimate: number | null;
@@ -85,6 +90,7 @@ export function toWorkItem(r: WorkItemRow): WorkItem {
     labels: r.labels,
     parentId: r.parentId ?? null,
     iterationId: r.iterationId ?? null,
+    milestoneId: r.milestoneId ?? null,
     estimate: r.estimate ?? null,
     rank: r.rank,
     createdAt: r.createdAt,
@@ -221,6 +227,8 @@ export const projectWorkItemsApi = {
       labels?: string[];
       parentId?: string;
       iterationId?: string;
+      /** count the new card toward a milestone of THIS project. */
+      milestoneId?: string;
       estimate?: number;
     },
   ): Promise<WorkItem> {
@@ -237,6 +245,7 @@ export const projectWorkItemsApi = {
         labels: input.labels,
         parentId: input.parentId,
         iterationId: input.iterationId,
+        milestoneId: input.milestoneId,
         estimate: input.estimate,
       }),
     };
@@ -265,6 +274,8 @@ export const projectWorkItemsApi = {
       parentId?: string | null;
       /** null sends the card back to the backlog. */
       iterationId?: string | null;
+      /** null detaches the card from the plan — it then counts toward no milestone. */
+      milestoneId?: string | null;
       /** null un-estimates the card — not the same as `0`. */
       estimate?: number | null;
     },

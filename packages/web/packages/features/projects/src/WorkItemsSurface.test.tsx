@@ -36,6 +36,9 @@ vi.mock("@agentic-toolkit/data/projects", async (importOriginal) => ({
   },
   // The workspace's time-boxes, which the editor's iteration picker offers.
   projectIterationsApi: { list: vi.fn() },
+  // The BOARD's plan, which the milestone picker, column and filter axis offer. Stubbed for the
+  // same reason the iterations are: unstubbed it reaches the network from every mount here.
+  projectMilestonesApi: { list: vi.fn() },
   projectActivityApi: {
     workItemActivity: vi.fn().mockResolvedValue({ rows: [], nextBefore: null }),
   },
@@ -58,8 +61,10 @@ import { resetViewMemory } from "./view-memory";
 import { projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   projectIterationsApi,
+  projectMilestonesApi,
   projectsApi,
   type Iteration,
+  type Milestone,
   type Project,
   type ProjectStatus,
   type ProjectParticipant,
@@ -76,6 +81,7 @@ const participantsList = vi.mocked(projectsApi.participants.list);
 const labelsList = vi.mocked(projectsApi.labels);
 const projectGet = vi.mocked(projectsApi.get);
 const iterationsList = vi.mocked(projectIterationsApi.list);
+const milestonesList = vi.mocked(projectMilestonesApi.list);
 const savedViewsList = vi.mocked(projectsApi.savedViews.list);
 const savedViewsCreate = vi.mocked(projectsApi.savedViews.create);
 const savedViewsUpdate = vi.mocked(projectsApi.savedViews.update);
@@ -110,6 +116,7 @@ function item(over: Partial<WorkItem>): WorkItem {
     labels: [],
     parentId: null,
     iterationId: null,
+    milestoneId: null,
     estimate: null,
     rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
@@ -152,6 +159,20 @@ const CYCLE: Iteration = {
   updatedAt: "2026-06-30T00:00:00Z",
 };
 
+/** One point in THIS board's plan. Scoped to the project, where CYCLE above is the workspace's —
+ *  the difference the two load-scope tests below exist to hold. */
+const MILESTONE: Milestone = {
+  id: "ms1",
+  projectId: "p1",
+  name: "Beta",
+  description: "",
+  targetDate: "2026-08-15",
+  counts: { backlog: 0, todo: 0, in_progress: 0, done: 0, canceled: 0 },
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
+};
+
 const PARTICIPANT: ProjectParticipant = {
   id: "pp1",
   projectId: "p1",
@@ -187,6 +208,7 @@ beforeEach(() => {
   labelsList.mockResolvedValue([]);
   projectGet.mockResolvedValue(structuredClone(PROJECT));
   iterationsList.mockResolvedValue([]);
+  milestonesList.mockResolvedValue([]);
   create.mockImplementation((_projectId, input) =>
     Promise.resolve({ ...structuredClone(W1), ...input, id: "w3" } as WorkItem),
   );
@@ -420,13 +442,44 @@ describe("WorkItemsSurface", () => {
     expect(listForProject).toHaveBeenCalledWith("p1");
   });
 
-  // The two PLANNING values the surface loads for its views: the WORKSPACE's cycles (one list
-  // answers every board its owner runs) and the PROJECT's estimate scale (what a size means here).
+  // The three PLANNING values the surface loads for its views: the WORKSPACE's cycles (one list
+  // answers every board its owner runs), the BOARD's milestones (a plan belongs to one board), and
+  // the PROJECT's estimate scale (what a size means here). The first two are loaded at DIFFERENT
+  // scopes on purpose, which is the thing worth pinning — wiring either to the other's scope
+  // offers a reader points, or cycles, from somewhere else.
   it("asks for the WORKSPACE's iterations, not the project's", async () => {
     render(<Harness workspaceSlug="acme" />);
     await listLoaded();
 
     await waitFor(() => expect(iterationsList).toHaveBeenCalledWith({ workspace: "acme" }));
+  });
+
+  it("asks for the PROJECT's milestones, not the workspace's", async () => {
+    render(<Harness workspaceSlug="acme" />);
+    await listLoaded();
+
+    await waitFor(() => expect(milestonesList).toHaveBeenCalledWith("p1"));
+  });
+
+  it("offers the board's plan in the editor's milestone picker", async () => {
+    milestonesList.mockResolvedValue([structuredClone(MILESTONE)]);
+
+    render(<Harness view="table" workspaceSlug="acme" />);
+    fireEvent.doubleClick(await screen.findByText("Design the landing page"));
+    await screen.findByRole("button", { name: "Save changes" });
+
+    const milestone = (await screen.findByLabelText("Milestone")) as HTMLSelectElement;
+    expect(within(milestone).getByRole("option", { name: /Beta/ })).not.toBeNull();
+    // The card counts toward nothing, so the picker sits on "No milestone" rather than aiming it.
+    expect(milestone.value).toBe("");
+  });
+
+  it("has no milestone field on a board with no plan", async () => {
+    render(<Harness view="table" workspaceSlug="acme" />);
+    fireEvent.doubleClick(await screen.findByText("Design the landing page"));
+    await screen.findByRole("button", { name: "Save changes" });
+
+    expect(screen.queryByLabelText("Milestone")).toBeNull();
   });
 
   it("offers the workspace's cycles and the project's scale in the editor", async () => {

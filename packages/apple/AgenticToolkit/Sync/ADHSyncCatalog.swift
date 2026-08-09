@@ -10,7 +10,7 @@ import Foundation
 /// what actually syncs. `pullOnly` mirrors backend pushMode 'route' — resources
 /// whose writes stay on bespoke routes; /sync/push refuses a generic write.
 public enum ADHSyncCatalog {
-    /// Every catalog resource (77), each with its schemaVersion.
+    /// Every catalog resource (83), each with its schemaVersion.
     public static let all: [SyncResource] = [
         SyncResource(resource: "bucket.bucket_types", schemaVersion: 1),
         SyncResource(resource: "bucket.buckets", schemaVersion: 1),
@@ -74,10 +74,16 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "personal.jobs", schemaVersion: 1),
         SyncResource(resource: "project.activity", schemaVersion: 1),
         SyncResource(resource: "project.artifacts", schemaVersion: 1),
+        SyncResource(resource: "project.comments", schemaVersion: 1),
         SyncResource(resource: "project.fields", schemaVersion: 1),
+        SyncResource(resource: "project.iterations", schemaVersion: 1),
+        SyncResource(resource: "project.milestones", schemaVersion: 1),
         SyncResource(resource: "project.participants", schemaVersion: 1),
+        SyncResource(resource: "project.programs", schemaVersion: 1),
         SyncResource(resource: "project.projects", schemaVersion: 1),
         SyncResource(resource: "project.research_projects", schemaVersion: 1),
+        SyncResource(resource: "project.saved_views", schemaVersion: 1),
+        SyncResource(resource: "project.status_updates", schemaVersion: 1),
         SyncResource(resource: "project.statuses", schemaVersion: 1),
         SyncResource(resource: "project.tasks", schemaVersion: 1),
         SyncResource(resource: "project.work_item_dependencies", schemaVersion: 1),
@@ -91,7 +97,7 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "social.user_blocks", schemaVersion: 1)
     ]
 
-    /// Pull-only resources (30): backend pushMode 'route'.
+    /// Pull-only resources (36): backend pushMode 'route'.
     public static let pullOnly: Set<String> = [
         "content.addresses",
         "content.attachments",
@@ -110,10 +116,16 @@ public enum ADHSyncCatalog {
         "notification.notifications",
         "project.activity",
         "project.artifacts",
+        "project.comments",
         "project.fields",
+        "project.iterations",
+        "project.milestones",
         "project.participants",
+        "project.programs",
         "project.projects",
         "project.research_projects",
+        "project.saved_views",
+        "project.status_updates",
         "project.statuses",
         "project.work_item_dependencies",
         "project.work_item_field_values",

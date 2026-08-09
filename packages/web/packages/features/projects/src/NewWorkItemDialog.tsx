@@ -23,11 +23,12 @@ import {
  * item's own detail opens for everything else (assignee, priority, dates, parent, activity),
  * exactly as "New Project" does.
  *
- * The iteration and the estimate are in that second group deliberately, though a card COULD be
- * created straight into a cycle (the API takes both on create). Committing work to a fortnight
- * and sizing it are planning decisions made about a card that exists, usually later and often by
- * someone else; putting them in the modal would make writing down an idea a planning meeting.
- * The detail pane's pickers are where both are answered.
+ * The iteration, the milestone and the estimate are in that second group deliberately, though a
+ * card COULD be created straight into any of them (the API takes all three on create). Committing
+ * work to a fortnight, aiming it at a delivery and sizing it are planning decisions made about a
+ * card that exists, usually later and often by someone else; putting them in the modal would make
+ * writing down an idea a planning meeting. The detail pane's pickers are where all three are
+ * answered.
  *
  * Built on the shared {@link CreateResourceDialog}, so the guarded close (Save / Discard / keep
  * editing, inert backdrop) behaves like every other create on the platform.

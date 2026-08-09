@@ -23,6 +23,7 @@ import { compareRank, projectWorkItemsApi, type WorkItem } from "@agentic-toolki
 import {
   type EstimateScale,
   type Iteration,
+  type Milestone,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -131,6 +132,7 @@ export function ListView({
   statuses,
   participants,
   iterations,
+  milestones,
   estimateScale,
   onChanged,
 }: {
@@ -140,6 +142,8 @@ export function ListView({
   participants: ProjectParticipant[];
   /** The workspace's time-boxes, so the details pane names the card's cycle rather than its id. */
   iterations: Iteration[];
+  /** This board's milestones, so the details pane names the card's target rather than its id. */
+  milestones: Milestone[];
   /** The project's estimate scale, which is what an estimate's digits mean. */
   estimateScale: EstimateScale;
   /** A row committed an edit or a delete — the surface re-reads the shared items so every view
@@ -569,6 +573,7 @@ export function ListView({
             participants={participants}
             workItems={items}
             iterations={iterations}
+            milestones={milestones}
             estimateScale={estimateScale}
           />
         )}

@@ -15,6 +15,7 @@ import type { WorkItem } from "@agentic-toolkit/data/projects";
 import {
   EMPTY_FILTER,
   NO_ITERATION,
+  NO_MILESTONE,
   UNASSIGNED,
   applyWorkItemFilter,
   decodeFilter,
@@ -38,6 +39,7 @@ function item(over: Partial<WorkItem> & { id: string }): WorkItem {
     labels: [],
     parentId: null,
     iterationId: null,
+    milestoneId: null,
     estimate: null,
     rank: "a0",
     createdAt: "2026-01-01T00:00:00.000Z",
@@ -57,6 +59,7 @@ describe("isFilterActive", () => {
 
   it("is true for any single axis, including an empty-string sentinel that means something", () => {
     expect(isFilterActive(filter({ iterationId: NO_ITERATION }))).toBe(true);
+    expect(isFilterActive(filter({ milestoneId: NO_MILESTONE }))).toBe(true);
     expect(isFilterActive(filter({ assignee: UNASSIGNED }))).toBe(true);
     expect(isFilterActive(filter({ priority: "0" }))).toBe(true);
     expect(isFilterActive(filter({ labels: ["bug"] }))).toBe(true);
@@ -125,6 +128,28 @@ describe("applyWorkItemFilter", () => {
     ]);
   });
 
+  it("filters by milestone independently of the iteration, and ANDs the two", () => {
+    // The point of a separate axis: the two answer different questions about the same card, so
+    // narrowing by one must not narrow by the other, and setting both must narrow by both. If
+    // the milestone were ever folded into the iteration axis, the third assertion is what breaks.
+    const items = [
+      item({ id: "beta-now", iterationId: "it-1", milestoneId: "ms-1" }),
+      item({ id: "beta-later", iterationId: "it-2", milestoneId: "ms-1" }),
+      item({ id: "ga-now", iterationId: "it-1", milestoneId: "ms-2" }),
+      item({ id: "unaimed", iterationId: "it-1" }),
+    ];
+    expect(ids(applyWorkItemFilter(items, filter({ milestoneId: "ms-1" })))).toEqual([
+      "beta-now",
+      "beta-later",
+    ]);
+    expect(ids(applyWorkItemFilter(items, filter({ milestoneId: NO_MILESTONE })))).toEqual([
+      "unaimed",
+    ]);
+    expect(
+      ids(applyWorkItemFilter(items, filter({ milestoneId: "ms-1", iterationId: "it-1" }))),
+    ).toEqual(["beta-now"]);
+  });
+
   it("requires EVERY listed label, not any of them", () => {
     const items = [
       item({ id: "both", labels: ["bug", "ui", "p2"] }),
@@ -171,6 +196,7 @@ describe("encodeFilter / decodeFilter", () => {
       statusId: "st-1",
       assignee: "customer:cust-1",
       iterationId: NO_ITERATION,
+      milestoneId: "ms-1",
       priority: "3",
       labels: ["bug", "ui"],
       dueFrom: "2026-02-01",
@@ -187,7 +213,9 @@ describe("encodeFilter / decodeFilter", () => {
     expect(decodeFilter("nonsense")).toEqual(EMPTY_FILTER);
     expect(decodeFilter({ priority: 3, labels: "bug" })).toEqual(EMPTY_FILTER);
     expect(decodeFilter({ labels: ["bug", 7, null] })).toEqual(filter({ labels: ["bug"] }));
-    // An axis this build has never heard of is dropped, not carried into the filter.
-    expect(decodeFilter({ text: "x", milestoneId: "m-1" })).toEqual(filter({ text: "x" }));
+    // An axis this build has never heard of is dropped, not carried into the filter. (This
+    // example used to be `milestoneId`, which is now a real axis — the assertion failing when it
+    // shipped is the guard doing its job, and the replacement is a name no axis will ever take.)
+    expect(decodeFilter({ text: "x", notAnAxis: "m-1" })).toEqual(filter({ text: "x" }));
   });
 });

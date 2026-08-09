@@ -45,6 +45,7 @@ import {
   projectWorkItemsApi,
   type EstimateScale,
   type Iteration,
+  type Milestone,
   type ProjectStatus,
   type WorkItem,
 } from "@agentic-toolkit/data/projects";
@@ -69,6 +70,7 @@ const ITEM: WorkItem = {
   labels: [],
   parentId: null,
   iterationId: null,
+  milestoneId: null,
   estimate: null,
   rank: "V0",
   createdAt: "2026-07-03T00:00:00Z",
@@ -86,6 +88,20 @@ const CYCLE: Iteration = {
   state: "active",
   ownerKind: "customer",
   ownerId: "cust-1",
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
+};
+
+/** One point in THIS board's plan, so the milestone picker has something to offer. `counts` are
+ *  derived by the backend on every read — a fixture just states them. */
+const MILESTONE: Milestone = {
+  id: "ms1",
+  projectId: "p1",
+  name: "Beta",
+  description: "",
+  targetDate: "2026-08-15",
+  counts: { backlog: 0, todo: 0, in_progress: 0, done: 0, canceled: 0 },
   ecosystemId: "eco-1",
   createdAt: "2026-06-30T00:00:00Z",
   updatedAt: "2026-06-30T00:00:00Z",
@@ -114,7 +130,11 @@ afterEach(cleanup);
 
 function renderEditor(
   item: WorkItem = ITEM,
-  planning: { iterations?: Iteration[]; estimateScale?: EstimateScale } = {},
+  planning: {
+    iterations?: Iteration[];
+    milestones?: Milestone[];
+    estimateScale?: EstimateScale;
+  } = {},
 ) {
   return render(
     <WorkItemEditor
@@ -125,6 +145,7 @@ function renderEditor(
       workItems={[ITEM]}
       labelOptions={[]}
       iterations={planning.iterations ?? []}
+      milestones={planning.milestones ?? []}
       estimateScale={planning.estimateScale ?? "none"}
       onSaved={() => {}}
       onCancel={() => {}}
@@ -220,6 +241,7 @@ describe("WorkItemEditor save (edit mode)", () => {
         workItems={[ITEM]}
         labelOptions={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onSaved={onSaved}
         onCancel={() => {}}
@@ -293,6 +315,7 @@ describe("WorkItemEditor labels", () => {
         workItems={[item]}
         labelOptions={VOCABULARY}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onSaved={() => {}}
         onCancel={() => {}}
@@ -344,11 +367,12 @@ describe("WorkItemEditor labels", () => {
   });
 });
 
-// The two PLANNING fields — which cycle a card is committed to, and how big it is. Both are
-// draft STRINGS over nullable API values, which is where the interesting cases are: "" is a real
-// answer (the backlog / unestimated) and has to PATCH as an explicit `null`, and `0` is a real
-// size that must not collapse into "no estimate".
-describe("WorkItemEditor iteration + estimate", () => {
+// The three PLANNING fields — which cycle a card is committed to, which delivery it counts
+// toward, and how big it is. All three are draft STRINGS over nullable API values, which is where
+// the interesting cases are: "" is a real answer (the backlog / no milestone / unestimated) and
+// has to PATCH as an explicit `null`, and `0` is a real size that must not collapse into
+// "no estimate".
+describe("WorkItemEditor iteration + milestone + estimate", () => {
   it("commits a backlog card to a cycle", async () => {
     update.mockResolvedValueOnce({ ...ITEM, iterationId: "it1" });
     renderEditor(ITEM, { iterations: [CYCLE] });
@@ -374,6 +398,52 @@ describe("WorkItemEditor iteration + estimate", () => {
 
     await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
     expect(update).toHaveBeenCalledWith("w1", { iterationId: null });
+  });
+
+  it("aims a card at a milestone, on its OWN key", async () => {
+    update.mockResolvedValueOnce({ ...ITEM, milestoneId: "ms1" });
+    renderEditor(ITEM, { milestones: [MILESTONE] });
+
+    fireEvent.change(screen.getByLabelText("Milestone"), { target: { value: "ms1" } });
+    const save = screen.getByRole("button", { name: "Save changes" });
+    await waitFor(() => expect(save).not.toBeDisabled());
+    fireEvent.click(save);
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    // ONLY the milestone travels: aiming a card at a delivery says nothing about which fortnight
+    // it is being worked in, so a patch that carried `iterationId` too would be inventing an
+    // answer to the other question.
+    expect(update).toHaveBeenCalledWith("w1", { milestoneId: "ms1" });
+  });
+
+  it("detaches a card from its milestone as an explicit null", async () => {
+    const aimed = { ...ITEM, milestoneId: "ms1" };
+    update.mockResolvedValueOnce({ ...aimed, milestoneId: null });
+    renderEditor(aimed, { milestones: [MILESTONE] });
+
+    fireEvent.change(screen.getByLabelText("Milestone"), { target: { value: "" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(update).toHaveBeenCalledWith("w1", { milestoneId: null });
+  });
+
+  it("has no milestone field at all on a board with no plan", () => {
+    // Unlike the iteration picker beside it, which always renders because "Backlog" is a real
+    // answer to a question every workspace's cards face. A board that has declared no milestones
+    // is being asked nothing, so the row is absent rather than empty.
+    renderEditor(ITEM, { milestones: [] });
+    expect(screen.queryByLabelText("Milestone")).toBeNull();
+    expect(screen.getByLabelText("Iteration")).not.toBeNull();
+  });
+
+  it("keeps the field for a card aimed at a milestone the list no longer carries", () => {
+    // A value the reader cannot see is a value they cannot correct — so a deleted or foreign
+    // milestoneId keeps the row, and with it the only way to clear the reference.
+    renderEditor({ ...ITEM, milestoneId: "gone" }, { milestones: [] });
+    const select = screen.getByLabelText("Milestone") as HTMLSelectElement;
+    expect(select.value).toBe("gone");
+    expect(screen.getByRole("button", { name: "Save changes" })).toBeDisabled();
   });
 
   it("has no estimate field at all on a project that does not estimate", () => {
@@ -438,6 +508,7 @@ describe("WorkItemEditor status field with a statusless item", () => {
         workItems={[NO_STATUS]}
         labelOptions={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onSaved={() => {}}
         onCancel={() => {}}

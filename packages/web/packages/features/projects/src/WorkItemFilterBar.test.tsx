@@ -11,7 +11,12 @@
 // may hide an axis nobody is using, and never one that someone is.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
-import type { Iteration, ProjectParticipant, ProjectStatus } from "@agentic-toolkit/data/projects";
+import type {
+  Iteration,
+  Milestone,
+  ProjectParticipant,
+  ProjectStatus,
+} from "@agentic-toolkit/data/projects";
 import { WorkItemFilterBar } from "./WorkItemFilterBar";
 import { EMPTY_FILTER, type WorkItemFilter } from "./filters";
 
@@ -55,7 +60,23 @@ const ITERATIONS: Iteration[] = [
   },
 ];
 
-function renderBar(filter: Partial<WorkItemFilter> = {}) {
+const MILESTONES: Milestone[] = [
+  {
+    id: "ms1",
+    projectId: "p1",
+    name: "Beta",
+    description: "",
+    targetDate: "2026-08-15",
+    counts: { backlog: 0, todo: 0, in_progress: 0, done: 0, canceled: 0 },
+    ecosystemId: "eco-1",
+    createdAt: "2026-06-30T00:00:00Z",
+    updatedAt: "2026-06-30T00:00:00Z",
+  },
+];
+
+/** The milestone list is a PARAMETER, not a constant like the others: its axis is the one that
+ *  disappears when the board has no plan, so half the cases below need to hand in an empty list. */
+function renderBar(filter: Partial<WorkItemFilter> = {}, milestones: Milestone[] = MILESTONES) {
   const onChange = vi.fn();
   render(
     <WorkItemFilterBar
@@ -64,6 +85,7 @@ function renderBar(filter: Partial<WorkItemFilter> = {}) {
       statuses={STATUSES}
       participants={PARTICIPANTS}
       iterations={ITERATIONS}
+      milestones={milestones}
       labelOptions={["bug", "ui"]}
     />,
   );
@@ -161,5 +183,49 @@ describe("WorkItemFilterBar", () => {
 
     fireEvent.change(axis, { target: { value: "none" } });
     expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTER, iterationId: "none" });
+  });
+
+  it("leads the milestone axis with 'No milestone', valued as its own answer", () => {
+    const onChange = renderBar();
+    const axis = screen.getByRole("combobox", { name: "Filter by milestone" });
+    const options = within(axis).getAllByRole("option") as HTMLOptionElement[];
+    expect(options.map((o) => o.textContent)).toEqual(["All milestones", "No milestone", "Beta"]);
+    expect(options[2]!.value).toBe("ms1");
+
+    fireEvent.change(axis, { target: { value: "none" } });
+    expect(onChange).toHaveBeenCalledWith({ ...EMPTY_FILTER, milestoneId: "none" });
+  });
+
+  it("narrows by milestone WITHOUT disturbing the iteration already set beside it", () => {
+    // The two are separate axes over the same card, so setting one must merge into the filter
+    // rather than replace it — "what is left for the beta, this sprint" is the query the pair
+    // exists to answer.
+    const onChange = renderBar({ iterationId: "it1" });
+    fireEvent.change(screen.getByRole("combobox", { name: "Filter by milestone" }), {
+      target: { value: "ms1" },
+    });
+    expect(onChange).toHaveBeenCalledWith({
+      ...EMPTY_FILTER,
+      iterationId: "it1",
+      milestoneId: "ms1",
+    });
+  });
+
+  it("drops the milestone axis on a board with no plan, and keeps the iteration axis", () => {
+    // Same rule as the picker and the table column: present only where it has an answer. The
+    // iteration axis survives because its list is the WORKSPACE's — an empty one still means
+    // "everything is in the backlog", which is a real thing to filter for.
+    renderBar({}, []);
+    expect(screen.queryByRole("combobox", { name: "Filter by milestone" })).toBeNull();
+    expect(screen.getByRole("combobox", { name: "Filter by iteration" })).not.toBeNull();
+  });
+
+  it("keeps the milestone axis when the FILTER names one the list no longer carries", () => {
+    // The escape hatch. A `<select>` whose value is absent from its options silently displays the
+    // first one, so without the orphan entry the control would read "All milestones" while the
+    // list stayed narrowed — the exact "board looks broken" failure this file exists to prevent.
+    renderBar({ milestoneId: "gone" }, []);
+    const axis = screen.getByRole("combobox", { name: "Filter by milestone" }) as HTMLSelectElement;
+    expect(axis.value).toBe("gone");
   });
 });

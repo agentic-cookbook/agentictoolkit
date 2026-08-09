@@ -13,6 +13,7 @@ import { TableView } from "./TableView";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type Iteration,
+  type Milestone,
   type ProjectStatus,
   type ProjectParticipant,
 } from "@agentic-toolkit/data/projects";
@@ -51,6 +52,7 @@ function makeItem(over: Partial<WorkItem> & Pick<WorkItem, "id" | "title">): Wor
     labels: [],
     parentId: null,
     iterationId: null,
+    milestoneId: null,
     estimate: null,
     rank: "V0",
     createdAt: "2026-07-03T00:00:00Z",
@@ -73,6 +75,22 @@ const CYCLE: Iteration = {
   createdAt: "2026-06-30T00:00:00Z",
   updatedAt: "2026-06-30T00:00:00Z",
 };
+
+/** Two points in ONE board's plan; `counts` are derived by the backend, so a fixture states them.
+ *  Passed to the view in the WRONG order on purpose — the column sorts by target date, not by the
+ *  order the list happened to arrive in. */
+const BETA: Milestone = {
+  id: "ms1",
+  projectId: "p1",
+  name: "Beta",
+  description: "",
+  targetDate: "2026-08-15",
+  counts: { backlog: 0, todo: 1, in_progress: 0, done: 1, canceled: 0 },
+  ecosystemId: "eco-1",
+  createdAt: "2026-06-30T00:00:00Z",
+  updatedAt: "2026-06-30T00:00:00Z",
+};
+const GA: Milestone = { ...BETA, id: "ms2", name: "GA", targetDate: "2026-11-01" };
 
 const FULL: WorkItem = makeItem({
   id: "w1",
@@ -105,6 +123,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -133,6 +152,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -158,6 +178,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
@@ -180,6 +201,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
@@ -198,6 +220,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={onOpenItem}
         onChanged={vi.fn()}
@@ -219,6 +242,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -248,6 +272,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -264,6 +289,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -285,6 +311,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -299,22 +326,98 @@ describe("TableView", () => {
     expect(titlesInOrder()).toEqual(["Forty-two", "Nine", "Seven"]);
   });
 
-  // The two PLANNING columns. Each is conditional on there being an answer to show — a workspace
-  // that runs no cycles, or a project that does not estimate, gets a column of dashes otherwise.
-  it("has no Iteration or Estimate column when there are no cycles and no scale", () => {
+  // The three PLANNING columns. Each is conditional on there being an answer to show — a workspace
+  // that runs no cycles, a board with no plan, or a project that does not estimate, gets a column
+  // of dashes otherwise.
+  it("has no Iteration, Milestone or Estimate column when there is nothing to put in one", () => {
     render(
       <TableView
         items={[FULL]}
         statuses={[STATUS]}
         participants={[PARTICIPANT]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
       />,
     );
     expect(screen.queryByRole("button", { name: "Iteration" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Milestone" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Estimate" })).toBeNull();
+  });
+
+  it("names each card's milestone, and sorts the column by the milestone's TARGET DATE", () => {
+    // Named so a TEXT sort would order them "Beta, GA" — the opposite of the plan's order, which
+    // is what the column's comparable exists to avoid. Same shape as the cycle column above, and
+    // deliberately a SEPARATE column: a card's cycle says which fortnight, its milestone says
+    // which delivery, and a reader scanning the board wants both at once.
+    render(
+      <TableView
+        items={[
+          makeItem({ id: "w1", title: "Later", milestoneId: "ms2" }),
+          makeItem({ id: "w2", title: "Sooner", milestoneId: "ms1" }),
+          makeItem({ id: "w3", title: "Unaimed" }),
+        ]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        milestones={[GA, BETA]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Beta")).not.toBeNull();
+    expect(screen.getByText("GA")).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Milestone" }));
+    // Unaimed first (no target at all), then August, then November.
+    expect(titlesInOrder()).toEqual(["Unaimed", "Sooner", "Later"]);
+  });
+
+  it("keeps the Milestone column independent of the Iteration column", () => {
+    // The two are separate answers about the same card, so a board with a plan but no cycles gets
+    // the one column it has answers for — folding either into the other would show both or
+    // neither.
+    render(
+      <TableView
+        items={[makeItem({ id: "w1", title: "Design the landing page", milestoneId: "ms1" })]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        milestones={[BETA]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: "Milestone" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Iteration" })).toBeNull();
+  });
+
+  it("dashes a card whose milestone is not in the list, rather than printing its id", () => {
+    // A detached or foreign id is a reference the reader cannot act on; showing the raw uuid in a
+    // dense grid reads as data. (The DETAIL pane does show it — there the id is the only handle
+    // on a value the reader may need to clear.)
+    render(
+      <TableView
+        items={[makeItem({ id: "w1", title: "Orphan", milestoneId: "gone" })]}
+        statuses={[STATUS]}
+        participants={[]}
+        iterations={[]}
+        milestones={[BETA]}
+        estimateScale="none"
+        onOpenItem={vi.fn()}
+        onChanged={vi.fn()}
+      />,
+    );
+    expect(screen.queryByText("gone")).toBeNull();
+    // Cell 5 is the Milestone column here: Key, Title, Status, Assignee, Priority, Milestone —
+    // with no cycles and no scale, the two columns either side of it are absent.
+    const row = screen.getAllByRole("row")[1]!;
+    expect(within(row).getAllByRole("gridcell")[5]?.textContent).toBe("—");
   });
 
   it("names each card's cycle, and sorts the column by the cycle's START", () => {
@@ -331,6 +434,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[CYCLE, late]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -356,6 +460,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="tshirt"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}
@@ -377,6 +482,7 @@ describe("TableView", () => {
         statuses={[STATUS]}
         participants={[]}
         iterations={[]}
+        milestones={[]}
         estimateScale="none"
         onOpenItem={vi.fn()}
         onChanged={vi.fn()}

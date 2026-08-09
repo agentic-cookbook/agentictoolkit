@@ -10,6 +10,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { ListChooser } from "@agentic-toolkit/ui/components/list-chooser";
 import type {
   Iteration,
+  Milestone,
   ProjectParticipant,
   ProjectStatus,
 } from "@agentic-toolkit/data/projects";
@@ -18,6 +19,7 @@ import { PRIORITIES } from "./WorkItemEditor";
 import {
   EMPTY_FILTER,
   NO_ITERATION,
+  NO_MILESTONE,
   UNASSIGNED,
   isFilterActive,
   type WorkItemFilter,
@@ -51,6 +53,7 @@ export function WorkItemFilterBar({
   statuses,
   participants,
   iterations,
+  milestones,
   labelOptions,
 }: {
   filter: WorkItemFilter;
@@ -58,6 +61,9 @@ export function WorkItemFilterBar({
   statuses: ProjectStatus[];
   participants: ProjectParticipant[];
   iterations: Iteration[];
+  /** This board's milestones. An empty list removes the axis entirely (see below) — most boards
+   *  never declare one, and an axis whose every answer is "no" is a control that cannot narrow. */
+  milestones: Milestone[];
   /** The project's label vocabulary — the same suggestions the editor offers. */
   labelOptions: string[];
 }): ReactElement {
@@ -82,6 +88,41 @@ export function WorkItemFilterBar({
     ],
     [participants],
   );
+
+  // The milestone axis's answers, or null when the board has no milestone axis to offer.
+  //
+  // Two things are load-bearing here. The axis is DROPPED on a board with no milestones — the
+  // same call TableView makes about its iteration column, and for the same reason: a select whose
+  // only entries are "all" and "none" cannot narrow anything, so showing it costs a control and
+  // buys a dead end. And it is kept anyway while the FILTER names one, because a filter arriving
+  // from a URL or a saved view can outlive the milestone it names; dropping the control then
+  // would narrow the list with nothing on screen to say so or to undo it. That same survivor gets
+  // an option of its own, since a `<select>` whose value is absent from its options silently
+  // displays the first one instead — the list would read "All milestones" while filtering.
+  //
+  // Deliberately NOT memoised, where the assignee list above is: this config closes over `set`,
+  // and therefore over the whole `filter`. Held across renders it would merge the axis into a
+  // stale filter and silently revert whatever the user changed in between.
+  const namedMilestone = filter.milestoneId !== "" && filter.milestoneId !== NO_MILESTONE;
+  const milestoneAxis =
+    milestones.length === 0 && !namedMilestone
+      ? null
+      : {
+          name: "milestone",
+          label: "Filter by milestone",
+          value: filter.milestoneId,
+          // "No milestone" leads for the same reason "Backlog" leads the iteration axis: counting
+          // toward nothing is an answer about a card, not the absence of a question.
+          options: [
+            { value: NO_MILESTONE, label: "No milestone" },
+            ...milestones.map((m) => ({ value: m.id, label: m.name })),
+            ...(namedMilestone && !milestones.some((m) => m.id === filter.milestoneId)
+              ? [{ value: filter.milestoneId, label: "Filtered milestone" }]
+              : []),
+          ],
+          allLabel: "All milestones",
+          onChange: (v: string) => set("milestoneId", v),
+        };
 
   // The axes behind the disclosure, counted rather than described: the header says how many are
   // narrowing the list so a folded filter is never invisible.
@@ -136,6 +177,9 @@ export function WorkItemFilterBar({
             allLabel: "All iterations",
             onChange: (v) => set("iterationId", v),
           },
+          // Directly after the iteration, because the two are the same question asked twice —
+          // when, and toward what — and a reader who is narrowing one usually wants the other.
+          ...(milestoneAxis ? [milestoneAxis] : []),
         ]}
       >
         {/* A typeahead rather than a select: a project's participant list grows without bound,

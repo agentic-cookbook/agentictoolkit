@@ -154,6 +154,13 @@ describe("actionPhrase for the rest of the trail", () => {
     "saved_view.created",
     "saved_view.updated",
     "saved_view.deleted",
+    "milestone.created",
+    "milestone.updated",
+    "milestone.deleted",
+    "status_update.posted",
+    "status_update.edited",
+    "status_update.deleted",
+    "work_item.milestone_changed",
   ];
 
   it("phrases every action the backend can write", () => {
@@ -181,6 +188,74 @@ describe("actionPhrase for the rest of the trail", () => {
     );
     // No list at all is an older row, not a row that changed nothing.
     expect(actionPhrase("work_item.fields_updated")).toBe("updated field values");
+  });
+
+  it("names a milestone's two distinct edits — a rename and a slipped date", () => {
+    // One action covers name, description and targetDate. A date move slips the point everything
+    // on the board is counted against, so it is the one edit a plan's readers are watching for.
+    expect(actionPhrase("milestone.updated", { changed: ["name"] })).toBe("renamed a milestone");
+    expect(actionPhrase("milestone.updated", { changed: ["targetDate"] })).toBe(
+      "moved a milestone's date",
+    );
+    expect(actionPhrase("milestone.updated", { changed: ["description"] })).toBe(
+      "updated a milestone",
+    );
+    // Travelling together is no longer either single event.
+    expect(actionPhrase("milestone.updated", { changed: ["name", "targetDate"] })).toBe(
+      "updated a milestone",
+    );
+    expect(actionPhrase("milestone.updated")).toBe("updated a milestone");
+  });
+
+  it("reads a milestone move off `to`, where null is a destination and not an absence", () => {
+    // Same `{ from, to }` shape as an iteration move: `to: null` means the card counts toward no
+    // milestone, which is a state someone chose rather than a fact we are missing.
+    expect(actionPhrase("work_item.milestone_changed", { from: null, to: "ms_1" })).toBe(
+      "moved a work item to a milestone",
+    );
+    expect(actionPhrase("work_item.milestone_changed", { from: "ms_1", to: null })).toBe(
+      "removed a work item from a milestone",
+    );
+    // No detail at all is not a removal — a phrase built from the action alone must not claim one.
+    expect(actionPhrase("work_item.milestone_changed")).toBe("moved a work item to a milestone");
+  });
+
+  it("says which way a status update moved the board, in the report's own words", () => {
+    // The backend puts `health` on the row so the trail reads without a second fetch.
+    expect(actionPhrase("status_update.posted", { health: "on_track" })).toBe(
+      "reported the project on track",
+    );
+    expect(actionPhrase("status_update.posted", { health: "at_risk" })).toBe(
+      "reported the project at risk",
+    );
+    expect(actionPhrase("status_update.posted", { health: "off_track" })).toBe(
+      "reported the project off track",
+    );
+    // A health this bundle has never heard of is not a neutral report — fall back rather than
+    // pick a direction. Same for a row with no health at all.
+    expect(actionPhrase("status_update.posted", { health: "amber" })).toBe(
+      "posted a status update",
+    );
+    expect(actionPhrase("status_update.posted")).toBe("posted a status update");
+  });
+
+  it("separates a health revision from a typo fix, and names the retracted claim", () => {
+    // `changed` is the only thing that distinguishes the two edits; a retraction carries the
+    // health it is withdrawing, which is the fact that makes the row worth reading.
+    expect(actionPhrase("status_update.edited", { changed: ["health"] })).toBe(
+      "revised the project's health",
+    );
+    expect(actionPhrase("status_update.edited", { changed: ["health", "body"] })).toBe(
+      "revised the project's health",
+    );
+    expect(actionPhrase("status_update.edited", { changed: ["body"] })).toBe(
+      "edited a status update",
+    );
+    expect(actionPhrase("status_update.edited")).toBe("edited a status update");
+    expect(actionPhrase("status_update.deleted", { health: "off_track" })).toBe(
+      "retracted an off-track report",
+    );
+    expect(actionPhrase("status_update.deleted")).toBe("retracted a status update");
   });
 
   it("separates a saved view's rename from a re-point", () => {

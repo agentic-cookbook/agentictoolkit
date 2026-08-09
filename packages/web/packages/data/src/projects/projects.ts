@@ -15,6 +15,7 @@ import { authedJson, authedRequest } from "../http";
 import { compact, enc, sortByText, workspaceQuery } from "../client-helpers";
 import type {
   EstimateScale,
+  ProjectHealth,
   StatusCategory,
   ProjectRow,
   ProjectStatusRow,
@@ -79,6 +80,23 @@ export interface Project {
    *  this project does not estimate, and is why the field is never optional here: "no scale"
    *  is an answer a renderer can act on, whereas `undefined` is one it has to guess about. */
   estimateScale: EstimateScale;
+  /** the plan's two ends (YYYY-MM-DD), each null when unset. Independent: a board may know its
+   *  target long before its start, and a standing board has neither. */
+  startDate: string | null;
+  targetDate: string | null;
+  /** the ONE principal answerable for the board, or null. The two halves are always both set or
+   *  both null — the backend refuses half a lead — so a renderer may test either one. */
+  leadKind: "customer" | "persona" | "team" | null;
+  leadId: string | null;
+  /** the program this board rolls up into, or null. */
+  programId: string | null;
+  /** the newest REPORTED health, or null for "nobody has reported yet" — which is not the same
+   *  as on-track and must not be rendered as it. Derived by the backend from the newest live
+   *  status update; nothing here computes or caches it. */
+  health: ProjectHealth | null;
+  /** when that report was posted, or null alongside a null health. Show it with the health: a
+   *  colour with no date is a claim of unknown age. */
+  healthUpdatedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +112,16 @@ export function toProject(r: ProjectRow): Project {
     ecosystemId: r.ecosystemId,
     archivedAt: r.archivedAt ?? null,
     estimateScale: r.estimateScale ?? "none",
+    startDate: r.startDate ?? null,
+    targetDate: r.targetDate ?? null,
+    // A lead is only a lead when BOTH halves arrived. A row carrying one and not the other is
+    // not a partial lead to render — the backend cannot write one, so it is a response from a
+    // backend that predates the field, and "unset" is the honest reading.
+    leadKind: r.leadKind && r.leadId ? r.leadKind : null,
+    leadId: r.leadKind && r.leadId ? r.leadId : null,
+    programId: r.programId ?? null,
+    health: r.health ?? null,
+    healthUpdatedAt: r.healthUpdatedAt ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };

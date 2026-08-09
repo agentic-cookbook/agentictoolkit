@@ -30,6 +30,17 @@ export const UNASSIGNED = "unassigned";
  *  is a state to filter FOR, and it is what `iterationId === null` means on a card. */
 export const NO_ITERATION = "none";
 
+/** The same sentinel for the milestone axis — "counts toward no milestone" is a state to filter
+ *  FOR, not the absence of a question.
+ *
+ *  Note it is `"none"` here and `""` in {@link MilestonePicker}, exactly as the two iteration
+ *  sentinels differ, and the split is deliberate on both axes: an EDITOR's empty option is a
+ *  value being written to a card, so it has to be the empty string a `<select>` gives back and
+ *  the client turns into an explicit `null`. A FILTER's empty option is "don't narrow by this",
+ *  which is a third answer the editor has no use for. Unifying them would make one of the two
+ *  controls lie about what its blank option does. */
+export const NO_MILESTONE = "none";
+
 export interface WorkItemFilter {
   /** Free text, matched case-insensitively against the item KEY, title and description. */
   text: string;
@@ -43,6 +54,11 @@ export interface WorkItemFilter {
   assignee: string;
   /** An iteration id, {@link NO_ITERATION} for the backlog, or `""` for any. */
   iterationId: string;
+  /** A milestone id, {@link NO_MILESTONE} for cards counting toward none, or `""` for any. A
+   *  SEPARATE axis from the iteration rather than a mode of it: the two answer different
+   *  questions about the same card ("which fortnight" vs "which delivery"), a card can carry
+   *  both, and ANDing them is the useful query — "what is left for the beta, this sprint". */
+  milestoneId: string;
   /** A priority as its stored number, or `""` for any. A string because it comes off a
    *  `<select>` and goes into a URL — the one parse happens in {@link applyWorkItemFilter}. */
   priority: string;
@@ -60,6 +76,7 @@ export const EMPTY_FILTER: WorkItemFilter = {
   statusId: "",
   assignee: "",
   iterationId: "",
+  milestoneId: "",
   priority: "",
   labels: [],
   dueFrom: "",
@@ -74,6 +91,7 @@ export function isFilterActive(f: WorkItemFilter): boolean {
     f.statusId !== "" ||
     f.assignee !== "" ||
     f.iterationId !== "" ||
+    f.milestoneId !== "" ||
     f.priority !== "" ||
     f.labels.length > 0 ||
     f.dueFrom !== "" ||
@@ -122,6 +140,10 @@ export function applyWorkItemFilter(items: WorkItem[], filter: WorkItemFilter): 
       const want = filter.iterationId === NO_ITERATION ? null : filter.iterationId;
       if (item.iterationId !== want) return false;
     }
+    if (filter.milestoneId !== "") {
+      const want = filter.milestoneId === NO_MILESTONE ? null : filter.milestoneId;
+      if (item.milestoneId !== want) return false;
+    }
     if (priority !== null && item.priority !== priority) return false;
     if (filter.labels.length > 0 && !filter.labels.every((l) => item.labels.includes(l))) {
       return false;
@@ -151,6 +173,7 @@ export function encodeFilter(f: WorkItemFilter): Record<string, string | string[
   if (f.statusId !== "") out.statusId = f.statusId;
   if (f.assignee !== "") out.assignee = f.assignee;
   if (f.iterationId !== "") out.iterationId = f.iterationId;
+  if (f.milestoneId !== "") out.milestoneId = f.milestoneId;
   if (f.priority !== "") out.priority = f.priority;
   if (f.labels.length > 0) out.labels = [...f.labels];
   if (f.dueFrom !== "") out.dueFrom = f.dueFrom;
@@ -173,6 +196,7 @@ export function decodeFilter(raw: unknown): WorkItemFilter {
     statusId: str("statusId"),
     assignee: str("assignee"),
     iterationId: str("iterationId"),
+    milestoneId: str("milestoneId"),
     priority: str("priority"),
     labels,
     dueFrom: str("dueFrom"),

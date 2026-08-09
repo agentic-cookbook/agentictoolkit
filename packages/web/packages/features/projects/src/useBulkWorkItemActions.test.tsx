@@ -47,6 +47,9 @@ function item(id: string, title: string): WorkItem {
     id, projectId: "p1", itemKey: "", title, description: "", statusId: "s1",
     assigneeKind: null, assigneeId: null, priority: 0,
     startDate: null, dueDate: null, labels: [], parentId: null, rank: "V0",
+    // Unplanned and unsized — the three fields the planning axes read. This file is about the
+    // SELECTION, so every card sits outside every plan: nothing here should depend on them.
+    iterationId: null, milestoneId: null, estimate: null,
     createdAt: "2026-07-03T00:00:00Z", updatedAt: "2026-07-03T00:00:00Z",
   };
 }
@@ -62,6 +65,9 @@ function renderList(): { onChanged: ReturnType<typeof vi.fn> } {
       items={[ONE, TWO]}
       statuses={[TODO, DOING]}
       participants={[PARTICIPANT]}
+      iterations={[]}
+      milestones={[]}
+      estimateScale="none"
       onChanged={onChanged}
     />,
   );
