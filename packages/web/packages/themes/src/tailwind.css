@@ -22,6 +22,27 @@
  * color-mode-light.css for the trigger rationale). */
 @import "./styles/color-mode-light.css";
 
+/* The family's palette, declared as a VALUE rather than only as a set of tokens.
+ * `color-scheme` is the one signal that says "this document is painting dark" in a
+ * form CSS can read downstream: it is inherited, and every theme that overrides the
+ * palette overrides it in the same rule, so it tracks the palette exactly. The
+ * `.dark` class does NOT — appearance.ts toggles that from the visitor's colour-MODE
+ * preference, which a dark-always theme (the family default) deliberately ignores.
+ * Anything that needs to branch on the palette must read this, not `.dark`; see the
+ * Shiki rules in @agentic-toolkit/api-explorer's styles for the live consumer.
+ *
+ * Declared bare so the cascade already in place decides it: color-mode-light's
+ * `:root[data-color-mode]:not(.dark)` (0,3,0) sets it back to `light` for the base
+ * family's light mode, and a full-palette theme's `html:root` (0,1,1) / light
+ * selectors (0,3,1) outrank both — the same per-mode arithmetic the palette follows,
+ * so the two cannot disagree about which mode won.
+ *
+ * It also earns its keep on its own: the UA renders form controls, scrollbars and
+ * the canvas from this, so without it a dark family site draws light native widgets. */
+:root {
+  color-scheme: dark;
+}
+
 @theme {
   --font-sans: ui-sans-serif, system-ui, sans-serif;
   --font-serif: ui-serif, Georgia, serif;

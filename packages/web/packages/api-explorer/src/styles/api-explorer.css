@@ -2,10 +2,24 @@
  *
  * Shiki emits `<pre class="shiki">` whose token <span>s carry --shiki-light /
  * --shiki-dark CSS variables (created with defaultColor:false), and the <pre>
- * carries --shiki-light-bg / --shiki-dark-bg. We pick the variant off the app's
- * `.dark` class — the same signal Tailwind's `dark:` variant uses — so code
- * follows the theme with no re-highlight. Only these var()-based rules need raw
- * CSS; everything else in the panel is apt-* utilities. */
+ * carries --shiki-light-bg / --shiki-dark-bg. `light-dark()` picks the variant off
+ * the element's used `color-scheme`, so code follows the theme with no re-highlight.
+ * Only these var()-based rules need raw CSS; everything else in the panel is apt-*
+ * utilities.
+ *
+ * `color-scheme`, NOT the `.dark` class these rules keyed off until the family
+ * default became a dark-always theme. The two look interchangeable and are different
+ * facts: `.dark` records the visitor's colour-MODE preference (appearance.ts toggles
+ * it from `colorMode`), while what is actually on screen is chosen by the THEME. A
+ * dark-always theme hands its light-mode selectors the dark palette on purpose, so a
+ * light-OS visitor has no `.dark` class and got `github-light` here — white code
+ * boxes mid-page in Help and the API reference, on every site in the family, with no
+ * setting that could undo it. `color-scheme` cannot drift that way: it is inherited,
+ * and every stylesheet that sets the palette sets it in the same rule (the base
+ * family's in themes/tailwind.css + color-mode-light.css, each theme's in its own),
+ * so it names the palette that actually won the cascade.
+ *
+ * `light-dark()` is Baseline 2024 — Chrome 123, Safari 17.5, Firefox 120. */
 
 .adh-api-code pre.shiki {
   margin: 0;
@@ -16,21 +30,12 @@
   font-size: 0.8125rem;
   line-height: 1.55;
   tab-size: 2;
-  background-color: var(--shiki-light-bg);
+  background-color: light-dark(var(--shiki-light-bg), var(--shiki-dark-bg));
 }
 
 .adh-api-code pre.shiki,
 .adh-api-code pre.shiki span {
-  color: var(--shiki-light);
-}
-
-.dark .adh-api-code pre.shiki {
-  background-color: var(--shiki-dark-bg);
-}
-
-.dark .adh-api-code pre.shiki,
-.dark .adh-api-code pre.shiki span {
-  color: var(--shiki-dark);
+  color: light-dark(var(--shiki-light), var(--shiki-dark));
 }
 
 /* === Server-rendered API reference shell (ApiReferenceShell) ===

@@ -19,6 +19,12 @@
  * deletable when the token pipeline grows real light variants. */
 
 :root[data-color-mode]:not(.dark) {
+  /* The palette as a VALUE, paired with the roles below so the two can never
+   * disagree: tailwind.css declares `dark` on the bare `:root` and this rule
+   * (0,3,0) overrides it exactly where it overrides the roles. Downstream CSS
+   * branches on this rather than on `.dark`; tailwind.css carries the why. */
+  color-scheme: light;
+
   /* Primary — brand gold, deepened so it carries contrast on light surfaces. */
   --color-primary: #8a6a14;
   --color-on-primary: #ffffff;
