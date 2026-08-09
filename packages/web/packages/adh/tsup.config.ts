@@ -152,6 +152,13 @@ export default defineConfig({
     // details pages import a site's config too and none of them wants the landing deck
     // behind it. No module state and no runtime self-imports, so it owes no `external`.
     'site/index': 'src/site/index.ts',
+    // The family's landing DECK — the shape of every site's `/` and `/tour`, which used to
+    // be emitted into each site as markup. Its own entry rather than a member of
+    // marketing/index: that barrel is what a site's layout imports on every route, and the
+    // deck plus its twenty-odd blocks belongs to two of them. It reaches NavChrome by
+    // package path (`@agentic-toolkit/landing/client`) for the directive reason the
+    // `external` list below spells out.
+    'landing/index': 'src/landing/index.ts',
     'marketing/index': 'src/marketing/index.ts',
     'marketing/LandingHeroGate': 'src/marketing/LandingHeroGate.tsx',
     'marketing/SiteWordmark': 'src/marketing/SiteWordmark.tsx',
@@ -380,6 +387,14 @@ export default defineConfig({
     // Its CSS subpath rides with the lazy FooterChatInner chunk.
     '@agentic-toolkit/bitbag',
     '@agentic-toolkit/bitbag/css/bitbag-dock.css',
+    // The framework-agnostic landing KIT the deck is built from. The subpath form is the
+    // load-bearing half: `@agentic-toolkit/landing/client` is that package's `'use client'`
+    // entry, and tsup's `external` matches specifiers rather than packages, so the bare
+    // name above does nothing for it. Inlined, preserve-directives would hoist NavChrome's
+    // banner over the whole `landing` entry and every screen of every site's landing copy
+    // would ship as a Client Component — legal, silent, and three copies of the words.
+    '@agentic-toolkit/landing',
+    '@agentic-toolkit/landing/*',
     // Only `react-slot` is left of Radix: it backs components/ui/button's `asChild`.
     // The avatar and dropdown-menu primitives went with the components that used
     // them (both now come from @agentic-toolkit/ui, on Base UI).

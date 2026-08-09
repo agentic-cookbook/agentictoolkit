@@ -47,6 +47,9 @@ importers:
       '@agentic-toolkit/ecosystem-config':
         specifier: workspace:*
         version: link:../features/ecosystem-config
+      '@agentic-toolkit/landing':
+        specifier: workspace:*
+        version: link:../landing
       '@agentic-toolkit/markdown':
         specifier: workspace:*
         version: link:../markdown

@@ -211,6 +211,11 @@
       "development": "./src/site/index.ts",
       "import": "./dist/site/index.js"
     },
+    "./landing": {
+      "types": "./dist/landing/index.d.ts",
+      "development": "./src/landing/index.ts",
+      "import": "./dist/landing/index.js"
+    },
     "./marketing": {
       "types": "./dist/marketing/index.d.ts",
       "development": "./src/marketing/index.ts",
@@ -257,6 +262,7 @@
     "@agentic-toolkit/bitbag": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
     "@agentic-toolkit/ecosystem-config": "workspace:*",
+    "@agentic-toolkit/landing": "workspace:*",
     "@agentic-toolkit/markdown": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
