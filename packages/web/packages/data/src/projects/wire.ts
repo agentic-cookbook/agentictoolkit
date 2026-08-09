@@ -265,6 +265,11 @@ export interface WorkItemRow {
    *  is distinct from estimated at 0. Any non-negative integer is accepted whatever the scale
    *  says, so changing a project's scale never invalidates a card. */
   estimate?: number | null;
+  /** when this card was ACCEPTED onto its board. `null` means it is still in the board's TRIAGE
+   *  INBOX — filed, but with no column decision made about it yet — and that is why it is absent
+   *  from the ordinary board list unless `includeUntriaged` is asked for. A timestamp rather than
+   *  a flag because "how long has this been sitting here" is the question a queue is worked by. */
+  triagedAt?: string | null;
   /** the card's place in its sibling list, as an OPAQUE sort key — compare two of them with
    *  `<`, never subtract them. It is a fractional index, so a card moved between two others
    *  gets a key strictly between theirs and nothing else is rewritten; the backend sorts by
@@ -353,6 +358,10 @@ export interface WorkItemCreateBody {
   /** count the new card toward a milestone of THIS project; omitted counts it toward none. */
   milestoneId?: string;
   estimate?: number;
+  /** file the card into the board's TRIAGE INBOX instead of onto the board. Omitted (or false)
+   *  accepts it immediately, which is what keeps the inbox opt-in: a caller that does not ask for
+   *  a queue gets the behaviour it has always had. */
+  triage?: boolean;
 }
 
 /** `PATCH /project/work-items/{id}` body (explicit null clears the column). */
@@ -618,6 +627,170 @@ export interface StatusUpdateCreateBody {
 export interface StatusUpdatePatchBody {
   health?: ProjectHealth;
   body?: string;
+}
+
+/* ── Templates (the shapes a workspace stamps out repeatedly) ─────────── */
+
+/**
+ * What a template MAKES — the discriminator its `body` is read against. A closed set, because a
+ * consumer picks one before it can render a picker at all, and the two make different things: one
+ * builds a card (and its checklist) on a board that already exists, the other builds the board.
+ */
+export type TemplateKind = "work_item" | "project";
+
+/**
+ * One card as a work-item template writes it. What is NOT here is the design: no `statusId`, no
+ * `milestoneId`, no `iterationId`, no assignee — every one of those is an id that exists on ONE
+ * board, and a template belongs to the WORKSPACE, so storing one would make the template work on
+ * the board it was authored from and fail on every other. Labels are the exception, and the reason
+ * is real: they belong to the owner's vocabulary rather than to any board.
+ */
+export interface TemplateCardSpec {
+  title: string;
+  description?: string;
+  priority?: number;
+  estimate?: number;
+  labels?: string[];
+}
+
+/** A work-item template's stored body: one card plus the sub-tasks that always come with it.
+ *  ONE level deep, deliberately — a body that nested arbitrarily would be a project template
+ *  wearing the wrong noun. */
+export interface WorkItemTemplateBody extends TemplateCardSpec {
+  children?: TemplateCardSpec[];
+}
+
+/** A project template's stored body — a board's SHAPE. The `statuses` array IS the column order,
+ *  so no positions travel to disagree with the list they sit in, and milestones carry no DATES: a
+ *  plan point's date is a fact about one delivery, and a template instantiated three months after
+ *  it was written would seed a plan already overdue on the day it was made. */
+export interface ProjectTemplateBody {
+  description?: string;
+  color?: string;
+  estimateScale?: EstimateScale;
+  statuses?: Array<{ key: string; label: string; category: StatusCategory }>;
+  milestones?: Array<{ name: string; description?: string }>;
+}
+
+/** Backend row for `GET /project/templates`. `body` is the stored jsonb, whose shape follows
+ *  `kind` — narrow it with the kind before reading it, which is what the union expresses. */
+export interface TemplateRow {
+  id: string;
+  kind: TemplateKind;
+  name: string;
+  description: string;
+  body: WorkItemTemplateBody | ProjectTemplateBody;
+  /** the workspace that owns it — the same owner scoping a program or an iteration carries. */
+  ownerKind: string;
+  ownerId: string;
+  createdBy?: string | null;
+  ecosystemId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** `POST /project/templates` body — created against a `?workspace=` slug, like a program. The
+ *  body is validated against `kind` server-side and STRICTLY: an unrecognized key is a 400, not a
+ *  silent discard, because every key in a template body becomes something. */
+export interface TemplateCreateBody {
+  kind: TemplateKind;
+  name: string;
+  description?: string;
+  body: WorkItemTemplateBody | ProjectTemplateBody;
+}
+
+/** `PATCH /project/templates/{id}` body. No `kind`: what a template makes is its identity, and
+ *  re-kinding one would re-interpret a stored body against a schema it was never written for. */
+export interface TemplatePatchBody {
+  name?: string;
+  description?: string;
+  body?: WorkItemTemplateBody | ProjectTemplateBody;
+}
+
+/** `POST /project/templates/{id}/work-items` body — where the card LANDS, which is the half a
+ *  body deliberately does not carry. Only `projectId` is required; the column, the plan point and
+ *  the cycle fall back to the board's own defaults. */
+export interface TemplateInstantiateWorkItemBody {
+  projectId: string;
+  /** re-titles THIS card only. The children are never re-titled — renaming a checklist's steps at
+   *  instantiation is editing the template, not using it. */
+  title?: string;
+  statusId?: string;
+  milestoneId?: string;
+  iterationId?: string;
+}
+
+/** `POST /project/templates/{id}/work-items` response — the parent and the children it wrote,
+ *  every one an ORDINARY card (numbered, ranked, labelled, accepted). */
+export interface TemplateInstantiateWorkItemResult {
+  item: WorkItemRow;
+  children: WorkItemRow[];
+}
+
+/** `POST /project/templates/{id}/projects` body. The board's NAME is the one thing a project
+ *  template does not supply; its key prefix is ALLOCATED from that name like any other board's. */
+export interface TemplateInstantiateProjectBody {
+  name: string;
+  /** wins over the template's own, which is the fallback for the boards that say nothing. */
+  description?: string;
+}
+
+/** `POST /project/templates/{id}/projects` response — the board, and the plan points seeded with
+ *  it (undated, in the body's order). */
+export interface TemplateInstantiateProjectResult {
+  project: ProjectRow;
+  milestones: MilestoneRow[];
+}
+
+/* ── Triage (the cards nobody has accepted yet) ───────────────────────── */
+
+/**
+ * Backend row for `GET /project/triage` — a card waiting in some board's inbox, seen from a page
+ * that spans boards.
+ *
+ * A SIGNPOST, like a search hit and for the same reason: it carries what it takes to recognise
+ * the card and open it, plus the board's NAME, which the client cannot join because the boards a
+ * cross-workspace queue reaches are exactly the ones it has not loaded. No labels — those resolve
+ * per OWNER, and a triage decision rarely turns on them; the per-board inbox
+ * (`GET /project/projects/{id}/triage`) returns full cards for the moment one is opened.
+ */
+export interface TriageHitRow {
+  id: string;
+  projectId: string;
+  projectName: string;
+  /** already rendered against the OWNING board's prefix — a queue crossing boards crosses
+   *  prefixes, so the client has none to render it with. */
+  itemKey: string;
+  itemNumber: number;
+  title: string;
+  description: string;
+  statusId: string;
+  priority: number;
+  createdBy?: string | null;
+  /** when it was filed. The queue is ordered by this, oldest first. */
+  createdAt: string;
+}
+
+/** `GET /project/triage` response — one page, with the limit the server ACTUALLY applied (it
+ *  clamps an out-of-range one rather than refusing it). */
+export interface TriagePageRow {
+  results: TriageHitRow[];
+  limit: number;
+  hasMore: boolean;
+}
+
+/** `POST /project/work-items/{id}/triage` body — the placement decided in the same request that
+ *  accepts the card. Every key is optional: accepting a card that is already where it belongs is
+ *  the common case. There is no `decline` — declining is naming a status in the `canceled`
+ *  category, which leaves the card findable and says what happened to it. */
+export interface TriageAcceptBody {
+  statusId?: string;
+  assigneeKind?: "customer" | "persona" | "team";
+  assigneeId?: string;
+  milestoneId?: string;
+  iterationId?: string;
+  priority?: number;
+  estimate?: number;
 }
 
 /* ── Artifacts (the things a project holds) ───────────────────────────── */

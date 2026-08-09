@@ -20,12 +20,28 @@ export type { EstimateScale, IterationState } from "./wire";
 // a signature that takes one (a badge's tone, a progress bar's props) rarely already holds the
 // project or milestone it came off.
 export type { ProjectHealth, MilestoneCounts } from "./wire";
+// What a template MAKES, and the two body shapes read against it. Public for the same reason as
+// the vocabularies above — an editor takes a body without holding the template it belongs to, and
+// a picker names the kind it wants before any row exists to reach it through.
+export type {
+  TemplateKind,
+  TemplateCardSpec,
+  WorkItemTemplateBody,
+  ProjectTemplateBody,
+  TemplatePatchBody,
+  TemplateInstantiateWorkItemBody,
+} from "./wire";
+// The placement a triage acceptance carries. Public because the decision is raised UPWARD from a
+// queue row to whoever owns the list, exactly as a move target is.
+export type { TriageAcceptBody } from "./wire";
 export * from "./projects";
 export * from "./iterations";
 export * from "./programs";
 export * from "./milestones";
 export * from "./status-updates";
 export * from "./work-items";
+export * from "./templates";
+export * from "./triage";
 export * from "./search";
 export * from "./activity";
 export * from "./comments";

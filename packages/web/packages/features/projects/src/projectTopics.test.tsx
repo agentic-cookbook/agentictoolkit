@@ -158,16 +158,23 @@ const CONTEXT: ProjectTopicContext = {
 
 describe("projectTopics", () => {
   it("publishes a project's topics in rail order", () => {
-    // The order is a sentence about the project: what it is, what it is doing, what that work is
-    // aimed at, when it is being done, what it rolls up into, what it holds, what happened, who
-    // may look. Within the middle run the split is by SCOPE — the board's own plan (Milestones)
-    // before the two topics that reach past it (Iterations, Programs).
+    // The order is a sentence about the project: what it is, what it is doing, what is waiting to
+    // be let in, what that work is aimed at, when it is being done, what it rolls up into, what
+    // shapes it reuses, what it holds, what happened, who may look. Within the middle run the
+    // split is by SCOPE — the board's own plan (Milestones) before the three topics that reach
+    // past it (Iterations, Programs, Templates).
+    //
+    // Triage is adjacent to Work Items because the two lists PARTITION the board's cards: a card
+    // is untriaged or on the board, never both and never neither. Anything between them would be
+    // a topic wedged into one set of cards.
     expect(projectTopics({ workspaceSlug: "acme" }).map((t) => t.id)).toEqual([
       "overview",
       "work-items",
+      "triage",
       "milestones",
       "iterations",
       "programs",
+      "templates",
       "contents",
       "activity",
       "access",
@@ -179,15 +186,17 @@ describe("projectTopics", () => {
     // the topic could only ever render an empty pane. A rail row that opens onto nothing reads
     // as a bug; leaving the topic out says the true thing.
     //
-    // Iterations and Programs survive the same condition on purpose, and the difference is what
-    // they can still show: without a workspace both lists fall back to the caller's own reach,
-    // exactly as the project list does, so each pane has something true to render.
+    // Iterations, Programs and Templates survive the same condition on purpose, and the difference
+    // is what they can still show: without a workspace all three lists fall back to the caller's
+    // own reach, exactly as the project list does, so each pane has something true to render.
     expect(projectTopics({}).map((t) => t.id)).toEqual([
       "overview",
       "work-items",
+      "triage",
       "milestones",
       "iterations",
       "programs",
+      "templates",
       "contents",
       "activity",
     ]);

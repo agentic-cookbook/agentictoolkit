@@ -70,6 +70,12 @@ export interface WorkItem {
   /** where the card sits among its siblings, as an OPAQUE key: compare two with `<`, never
    *  subtract. Ascending is board order. Server-set — reorder with {@link projectWorkItemsApi.move}. */
   rank: string;
+  /** when the card was ACCEPTED onto its board; null means it is still in the TRIAGE INBOX. That
+   *  is why an untriaged card is missing from {@link projectWorkItemsApi.listForProject} unless
+   *  `includeUntriaged` is asked for — it sits in whatever column it was filed into, and the
+   *  board would be asserting a placement nobody has made. Accept one with
+   *  {@link projectTriageApi.accept}. */
+  triagedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -93,6 +99,7 @@ export function toWorkItem(r: WorkItemRow): WorkItem {
     milestoneId: r.milestoneId ?? null,
     estimate: r.estimate ?? null,
     rank: r.rank,
+    triagedAt: r.triagedAt ?? null,
     createdAt: r.createdAt,
     updatedAt: r.updatedAt,
   };
@@ -197,9 +204,24 @@ export function toWorkItemRelation(r: WorkItemRelationRow): WorkItemRelation {
 /* ── Client ───────────────────────────────────────────────────────────── */
 
 export const projectWorkItemsApi = {
-  async listForProject(projectId: string): Promise<WorkItem[]> {
+  /**
+   * The board's cards, in rank order. ACCEPTED cards only by default — a card still in triage
+   * has had no column decision made about it, so showing it would put it in whatever column it
+   * was filed into, which is the one claim the inbox exists to withhold.
+   *
+   * `includeUntriaged` is the escape for a caller that wants the board's TRUE contents (an
+   * export, a count, a total). It is opt-in because the default has to be the reading that
+   * cannot mislead; to WORK the queue, use {@link projectTriageApi.listForProject}, which
+   * returns the other half and in the order a queue is worked.
+   */
+  async listForProject(
+    projectId: string,
+    opts?: { includeUntriaged?: boolean },
+  ): Promise<WorkItem[]> {
     const rows = await authedJson<WorkItemRow[]>(
-      `${PROJECTS}/${enc(projectId)}/work-items`,
+      `${PROJECTS}/${enc(projectId)}/work-items${
+        opts?.includeUntriaged ? "?includeUntriaged=true" : ""
+      }`,
     );
     return rows.map(toWorkItem); // server orders by rank
   },
@@ -230,6 +252,11 @@ export const projectWorkItemsApi = {
       /** count the new card toward a milestone of THIS project. */
       milestoneId?: string;
       estimate?: number;
+      /** file the card into the board's TRIAGE INBOX instead of onto the board — for intake that
+       *  arrives from outside (a form, a bot, a bug report), where nobody has yet decided the card
+       *  belongs on this board at all. Omitted accepts it immediately, which is what keeps every
+       *  board that has never used an inbox unchanged. */
+      triage?: boolean;
     },
   ): Promise<WorkItem> {
     const body: WorkItemCreateBody = {
@@ -247,6 +274,7 @@ export const projectWorkItemsApi = {
         iterationId: input.iterationId,
         milestoneId: input.milestoneId,
         estimate: input.estimate,
+        triage: input.triage,
       }),
     };
     return toWorkItem(

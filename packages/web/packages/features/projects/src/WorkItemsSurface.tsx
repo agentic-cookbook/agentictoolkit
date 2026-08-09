@@ -28,12 +28,14 @@ import {
 import {
   projectIterationsApi,
   projectMilestonesApi,
+  projectTemplatesApi,
   projectsApi,
   type EstimateScale,
   type Iteration,
   type Milestone,
   type ProjectStatus,
   type ProjectParticipant,
+  type Template,
 } from "@agentic-toolkit/data/projects";
 import { useResourceList } from "@agentic-toolkit/data";
 import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
@@ -207,6 +209,14 @@ export function WorkItemsSurface({
     () => projectMilestonesApi.list(projectId).catch(() => [] as Milestone[]),
     [projectId],
   );
+  // The workspace's TEMPLATES, for the create modal's picker. Both kinds, under the workspace key
+  // the Templates pane fills — the dialog selects the card ones out, because one cache key must
+  // mean one list: a `kind`-filtered read stored here would silently hide half the pane's rows.
+  // Fails soft like the pickers: no templates simply means no picker, never no create.
+  const loadTemplates = useCallback(
+    () => projectTemplatesApi.list({ workspace: workspaceSlug }).catch(() => [] as Template[]),
+    [workspaceSlug],
+  );
   const {
     items,
     setItems,
@@ -233,11 +243,16 @@ export function WorkItemsSurface({
     `project:${projectId}:milestones`,
     loadMilestones,
   );
+  const { items: templateRows } = useResourceList<Template>(
+    `workspace:${workspaceSlug ?? ""}:templates`,
+    loadTemplates,
+  );
   const statuses = statusRows ?? [];
   const participants = participantRows ?? [];
   const labelOptions = labelRows ?? [];
   const iterations = iterationRows ?? [];
   const milestones = milestoneRows ?? [];
+  const templates = templateRows ?? [];
 
   // The project's OWN estimate scale — what an estimate's digits mean here. Read from the record
   // rather than passed in by the host, because both hosts would otherwise have to carry it and the
@@ -687,6 +702,7 @@ export function WorkItemsSurface({
         <NewWorkItemDialog
           projectId={projectId}
           statuses={statuses}
+          templates={templates}
           onClose={() => setNewOpen(false)}
           onCreated={(created) => void onCreated(created)}
         />

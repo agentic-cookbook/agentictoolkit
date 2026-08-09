@@ -7,8 +7,13 @@ import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { projectsApi } from "@agentic-toolkit/data/projects";
+import {
+  projectTemplatesApi,
+  projectsApi,
+  type Template,
+} from "@agentic-toolkit/data/projects";
 import { useResourceList } from "@agentic-toolkit/data";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
@@ -57,13 +62,21 @@ function StatusBadge({ status }: { status: string }): ReactElement {
 
 /* ── Create-project form ──────────────────────────────────────────────────── */
 
+/** The "no template — a plain board" sentinel. `""` because that is what an unset Select reads
+ *  as, so the blank draft needs no special case. */
+const NO_TEMPLATE = "";
+
 interface ProjectInput {
   name: string;
   description: string;
+  /** A BOARD template's id, or {@link NO_TEMPLATE}. A template chosen here decides the new
+   *  board's columns, its milestones, its colour and its estimate scale — everything the plain
+   *  create leaves at the defaults. */
+  templateId: string;
 }
 
 function projectBlank(): ProjectInput {
-  return { name: "", description: "" };
+  return { name: "", description: "", templateId: NO_TEMPLATE };
 }
 
 function projectValidate(draft: ProjectInput): string | null {
@@ -76,14 +89,40 @@ function ProjectForm({
   draft,
   onChange,
   error,
+  templates,
 }: {
   draft: ProjectInput;
   onChange: (next: ProjectInput) => void;
   error?: string | null;
+  /** The workspace's BOARD templates. Empty (or absent) hides the control entirely — a picker
+   *  whose only option is "no template" is a question with one answer. */
+  templates?: Template[];
 }): ReactElement {
+  const boardTemplates = templates ?? [];
   return (
     <Card>
       <CardContent className="flex flex-col gap-5">
+        {boardTemplates.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="new-project-template">Template</Label>
+            <Select
+              id="new-project-template"
+              value={draft.templateId}
+              onChange={(e) => onChange({ ...draft, templateId: e.target.value })}
+            >
+              <option value={NO_TEMPLATE}>Empty board</option>
+              {boardTemplates.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </Select>
+            <p className="text-sm text-apt-text-muted">
+              Starts the board with a template&apos;s columns and milestones instead of the
+              defaults.
+            </p>
+          </div>
+        )}
         <div className="flex flex-col gap-2">
           <Label htmlFor="new-project-name">Name</Label>
           <Input
@@ -148,6 +187,20 @@ export function ProjectsFeature({
   );
   const { items: projects, reload } = useResourceList(basePath, loadProjects);
 
+  // The workspace's TEMPLATES, for the create dialog's picker — both kinds, under the workspace
+  // key the Templates pane and the card-create dialog share, so one read answers all three. The
+  // board ones are selected out at the call site. Fails soft: no templates means no picker, never
+  // no create.
+  const loadTemplates = useCallback(
+    () => projectTemplatesApi.list({ workspace: workspaceSlug }).catch(() => [] as Template[]),
+    [workspaceSlug],
+  );
+  const { items: templateRows } = useResourceList<Template>(
+    `workspace:${workspaceSlug ?? ""}:templates`,
+    loadTemplates,
+  );
+  const boardTemplates = (templateRows ?? []).filter((t) => t.kind === "project");
+
   // Entity-first topics (FTD), adapted from the shared declaration in projectTopics.tsx —
   // which is also what SubjectProjectPane publishes, so the two doors into a project can't
   // drift apart. All this adapter adds is the explorer's own vocabulary: the breadcrumbed
@@ -209,18 +262,38 @@ export function ProjectsFeature({
             blank={projectBlank}
             validate={projectValidate}
             create={(d) =>
-              projectsApi.create(
-                {
-                  name: d.name.trim(),
-                  description: d.description.trim() || undefined,
-                },
-                { workspace: workspaceSlug },
-              )
+              d.templateId === NO_TEMPLATE
+                ? projectsApi.create(
+                    {
+                      name: d.name.trim(),
+                      description: d.description.trim() || undefined,
+                    },
+                    { workspace: workspaceSlug },
+                  )
+                : // The milestones the template writes come back alongside; the explorer opens the
+                  // PROJECT, which is what was asked for, and its Milestones topic is where they
+                  // are. The template's own description stands in when none was typed — that is
+                  // the endpoint's rule, not a client default.
+                  projectTemplatesApi
+                    .instantiateProject(
+                      d.templateId,
+                      {
+                        name: d.name.trim(),
+                        description: d.description.trim() || undefined,
+                      },
+                      { workspace: workspaceSlug },
+                    )
+                    .then((r) => r.project)
             }
             onClose={onClose}
             onCreated={(project) => onCreated(project.id)}
             renderForm={(draft, onChange, error) => (
-              <ProjectForm draft={draft} onChange={onChange} error={error} />
+              <ProjectForm
+                draft={draft}
+                onChange={onChange}
+                error={error}
+                templates={boardTemplates}
+              />
             )}
           />
         )}

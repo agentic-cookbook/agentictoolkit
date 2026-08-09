@@ -7,17 +7,21 @@ import {
   FileStack,
   Flag,
   FolderKanban,
+  Inbox,
   KeyRound,
   Layers,
   ListTodo,
+  Shapes,
 } from "lucide-react";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { ProjectOverviewPane } from "./ProjectOverviewPane";
 import { WorkItemsSurface } from "./WorkItemsSurface";
+import { TriagePane } from "./TriagePane";
 import { MilestonesPane } from "./MilestonesPane";
 import { IterationsPane } from "./IterationsPane";
 import { ProgramsPane } from "./ProgramsPane";
+import { TemplatesPane } from "./TemplatesPane";
 import { ProjectContentsPane } from "./ProjectContentsPane";
 import { ProjectActivityPane } from "./ProjectActivityPane";
 
@@ -109,6 +113,27 @@ const WORK_ITEMS: ProjectTopicDef = {
   ),
 };
 
+const TRIAGE: ProjectTopicDef = {
+  id: "triage",
+  label: "Triage",
+  icon: <Inbox size={16} aria-hidden />,
+  description:
+    "The inbox — cards filed into this project that nobody has accepted onto the board yet.",
+  // No `leadsTo` — deliberately, and the same as Milestones / Iterations / Programs, every one of
+  // which also publishes a deeper rail level. Declaring `"list"` on this one alone would make
+  // Triage the only topic that HOLDS the previous pane until a card is picked, and a single row
+  // that navigates differently from its four neighbours reads as a bug whichever behaviour is
+  // right. If the run wants the cascading hold, it wants it together.
+  render: (ctx) => (
+    <TriagePane
+      projectId={ctx.projectId}
+      title={ctx.title}
+      leaf={ctx.leaf}
+      workspaceSlug={ctx.workspaceSlug}
+    />
+  ),
+};
+
 const MILESTONES: ProjectTopicDef = {
   id: "milestones",
   label: "Milestones",
@@ -136,6 +161,20 @@ const PROGRAMS: ProjectTopicDef = {
   description: "The roll-ups above the boards — several projects read as one initiative.",
   render: (ctx) => (
     <ProgramsPane title={ctx.title} leaf={ctx.leaf} workspaceSlug={ctx.workspaceSlug} />
+  ),
+};
+
+const TEMPLATES: ProjectTopicDef = {
+  id: "templates",
+  label: "Templates",
+  // NOT `FileStack` — that is Contents' icon, and two rail rows sharing a glyph is exactly the
+  // collision the collapsed icon-only strip cannot recover from: with the labels hidden, the two
+  // rows become indistinguishable. A shape is what a template is.
+  icon: <Shapes size={16} aria-hidden />,
+  description:
+    "The shapes this workspace stamps out repeatedly — a card and its checklist, or a whole board.",
+  render: (ctx) => (
+    <TemplatesPane title={ctx.title} leaf={ctx.leaf} workspaceSlug={ctx.workspaceSlug} />
   ),
 };
 
@@ -181,33 +220,40 @@ const ACCESS: ProjectTopicDef = {
  * The topics a project publishes, in rail order.
  *
  * The order is a sentence about the project: what it IS (Overview), what it is DOING (Work
- * Items), what that work is AIMED AT (Milestones), WHEN it is being done (Iterations), what it
- * ROLLS UP INTO (Programs), what it HOLDS (Contents), what HAPPENED (Activity), and who may look
- * (Access). The four middle topics are all lenses on the same cards, which is why they sit
- * together directly under Work Items and above Contents — the material around the work is a
- * different subject.
+ * Items), what is WAITING TO BE LET IN (Triage), what that work is AIMED AT (Milestones), WHEN it
+ * is being done (Iterations), what it ROLLS UP INTO (Programs), what SHAPES it reuses (Templates),
+ * what it HOLDS (Contents), what HAPPENED (Activity), and who may look (Access). The middle run is
+ * all lenses on the same cards, which is why those topics sit together directly under Work Items
+ * and above Contents — the material around the work is a different subject.
+ *
+ * Triage sits IMMEDIATELY under Work Items because the two lists partition the board exactly: a
+ * card is in one or the other, never both and never neither. Anything between them would be a
+ * topic wedged into a single set of cards.
  *
  * Within that run the split is by SCOPE, and it is worth knowing which way round it goes:
- * Milestones belong to THIS board, while Iterations and Programs belong to the workspace. So the
- * project's own plan comes first, and the two topics that reach past the board are adjacent.
+ * Milestones belong to THIS board, while Iterations, Programs and Templates belong to the
+ * workspace. So the project's own plan comes first, and the three topics that reach past the board
+ * are adjacent.
  *
  * Access is present only when the host knows the owning workspace. Omitting the topic — rather
  * than listing it and rendering an empty pane — is the honest reading of "this surface cannot
  * show item-scoped roles": a rail row that opens onto nothing is a bug report waiting to be
  * filed. In practice every current host supplies one, so this is about what the next host sees.
  *
- * Iterations and Programs are listed UNCONDITIONALLY even though both belong to the workspace
- * rather than the project. Without a `workspaceSlug` their APIs answer from the caller's own
- * reach — the same fallback the project list itself uses — so each pane still has something true
- * to show, which is the test Access fails and these pass.
+ * Iterations, Programs and Templates are listed UNCONDITIONALLY even though all three belong to
+ * the workspace rather than the project. Without a `workspaceSlug` their APIs answer from the
+ * caller's own reach — the same fallback the project list itself uses — so each pane still has
+ * something true to show, which is the test Access fails and these pass.
  */
 export function projectTopics(opts: { workspaceSlug?: string }): ProjectTopicDef[] {
   return [
     OVERVIEW,
     WORK_ITEMS,
+    TRIAGE,
     MILESTONES,
     ITERATIONS,
     PROGRAMS,
+    TEMPLATES,
     CONTENTS,
     ACTIVITY,
     ...(opts.workspaceSlug ? [ACCESS] : []),
