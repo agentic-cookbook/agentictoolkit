@@ -26,6 +26,7 @@ export * from "./programs";
 export * from "./milestones";
 export * from "./status-updates";
 export * from "./work-items";
+export * from "./search";
 export * from "./activity";
 export * from "./comments";
 export * from "./artifacts";

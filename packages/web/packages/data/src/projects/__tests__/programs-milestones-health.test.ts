@@ -271,9 +271,9 @@ describe("projectStatusUpdatesApi", () => {
     mockedJson.mockResolvedValueOnce([updateRow]);
     const out = await projectStatusUpdatesApi.list("p1");
     expect(mockedJson).toHaveBeenCalledWith("/api/project/projects/p1/status-updates");
-    expect(out[0].health).toBe("at_risk");
+    expect(out[0]!.health).toBe("at_risk");
     // Unsigned rows exist (an admin-written one); null, never "".
-    expect(out[0].createdBy).toBeNull();
+    expect(out[0]!.createdBy).toBeNull();
   });
 
   it("posts both halves — a health and its explanation", async () => {

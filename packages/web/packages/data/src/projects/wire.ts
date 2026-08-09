@@ -622,6 +622,43 @@ export interface StatusUpdatePatchBody {
 
 /* ── Artifacts (the things a project holds) ───────────────────────────── */
 
+/* ── Cross-board search ───────────────────────────────────────────────── */
+
+/**
+ * Backend row for `GET /project/search/work-items` — a SIGNPOST to a card, not the card.
+ *
+ * Deliberately not a `WorkItemRow`: a hit carries only what it takes to recognise the card and
+ * then open it, plus the two things a cross-board list needs that a card does not hold — the
+ * board's NAME (the client cannot join it, because the boards a search reaches are exactly the
+ * ones it has not loaded) and the matched text. Anything more would tempt a consumer to render
+ * this instead of the real row, which is how a stale copy gets on screen.
+ */
+export interface WorkItemSearchHitRow {
+  id: string;
+  projectId: string;
+  projectName: string;
+  /** already rendered against the OWNING board's prefix — a result list crossing boards crosses
+   *  prefixes, so the client has no prefix to render it with. */
+  itemKey: string;
+  title: string;
+  statusId: string;
+  updatedAt: string;
+  /** a plain-text excerpt of the description (no markup). Near-empty for a title-only or key
+   *  hit, where the title is already the answer. */
+  snippet: string;
+  /** ts_rank over title (weight A) and description (weight B). Ordering is the server's; this
+   *  travels so a consumer can show relative strength, never so it can re-sort. */
+  rank: number;
+}
+
+/** `GET /project/search/work-items` response — one page, with the limit the server ACTUALLY
+ *  applied (it clamps rather than refusing an out-of-range one). */
+export interface WorkItemSearchPageRow {
+  results: WorkItemSearchHitRow[];
+  limit: number;
+  hasMore: boolean;
+}
+
 /**
  * A polymorphic `(kind, id)` pointer RESOLVED by the backend into something displayable.
  *
