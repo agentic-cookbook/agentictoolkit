@@ -82,10 +82,18 @@ export type MenuLink =
   // written out. This is how the menu names a site that does not exist as an app
   // yet — the registry cannot carry it, because `registry.test.ts` holds every
   // SiteId to a real folder under `frontend/src/sites/`, and wanting a menu row is
-  // not a reason to invent a site. Consequences of having no registry entry, all
-  // deliberate: no per-env host mapping (no `testing.`/`staging.` prefix), no SSO
-  // wrap, and no `current` marking — there is no deployment for any of that to
-  // describe. When the site ships, replace the row with `{ site }` to get them.
+  // not a reason to invent a site.
+  //
+  // Three things every `{ site }` row gets are absent here, each because the answer
+  // does not exist rather than because it was skipped:
+  //   - no per-env host mapping (no `testing.`/`staging.` prefix) — the row names ONE
+  //     host, and there is no deployment of it in any other environment;
+  //   - no SSO wrap — `ssoReturnOrigins` is derived from SITES, so this origin is not
+  //     allow-listed, and wrapping the hop would land the visitor on the authorization
+  //     server's error instead of the link;
+  //   - no `current` marking — "are we on this site?" is a question about a deployment
+  //     the family does not have.
+  // When the site ships, replace the row with `{ site }` and all three follow.
   | { href: string; label: string; description?: string; iconKey?: string }
 export type MenuGroup =
   // A promoted top-level link row (with an optional inline description via `blurb`).

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readdirSync, statSync, existsSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, isHubWorkspacePath, hubWorkspaceSlug, hubSwitchHref, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, isHubWorkspacePath, hubWorkspaceSlug, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -189,8 +189,8 @@ describe('SITES registry', () => {
   })
 })
 
-describe('LISTED_SITES (switcher list)', () => {
-  it('pins the full switcher order (the authoritative sequence)', () => {
+describe('LISTED_SITES (the family roster)', () => {
+  it('pins the full roster order (the authoritative sequence)', () => {
     expect(LISTED_SITES.map((s) => s.id)).toEqual([
       'bitbag',
       'hub',
@@ -562,7 +562,7 @@ describe('SITE_CATEGORIES (menu + overview grouping)', () => {
 })
 
 describe('FOOTER_SITES (SEO interlinks)', () => {
-  it('pins the full footer order (switcher order minus non-crawlable mcp)', () => {
+  it('pins the full footer order (roster order minus non-crawlable mcp)', () => {
     expect(FOOTER_SITES.map((s) => s.id)).toEqual([
       'bitbag',
       'hub',
@@ -676,18 +676,13 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
       expect(HUB_FEATURE_SEGMENT[id]).toBeUndefined()
     }
   })
-  it('resolves hubSwitchHref to a slug-scoped workspace path', () => {
-    expect(hubSwitchHref('acme', getSite('knowledgebases')!)).toBe('/acme/knowledgebases')
-    expect(hubSwitchHref('acme', getSite('dashboards')!)).toBe('/acme/dashboards')
-    // the personas registry site switches into the persona-data CRUD at /<slug>/all-data
-    expect(hubSwitchHref('acme', getSite('personas')!)).toBe('/acme/all-data')
-    // the /home IA restructure: storage is a top-level workspace feature again, and
-    // both the ecosystems and products sites switch into the Products view.
-    expect(hubSwitchHref('acme', getSite('storage')!)).toBe('/acme/storage')
-    expect(hubSwitchHref('acme', getSite('ecosystems')!)).toBe('/acme/products')
-    // a site with no hub workspace → undefined (switcher falls back to cross-site).
-    expect(hubSwitchHref('acme', getSite('cookbook')!)).toBeUndefined()
-    expect(hubSwitchHref('acme', getSite('customers')!)).toBeUndefined()
+  // What the table is FOR, now that nothing switches into a hub view: every segment
+  // it names has to be recognized as a workspace segment, because that recognition is
+  // how the menu knows a hub path has a slug to carry.
+  it('contributes every segment to HUB_WORKSPACE_SEGMENTS', () => {
+    const segs = Object.values(HUB_FEATURE_SEGMENT).filter((s): s is string => s !== undefined)
+    expect(segs.length).toBeGreaterThan(0) // non-vacuity
+    for (const seg of segs) expect(isHubWorkspacePath(`/acme/${seg}`), seg).toBe(true)
   })
 })
 
@@ -709,8 +704,8 @@ describe('isHubWorkspacePath (/<slug>/<home|feature>)', () => {
     expect(isHubWorkspacePath('/acme/projects')).toBe(true)
   })
   it('matches the persona-editor route (a workspace route, distinct from the all-data CRUD)', () => {
-    // /<slug>/personas is a first-class workspace route; the personas registry site
-    // still switches into /<slug>/all-data (see hubSwitchHref). Both chrome surfaces
+    // /<slug>/personas is a first-class workspace route; the personas registry site's
+    // own hub view is /<slug>/all-data (see HUB_FEATURE_SEGMENT). Both chrome surfaces
     // (the switcher/drawer and the app header's FEATURE_META) must agree it's one.
     expect(isHubWorkspacePath('/acme/personas')).toBe(true)
     expect(hubWorkspaceSlug('/acme/personas')).toBe('acme')

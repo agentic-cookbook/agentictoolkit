@@ -66,6 +66,9 @@ export declare function toAvatarUser(u: Pick<AuthUser, 'email' | 'avatarUrl'> & 
  * always uses the shared cross-site 'adh' client (`ssoSwitchUrl`'s default), NOT a
  * site's own login client — only the 'adh' client's return-origin allow-list spans
  * every sibling site. One home for the rule, shared by every SSO source.
+ *
+ * Both results are stable references (see {@link SSO_SWITCH}), so a caller may pass
+ * this straight into a memo dependency list.
  */
 export declare function ssoSwitchResolver(signedIn: boolean): ((defaultHref: string) => string) | undefined;
 /**

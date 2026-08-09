@@ -252,6 +252,7 @@ function NavigationPopover({
     const out = [];
     for (const e of entries) {
       if (e.kind === "topic") {
+        if (e.href !== void 0) out.push({ item: topicItem(e), area: null });
         for (const item of e.items) out.push({ item, area: e.label });
       } else {
         out.push({ item: e.item, area: null });
@@ -547,6 +548,7 @@ function NavigationPopover({
                                   }
                                 }
                               ) : void 0,
+                              id: `${uid}-e${index}`,
                               "data-nav": `e${index}`,
                               className: cn("adh-nav-popover__topic", {
                                 "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
@@ -560,7 +562,7 @@ function NavigationPopover({
                               },
                               children: [
                                 /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
-                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, className: "adh-nav-popover__link-name", children: entry.label }),
+                                /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: entry.label }),
                                 entry.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.description })
                               ]
                             }
@@ -1376,7 +1378,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
       if (g.kind === "topic") {
         const items = g.links.map(toItem).filter((r) => r !== null);
         const self = g.link ? toItem(g.link) : null;
-        if (items.length)
+        if (items.length || self)
           out.push({
             kind: "topic",
             section: g.section,
@@ -1624,7 +1626,13 @@ var FLEET_MENU_GROUPS = [
     link: { site: "help" },
     links: [
       { site: "academy" },
-      { site: "help" },
+      // hub-help again, NOT the 'help' landing this topic itself links to. Two reasons,
+      // both from the registry: a family "Help" link points at hub-help by rule (see the
+      // note above SiteDef 'help' in registry.ts), and `{ site: 'help' }` here would
+      // resolve to the identical href as the Learn trigger above it — a row whose only
+      // effect is to repeat its own parent. So Hub ▸ Help and Learn ▸ Help are one
+      // destination reached from two groups, which is why they read the same.
+      { site: "hub-help" },
       // The registry's description for this one is its own domain (it has no other
       // blurb), which reads as a stray URL in a menu row.
       { site: "learntruefacts", description: "Facts, checked" }

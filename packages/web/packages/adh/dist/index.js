@@ -252,6 +252,7 @@ function NavigationPopover({
     const out = [];
     for (const e of entries) {
       if (e.kind === "topic") {
+        if (e.href !== void 0) out.push({ item: topicItem(e), area: null });
         for (const item of e.items) out.push({ item, area: e.label });
       } else {
         out.push({ item: e.item, area: null });
@@ -547,6 +548,7 @@ function NavigationPopover({
                                   }
                                 }
                               ) : void 0,
+                              id: `${uid}-e${index}`,
                               "data-nav": `e${index}`,
                               className: cn("adh-nav-popover__topic", {
                                 "adh-nav-popover__item--active": nav.kind === "top" && nav.entry === index,
@@ -560,7 +562,7 @@ function NavigationPopover({
                               },
                               children: [
                                 /* @__PURE__ */ jsx4(IconSlot, { icon: entry.icon }),
-                                /* @__PURE__ */ jsx4("span", { id: `${uid}-e${index}`, className: "adh-nav-popover__link-name", children: entry.label }),
+                                /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__link-name", children: entry.label }),
                                 entry.description && /* @__PURE__ */ jsx4("span", { className: "adh-dropdown-menu__shortcut", children: entry.description })
                               ]
                             }

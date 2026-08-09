@@ -1,1 +1,1 @@
-{"version":3,"file":"WorkspaceSiteMenu.d.ts","sourceRoot":"","sources":["../../src/header/WorkspaceSiteMenu.tsx"],"names":[],"mappings":"AAEA,OAAO,EAAE,KAAK,YAAY,EAAE,MAAM,OAAO,CAAA;AACzC,OAAO,EAAY,KAAK,mBAAmB,EAAE,MAAM,YAAY,CAAA;AAc/D,wBAAgB,iBAAiB,CAAC,KAAK,EAAE,mBAAmB,GAAG,YAAY,CAE1E"}
+{"version":3,"file":"WorkspaceSiteMenu.d.ts","sourceRoot":"","sources":["../../src/header/WorkspaceSiteMenu.tsx"],"names":[],"mappings":"AAEA,OAAO,EAAE,KAAK,YAAY,EAAE,MAAM,OAAO,CAAA;AACzC,OAAO,EAAY,KAAK,mBAAmB,EAAE,MAAM,YAAY,CAAA;AAgB/D,wBAAgB,iBAAiB,CAAC,KAAK,EAAE,mBAAmB,GAAG,YAAY,CAE1E"}

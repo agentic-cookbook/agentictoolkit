@@ -13,8 +13,9 @@ function toAvatarUser(u, fallback = "User") {
     imageUrl: u.avatarUrl || void 0
   };
 }
+var SSO_SWITCH = (href) => ssoSwitchUrl(href);
 function ssoSwitchResolver(signedIn) {
-  return signedIn ? (href) => ssoSwitchUrl(href) : void 0;
+  return signedIn ? SSO_SWITCH : void 0;
 }
 function useAnonymousHeaderAuth(_opts) {
   return { user: null, authLoading: false };

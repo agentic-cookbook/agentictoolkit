@@ -92,6 +92,14 @@ export function toAvatarUser(
   }
 }
 
+/** The signed-in resolver itself, hoisted to module scope rather than written inline
+ *  below, because its IDENTITY is a dependency: {@link ssoSwitchResolver} is called
+ *  from inside a hook on every render, and the site menu memoizes every row's
+ *  resolved href on the function it gets back — a fresh closure per render would
+ *  re-run env detection and URL parsing across the whole tree each time. It closes
+ *  over nothing, so one instance is all there ever needs to be. */
+const SSO_SWITCH = (href: string): string => ssoSwitchUrl(href)
+
 /**
  * The cross-site switch resolver every adh-SSO source uses. Signed in: route a site
  * switch through a silent SSO redirect so the target lands ALREADY logged in (its
@@ -100,11 +108,14 @@ export function toAvatarUser(
  * always uses the shared cross-site 'adh' client (`ssoSwitchUrl`'s default), NOT a
  * site's own login client — only the 'adh' client's return-origin allow-list spans
  * every sibling site. One home for the rule, shared by every SSO source.
+ *
+ * Both results are stable references (see {@link SSO_SWITCH}), so a caller may pass
+ * this straight into a memo dependency list.
  */
 export function ssoSwitchResolver(
   signedIn: boolean,
 ): ((defaultHref: string) => string) | undefined {
-  return signedIn ? (href) => ssoSwitchUrl(href) : undefined
+  return signedIn ? SSO_SWITCH : undefined
 }
 
 /**

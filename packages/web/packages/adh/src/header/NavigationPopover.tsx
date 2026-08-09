@@ -302,6 +302,13 @@ export function NavigationPopover({
     const out: { item: PopoverItem; area: string | null }[] = []
     for (const e of entries) {
       if (e.kind === 'topic') {
+        // A NAVIGABLE topic is a destination in its own right, so it has to be
+        // findable like one — otherwise the rows that both group and go somewhere
+        // (Hub, Personas, …) are the only destinations in the menu the filter box
+        // cannot reach, and typing their own name lists their children instead of
+        // them. No `area`: it IS a top-level row, not something under one. First,
+        // so it precedes the children it names.
+        if (e.href !== undefined) out.push({ item: topicItem(e), area: null })
         for (const item of e.items) out.push({ item, area: e.label })
       } else {
         out.push({ item: e.item, area: null })
@@ -719,10 +726,17 @@ export function NavigationPopover({
                             />
                           ) : undefined
                         }
-                        // No custom `id` here: the engine owns the SubTrigger id
-                        // and links the flyout to it (the submenu's accessible
-                        // name). The scroll/aria-active id lives on the inner
-                        // label span instead.
+                        // The row's own id — the target of the command input's
+                        // aria-activedescendant when this row is highlighted, and of
+                        // the scroll-into-view lookup. It belongs on the TRIGGER, the
+                        // element that carries role="menuitem": pointed at the inner
+                        // label span (a roleless <span>) instead, the highlight named
+                        // nothing assistive tech could announce as a menu item.
+                        // Setting it is safe here — Base UI threads an explicit id
+                        // through `useBaseUiId`, so this one becomes the trigger id it
+                        // registers, and the flyout still takes its accessible name
+                        // from this row.
+                        id={`${uid}-e${index}`}
                         data-nav={`e${index}`}
                         className={cn('adh-nav-popover__topic', {
                           'adh-nav-popover__item--active':
@@ -743,9 +757,7 @@ export function NavigationPopover({
                             still a row with an icon, a name and a tagline; only the
                             element it renders as differs. */}
                         <IconSlot icon={entry.icon} />
-                        <span id={`${uid}-e${index}`} className="adh-nav-popover__link-name">
-                          {entry.label}
-                        </span>
+                        <span className="adh-nav-popover__link-name">{entry.label}</span>
                         {entry.description && (
                           <span className="adh-dropdown-menu__shortcut">{entry.description}</span>
                         )}

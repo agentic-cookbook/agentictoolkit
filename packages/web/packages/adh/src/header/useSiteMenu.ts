@@ -234,9 +234,13 @@ export function useSiteMenu(
         }
       }
       if ('href' in link) {
-        // A destination with no registry site: the href is used verbatim. No `current`
-        // marking and no SSO wrap — see MenuLink's `href` variant for why both are
-        // absent by construction rather than forgotten.
+        // A destination with no registry site: the href is used verbatim. Neither the
+        // SSO wrap nor `current` is skipped here — neither one HAS an answer for a host
+        // the registry has never heard of. `ssoReturnOrigins` is derived from SITES, so
+        // wrapping this href would hand the authorization server a return origin it does
+        // not allow-list and bounce the visitor to a login page instead of the link they
+        // clicked; and `current` asks whether the visitor is on this site, which is a
+        // question about a deployment there isn't one of. See MenuLink's `href` variant.
         return {
           key: `href:${link.href}`,
           label: link.label,
@@ -267,7 +271,11 @@ export function useSiteMenu(
         // site elsewhere in the menu. Null for a grouping header (Plan, Build), which
         // leaves `href` undefined and the trigger a pure disclosure.
         const self = g.link ? toItem(g.link) : null
-        if (items.length)
+        // Kept when it has children OR somewhere of its own to go. A topic whose
+        // children all failed to resolve is still a destination if it names one, and
+        // dropping it would delete a site from the menu because a row UNDER it named
+        // something the registry no longer has.
+        if (items.length || self)
           out.push({
             kind: 'topic',
             section: g.section,

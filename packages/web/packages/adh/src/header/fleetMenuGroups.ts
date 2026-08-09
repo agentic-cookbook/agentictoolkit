@@ -86,7 +86,13 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
     link: { site: 'help' },
     links: [
       { site: 'academy' },
-      { site: 'help' },
+      // hub-help again, NOT the 'help' landing this topic itself links to. Two reasons,
+      // both from the registry: a family "Help" link points at hub-help by rule (see the
+      // note above SiteDef 'help' in registry.ts), and `{ site: 'help' }` here would
+      // resolve to the identical href as the Learn trigger above it — a row whose only
+      // effect is to repeat its own parent. So Hub ▸ Help and Learn ▸ Help are one
+      // destination reached from two groups, which is why they read the same.
+      { site: 'hub-help' },
       // The registry's description for this one is its own domain (it has no other
       // blurb), which reads as a stray URL in a menu row.
       { site: 'learntruefacts', description: 'Facts, checked' },

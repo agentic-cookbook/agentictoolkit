@@ -101,9 +101,15 @@ export interface SiteDef {
    *  values are stamped from the actual route tree and held to it by
    *  `registry.test.ts` ("workspaceRoute matches the route tree"). */
   workspaceRoute?: 'root' | 'nested' | 'hub'
-  /** Shown in the site-switcher dropdown. Defaults to true; set false to keep a
-   *  site in the registry (so its own header still resolves a label) while
-   *  hiding it from the cross-site switcher list. */
+  /** Part of the derived family roster ({@link LISTED_SITES}, and the footer
+   *  interlinks under it). Defaults to true; set false to keep a site in the registry
+   *  — so its own header still resolves a label and its pages keep serving — while
+   *  leaving that roster.
+   *
+   *  ⚠️ It does NOT hide a site from the site menu, despite the name. That tree is
+   *  hand-authored (`fleetMenuGroups.ts`) and names its rows one at a time, so a
+   *  delisted site appears there exactly when someone wrote it in — which several do,
+   *  on purpose. Delisting is about the roster, not about reachability. */
   listed?: boolean
   /** Render a divider above this entry in the switcher dropdown — used to set
    *  a site apart from the rest of the family. */
@@ -241,13 +247,15 @@ export const SITES: SiteDef[] = [
   { id: 'messaging', label: 'Messaging', fullLabel: 'Agentic Developer Messaging', description: 'Direct messages & notifications', prodHost: 'agenticdevelopermessaging.com', hasStaging: false, hasTesting: false, hasHome: false, listed: false },
 ]
 
-/** The sites shown in the cross-site switcher dropdown, in display order. */
+/** The family roster — every site that counts as a public member of the family, in
+ *  display order. What consumes it is the footer/overview surfaces below; the site
+ *  menu does NOT (see {@link SiteDef.listed}). */
 export const LISTED_SITES: SiteDef[] = SITES.filter((s) => s.listed !== false)
 
-/** The crawlable sites to interlink from the footer, in display order. Same set
- *  as the switcher minus non-HTML endpoints (e.g. the MCP server). These render
- *  as real server-side `<a href>` links to absolute production hosts so search
- *  engines can follow them between properties. */
+/** The crawlable sites to interlink from the footer, in display order. The roster
+ *  above minus non-HTML endpoints (e.g. the MCP server). These render as real
+ *  server-side `<a href>` links to absolute production hosts so search engines can
+ *  follow them between properties. */
 export const FOOTER_SITES: SiteDef[] = LISTED_SITES.filter((s) => s.crawlable !== false)
 
 export function getSite(id: SiteId): SiteDef | undefined {
@@ -449,17 +457,18 @@ export function buildSiteHref(target: SiteDef, currentHostname: string, pathname
 // ---------------------------------------------------------------------------
 // Hub workspace routes (hand-managed — NOT scaffolded; keep outside gen blocks).
 //
-// Each developer-feature site is a marketing landing page whose actual
-// workspace lives on the hub under the active workspace slug, at
-// `/<slug>/<feature>` (e.g. the Storage site's workspace is hub
-// `/<slug>/storage`). When an authenticated user opens the switcher on one of
-// those hub workspace routes, it navigates within the hub to the target's
-// workspace route — scoped to the ACTIVE slug — instead of cross-site to the
-// satellite (see useSiteMenu). Sites absent here (Docs, Cookbook, …) keep
-// cross-site switching everywhere.
+// Each developer-feature site also has a view INSIDE the hub, under the active
+// workspace slug at `/<slug>/<feature>` (e.g. the Storage site's hub view is
+// `/<slug>/storage`). This maps the site to that segment.
 //
-// Values are bare feature SEGMENTS (no leading slash); `hubSwitchHref` joins
-// them to the active slug.
+// It is no longer a switch TARGET: the site menu is a cross-site navigator, so a
+// switch from a workspace lands on the site's OWN workspace route
+// ({@link siteWorkspaceHref}), never the hub's view of it. What this table is for
+// now is the other direction — naming which second segments of a hub path ARE
+// workspace routes, via {@link HUB_WORKSPACE_SEGMENTS}, which is how the menu knows
+// there is a workspace to carry at all.
+//
+// Values are bare feature SEGMENTS (no leading slash).
 export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
   dashboards: 'dashboards',
   // The persona-data CRUD workspace lives at /<slug>/all-data (the /<slug>/personas
@@ -478,15 +487,15 @@ export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
   research: 'research',
 }
 
-/** Hub workspace feature segments with no DISTINCT registry site to switch INTO:
- *  recognized as workspace routes (so the in-hub menu engages) but NOT `hubSwitchHref`
- *  targets. teams + projects are bespoke workspace features with no registry site of
- *  their own. `personas` is the persona-EDITOR route (`/<slug>/personas`), a first-class
- *  workspace route; the `personas` registry site switches into the persona-DATA CRUD at
- *  `/<slug>/all-data` (see HUB_FEATURE_SEGMENT), so `personas` lives here — not in
- *  HUB_FEATURE_SEGMENT — to be recognized by isHubWorkspacePath without changing any
- *  switch target (this keeps the switcher/drawer in step with the app header, which
- *  treats /<slug>/personas as a workspace route via FEATURE_META). */
+/** Hub workspace feature segments with no DISTINCT registry site behind them:
+ *  recognized as workspace routes (so the menu reads a slug to carry) but absent from
+ *  HUB_FEATURE_SEGMENT, which is keyed by site. teams + projects are bespoke workspace
+ *  features with no registry site of their own. `personas` is the persona-EDITOR route
+ *  (`/<slug>/personas`), a first-class workspace route; the `personas` registry site's
+ *  hub view is the persona-DATA CRUD at `/<slug>/all-data` (see HUB_FEATURE_SEGMENT),
+ *  so `personas` lives here — one segment cannot map to two sites — and is recognized
+ *  by isHubWorkspacePath all the same. That keeps the switcher/drawer in step with the
+ *  app header, which treats /<slug>/personas as a workspace route via FEATURE_META. */
 const HUB_EXTRA_FEATURE_SEGMENTS: string[] = [
   'teams', 'projects', 'personas', 'persona-services', 'tokens', 'integrations', 'members', 'settings',
   // Ecosystem topics + LLM Providers promoted onto the root workspace rail (each is a
@@ -530,23 +539,15 @@ export function hubWorkspaceSlug(pathname: string): string | null {
   return segs.length >= 2 && HUB_WORKSPACE_SEGMENTS.has(segs[1]!) ? segs[0]! : null
 }
 
-/** The in-hub workspace route for `target`, scoped to the active workspace
- *  `slug` — `/<slug>/<feature>` — or undefined when the target has no hub
- *  workspace (the switcher falls back to cross-site navigation). */
-export function hubSwitchHref(slug: string, target: SiteDef): string | undefined {
-  const seg = HUB_FEATURE_SEGMENT[target.id]
-  return seg ? `/${slug}/${seg}` : undefined
-}
-
 /** The path of `target`'s OWN authenticated workspace, scoped to `slug` — the
  *  destination the site menu carries a signed-in visitor to when they switch
  *  sites from a workspace route, so they land in the SAME workspace on the site
  *  they picked. Returns undefined when `target` has no workspace route, and the
  *  caller falls back to the site's landing.
  *
- *  This is the CROSS-SITE counterpart to {@link hubSwitchHref}: that one keeps
- *  the visitor inside the hub at `/<slug>/<feature>`, this one sends them to the
- *  site itself. The site menu is a cross-site navigator, so it uses this one.
+ *  It sends the visitor to the SITE, never to the hub's own view of that site's
+ *  feature (`/<slug>/<feature>`, see HUB_FEATURE_SEGMENT): the menu is a cross-site
+ *  navigator, and picking "Storage" from it means the Storage site.
  *  The shape per site comes from {@link SiteDef.workspaceRoute}. */
 export function siteWorkspaceHref(target: SiteDef, slug: string): string | undefined {
   if (!slug) return undefined

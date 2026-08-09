@@ -2,23 +2,33 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { getSite } from '@agentic-toolkit/adh-registry'
 
-// The fleet tree — the family as ten top-level rows. Its contract is mostly about what
+// The fleet tree — the family as nine top-level rows. Its contract is mostly about what
 // a reader SEES, so most of this resolves the config through the engine rather than
 // reading the literal: a row whose icon or tagline is missing is missing on screen
 // whether the gap is in this file or in the registry it defers to.
 
+// Mutable so a case can resolve the tree from somewhere other than the landing — the
+// `mock` prefix is what lets vitest's hoisted factory close over it.
+let mockPath = '/'
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/',
+  usePathname: () => mockPath,
   useRouter: () => ({ push: vi.fn() }),
 }))
 
 import { FLEET_MENU_GROUPS, FLEET_SECTION } from '../fleetMenuGroups'
-import { useSiteMenu } from '../useSiteMenu'
+import { useSiteMenu, type UseSiteMenuOpts } from '../useSiteMenu'
 import { type MenuLink } from '../SiteMenu'
 import { type PopoverEntry } from '@agentic-toolkit/adh/header'
 
-function resolve(): PopoverEntry[] {
-  const { result } = renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub' }))
+/** Resolve the tree as the hub's header would. Defaults to a signed-out visitor on the
+ *  marketing landing; pass a `pathname` and the session bits to place them elsewhere. */
+function resolve(
+  { pathname = '/', ...opts }: { pathname?: string } & Partial<UseSiteMenuOpts> = {},
+): PopoverEntry[] {
+  mockPath = pathname
+  const { result } = renderHook(() =>
+    useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', ...opts }),
+  )
   return result.current.entries
 }
 
@@ -77,6 +87,33 @@ describe('FLEET_MENU_GROUPS', () => {
     // The family has no plan.* or build.* site for these to point at.
     for (const label of ['Plan', 'Build'])
       expect(byLabel[label]?.href, `${label} is a grouping header`).toBeUndefined()
+  })
+
+  // Nothing in this tree is auth-conditional (see the module comment): the rows a
+  // visitor sees, and what each one is called, are the same signed out on the landing
+  // as signed in inside a workspace. A session changes where a row GOES — the workspace
+  // carry, which is useSiteMenu's own contract and tested there — never which rows
+  // exist, so a row that quietly appears or vanishes with the session fails here.
+  it('resolves the same rows, names and taglines signed out and signed in', () => {
+    const shape = (entries: PopoverEntry[]): unknown[] =>
+      entries.map((e) =>
+        e.kind === 'topic'
+          ? {
+              label: e.label,
+              description: e.description,
+              hasIcon: Boolean(e.icon),
+              // A topic that is a site navigates as well as opens; a grouping header
+              // only opens. That split must not move with the session either.
+              navigable: e.href !== undefined,
+              items: e.items.map((i) => [i.label, i.description, Boolean(i.icon)]),
+            }
+          : { label: e.item.label, description: e.item.description, hasIcon: Boolean(e.item.icon) },
+      )
+    const signedOut = shape(resolve())
+    const signedIn = shape(
+      resolve({ pathname: '/acme/ecosystems', authenticated: true, personalSlug: 'acme' }),
+    )
+    expect(signedIn).toEqual(signedOut)
   })
 
   it('names a real registry site in every `site` link', () => {
