@@ -95,8 +95,12 @@ describe("SiteHomeRoute", () => {
     params = { workspace: "acme", path: ["notes"] };
     render(<SiteHomeRoute model={model} />);
 
-    expect(shellProps).toHaveBeenCalledTimes(1);
-    expect(Object.keys(shellProps.mock.calls[0][0]).sort()).toEqual(["children", "workspaceSlug"]);
+    // Mapped over the calls rather than indexed into them: `calls[0]` is possibly-undefined
+    // under noUncheckedIndexedAccess, and a `!` would be asserting the call count a second
+    // time. This shape says both things once — one call, and these two props.
+    expect(shellProps.mock.calls.map(([props]) => Object.keys(props).sort())).toEqual([
+      ["children", "workspaceSlug"],
+    ]);
   });
 
   it("parses ABOVE the shell, so a refused path never mounts it", () => {

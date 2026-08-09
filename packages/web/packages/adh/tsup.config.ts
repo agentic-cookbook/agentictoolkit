@@ -150,8 +150,20 @@ export default defineConfig({
     // The per-site declaration (`defineSite`) every family site's app/ tree reads. Its own
     // entry rather than a member of marketing/index, because robots.ts, sitemap.ts and the
     // details pages import a site's config too and none of them wants the landing deck
-    // behind it. No module state and no runtime self-imports, so it owes no `external`.
+    // behind it.
     'site/index': 'src/site/index.ts',
+    // The hub's workspace-path predicates. Split off `site/index` for the reason
+    // concepts/participating is split off the taxonomy — the header asks both predicates on
+    // every render, and the header is the entry that ships on every public page — and kept
+    // un-inlined for the reason the matching `external` below spells out: the module holds
+    // module-level state (the slug-less segment Set, and the memoized reserved list), and with
+    // bundle:true/splitting:false every entry that reaches it RELATIVELY inlines its own copy.
+    // Here the two copies would agree — this state is derived from module constants and never
+    // written again, so it is duplicated work rather than forked state. The toolkit draws no
+    // such distinction: verify-bundle-boundaries.py's Check B refuses a stateful module in two
+    // entries outright, and its allowlist is not available to a toolkit package. Both halves
+    // are load-bearing: this entry, AND the package path in every reaching module.
+    'site/hubWorkspacePath': 'src/site/hubWorkspacePath.ts',
     // The family's landing DECK — the shape of every site's `/` and `/tour`, which used to
     // be emitted into each site as markup. Its own entry rather than a member of
     // marketing/index: that barrel is what a site's layout imports on every route, and the
@@ -222,6 +234,12 @@ export default defineConfig({
     // path '@agentic-toolkit/adh/header/recents'. One surviving './recents' defeats
     // it. Enforced by frontend/tools/verify-bundle-boundaries.py.
     '@agentic-toolkit/adh/header/recents',
+    // The hub workspace-path leaf (entry above). Two entries reach it — the `site` barrel
+    // re-exports both predicates, and the header calls them from useSiteMenu and
+    // activeMenuGroups — so without this it is inlined twice. Preserved import ⇒ one copy,
+    // resolved by the consumer. One surviving '../site/hubWorkspacePath' defeats it, exactly
+    // as one surviving './recents' would above.
+    '@agentic-toolkit/adh/site/hubWorkspacePath',
     // The flags module holds the React context (FeatureFlagsProvider / FeatureFlagsContext).
     // With splitting:false, every entry that inlines it gets its OWN context instance — a consumer
     // entry in THIS package (`footer/AdhFooter`, which landed here in Task 5.7, is the nearest

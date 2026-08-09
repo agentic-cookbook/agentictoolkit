@@ -15,9 +15,11 @@ import {
   type SiteId,
 } from '@agentic-toolkit/adh-registry'
 // From `site`, not the registry: which URLs are the hub's workspace is now decided by the first
-// segment against the reserved-slug list, which lives there. By the SUBPATH so this pulls in the
-// word lists alone — `@agentic-toolkit/adh/site`'s barrel also carries `defineSite`.
-import { hubWorkspaceSlug, isHubWorkspacePath } from '../site/hubWorkspacePath'
+// segment against the reserved-slug list, which lives there. By the PACKAGE PATH, not
+// '../site/hubWorkspacePath': the subpath has its own entry and is listed `external`, so this
+// pulls in the word lists alone (`@agentic-toolkit/adh/site`'s barrel also carries `defineSite`)
+// and the module stays one copy instead of being inlined into the header bundle as a second.
+import { hubWorkspaceSlug, isHubWorkspacePath } from '@agentic-toolkit/adh/site/hubWorkspacePath'
 // By the theme-preview SUBPATH, not the `@agentic-toolkit/adh/themes` barrel and not
 // '../themes/theme-preview': the subpath has its own entry and is listed `external`, so it
 // stays a preserved import in this dist instead of being inlined into the header bundle

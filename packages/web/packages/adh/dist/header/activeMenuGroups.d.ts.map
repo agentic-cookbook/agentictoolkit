@@ -1,1 +1,1 @@
-{"version":3,"file":"activeMenuGroups.d.ts","sourceRoot":"","sources":["../../src/header/activeMenuGroups.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,KAAK,MAAM,EAAE,MAAM,+BAA+B,CAAA;AAG3D;;;;;GAKG;AACH,wBAAgB,oBAAoB,CAAC,aAAa,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,GAAG,OAAO,CAErF"}
+{"version":3,"file":"activeMenuGroups.d.ts","sourceRoot":"","sources":["../../src/header/activeMenuGroups.ts"],"names":[],"mappings":"AAEA,OAAO,EAAE,KAAK,MAAM,EAAE,MAAM,+BAA+B,CAAA;AAK3D;;;;;GAKG;AACH,wBAAgB,oBAAoB,CAAC,aAAa,EAAE,MAAM,EAAE,QAAQ,EAAE,MAAM,GAAG,OAAO,CAErF"}

@@ -20,4 +20,7 @@ export {
 // `@agentic-toolkit/adh-registry` where it used to live: since the hub's root became
 // `[workspace]` the answer is "the first segment is not one of the site's own routes", and that
 // list is this module's. The registry cannot import it without depending on this package.
-export { isHubWorkspacePath, hubWorkspaceSlug } from './hubWorkspacePath'
+// Re-exported by PACKAGE PATH, not './hubWorkspacePath': the leaf has its own entry and is listed
+// `external`, so this barrel forwards a preserved import instead of inlining the module a second
+// time beside the header's copy. See tsup.config.ts's entry note.
+export { isHubWorkspacePath, hubWorkspaceSlug } from '@agentic-toolkit/adh/site/hubWorkspacePath'

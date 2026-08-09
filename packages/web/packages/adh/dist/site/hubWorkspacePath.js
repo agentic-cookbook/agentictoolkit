@@ -1,35 +1,3 @@
-// src/site/SiteConfig.ts
-var FAMILY_ROBOTS_DISALLOW = [
-  "/login",
-  "/signup",
-  "/home",
-  "/api/",
-  "/auth/"
-];
-function defineSite(site) {
-  return {
-    id: site.id,
-    seo: site.seo,
-    robotsDisallow: site.robotsDisallow ?? FAMILY_ROBOTS_DISALLOW,
-    sitemap: site.sitemap,
-    homeGate: site.homeGate,
-    workspaceGate: site.workspaceGate,
-    authCallback: site.authCallback,
-    shell: {
-      siteId: site.id,
-      header: site.header,
-      providers: site.providers,
-      navLinks: site.navLinks,
-      trailingNavLinks: site.trailingNavLinks,
-      footerLinks: site.footerLinks,
-      silentSso: site.silentSso
-    }
-  };
-}
-async function siteSitemapRoutes(site) {
-  return typeof site.sitemap === "function" ? site.sitemap() : site.sitemap;
-}
-
 // src/site/reservedSlugs.ts
 var FAMILY_ROUTE_SEGMENTS = [
   "auth",
@@ -178,17 +146,27 @@ function reservedWorkspaceSlugs() {
   return new Set(all.map((s) => s.toLowerCase()));
 }
 
-// src/site/index.ts
-import { isHubWorkspacePath, hubWorkspaceSlug } from "@agentic-toolkit/adh/site/hubWorkspacePath";
+// src/site/hubWorkspacePath.ts
+var SLUGLESS_APP_SEGMENTS = /* @__PURE__ */ new Set(["home", "settings"]);
+var reserved = null;
+function isRouteSegment(segment) {
+  reserved ??= reservedWorkspaceSlugs();
+  return reserved.has(segment.toLowerCase());
+}
+function firstSegment(pathname) {
+  return (pathname || "/").split("/").filter(Boolean)[0];
+}
+function isHubWorkspacePath(pathname) {
+  const first = firstSegment(pathname);
+  if (first === void 0) return false;
+  return SLUGLESS_APP_SEGMENTS.has(first) || !isRouteSegment(first);
+}
+function hubWorkspaceSlug(pathname) {
+  const first = firstSegment(pathname);
+  return first !== void 0 && !isRouteSegment(first) ? first : null;
+}
 export {
-  FAMILY_ROBOTS_DISALLOW,
-  FAMILY_ROUTE_SEGMENTS,
-  RESERVED_HANDLE_WORDS,
-  SITE_ROUTE_SEGMENTS,
-  defineSite,
   hubWorkspaceSlug,
-  isHubWorkspacePath,
-  reservedWorkspaceSlugs,
-  siteSitemapRoutes
+  isHubWorkspacePath
 };
-//# sourceMappingURL=index.js.map
+//# sourceMappingURL=hubWorkspacePath.js.map
