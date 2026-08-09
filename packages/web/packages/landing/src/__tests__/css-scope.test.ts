@@ -96,25 +96,36 @@ describe('the document-level rules are gated on the deck, at their original weig
     .filter((s) => s.includes('.lp-deck') && !s.startsWith('.lp-deck'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
 
+  // `DeckScript` stamps TWO attributes on <html>, and a gate is written against
+  // each: ARM_SNAPPING sets `data-snap` on the reader's first pointerdown/wheel/
+  // keydown (`once`), and ARM_SMOOTH sets `data-smooth` on the same three events
+  // (see DeckScript.tsx:23 and :41). So the fixture has to arm both: a document
+  // holding a deck the reader has touched is the only state in which every rule
+  // in this sheet is live, and a fixture missing one of them reports a rule that
+  // is perfectly well gated as a gate that matches nothing.
+  function armDocument(): void {
+    document.documentElement.setAttribute('data-snap', '')
+    document.documentElement.setAttribute('data-smooth', '')
+  }
+
   it('matches the document while a deck is mounted', () => {
     expect(gates.length).toBeGreaterThan(5)
     document.body.innerHTML =
       '<main><div class="lp-deck"><section class="lp-screen"></section></div></main>'
-    // Both flags DeckScript stamps on <html>, because a gate is only reachable once its flag is
-    // armed: `data-snap` by ARM_SNAPPING, `data-smooth` by ARM_SMOOTH on the first interaction.
-    // A gate whose flag is missing here would read as "spelled wrong" — the very defect the probe
-    // exists to catch — so the fixture has to be the armed document, not a half-armed one.
-    document.documentElement.setAttribute('data-snap', '')
-    document.documentElement.setAttribute('data-smooth', '')
+    armDocument()
     for (const sel of gates) expect(document.querySelector(sel), sel).not.toBeNull()
   })
 
   it('matches nothing once the deck leaves the DOM', () => {
-    // A client-side navigation off `/` unmounts the deck and runs no cleanup —
-    // `data-snap` in particular is stamped on <html> by ARM_SNAPPING and never
-    // removed, so it is left set here deliberately.
+    // A client-side navigation off `/` unmounts the deck and runs no cleanup, so
+    // both attributes are left set here deliberately — that is the honest worst
+    // case, not an oversight. Neither is removed on a forward navigation:
+    // ARM_SNAPPING never clears `data-snap` at all, and ARM_SMOOTH clears
+    // `data-smooth` only on `popstate`, which a Link does not fire. `:has(.lp-deck)`
+    // is therefore the whole of the gate on a host route, and this asserts it
+    // holds alone.
     document.body.innerHTML = '<main><h1>Privacy</h1><p>Some prose.</p></main>'
-    document.documentElement.setAttribute('data-snap', '')
+    armDocument()
     for (const sel of gates) expect(document.querySelector(sel), sel).toBeNull()
   })
 })
