@@ -32,7 +32,7 @@ function Highlighted({ text, query }: { text: string; query: string }): ReactNod
  * category, author attribution (displayName + @slug), and date. The active query terms are
  * wrapped in `<mark>` within the title and snippet (escape-safe React nodes). The card
  * body is a SELECT button (drives the master/detail preview); a sibling anchor opens
- * the public paper page at `/:slug/:publicRoute` — kept siblings so neither nests the
+ * the public paper page at the HOST-supplied `href` — kept siblings so neither nests the
  * other (valid, accessible interactive structure).
  *
  * PER-KIND (c16): the row is shared scaffolding with per-kind SLOTS filled from the
@@ -46,6 +46,7 @@ function Highlighted({ text, query }: { text: string; query: string }): ReactNod
  */
 export function MarkdownResultRow({
   hit,
+  href,
   query,
   selected,
   onSelect,
@@ -53,7 +54,6 @@ export function MarkdownResultRow({
   controlRef,
 }: DocumentResultProps<PaperSearchHit>): ReactElement {
   const author = hit.author.displayName?.trim() || `@${hit.author.slug}`
-  const href = `/${hit.author.slug}/${hit.publicRoute}`
   // c16 — the per-kind renderer supplies the badge accent + the subtitle source. A
   // missing/unknown kind falls back to the default renderer (never throws).
   const renderer = kindRendererFor(hit.kind)

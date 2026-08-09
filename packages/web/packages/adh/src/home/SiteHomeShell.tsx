@@ -36,13 +36,9 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
  */
 export function SiteHomeShell({
-  basePath,
   workspaceSlug,
   children,
 }: {
-  /** The base ABOVE the workspace segment — `''` for a site whose workspace sits at its root,
-   *  so the URL is `/<workspace>`. Drives the URL and the list cache key. */
-  basePath: string
   /** The workspace segment as it stands in the URL, if any. */
   workspaceSlug?: string
   /** This site's HTDV. Called — not rendered — once a workspace is resolved AND in the URL, with
@@ -56,13 +52,15 @@ export function SiteHomeShell({
   // the children never mount, the empty-state hint never fires, and the page sits blank behind a
   // chooser with nothing in it. Every one of the 35 sites' gated surface has that same failure, so
   // the shell owns saying so.
-  const { items: workspaces, error } = useResourceList<Workspace>(
-    `${basePath}::workspaces`,
-    loadWorkspaces,
-  )
-  // Memoized on `basePath` alone, because useWorkspaceRoute holds this in two effects' dependency
+  //
+  // The cache key is a bare literal, and can be: it identifies a REQUEST, not a mount point, and
+  // there is one workspace list per signed-in caller across the whole family. It used to be keyed
+  // on the shell's base so two mounts at different bases could not read each other's rows — a
+  // distinction that never existed, since both would have fetched the same list.
+  const { items: workspaces, error } = useResourceList<Workspace>('workspaces', loadWorkspaces)
+  // Memoized with no dependencies, because useWorkspaceRoute holds this in two effects' dependency
   // arrays — a fresh closure each render would re-run both on every render.
-  const hrefFor = useCallback((slug: string) => `${basePath}/${slug}`, [basePath])
+  const hrefFor = useCallback((slug: string) => `/${slug}`, [])
   // Switching workspace KEEPS what you were looking at: the segments below the workspace are this
   // site's own selected path (`model.parse` reads exactly these — see SiteHomeRoute), so moving
   // them onto the new workspace is what makes the HTDV land on the same place rather than back at
@@ -79,8 +77,8 @@ export function SiteHomeShell({
   // and one it does have (the user-scoped lists, where the row is the same row) stays selected.
   const pathname = usePathname() ?? ''
   const switchHrefFor = useCallback(
-    (slug: string) => [basePath, slug, ...workspacePathTail(pathname, basePath)].join('/'),
-    [basePath, pathname],
+    (slug: string) => `/${[slug, ...workspacePathTail(pathname)].join('/')}`,
+    [pathname],
   )
   // No `canPersist`: every row this list carries is an owner-scopable workspace (workspacesApi
   // drops teams), so any of them is legitimate cross-site preference material.
@@ -126,7 +124,7 @@ export function SiteHomeShell({
         workspace !== null &&
         children({
           workspaceSlug: resolved,
-          scopedBase: `${basePath}/${resolved}`,
+          scopedBase: `/${resolved}`,
           workspace,
         })}
     </>

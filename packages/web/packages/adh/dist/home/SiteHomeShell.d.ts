@@ -22,10 +22,7 @@ import type { SiteHomeScope } from './SiteHomeModel';
  *
  * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
  */
-export declare function SiteHomeShell({ basePath, workspaceSlug, children, }: {
-    /** The base ABOVE the workspace segment — `''` for a site whose workspace sits at its root,
-     *  so the URL is `/<workspace>`. Drives the URL and the list cache key. */
-    basePath: string;
+export declare function SiteHomeShell({ workspaceSlug, children, }: {
     /** The workspace segment as it stands in the URL, if any. */
     workspaceSlug?: string;
     /** This site's HTDV. Called — not rendered — once a workspace is resolved AND in the URL, with

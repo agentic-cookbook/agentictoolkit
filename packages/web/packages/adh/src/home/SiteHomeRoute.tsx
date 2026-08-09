@@ -47,9 +47,16 @@ export function SiteHomeRoute<View>({ model }: { model: SiteHomeModel<View> }): 
   const rest = raw === undefined ? [] : Array.isArray(raw) ? raw : [raw]
   const workspaceSlug = params?.workspace
 
+  // Parsed HERE, above the shell, rather than inside the child it hands to `children`. A parser is
+  // also where a site says a path does not exist (see SiteHomeModel.parse and `noSubPath`), and a
+  // refusal made inside the shell would arrive after the workspace list had been fetched and the
+  // chooser drawn — a bar and a spinner on the way to a 404. Above it, a path the site has no
+  // grammar for 404s on the first render and asks the backend nothing.
+  const view = model.parse(rest)
+
   return (
-    <SiteHomeShell basePath={model.basePath} workspaceSlug={workspaceSlug}>
-      {(scope) => model.render({ ...scope, view: model.parse(rest) })}
+    <SiteHomeShell workspaceSlug={workspaceSlug}>
+      {(scope) => model.render({ ...scope, view })}
     </SiteHomeShell>
   )
 }

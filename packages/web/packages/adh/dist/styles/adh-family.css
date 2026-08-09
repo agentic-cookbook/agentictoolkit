@@ -1,0 +1,105 @@
+/* The FAMILY sheet — everything the thirty-eight landing sites' documents agree on.
+ *
+ * A site's own `app/globals.css` is three lines: Tailwind, this file, and the site's
+ * `src/site.css`. That is the whole of it, byte for byte, in every site. Before this
+ * file existed those three lines were forty to four hundred, hand-copied, and the
+ * family had nineteen distinct globals.css shapes — nine of them differing in what the
+ * DOCUMENT itself says, which is the one thing no site should be deciding alone. Three
+ * sites had drifted out of `concepts.css`, one out of the landing deck's stylesheets
+ * altogether (its `/` and `/tour` rendered in the package's unthemed greyscale), and
+ * one had `overflow-x: hidden` where the rest say `clip` — see the body rule below for
+ * why that is not a cosmetic difference.
+ *
+ * What belongs HERE: the stylesheets every site imports, and the handful of rules that
+ * address `html`, `body` and the shared chrome. What belongs in a site's `src/site.css`:
+ * the feature packages that site mounts (`@import "@agentic-toolkit/<pkg>/sources.css"`),
+ * and rules for its own components. It is imported after this file, so it wins.
+ *
+ * Tailwind itself is NOT imported here. `@import "tailwindcss"` belongs to the app —
+ * it is what makes the app's own sources scannable — and this sheet is a dependency
+ * the app pulls in, not the other way round. */
+
+/* The shared chrome and surfaces. `styles.css` is the site tier (SiteHeader,
+ * SiteFooter, the marketing shell) and carries the primitives, the themes package's
+ * @theme and this package's own Tailwind @source registration with it, so no site
+ * needs @source globs of its own. `help.css` styles the HMDV topic panes and the
+ * markdown prose the guides render with, `legal.css` the privacy/terms pages, and
+ * `concepts.css` the concept surfaces and backlinks. All four are unconditional: a
+ * site that renders none of a sheet's selectors pays for a stylesheet, and a site
+ * that quietly lost one renders a whole surface unstyled with nothing to say so. */
+@import "./adh-site.css";
+@import "./adh-help.css";
+@import "./adh-legal.css";
+@import "./adh-concepts.css";
+
+/* The landing deck at `/` and `/tour` — the screens, the blocks and the drawer chrome.
+ * `base.css` addresses the DOCUMENT (root size, face, snap, `overflow-x`), and importing
+ * it site-wide is safe because every rule in it is gated on `:has(.lp-deck)`, the class
+ * the deck puts on its own element — so none of it reaches a site's feature routes.
+ * `landing-bridge.css` is what assigns the `--lp-*` token contract from the M3 role vars
+ * <AdhThemeStyle/> injects; without it the deck renders in the package's greyscale
+ * fallbacks. It is written last for readability, not for the cascade: landing's own
+ * sheets never assign `:root` (every token is read as `var(--lp-x, fallback)`), so this
+ * override wins at any import position. */
+@import "@agentic-toolkit/landing/css/base.css";
+@import "@agentic-toolkit/landing/css/chrome.css";
+@import "@agentic-toolkit/landing/css/blocks.css";
+@import "./adh-landing-bridge.css";
+
+/* Reserve the scrollbar's width whether or not the page scrolls, so navigating between
+ * a short route and a long one does not shift the whole layout sideways. */
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  /* The theme declares these two already — the generated theme CSS <AdhThemeStyle/>
+     renders into <head> carries `:where(body) { background-color; color }` — but at
+     ZERO specificity, so the deck's own `:where(html:has(.lp-deck)) body` (0,0,1) beats
+     it on `/` and `/tour` and paints from the `--lp-*` contract instead. Restating the
+     family's ground here at (0,0,1), after that import, is what keeps one site one
+     colour across its landing and its app routes. Same tokens the theme uses, and no
+     literal fallback: the theme style is server-rendered into every document in this
+     family (MarketingRootHtml), so there is no paint without it to fall back to. */
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  /* `clip`, never `hidden`. The deck scrolls the DOCUMENT — that is what makes Safari
+     collapse its toolbar, and what `scroll-snap-type` on <html> needs to find its snap
+     areas on. `overflow-x: hidden` computes the other axis from `visible` to `auto`,
+     which makes <body> a scroll container in its own right and puts it between every
+     `.lp-screen` and the <html> that is supposed to snap them. It also takes the site's
+     chrome down with it: `.adh-header` and `.adh-footer` are `position: sticky`, and
+     sticky resolves against the nearest scrollport — body's, which never scrolls, so
+     both simply ride the page and the footer sits unreachable at the foot of six
+     screens. `clip` is the one value that pairs with `visible` and leaves the other axis
+     alone, so the containment survives and the scroller does not move. Landing's own
+     base.css says the same thing for the same reason, but writes it
+     `:where(html:has(.lp-deck)) body` — same (0,0,1) as a bare `body`, so this rule wins
+     only by coming later, which it does. Said outside the deck's gate on purpose: the
+     workspace, /privacy, /terms and /details want the horizontal guard too. */
+  overflow-x: clip;
+}
+
+::selection {
+  background: var(--color-accent-dim);
+  color: var(--color-accent);
+}
+
+/* Let the shared adh header/footer span the full window width. Both cap their content
+ * at --adh-container-max-width (72rem), a centred band; the family wants the bar
+ * edge-to-edge against the window. Overriding max-width directly, rather than the
+ * theme-set variable, keeps this robust regardless of where the injected theme <style>
+ * lands in the cascade. The adh rule's 1.5rem side gutter is retained. */
+.adh-header__container,
+.adh-footer__container {
+  max-width: none;
+}
+
+/* NO `@media (prefers-reduced-motion: reduce) { * { animation: none !important } }`.
+ * Twenty-nine sites carried one, and it was wrong twice over. The themes package
+ * already implements the whole preference (accessibility.css, driven by Appearance →
+ * Reduce motion plus the OS setting), and it deliberately honours an explicit "Off" —
+ * a blanket `@media` block here overrides that and forces motion off for a user who
+ * asked to keep it. It also reaches for `!important`, which this repo bans, and
+ * `animation: none`, which kills an animation outright where the shared rule shortens
+ * it to 0.001ms and so leaves `animationend` handlers firing. */

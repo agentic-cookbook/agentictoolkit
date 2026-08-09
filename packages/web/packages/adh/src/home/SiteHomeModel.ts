@@ -1,5 +1,6 @@
 'use client'
 
+import { notFound } from 'next/navigation'
 import type { ReactNode } from 'react'
 import type { Workspace } from '@agentic-toolkit/data'
 
@@ -25,8 +26,8 @@ export interface SiteHomeScope {
   /** The resolved workspace's slug. Never empty: nothing below the shell renders until a
    *  workspace resolves AND the URL carries it. */
   workspaceSlug: string
-  /** `${basePath}/${workspaceSlug}` — the base the site's own view is mounted at. Built here so
-   *  no site builds it, and so the grammar changes in one place. */
+  /** `/${workspaceSlug}` — the base the site's own view is mounted at. Built here so no site
+   *  builds it, and so the grammar changes in one place. */
   scopedBase: string
   /**
    * The resolved workspace's own ROW, not just its slug — carried because the shell already has
@@ -51,16 +52,21 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
  * it.
  */
 export interface SiteHomeModel<View> {
-  /** Whatever sits ABOVE the workspace segment — `''` for every site today, whose workspace is
-   *  its first path segment, so the URL is `/<workspace>`. It is declared rather than assumed
-   *  because it is the route's own property, and the shell keys its workspace-list cache on it. */
-  basePath: string
   /**
    * The path segments BELOW the workspace → this site's view state.
    *
    * `/acme/proj-1/notes` hands `['proj-1', 'notes']`. The workspace segment is already
    * consumed — a site that reads it here is reading the wrong layer, and `scopedBase` /
    * `workspaceSlug` are how it gets that.
+   *
+   * There is no `basePath` above it and no site declares one: the workspace IS the first segment
+   * on every site, so the count of segments above it is zero everywhere and a field that can only
+   * hold one value is a field three sites got to disagree about.
+   *
+   * This is also where a site says a path does NOT exist, by calling `notFound()` — the route
+   * mounts one optional catch-all in every site, so "there is nothing at this depth" is a
+   * statement about the site's grammar rather than about its file layout. A site with no grammar
+   * at all below the workspace uses `noSubPath` below rather than writing that rule again.
    *
    * Called on every render, so it must be pure and cheap; parsing a handful of segments is both.
    */
@@ -80,4 +86,28 @@ export interface SiteHomeModel<View> {
  */
 export function defineSiteHome<View>(model: SiteHomeModel<View>): SiteHomeModel<View> {
   return model
+}
+
+/**
+ * The `parse` for a site with NO grammar below the workspace: `/<ws>` is the only address it has,
+ * and anything deeper does not exist.
+ *
+ * This used to be said by the file layout — those sites mounted a plain `[workspace]/page.tsx`
+ * rather than a catch-all, so Next answered a deeper path with not-found and no site wrote a rule.
+ * It cost the family its one shape: a site that later grew a sub-path had to change its route
+ * FILES, which is exactly the per-site divergence this route exists to remove. So every site now
+ * mounts `[workspace]/[[...path]]/page.tsx` — the same bytes — and the depth a site accepts is a
+ * line in its model instead of a directory on disk.
+ *
+ * Says the same thing to a visitor as the old layout did: `notFound()` renders the site's own
+ * `app/not-found.tsx`. It is called during render of a Client Component, which Next's HTTP-access
+ * fallback boundary catches the same way it catches a server one — the boundary is a React error
+ * boundary in the client layout router, not a server-only path.
+ *
+ * Returns `null` so `View` infers as `null` for these sites, which is what their `render` already
+ * expects; the `return` is unreachable, since `notFound()` throws.
+ */
+export function noSubPath(segments: string[]): null {
+  if (segments.length > 0) notFound()
+  return null
 }

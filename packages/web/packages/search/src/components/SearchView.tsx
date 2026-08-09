@@ -25,6 +25,14 @@ export interface SearchViewProps<Hit> {
   source: SearchSource
   /** HOW results render — the document-type config (result row + preview + identity). */
   documentType: DocumentTypeConfig<Hit>
+  /**
+   * WHERE a hit's public page lives on THIS host — the link seam. Required, and
+   * deliberately without a default: the corpus is addressed differently on every site
+   * that mounts this view, so a default would be a guess that is silently wrong
+   * everywhere it was not written for, and it would keep working long enough for the
+   * host that inherited it to ship the broken link.
+   */
+  documentHref: (hit: Hit) => string
   /** Accessible label for the search field. */
   searchLabel?: string
   /** Placeholder for the search field. */
@@ -59,10 +67,11 @@ function resultCountLabel(total: number): string {
 }
 
 /**
- * The reusable, CONFIGURABLE document-search view. Driven by two injected seams — the
- * scope/source ({@link SearchViewProps.source}) and the document-type config
- * ({@link SearchViewProps.documentType}) — so it holds NO public-only endpoint, query
- * string, or markdown specific. Renders the shared `SearchFilterBar` over q + category
+ * The reusable, CONFIGURABLE document-search view. Driven by three injected seams — the
+ * scope/source ({@link SearchViewProps.source}), the document-type config
+ * ({@link SearchViewProps.documentType}) and the host's link builder
+ * ({@link SearchViewProps.documentHref}) — so it holds NO public-only endpoint, query
+ * string, site URL, or markdown specific. Renders the shared `SearchFilterBar` over q + category
  * + tag, fetches results (debounced + instant-on-Enter, plain `fetch`) from the scope,
  * lists them through the type's result row, and previews the selected hit through the
  * type's preview.
@@ -90,6 +99,7 @@ function resultCountLabel(total: number): string {
 export function SearchView<Hit>({
   source,
   documentType,
+  documentHref,
   searchLabel = 'Search documents',
   searchPlaceholder = 'Search…',
   searchLandmarkLabel = 'Document search',
@@ -316,6 +326,7 @@ export function SearchView<Hit>({
               hasFacets,
               ResultRow,
               getId,
+              documentHref,
               query: filters.q,
               selectedId,
               activeIndex,
@@ -352,7 +363,9 @@ export function SearchView<Hit>({
             onKeyDown={onPreviewKeyDown}
             ratio={1 - listRatio}
             header={
-              selectedHit ? <PreviewHeader hit={selectedHit} /> : null
+              selectedHit ? (
+                <PreviewHeader hit={selectedHit} href={documentHref(selectedHit)} />
+              ) : null
             }
           >
             {selectedHit ? (
@@ -561,6 +574,7 @@ function renderList<Hit>({
   hasFacets,
   ResultRow,
   getId,
+  documentHref,
   query,
   selectedId,
   activeIndex,
@@ -573,6 +587,7 @@ function renderList<Hit>({
   hasFacets: boolean
   ResultRow: DocumentTypeConfig<Hit>['ResultRow']
   getId: DocumentTypeConfig<Hit>['getId']
+  documentHref: (hit: Hit) => string
   query: string
   selectedId: string | null
   activeIndex: number
@@ -631,6 +646,7 @@ function renderList<Hit>({
           <li key={id}>
             <ResultRow
               hit={hit}
+              href={documentHref(hit)}
               query={query}
               selected={id === selectedId}
               active={index === activeIndex}

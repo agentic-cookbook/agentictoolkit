@@ -146,28 +146,23 @@ function useWorkspaceRoute({
 }
 
 // src/home/workspacePathTail.ts
-function workspacePathTail(pathname, basePath) {
-  const above = basePath.split("/").filter(Boolean).length;
-  return pathname.split("/").filter(Boolean).slice(above + 1);
+function workspacePathTail(pathname) {
+  return pathname.split("/").filter(Boolean).slice(1);
 }
 
 // src/home/SiteHomeShell.tsx
 import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
 function SiteHomeShell({
-  basePath,
   workspaceSlug,
   children
 }) {
-  const { items: workspaces, error } = useResourceList(
-    `${basePath}::workspaces`,
-    loadWorkspaces
-  );
-  const hrefFor = useCallback2((slug) => `${basePath}/${slug}`, [basePath]);
+  const { items: workspaces, error } = useResourceList("workspaces", loadWorkspaces);
+  const hrefFor = useCallback2((slug) => `/${slug}`, []);
   const pathname = usePathname() ?? "";
   const switchHrefFor = useCallback2(
-    (slug) => [basePath, slug, ...workspacePathTail(pathname, basePath)].join("/"),
-    [basePath, pathname]
+    (slug) => `/${[slug, ...workspacePathTail(pathname)].join("/")}`,
+    [pathname]
   );
   const { resolved, onSelect } = useWorkspaceRoute({
     workspaces,
@@ -175,16 +170,11 @@ function SiteHomeShell({
     hrefFor,
     switchHrefFor
   });
-  const workspace = workspaces?.find((w) => w.slug === resolved) ?? null;
   return /* @__PURE__ */ jsxs2(Fragment, { children: [
     /* @__PURE__ */ jsx3(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
     error !== null && workspaces === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
     resolved === null && /* @__PURE__ */ jsx3(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
-    resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null && children({
-      workspaceSlug: resolved,
-      scopedBase: `${basePath}/${resolved}`,
-      workspace
-    })
+    resolved !== void 0 && resolved !== null && resolved === workspaceSlug && children({ workspaceSlug: resolved, scopedBase: `/${resolved}` })
   ] });
 }
 
@@ -195,12 +185,18 @@ function SiteHomeRoute({ model }) {
   const raw = params?.path;
   const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
   const workspaceSlug = params?.workspace;
-  return /* @__PURE__ */ jsx4(SiteHomeShell, { basePath: model.basePath, workspaceSlug, children: (scope) => model.render({ ...scope, view: model.parse(rest) }) });
+  const view = model.parse(rest);
+  return /* @__PURE__ */ jsx4(SiteHomeShell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
 }
 
 // src/home/SiteHomeModel.ts
+import { notFound } from "next/navigation";
 function defineSiteHome(model) {
   return model;
+}
+function noSubPath(segments) {
+  if (segments.length > 0) notFound();
+  return null;
 }
 export {
   SiteHomeRoute,
@@ -208,6 +204,7 @@ export {
   WorkspaceBar,
   WorkspacePicker,
   defineSiteHome,
+  noSubPath,
   useWorkspaceRoute,
   workspacePathTail
 };

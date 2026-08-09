@@ -21,6 +21,7 @@ import { formatDate } from '../../lib/format'
 
 export function MarkdownPreviewHeader({
   hit,
+  href,
 }: DocumentPreviewHeaderProps<PaperSearchHit>): ReactElement {
   const author = hit.author.displayName?.trim() || `@${hit.author.slug}`
   const date = hit.updatedAt ? formatDate(hit.updatedAt) : ''
@@ -31,10 +32,10 @@ export function MarkdownPreviewHeader({
   // itself). Unknown kinds fall back to the neutral default.
   const renderer = kindRendererFor(hit.kind)
   const previewExtra = renderer.previewExtra(hit)
+  // A hit with no public route has no public page, so there is nothing to link to —
+  // `href` is still a well-formed string in that case, which is why the guard reads the
+  // route rather than the URL built from it.
   const route = hit.publicRoute
-  // The preview header links out to the public paper page (in addition to the result
-  // row's link), so the affordance is present where the reader is reading.
-  const publicHref = `/${hit.author.slug}/${route}`
 
   return (
     <div className="flex flex-col gap-2">
@@ -44,7 +45,7 @@ export function MarkdownPreviewHeader({
         </h3>
         {route && (
           <a
-            href={publicHref}
+            href={href}
             className="inline-flex min-h-6 shrink-0 items-center rounded-sm text-xs font-medium text-apt-gold underline-offset-2 outline-none hover:underline focus-visible:ring-2 focus-visible:ring-apt-gold/40"
           >
             View full paper

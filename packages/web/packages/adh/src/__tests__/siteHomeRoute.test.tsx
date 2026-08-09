@@ -26,13 +26,12 @@ const SHELL_SCOPE = {
 const shellProps = vi.fn();
 vi.mock("../home/SiteHomeShell", () => ({
   SiteHomeShell: (props: {
-    basePath: string;
     workspaceSlug?: string;
     children: (scope: typeof SHELL_SCOPE) => React.ReactNode;
   }) => {
     shellProps(props);
     return (
-      <div data-testid="shell" data-base={props.basePath} data-slug={props.workspaceSlug ?? "none"}>
+      <div data-testid="shell" data-slug={props.workspaceSlug ?? "none"}>
         {props.children(SHELL_SCOPE)}
       </div>
     );
@@ -40,12 +39,19 @@ vi.mock("../home/SiteHomeShell", () => ({
 }));
 
 let params: { workspace?: string; path?: string | string[] } | null = {};
+// `notFound` throws in Next too (that is how the fallback boundary catches it), so a stub that
+// merely records the call would let execution continue past a refusal and test a shape the real
+// thing never produces.
+const notFound = vi.fn(() => {
+  throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
+});
 vi.mock("next/navigation", () => ({
   useParams: () => params,
+  notFound: () => notFound(),
 }));
 
 const { SiteHomeRoute } = await import("../home/SiteHomeRoute");
-const { defineSiteHome } = await import("../home/SiteHomeModel");
+const { defineSiteHome, noSubPath } = await import("../home/SiteHomeModel");
 
 afterEach(() => {
   cleanup();
@@ -57,7 +63,6 @@ afterEach(() => {
  *  the tests can prove which segments reached it. */
 const parse = vi.fn((segments: string[]) => ({ depth: segments.length, segments }));
 const model = defineSiteHome({
-  basePath: "",
   parse,
   render: ({ workspaceSlug, scopedBase, workspace, view }) => (
     <div
@@ -83,18 +88,40 @@ describe("SiteHomeRoute", () => {
     expect(screen.getByTestId("view")).toHaveAttribute("data-segments", "proj-1,notes");
   });
 
-  it("passes the model's basePath through to the shell", () => {
-    params = { workspace: "acme" };
-    render(<SiteHomeRoute model={{ ...model, basePath: "/w" }} />);
+  it("hands the shell the workspace and NOTHING else", () => {
+    // The shell used to take a base as well, and three sites disagreed about it. There is no base
+    // now, so this pins the argument list itself: a second prop reappearing here is a second thing
+    // a site could be handed differently.
+    params = { workspace: "acme", path: ["notes"] };
+    render(<SiteHomeRoute model={model} />);
 
-    expect(screen.getByTestId("shell")).toHaveAttribute("data-base", "/w");
+    expect(shellProps).toHaveBeenCalledTimes(1);
+    expect(Object.keys(shellProps.mock.calls[0][0]).sort()).toEqual(["children", "workspaceSlug"]);
+  });
+
+  it("parses ABOVE the shell, so a refused path never mounts it", () => {
+    // A parser is also where a site says a path does not exist (`noSubPath`), and `notFound()`
+    // throws. Parsed inside the shell's child, that throw would arrive only after the workspace
+    // list had been fetched and the chooser drawn — a bar and a spinner on the way to a 404.
+    params = { workspace: "acme", path: ["nope"] };
+    const refusing = defineSiteHome({ parse: noSubPath, render: () => null });
+    // React reports an uncaught render error through console.error before rethrowing it. Expected
+    // here, and only here — silenced so the suite's output still reads as passing.
+    const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    try {
+      expect(() => render(<SiteHomeRoute model={refusing} />)).toThrow(/404/);
+    } finally {
+      quiet.mockRestore();
+    }
+    expect(shellProps).not.toHaveBeenCalled();
   });
 
   it("hands the site's render the scope the shell built, not one of its own", () => {
     params = { workspace: "acme" };
     render(<SiteHomeRoute model={model} />);
 
-    // The params say "acme" and the model's basePath is "", so a route that recomputed the scope
+    // The params say "acme", so a route that recomputed the scope
     // would put "acme" and "/acme" here — and the assertion would still pass if the sentinels
     // below were those strings. They are not, so only forwarding can satisfy it. Recomputing is
     // the duplication this whole contract removes, and it would silently disagree with the shell
@@ -156,8 +183,27 @@ describe("defineSiteHome", () => {
   it("returns the model unchanged — it exists for inference, not behaviour", () => {
     // Worth pinning because the temptation to make it do something (defaults, validation) is
     // real, and a site's model is a plain object it may legitimately spread or extend, as the
-    // basePath test above does.
-    const input = { basePath: "", parse: (s: string[]) => s, render: () => null };
+    // refusing model above does.
+    const input = { parse: (s: string[]) => s, render: () => null };
     expect(defineSiteHome(input)).toBe(input);
+  });
+});
+
+describe("noSubPath", () => {
+  // 34 of the 38 sites use this as their whole parser, so it is the family's answer to "there is
+  // nothing below the workspace" — a rule that used to be stated by the ABSENCE of a catch-all
+  // directory and is now a line of code that has to be right.
+  it("accepts the bare workspace", () => {
+    expect(noSubPath([])).toBeNull();
+    expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("refuses ANY depth below it, not just deep ones", () => {
+    // One segment is the case that matters: `/<ws>/anything` is what a stale link or a typo
+    // produces, and answering it with the workspace card at every depth is precisely the bug the
+    // old file layout prevented for free.
+    expect(() => noSubPath(["anything"])).toThrow(/404/);
+    expect(() => noSubPath(["a", "b", "c"])).toThrow(/404/);
+    expect(notFound).toHaveBeenCalledTimes(2);
   });
 });

@@ -6,18 +6,19 @@
 // package's @agentic-toolkit/data dependency — the header ships on every public page and must
 // not carry workspace vocabulary.
 //
-// A site needs exactly two of these: `defineSiteHome` to declare its model, and `SiteHomeRoute`
-// to render it. `SiteHomeShell` and `WorkspacePicker` are the parts the route assembles, exported
-// for tests and for anything that legitimately needs one alone — a site reaching for them is
-// rebuilding by hand the arrangement the model exists to own.
+// A site needs three of these at most: `defineSiteHome` to declare its model, `SiteHomeRoute` to
+// render it, and `noSubPath` if it has no grammar below the workspace. `SiteHomeShell` and
+// `WorkspacePicker` are the parts the route assembles, exported for tests and for anything that
+// legitimately needs one alone — a site reaching for them is rebuilding by hand the arrangement
+// the model exists to own.
 //
 // `WorkspaceBar` and `useWorkspaceRoute` are the two halves SiteHomeShell composes, exported for
 // ONE caller with a legitimate need: the hub, whose workspace is `/<slug>/home` rather than
-// `${basePath}/<slug>` — a URL shape the shell cannot express, since the hub's bare `/<slug>` is
-// a public profile page. It mounts these directly so the bar and its behaviour stay the fleet's,
-// not a second implementation. A feature site never needs them.
+// `/<slug>` — a URL shape the shell cannot express, since the hub's bare `/<slug>` is a public
+// profile page. It mounts these directly so the bar and its behaviour stay the fleet's, not a
+// second implementation. A feature site never needs them.
 export { SiteHomeRoute } from './SiteHomeRoute'
-export { defineSiteHome } from './SiteHomeModel'
+export { defineSiteHome, noSubPath } from './SiteHomeModel'
 export type { SiteHomeModel, SiteHomeContext, SiteHomeScope } from './SiteHomeModel'
 export { SiteHomeShell } from './SiteHomeShell'
 export { WorkspaceBar } from './WorkspaceBar'

@@ -625,18 +625,49 @@ export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | nul
  *  pages that live on the hub. Unlike buildSiteHref this carries the exact path
  *  rather than route-matching, so it suits fixed destinations like `/login`. */
 /**
- * A persona's public profile URL on the registry. `siteUrl` resolves the right host for the
- * current environment (local suite / testing / staging / prod); the bare `/<slug>` resolves
- * when the slug is unique system-wide. Only reachable once the persona is saved with
- * public/unlisted visibility. Lives HERE (not in a host) because every host that links a
- * profile — the hub's persona surfaces AND the personabuilder site's mount — must mint the
- * SAME URL; two copies of this rule already drifted once into review findings.
+ * The persona registry's three public namespaces, as paths.
+ *
+ * All four hosts that link into that site mint these — the registry's own pages, the hub's
+ * persona surfaces, personabuilder, and the registry's smoke test — so the rule lives here,
+ * where `personaProfileUrl` already had to live for the same reason: two copies of it drifted
+ * once already, and that showed up as a review finding rather than a broken page.
+ *
+ * Each is a STATIC prefix over a handle, and that is the whole point. The registry's root
+ * segment is `/<workspace>` now, the signed-in surface every site in the family puts there,
+ * so a bare `/<handle>` no longer names a persona on any host — it names a workspace, and it
+ * is gated. A link minted the old way does not 404; it reaches an auth wall.
+ */
+export function personaProfilePath(slug: string): string {
+  return `/persona/${encodeURIComponent(slug)}`
+}
+
+/** A registry user's public profile — their personas, their creator sheet. */
+export function registryUserPath(slug: string): string {
+  return `/user/${encodeURIComponent(slug)}`
+}
+
+/** A persona addressed through its OWNER. The same persona also has a global handle at
+ *  `personaProfilePath`; this is the address that says whose it is. */
+export function registryUserPersonaPath(ownerSlug: string, personaSlug: string): string {
+  return `${registryUserPath(ownerSlug)}/${encodeURIComponent(personaSlug)}`
+}
+
+/** An organization's public profile on the registry. */
+export function registryOrgPath(slug: string): string {
+  return `/org/${encodeURIComponent(slug)}`
+}
+
+/**
+ * A persona's public profile URL on the registry — absolute, for a host linking in from
+ * somewhere else. `siteUrl` resolves the right host for the current environment (local suite
+ * / testing / staging / prod). Only reachable once the persona is saved with public/unlisted
+ * visibility.
  */
 export function personaProfileUrl(slug: string): string {
   // globalThis, not `window`: this file is also typechecked by the backend (no dom lib),
   // where a bare `window` reference is TS2304 even behind a typeof guard.
   const hostname = (globalThis as { location?: { hostname?: string } }).location?.hostname ?? "";
-  return siteUrl("personaregistry", `/${encodeURIComponent(slug)}`, hostname);
+  return siteUrl("personaregistry", personaProfilePath(slug), hostname);
 }
 
 export function siteUrl(id: SiteId, path: string, currentHostname: string): string {

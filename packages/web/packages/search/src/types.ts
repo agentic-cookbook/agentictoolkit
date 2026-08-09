@@ -1,7 +1,7 @@
 import type { ComponentType, Ref } from 'react'
 
 /**
- * @agentic-toolkit/search — the two configurable seams.
+ * @agentic-toolkit/search — the three configurable seams.
  *
  * 1. SCOPE/SOURCE seam ({@link SearchSource}): WHERE to search — a base URL plus the
  *    endpoint paths and query-param names. The core view holds NO literal endpoint or
@@ -10,8 +10,15 @@ import type { ComponentType, Ref } from 'react'
  *
  * 2. DOCUMENT-TYPE seam ({@link DocumentTypeConfig} / {@link DocumentSearchRegistry}):
  *    HOW a result of a given type renders — its result-row and preview renderers, plus
- *    id/href derivation. Markdown is the single entry today; a future type is added by
- *    registering another config, never by editing the core view (open/closed).
+ *    id and title derivation. Markdown is the single entry today; a future type is added
+ *    by registering another config, never by editing the core view (open/closed).
+ *
+ * 3. LINK seam (`documentHref` on the view): WHERE a hit's public page lives. The URL
+ *    space belongs to the HOST, not to this package — the same corpus is addressed
+ *    `/papers/:slug/:route` on one site and something else on the next, and a package
+ *    that assumed either one would be silently wrong on the other. The renderers receive
+ *    the finished `href` as a string, so the assumption cannot re-enter through a
+ *    renderer either.
  */
 
 // ── Scope / source seam ──────────────────────────────────────────────────────
@@ -93,6 +100,13 @@ export interface SearchFilters {
 /** Props the core passes to a type's RESULT-ROW renderer for one hit. */
 export interface DocumentResultProps<Hit> {
   hit: Hit
+  /**
+   * This hit's public page on the HOST — already built, by the host's own
+   * `documentHref` (seam 3 above). A string rather than the pieces to build one:
+   * handing a renderer `hit.author.slug` and letting it join them is exactly how the
+   * host's URL space ends up hard-coded in this package.
+   */
+  href: string
   /** The active free-text query (so a renderer can later highlight matches). */
   query: string
   /** Whether this row is the selected (previewed) one. */
@@ -135,6 +149,8 @@ export interface DocumentPreviewProps<Hit> {
  */
 export interface DocumentPreviewHeaderProps<Hit> {
   hit: Hit
+  /** This hit's public page on the HOST — see {@link DocumentResultProps.href}. */
+  href: string
 }
 
 /**
@@ -145,7 +161,9 @@ export interface DocumentPreviewHeaderProps<Hit> {
 export interface DocumentTypeConfig<Hit = unknown> {
   /** The type key (matches a {@link DocumentSearchRegistry} key). */
   type: DocumentType
-  /** Stable identity for React keys + selection. */
+  /** Stable identity for React keys + selection. NOT a URL — a hit's public page comes
+   *  from the host's `documentHref` (seam 3), because only the host knows its own
+   *  address space. */
   getId: (hit: Hit) => string
   /**
    * Short human label for a hit — shown in the preview dock's always-present minimal

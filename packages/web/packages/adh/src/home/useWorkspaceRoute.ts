@@ -37,7 +37,7 @@ export function __resetSeededWorkspace(): void {
  * Which workspace this URL means, and how picking another one is remembered.
  *
  * Extracted from SiteHomeShell so the hub can mount the same behaviour: the hub's workspace lives
- * at `/<slug>/home` rather than `${basePath}/<slug>`, and it lists rows (teams) the feature sites'
+ * at `/<slug>/home` rather than `/<slug>`, and it lists rows (teams) the feature sites'
  * client drops — two differences that are entirely expressed by `hrefFor` and `canPersist`. The
  * resolution order, the write-ordering guards and the races they exist for are NOT duplicated:
  * this is the one copy.

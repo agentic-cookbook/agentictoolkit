@@ -34,13 +34,11 @@ configure({ asyncUtilTimeout: 5000 });
 // half-state where the URL still names the old workspace while `stored` already names the new
 // one. `Promise.resolve().then(...)` reproduces that ordering without a real timer.
 let liveSetSlug: (slug: string | undefined) => void = () => {};
-// The workspace segment sits at a FIXED position — one past whatever `basePath` occupies — which
-// is the only way to read it now that a switch carries the segments BELOW it (`/acme/services/s_1`).
-// The last segment used to be the slug and no longer is; taking `.pop()` here would have fed the
-// deepest entity id back as `workspaceSlug` and made a carrying test pass for the wrong reason.
-let routerBasePath = "";
-const extractSlug = (href: string): string =>
-  href.split("/").filter(Boolean)[routerBasePath.split("/").filter(Boolean).length]!;
+// The workspace segment is the FIRST one, on every site — which is the only way to read it now
+// that a switch carries the segments BELOW it (`/acme/services/s_1`). The last segment used to be
+// the slug and no longer is; taking `.pop()` here would have fed the deepest entity id back as
+// `workspaceSlug` and made a carrying test pass for the wrong reason.
+const extractSlug = (href: string): string => href.split("/").filter(Boolean)[0]!;
 
 // What `usePathname()` answers. A module variable rather than state because nothing re-renders on
 // it alone: the shell reads it only when building the href for a click, and the render that follows
@@ -103,17 +101,25 @@ const writeCached = vi.fn();
 // assertions below; only the settled promise itself is routed around it.
 let prefsPutResult: () => Promise<void> = () => Promise.resolve();
 
+// What the real hook's module-scope cache would have seeded this mount with. Null — a cold cache —
+// for every test but the one that needs rows ALREADY on screen when a request fails; see
+// use-resource-list.ts's "the cache seeds the first paint … this is the authoritative read that
+// settles behind it". Reset in `beforeEach`.
+let seedRows: unknown[] | null = null;
+
 // The whole data boundary is mocked, `useResourceList` INCLUDED. The real hook caches at MODULE
-// scope keyed by cacheKey, and every test here uses the same basePath — so the second test would
-// seed from the first one's rows and the "holds children" case could never observe a null list.
-// The stub is the hook's contract minus the cache: null until the fetch settles, refetch when
-// `load`'s identity changes. (Async factory because vi.mock is hoisted above the imports, so
-// React has to be pulled in here rather than referenced from module scope.)
+// scope keyed by cacheKey, and every mount in the family now uses the same literal key — so the
+// second test would seed from the first one's rows and the "holds children" case could never
+// observe a null list. The stub is the hook's contract with that cache made EXPLICIT instead of
+// implicit: `seedRows` above stands in for it, so a test says which state it is starting from
+// rather than inheriting one from whichever test ran before it. (Async factory because vi.mock is
+// hoisted above the imports, so React has to be pulled in here rather than referenced from module
+// scope.)
 vi.mock("@agentic-toolkit/data", async () => {
   const { useEffect, useState } = await import("react");
   return {
     useResourceList: (_cacheKey: string, load: () => Promise<unknown[]>) => {
-      const [items, setItems] = useState<unknown[] | null>(null);
+      const [items, setItems] = useState<unknown[] | null>(seedRows);
       // The failure half of the contract, mirrored exactly (use-resource-list.ts:126-129): a
       // rejection sets `error` and leaves `items` UNTOUCHED — null on a cold mount, the previous
       // rows on a failed reload. A stub that nulled the rows instead would hide the only thing
@@ -122,8 +128,8 @@ vi.mock("@agentic-toolkit/data", async () => {
       const [error, setError] = useState<string | null>(null);
       // `_cacheKey` is a dependency here for the same reason it is one in the real hook
       // (use-resource-list.ts:133): a changed key is a different collection, and it refetches.
-      // That is what lets a test below reach the state the shell's error gate is written for —
-      // rows already on screen AND a failed request — without a `reload()` this shell never calls.
+      // Nothing in the family changes it any more — one workspace list, one literal key — but the
+      // stub mirrors the hook rather than the current callers, so it keeps saying so.
       useEffect(() => {
         let alive = true;
         void load()
@@ -199,14 +205,11 @@ const WORKSPACES = [
  * recorded. The assignment happens in the render body (not an effect): Harness's function body
  * always runs before its child's, so by the time SiteHomeShell mounts and its effects can call
  * `replace`/`push`, `liveSetSlug` already points at this instance's setter. */
-function Shell({ workspaceSlug, basePath = "" }: { workspaceSlug?: string; basePath?: string }) {
+function Shell({ workspaceSlug }: { workspaceSlug?: string }) {
   const [slug, setSlug] = useState<string | undefined>(workspaceSlug);
   liveSetSlug = setSlug;
-  // Same reason the setter is assigned here: `extractSlug` needs the base to know which segment is
-  // the workspace, and this body runs before the shell's.
-  routerBasePath = basePath;
   return (
-    <SiteHomeShell basePath={basePath} workspaceSlug={slug}>
+    <SiteHomeShell workspaceSlug={slug}>
       {/* The scope is rendered, not just consumed, so every test in this file that waits for
           `feature` is also asserting the shell never calls its child with a half-resolved one:
           `scopedBase` here is whatever the shell built, and the dedicated test below reads it. */}
@@ -228,7 +231,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   __resetSeededWorkspace();
   liveSetSlug = () => {};
-  routerBasePath = "";
+  seedRows = null;
   livePathname = "";
   routerFeedsBack = true;
   list.mockResolvedValue(WORKSPACES);
@@ -1134,15 +1137,19 @@ describe("SiteHomeShell resolution", () => {
   });
 
   it("[max review, finding 7] a failed REFETCH keeps its page — no error banner over live rows", async () => {
-    // The `workspaces === null` half. Rows are on screen, then a later request fails (here via a
-    // changed cache key, the same thing an account switch does to the real hook): the list the
-    // user is looking at is still good, and replacing it with an apology would be a worse answer
-    // than the slightly stale one it already has.
-    const view = render(<Shell workspaceSlug="acme" />);
-    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-
+    // The `workspaces === null` half. Rows are already on screen when a request fails: the real
+    // hook paints from its module cache on a mount and revalidates behind it, so this is the
+    // ordinary second visit with the network gone. The list the user is looking at is still good,
+    // and replacing it with an apology would be a worse answer than the slightly stale one it
+    // already has.
+    //
+    // Driven by the seed rather than by changing the cache key, which is what this used to do: a
+    // site cannot change that key any more, so a test that did would be exercising a state the
+    // shell can no longer be in.
+    seedRows = WORKSPACES;
     list.mockRejectedValue(new Error("offline"));
-    view.rerender(<Shell workspaceSlug="acme" basePath="/elsewhere" />);
+    render(<Shell workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
     await act(async () => {
       await new Promise((r) => setTimeout(r, 0));
     });
@@ -1154,25 +1161,22 @@ describe("SiteHomeShell resolution", () => {
 });
 
 describe("SiteHomeShell picker mount", () => {
-  it(
-    "[round 5, matrix row s03] a picked workspace navigates under the CURRENT basePath, not the " +
-      "one captured at mount",
-    async () => {
-      // `basePath` is a documented prop — the shell is meant to be mounted under whatever base a
-      // site gives it — yet nothing pinned `onSelect`'s dependency on it: emptying that array
-      // left 36 green, because every other test mounts one shell at one base. This is the only
-      // green row in the matrix whose inertness rested on a CONVENTION (one shell per base
-      // route) rather than something the types or the control flow forbid, so it gets an
-      // assertion instead of a ruling.
-      const { rerender } = render(<Shell workspaceSlug="mine" />);
-      await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
+  it("[round 5, matrix row s03] a picked workspace navigates from the CURRENT path", async () => {
+    // This row used to be about `basePath`: the shell took a base, `onSelect` closed over it, and
+    // nothing pinned that dependency — emptying the array left 36 green, because every other test
+    // mounted one shell at one base. The base is gone (every site's workspace is its first
+    // segment), and the same staleness now lives on `pathname`, which changes under a mounted
+    // shell on every navigation rather than only across mounts. So the assertion moves with it.
+    livePathname = "/mine";
+    const { rerender } = render(<Shell workspaceSlug="mine" />);
+    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
 
-      rerender(<Shell workspaceSlug="mine" basePath="/work" />);
-      fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    livePathname = "/mine/services/svc_1";
+    rerender(<Shell workspaceSlug="mine" />);
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
 
-      expect(push).toHaveBeenCalledWith("/work/acme", { scroll: false });
-    },
-  );
+    expect(push).toHaveBeenCalledWith("/acme/services/svc_1", { scroll: false });
+  });
 
   it("renders ONE picker, in a labelled bar, from one list", async () => {
     const { container } = render(<Shell workspaceSlug="mine" />);
@@ -1260,21 +1264,15 @@ describe("SiteHomeShell workspace switch carries the selection", () => {
     expect(push).toHaveBeenCalledWith("/acme/services/svc_1", { scroll: false });
   });
 
-  it("keeps basePath above the workspace instead of carrying it as selection", async () => {
-    // `/w` is the site, not the user's place in it. Counting it as a carried segment would
-    // duplicate it (`/w/acme/w/services/...`); dropping it would leave the site entirely.
-    livePathname = "/w/mine/services/svc_1";
-    render(<Shell basePath="/w" workspaceSlug="mine" />);
-    await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-
-    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
-    expect(push).toHaveBeenCalledWith("/w/acme/services/svc_1", { scroll: false });
-  });
-
   it("finds the workspace by POSITION, so a deeper segment spelled like the slug is carried", async () => {
-    // The reason `workspacePathTail` counts basePath's segments rather than searching the path for
+    // The reason `workspacePathTail` drops the first segment rather than searching the path for
     // the slug: an entity id, a feature or a sub-route may be spelled exactly like the workspace.
     // A search finds the wrong one — here it would cut at the LAST "mine" and carry nothing.
+    //
+    // A sibling case lived here while three sites mounted their workspace under `/home/`: a base
+    // above the workspace had to be kept above it, not carried as selection. There is no base to
+    // get wrong now — the workspace is the first segment on all 38 — so what is left is position,
+    // which is this.
     livePathname = "/mine/services/mine";
     render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
@@ -1317,14 +1315,19 @@ describe("SiteHomeShell child scope", () => {
   // testing is what surfaced it: the mutation the name described turned a DIFFERENT test red and
   // left this one green.
 
-  it("builds the scoped base from basePath, not from a hardcoded one", async () => {
-    // The one assertion that fails if `scopedBase` is ever inlined as a literal. Every site ships
-    // `basePath: ""` today, and an empty string is the value most easily mistaken for "no base at
-    // all" — which is exactly why a non-empty one needs pinning here rather than in the sites.
-    render(<Shell basePath="/w" workspaceSlug="acme" />);
-
+  it("rebuilds the scoped base when the workspace changes", async () => {
+    // The one assertion that fails if `scopedBase` is ever frozen at its first value — which is
+    // the shape a literal, a mount-time constant or a `useMemo([])` all collapse to, and none of
+    // them would fail a single-workspace test.
+    livePathname = "/mine";
+    render(<Shell workspaceSlug="mine" />);
     await waitFor(() => expect(screen.getByTestId("feature")).toBeInTheDocument());
-    expect(screen.getByTestId("feature")).toHaveAttribute("data-scoped-base", "/w/acme");
+    expect(screen.getByTestId("feature")).toHaveAttribute("data-scoped-base", "/mine");
+
+    fireEvent.click(screen.getByRole("button", { name: "Acme" }));
+    await waitFor(() =>
+      expect(screen.getByTestId("feature")).toHaveAttribute("data-scoped-base", "/acme"),
+    );
   });
 
   it("never CALLS children before a workspace resolves", async () => {
@@ -1337,9 +1340,7 @@ describe("SiteHomeShell child scope", () => {
     const child = vi.fn(() => <div data-testid="feature">the feature</div>);
 
     render(
-      <SiteHomeShell basePath="" workspaceSlug="acme">
-        {child}
-      </SiteHomeShell>,
+      <SiteHomeShell workspaceSlug="acme">{child}</SiteHomeShell>,
     );
 
     // Several renders happen here — the prefs GET settles, state lands — with no workspace list.

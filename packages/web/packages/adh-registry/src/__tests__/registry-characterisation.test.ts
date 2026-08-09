@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
   getSite,
+  personaProfilePath,
   personaProfileUrl,
+  registryOrgPath,
+  registryUserPath,
+  registryUserPersonaPath,
   siteHomePath,
   siteProdUrl,
   siteUrl,
@@ -31,7 +35,25 @@ describe('registry URL helpers (pins behaviour across the @agentic-toolkit/adh-r
   })
 
   it('personaProfileUrl percent-encodes the slug onto the persona registry', () => {
-    expect(personaProfileUrl('a b')).toContain('/a%20b')
+    expect(personaProfileUrl('a b')).toContain('/persona/a%20b')
+  })
+
+  // Spelled literally rather than composed from the helpers they test. These four are the
+  // registry site's public URL space, and a host that links in mints them from here — an
+  // assertion that called the helper to build its own expectation would agree with any
+  // prefix, including the bare `/<handle>` that now resolves to a gated workspace instead.
+  it('the persona registry addresses each public namespace under its own prefix', () => {
+    expect(personaProfilePath('bob')).toBe('/persona/bob')
+    expect(registryUserPath('ada')).toBe('/user/ada')
+    expect(registryUserPersonaPath('ada', 'bob')).toBe('/user/ada/bob')
+    expect(registryOrgPath('acme')).toBe('/org/acme')
+  })
+
+  it('every registry path helper percent-encodes its handle', () => {
+    expect(personaProfilePath('a b')).toBe('/persona/a%20b')
+    expect(registryUserPath('a b')).toBe('/user/a%20b')
+    expect(registryUserPersonaPath('a b', 'c d')).toBe('/user/a%20b/c%20d')
+    expect(registryOrgPath('a b')).toBe('/org/a%20b')
   })
 
   it('splitSiteTitle splits the brand lead from the accent', () => {
