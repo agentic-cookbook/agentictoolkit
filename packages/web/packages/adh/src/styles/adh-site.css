@@ -329,6 +329,31 @@
   font: inherit;
 }
 
+/* The icon-only variant: a trigger whose whole content is one glyph (the header's
+   dev-tools bug). No text and no caret, so it needs its own hit target — 1.75rem
+   square is the 24px-ish minimum a pointer can hit reliably beside a text trigger,
+   without becoming a second brand-weight element in the bar. Held back to 0.65
+   opacity so the site name stays the loudest thing in the lead, and brought to full
+   on hover/open, which is also the only feedback a caret would otherwise give. */
+.adh-nav-popover__trigger--icon {
+  justify-content: center;
+  height: 1.75rem;
+  width: 1.75rem;
+  border-radius: 0.375rem;
+  opacity: 0.65;
+  transition: opacity 120ms ease;
+}
+
+/* `[data-popup-open]` — Base UI's open-state attribute on the trigger. NOT
+   `[data-state='open']`: that is Radix's, and this package still carried a
+   Radix-era selector that matched nothing for long enough to be worth naming here
+   (see the note above .adh-dropdown-menu__sub-trigger in adh-components.css). */
+.adh-nav-popover__trigger--icon:hover,
+.adh-nav-popover__trigger--icon:focus-visible,
+.adh-nav-popover__trigger--icon[data-popup-open] {
+  opacity: 1;
+}
+
 .adh-nav-popover__chevron {
   height: 0.85em;
   width: 0.85em;

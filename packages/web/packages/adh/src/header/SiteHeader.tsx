@@ -21,6 +21,7 @@ import { getSite, siteHeaderTitle, siteHomePath, siteProdUrl, siteUrl, type Site
 // relative specifier would give this entry its own copy of its module-level Set.
 import { isConceptSite } from '@agentic-toolkit/adh/concepts/participating'
 import { SiteMenuSwitcher } from './SiteMenuSwitcher'
+import { DevToolsMenu } from './DevToolsMenu'
 
 import type { ReactNode } from 'react'
 
@@ -66,10 +67,10 @@ export type SiteHeaderProps = Omit<
    *  (which defaults it to `DEFAULT_PREVIEW_DETAIL`) — same passthrough, and the same
    *  reason, as `previewNotice` above. */
   previewDetail?: string
-  /** Curated route map, forwarded straight through to the site-menu's "Routes"
-   *  flyout (see SiteMenu's devToolsSection) for quick in-app jumping. The flyout
-   *  shows only in local/testing/staging or to a signed-in adh admin (any env); when
-   *  a site passes none it falls back to the generated per-site route map. */
+  /** Curated route map, forwarded straight through to the "Routes" flyout in the
+   *  dev-tools dropdown ({@link DevToolsMenu}) for quick in-app jumping. That whole
+   *  menu shows only in local/testing/staging or to a signed-in adh admin (any env);
+   *  when a site passes none it falls back to the generated per-site route map. */
   routes?: RouteSection[]
   /** The signed-in user's personal workspace slug, forwarded to the site-switcher as
    *  the in-hub slug fallback on the slug-less workspace shell routes (`/home`,
@@ -232,8 +233,18 @@ export function SiteHeader({
           // state. `trailingNavLinks` is deliberately not included — it renders outside
           // the collapsing group and survives the phone bar already.
           navLinks={resolvedNavLinks}
-          // Dev Routes flyout data — the flyout itself decides (env gate or the
-          // admin unlock) whether it's actually shown; see SiteMenu's devToolsSection.
+        />
+      }
+      // The dev-tools dropdown, beside the site menu and entirely separate from it.
+      // `routes` and `userIsAdmin` reach ONLY this: the site menu above is now the
+      // same menu in every build, and these two props are precisely what used to
+      // make it otherwise. DevToolsMenu renders nothing at all unless unlocked, so
+      // on a production site this slot is empty.
+      debugMenu={
+        <DevToolsMenu
+          currentSiteId={siteId}
+          resolveHref={resolveSwitchHref}
+          personalSlug={personalSlug}
           routes={routes}
           userIsAdmin={userIsAdmin}
         />

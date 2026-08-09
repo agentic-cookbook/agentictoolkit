@@ -1,21 +1,18 @@
 'use client'
 
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react'
+import { useMemo, type ReactElement, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
-import dynamic from 'next/dynamic'
 import { CircleHelp, Settings } from 'lucide-react'
 // Sibling module, not the '@agentic-toolkit/adh/footer' subpath: a self-referencing package
 // specifier would make tsup inline the whole footer entry into this header entry.
 import { SITES_OVERVIEW_POPOVER_ID } from '../footer/SitesOverview'
-import { detectEnv, getSite, siteHeaderTitle, type SiteId } from '@agentic-toolkit/adh-registry'
+import { getSite, siteHeaderTitle, type SiteId } from '@agentic-toolkit/adh-registry'
 import {
   HubMark,
   NavigationPopover,
-  useClientHost,
   useWorkspacesMenu,
   type PopoverEntry,
   type PopoverItem,
-  type RouteSection,
 } from '@agentic-toolkit/adh/header'
 // PRESERVED IMPORT — the recents store's own subpath, never the barrel and never a
 // relative path. `recents.ts` holds module-level mutable state (`snapshot`, the
@@ -27,9 +24,6 @@ import { useSiteMenu } from './useSiteMenu'
 import { useHeaderLinksCollapsed } from './useHeaderLinksCollapsed'
 import { buildSiteNavEntries } from './siteNavEntries'
 import { type NavLink } from './NavLink'
-import { buildDebugSiteGroups } from './debugSiteGroups'
-import { buildDevToolsEntries, DEV_TOOLS_BUILD_ENABLED } from './devToolsEntries'
-import { useEffectiveEnv, useEnvOverride } from './envOverride'
 import { menuIcon } from './menu-icons'
 // The section number only — this base renders the Recents flyout that HEADS the fleet
 // block, so it has to agree with the rows underneath it or a divider appears between
@@ -47,16 +41,6 @@ import { FLEET_SECTION } from './fleetMenuGroups'
 // (see `header/recents` above). This is a React context, and the wildcard is enough to
 // keep it a single HelpContext shared with whichever AppShell mounted the provider.
 import { useHelp } from '@agentic-toolkit/adh/help'
-
-// Code-split: its own chunk via the package subpath, fetched only once the user
-// actually opens the console. Unconditional (no build gate) because a signed-in
-// adh admin can open the console in ANY env, production included — the chunk must
-// exist in every build. Laziness, not DCE, is what keeps it off the wire for
-// ordinary visitors: nothing fetches it until the Debug Options row is used, and
-// that row only renders behind the dev-env / admin unlock below.
-const DebugConsoleWindow = dynamic(() =>
-  import('@agentic-toolkit/adh/debug-console').then((m) => m.DebugConsoleWindow),
-)
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Declarative config types. A config-only subclass (MarketingSiteMenu /
@@ -156,18 +140,6 @@ export type SiteMenuChromeProps = {
    *  omitted (the signed-in top section shows Home / Workspaces / Recents instead). */
   loginHref?: string
   signupHref?: string
-  /** Curated route map for the "Routes" flyout, appended after the Marketing/Main
-   *  sites submenus. Shown in local/testing/staging, and to a signed-in adh admin
-   *  in every env — see {@link SiteMenu}'s devToolsSection. When a site passes
-   *  none, the flyout falls back to the generated per-site route map
-   *  (`@agentic-toolkit/adh-registry/routes`), loaded lazily once the dev tools unlock. */
-  routes?: RouteSection[]
-  /** The signed-in user holds the adh `admin` capability. Unlocks the whole dev
-   *  tail of the menu (Marketing/Main sites, Routes, Debug Options) in EVERY env,
-   *  production included. A display courtesy, not a security boundary — everything
-   *  it reveals (site lists, route paths, the debug console) ships in the client
-   *  bundle for anyone to read; the backend enforces real authorization. */
-  userIsAdmin?: boolean
   /** The host site's OWN primary nav — the same `NavLink[]` the header bar draws.
    *  Surfaced here as rows ONLY while the bar has dropped them, which it does below
    *  768px (`.adh-header__links { display: none }`): the bar cannot hold the brand,
@@ -181,13 +153,6 @@ export type SiteMenuChromeProps = {
    *  Above the breakpoint these rows are ABSENT, not hidden: see
    *  {@link useHeaderLinksCollapsed}. */
   navLinks?: NavLink[]
-  /** Drop the dev-only Routes / Debug Options rows (and the Debug window they own).
-   *  Set by the theme editor's SiteMenuPreview, which renders a LIVE SiteMenu inside
-   *  the Debug console itself — without this, its "Debug Options" row would open a
-   *  second Debug console on top of the first. The same recursion the preview already
-   *  guards against for the theme switcher; the window portals to <body>, so the
-   *  preview's scoped-CSS trick can't reach it. */
-  suppressDevTools?: boolean
 }
 
 export type SiteMenuProps = SiteMenuChromeProps & {
@@ -225,9 +190,6 @@ export function SiteMenu({
   loginHref,
   signupHref,
   navLinks,
-  routes,
-  userIsAdmin,
-  suppressDevTools,
 }: SiteMenuProps): ReactElement {
   // The trigger is always the hub brand ("Agentic Developer Hub") — this menu is
   // the family launcher, not a breadcrumb, so the label never reflects the site
@@ -236,26 +198,10 @@ export function SiteMenu({
   const hub = getSite('hub')
   const label = hub ? siteHeaderTitle(hub) : 'Agentic Developer Hub'
 
-  // The single unlock for the menu's whole dev tail (site-family submenus +
-  // Routes + Debug Options): every visitor in a dev-env build, OR a signed-in adh
-  // admin in ANY env — production included. The admin leg is a runtime condition,
-  // so (unlike the original build-time-only gate) the dev-tail code now ships in
-  // production bundles; it stays invisible and unfetched for non-admins.
-  const devToolsUnlocked = DEV_TOOLS_BUILD_ENABLED || userIsAdmin === true
-
-  // The config the subclass supplied, plus the dev-only site-family submenus
-  // appended once here (only while unlocked) — so BOTH switcher flavors get them
-  // from this single shared base. Memoized for stable identity so useSiteMenu's
-  // `entries` memo doesn't re-derive every render.
-  const menuGroups = useMemo(
-    () => (devToolsUnlocked ? [...groups, ...buildDebugSiteGroups()] : groups),
-    [groups, devToolsUnlocked],
-  )
-
   // The resolved Hub-core rows + navigation + the Home destination — env-aware,
   // SSO-wrapped, `current`-marked, via the shared {@link useSiteMenu} engine (single
   // source of truth for the link logic).
-  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, {
+  const { entries, navigate, homeHref } = useSiteMenu(groups, {
     currentSiteId,
     resolveHref,
     personalSlug,
@@ -363,75 +309,19 @@ export function SiteMenu({
     [linksCollapsed, navLinks, authenticated, homeHref, pathname],
   )
 
-  // The Routes flyout's data: the site's curated `routes` prop when it passed one,
-  // else the generated per-site route map — its own lazy chunk (package subpath,
-  // like the debug console) fetched only once the dev tools actually unlock, so an
-  // ordinary production visitor never downloads the family's route inventory.
-  // Tagged with the site it was loaded for, so a resolved import can never render
-  // a *different* site's routes: today SiteMenu remounts on any cross-site change
-  // (each site is its own app), but tying the data to `currentSiteId` makes that
-  // correct by construction rather than by that implicit invariant.
-  const [generated, setGenerated] = useState<{ siteId: SiteId; sections: RouteSection[] }>()
-  const wantGeneratedRoutes =
-    devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0)
-  useEffect(() => {
-    if (!wantGeneratedRoutes) return
-    let cancelled = false
-    void import('@agentic-toolkit/adh-registry/routes').then(({ SITE_ROUTES }) => {
-      if (cancelled) return
-      const paths = SITE_ROUTES[currentSiteId]
-      setGenerated({
-        siteId: currentSiteId,
-        sections: paths?.length ? [{ label: 'Site', routes: paths.map((path) => ({ path })) }] : [],
-      })
-    })
-    return () => {
-      cancelled = true
-    }
-  }, [wantGeneratedRoutes, currentSiteId])
-  // Only trust the loaded map when it matches the site we're rendering.
-  const generatedRoutes =
-    generated && generated.siteId === currentSiteId ? generated.sections : undefined
-  const effectiveRoutes = routes && routes.length > 0 ? routes : generatedRoutes
-
-  // The dev-only tail of the menu (Routes flyout + Debug Options row), ported from
-  // AdhHeader's old header pills. The gating logic is the pure buildDevToolsEntries
-  // (see devToolsEntries.ts — it explains the deliberate effective-vs-real env
-  // split, and the admin bypass of both); everything here is just the wiring.
-  //
-  // devToolsUnlocked is checked FIRST, and matters beyond keeping the rows out of
-  // non-admin production menus: it's what keeps the rows honest with the (always
-  // lazily importable) DebugConsoleWindow they drive — the console only ever loads
-  // behind the same unlock that showed the row.
-  const host = useClientHost()
-  const effectiveEnv = useEffectiveEnv(host)
-  const realEnv = host ? detectEnv(host) : null
-  const override = useEnvOverride()
-  const [debugOpen, setDebugOpen] = useState(false)
-  const devToolsSection = useMemo<PopoverEntry[]>(
-    () =>
-      devToolsUnlocked && !suppressDevTools
-        ? buildDevToolsEntries({
-            routes: effectiveRoutes,
-            effectiveEnv,
-            realEnv,
-            adminUnlocked: userIsAdmin === true,
-            override,
-            pathname,
-            onOpenDebug: () => setDebugOpen(true),
-          })
-        : [],
-    [devToolsUnlocked, suppressDevTools, effectiveRoutes, effectiveEnv, realEnv, userIsAdmin, override, pathname],
-  )
-
   // The Help modal opener — an action row (no navigation), always present regardless of
   // auth. Sits at the foot of the top section (section 0), just above the first divider.
   const openHelp = useHelp().open
 
   // The full ordered list: the site's own nav (phone only — see navSection), the auth
   // top section closing on the Help row, then the fleet block — Recents at its head,
-  // then the tree the subclass supplied (which already ends with the dev site-family
-  // submenus) — and finally Routes/Debug Options.
+  // then the tree the subclass supplied.
+  //
+  // Every row here is unconditional in the sense that matters: nothing in this list is
+  // gated on the build env or on an admin capability, so the menu a developer opens is
+  // the menu that ships. The dev-only rows this list used to end with (the
+  // Marketing/Main site flyouts, Routes, Debug Options) are their own dropdown now —
+  // see {@link DevToolsMenu}.
   //
   // The site's nav goes FIRST because on a phone this menu IS the site's navigation —
   // that is the whole of what the bar handed over. Reaching a page on the site you are
@@ -447,9 +337,8 @@ export function SiteMenu({
       },
       ...recentsSection,
       ...entries,
-      ...devToolsSection,
     ],
-    [navSection, topSection, recentsSection, entries, devToolsSection, openHelp],
+    [navSection, topSection, recentsSection, entries, openHelp],
   )
 
   // Open the single shared sites-overview popover (rendered by the always-present
@@ -486,71 +375,60 @@ export function SiteMenu({
   }
 
   return (
-    <>
-      <NavigationPopover
-        entries={allEntries}
-        onChoose={navigate}
-        triggerLabel={`${label} — switch site`}
-        triggerText={label}
-        // The hub brand mark before the label (currentColor ⇒ it rides the
-        // trigger's accent color and hover brightening with the text).
-        triggerIcon={<HubMark className="adh-nav-popover__mark" />}
-        triggerContent={triggerContent}
-        triggerClassName={triggerClassName}
-        placeholder="Search sites, or browse topics"
-        emptyLabel="No matching sites"
-        // Typing "help" surfaces a command that opens the family-overview popover.
-        searchCommand={{
-          matches: (q) => q.toLowerCase() === 'help',
-          label: 'Help — about the sites',
-          shortcut: 'overview',
-          onSelect: showOverview,
-        }}
-        // The command-row trailing control: signed-in settings gear (in-app overlay
-        // or hub link), else the signed-out family-overview "?" help button.
-        commandTrailing={({ close }) =>
-          authenticated && onSettings ? (
-            <button
-              type="button"
-              className="adh-site-switcher__help"
-              aria-label="User settings"
-              onClick={() => {
-                close({ restoreFocus: false })
-                requestAnimationFrame(() => onSettings())
-              }}
-            >
-              <Settings className="adh-site-switcher__help-icon" aria-hidden />
-            </button>
-          ) : authenticated && settingsHref ? (
-            // A real link so middle-click / new-tab work; native nav tears down the
-            // page, so no explicit close needed.
-            <a className="adh-site-switcher__help" aria-label="User settings" href={settingsHref}>
-              <Settings className="adh-site-switcher__help-icon" aria-hidden />
-            </a>
-          ) : (
-            <button
-              type="button"
-              className="adh-site-switcher__help"
-              aria-label="About the Agentic Developer family"
-              onClick={() => {
-                close({ restoreFocus: false })
-                showOverview()
-              }}
-            >
-              <CircleHelp className="adh-site-switcher__help-icon" aria-hidden />
-            </button>
-          )
-        }
-      />
-      {/* Portals to document.body (see FloatingWindow), so its position here is
-          irrelevant to where it renders — this is just the one owning chokepoint
-          for the dynamic import + open state, driven by the "Debug Options" row
-          above. Mounted only once opened, so the chunk isn't fetched on every dev
-          page load; `suppressDevTools` keeps the theme editor's in-console SiteMenu
-          preview from stacking a second console on the first. */}
-      {debugOpen && !suppressDevTools && (
-        <DebugConsoleWindow open onClose={() => setDebugOpen(false)} />
-      )}
-    </>
+    <NavigationPopover
+      entries={allEntries}
+      onChoose={navigate}
+      triggerLabel={`${label} — switch site`}
+      triggerText={label}
+      // The hub brand mark before the label (currentColor ⇒ it rides the
+      // trigger's accent color and hover brightening with the text).
+      triggerIcon={<HubMark className="adh-nav-popover__mark" />}
+      triggerContent={triggerContent}
+      triggerClassName={triggerClassName}
+      placeholder="Search sites, or browse topics"
+      emptyLabel="No matching sites"
+      // Typing "help" surfaces a command that opens the family-overview popover.
+      searchCommand={{
+        matches: (q) => q.toLowerCase() === 'help',
+        label: 'Help — about the sites',
+        shortcut: 'overview',
+        onSelect: showOverview,
+      }}
+      // The command-row trailing control: signed-in settings gear (in-app overlay
+      // or hub link), else the signed-out family-overview "?" help button.
+      commandTrailing={({ close }) =>
+        authenticated && onSettings ? (
+          <button
+            type="button"
+            className="adh-site-switcher__help"
+            aria-label="User settings"
+            onClick={() => {
+              close({ restoreFocus: false })
+              requestAnimationFrame(() => onSettings())
+            }}
+          >
+            <Settings className="adh-site-switcher__help-icon" aria-hidden />
+          </button>
+        ) : authenticated && settingsHref ? (
+          // A real link so middle-click / new-tab work; native nav tears down the
+          // page, so no explicit close needed.
+          <a className="adh-site-switcher__help" aria-label="User settings" href={settingsHref}>
+            <Settings className="adh-site-switcher__help-icon" aria-hidden />
+          </a>
+        ) : (
+          <button
+            type="button"
+            className="adh-site-switcher__help"
+            aria-label="About the Agentic Developer family"
+            onClick={() => {
+              close({ restoreFocus: false })
+              showOverview()
+            }}
+          >
+            <CircleHelp className="adh-site-switcher__help-icon" aria-hidden />
+          </button>
+        )
+      }
+    />
   )
 }

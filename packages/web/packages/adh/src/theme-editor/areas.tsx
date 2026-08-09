@@ -12,7 +12,7 @@ import type { ComponentType } from 'react'
 // barrels also publish under confusingly close names: `SiteMenuSwitcher` (renamed from
 // this source's `SiteSwitcher`, which would now bind the toolkit's own unrelated
 // `SiteSwitcher`) and `SiteFooter` (renamed from `AdhFooter`, likewise). The previews
-// below pass adh's props — `currentSiteId`/`suppressDevTools`, and a footer that mounts
+// below pass adh's props — `currentSiteId`, and a footer that mounts
 // the chat dock this file's preview CSS hides — so the primitives are not substitutes.
 import { SiteHeader, SiteMenuSwitcher } from '@agentic-toolkit/adh/header'
 import type { HeaderAuthSource } from '@agentic-toolkit/adh/header-auth'
@@ -115,11 +115,13 @@ function FooterPreview() {
 function SiteMenuPreview() {
   return (
     <div className="flex items-center gap-3 p-5">
-      {/* Preview-only: drop the dev-only Routes / Debug Options rows. This preview
-          renders INSIDE the Debug console (the Site-theme editor), so its own
-          "Debug Options" row would open a second console on top of this one — the
-          same recursion the theme switcher is hidden for above. */}
-      <SiteMenuSwitcher currentSiteId="hub" suppressDevTools />
+      {/* No dev-only rows to suppress: this preview renders INSIDE the Debug console
+          (the Site-theme editor), and a "Debug Options" row here would open a second
+          console on top of this one — the same recursion the theme switcher is hidden
+          for above. The menu used to need a `suppressDevTools` prop to avoid it; the
+          rows live in DevToolsMenu now, which this renders no path to, so the
+          recursion is impossible by construction rather than opted out of. */}
+      <SiteMenuSwitcher currentSiteId="hub" />
       <span className="font-mono text-xs text-apt-text-dim">← click to open the menu</span>
     </div>
   )

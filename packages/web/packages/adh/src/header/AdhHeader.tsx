@@ -74,6 +74,16 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  default and the slot are mutually exclusive by
    *  construction: when this is set the default is not rendered at all. */
   siteSwitcher?: ReactNode
+  /** A second dropdown rendered immediately AFTER the switcher, on the same row.
+   *
+   *  Its own slot rather than something the caller folds into `siteSwitcher`,
+   *  because the point of it is that the two menus are INDEPENDENT: adh fills this
+   *  with its dev-tools menu, which appears only in a dev build or for an admin,
+   *  and the switcher beside it must render identically either way. A caller that
+   *  nested the two would put the disappearing thing inside the one that must not
+   *  change. Empty/absent on every other host, and absent here whenever the menu
+   *  is locked — the row simply holds one child then. */
+  debugMenu?: ReactNode
   /** Optional page/section title, shown centered in the bar. */
   pageTitle?: string
   /** Optional interactive content centered in the bar (e.g. a live status
@@ -131,6 +141,7 @@ export function AdhHeader({
   sites,
   onSwitchSite,
   siteSwitcher,
+  debugMenu,
   pageTitle,
   center,
   badges = [],
@@ -190,16 +201,24 @@ export function AdhHeader({
       <PreviewNotice notice={previewNotice} detail={previewDetail} />
       <div className="adh-header__container">
         <div className="adh-header__lead">
-          {/* Exactly one switcher: the caller's if it supplied one, else the
-              built-in `sites` one. Never both. */}
-          {siteSwitcher ?? (
-            <SiteSwitcher
-              siteName={siteName}
-              siteNameHref={siteNameHref}
-              sites={sites}
-              onSwitchSite={onSwitchSite}
-            />
-          )}
+          {/* The lead is a COLUMN (the badges stack under the site name), so anything
+              that belongs BESIDE the switcher needs this row of its own — dropped in
+              as a bare sibling, `debugMenu` would land under the switcher, not after
+              it. Always rendered, even with no `debugMenu`: a wrapper holding one
+              child lays out exactly as the bare switcher did. */}
+          <div className="adh-header__brand-row">
+            {/* Exactly one switcher: the caller's if it supplied one, else the
+                built-in `sites` one. Never both. */}
+            {siteSwitcher ?? (
+              <SiteSwitcher
+                siteName={siteName}
+                siteNameHref={siteNameHref}
+                sites={sites}
+                onSwitchSite={onSwitchSite}
+              />
+            )}
+            {debugMenu}
+          </div>
           {badges.length > 0 && (
             <span className="adh-header__badges" aria-hidden="true">
               {badges.map((badge) => (

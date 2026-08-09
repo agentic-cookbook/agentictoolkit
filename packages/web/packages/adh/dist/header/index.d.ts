@@ -23,6 +23,8 @@ export { SiteHeader } from './SiteHeader';
 export type { SiteHeaderProps } from './SiteHeader';
 export { SiteMenuSwitcher } from './SiteMenuSwitcher';
 export type { SiteMenuSwitcherProps } from './SiteMenuSwitcher';
+export { DevToolsMenu } from './DevToolsMenu';
+export type { DevToolsMenuProps } from './DevToolsMenu';
 export { SiteMenu } from './SiteMenu';
 export type { SiteMenuProps, SiteMenuChromeProps, MenuGroup, MenuLink } from './SiteMenu';
 export { MarketingSiteMenu } from './MarketingSiteMenu';

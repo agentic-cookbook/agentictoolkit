@@ -42,10 +42,10 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
      *  (which defaults it to `DEFAULT_PREVIEW_DETAIL`) — same passthrough, and the same
      *  reason, as `previewNotice` above. */
     previewDetail?: string;
-    /** Curated route map, forwarded straight through to the site-menu's "Routes"
-     *  flyout (see SiteMenu's devToolsSection) for quick in-app jumping. The flyout
-     *  shows only in local/testing/staging or to a signed-in adh admin (any env); when
-     *  a site passes none it falls back to the generated per-site route map. */
+    /** Curated route map, forwarded straight through to the "Routes" flyout in the
+     *  dev-tools dropdown ({@link DevToolsMenu}) for quick in-app jumping. That whole
+     *  menu shows only in local/testing/staging or to a signed-in adh admin (any env);
+     *  when a site passes none it falls back to the generated per-site route map. */
     routes?: RouteSection[];
     /** The signed-in user's personal workspace slug, forwarded to the site-switcher as
      *  the in-hub slug fallback on the slug-less workspace shell routes (`/home`,

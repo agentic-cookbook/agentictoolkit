@@ -1,6 +1,5 @@
 import { type ReactElement, type ReactNode } from 'react';
 import { type SiteId } from '@agentic-toolkit/adh-registry';
-import { type RouteSection } from '@agentic-toolkit/adh/header';
 import { type NavLink } from './NavLink';
 export type MenuLink = {
     site: SiteId;
@@ -72,18 +71,6 @@ export type SiteMenuChromeProps = {
      *  omitted (the signed-in top section shows Home / Workspaces / Recents instead). */
     loginHref?: string;
     signupHref?: string;
-    /** Curated route map for the "Routes" flyout, appended after the Marketing/Main
-     *  sites submenus. Shown in local/testing/staging, and to a signed-in adh admin
-     *  in every env — see {@link SiteMenu}'s devToolsSection. When a site passes
-     *  none, the flyout falls back to the generated per-site route map
-     *  (`@agentic-toolkit/adh-registry/routes`), loaded lazily once the dev tools unlock. */
-    routes?: RouteSection[];
-    /** The signed-in user holds the adh `admin` capability. Unlocks the whole dev
-     *  tail of the menu (Marketing/Main sites, Routes, Debug Options) in EVERY env,
-     *  production included. A display courtesy, not a security boundary — everything
-     *  it reveals (site lists, route paths, the debug console) ships in the client
-     *  bundle for anyone to read; the backend enforces real authorization. */
-    userIsAdmin?: boolean;
     /** The host site's OWN primary nav — the same `NavLink[]` the header bar draws.
      *  Surfaced here as rows ONLY while the bar has dropped them, which it does below
      *  768px (`.adh-header__links { display: none }`): the bar cannot hold the brand,
@@ -97,13 +84,6 @@ export type SiteMenuChromeProps = {
      *  Above the breakpoint these rows are ABSENT, not hidden: see
      *  {@link useHeaderLinksCollapsed}. */
     navLinks?: NavLink[];
-    /** Drop the dev-only Routes / Debug Options rows (and the Debug window they own).
-     *  Set by the theme editor's SiteMenuPreview, which renders a LIVE SiteMenu inside
-     *  the Debug console itself — without this, its "Debug Options" row would open a
-     *  second Debug console on top of the first. The same recursion the preview already
-     *  guards against for the theme switcher; the window portals to <body>, so the
-     *  preview's scoped-CSS trick can't reach it. */
-    suppressDevTools?: boolean;
 };
 export type SiteMenuProps = SiteMenuChromeProps & {
     /** The declarative menu config to render — supplied by a config-only subclass
@@ -126,5 +106,5 @@ export type SiteMenuProps = SiteMenuChromeProps & {
  * The config-only subclasses (MarketingSiteMenu, WorkspaceSiteMenu) supply nothing
  * but their `groups`; the dispatcher (SiteMenuSwitcher) picks which to render by route.
  */
-export declare function SiteMenu({ groups, currentSiteId, authenticated, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, navLinks, routes, userIsAdmin, suppressDevTools, }: SiteMenuProps): ReactElement;
+export declare function SiteMenu({ groups, currentSiteId, authenticated, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, navLinks, }: SiteMenuProps): ReactElement;
 //# sourceMappingURL=SiteMenu.d.ts.map

@@ -5,8 +5,9 @@ import { renderHook } from '@testing-library/react'
 // resolve to the actual site deployment even from an in-hub workspace route (where
 // a plain site link resolves to the /<slug>/<feature> view instead). This file
 // covers the pure buildDebugSiteGroups() CONTENTS; the gate (dev-env build OR the
-// signed-in-admin unlock) is SiteMenu's `devToolsUnlocked`, whose build-flag leg
-// (DEV_TOOLS_BUILD_ENABLED) is covered in devToolsEntries.test.ts.
+// signed-in-admin unlock) is DevToolsMenu's `unlocked`, covered in
+// devToolsMenu.test.tsx, whose build-flag leg (DEV_TOOLS_BUILD_ENABLED) is covered
+// in devToolsEntries.test.ts.
 
 // Mock a hub WORKSPACE route so useSiteMenu enters in-hub mode (workspaceSlug set).
 vi.mock('next/navigation', () => ({

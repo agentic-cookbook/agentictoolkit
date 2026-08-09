@@ -45,6 +45,19 @@ vi.mock('../header/SiteMenuSwitcher', () => ({
   },
 }))
 
+// The dev-tools dropdown, probed the same way and for the same reason: its rows are
+// covered by header/__tests__/{debugSiteGroups,devToolsEntries}.test, and its own
+// unlock by devToolsMenu.test. What this file owns is that `routes` and `userIsAdmin`
+// reach THIS component and not the switcher above — that separation is the whole point
+// of the second menu, and it is invisible in the rendered bar.
+const devToolsProps = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }))
+vi.mock('../header/DevToolsMenu', () => ({
+  DevToolsMenu: (props: Record<string, unknown>) => {
+    devToolsProps.current = props
+    return <div data-testid="adh-dev-tools-menu" />
+  },
+}))
+
 // The avatar menu, stubbed to keep this file's subject in view: `AvatarMenu` is the only
 // thing the header renders when `user != null`, and a signed-in render is exactly what
 // the auth source's assertions below need — its whole job is producing `user`. Stubbing
@@ -90,7 +103,11 @@ describe('SiteHeader', () => {
     // drop `siteSwitcher` from SiteHeader and this line goes red.
     const lead = screen.getByRole('banner').querySelector('.adh-header__lead')!
     expect(lead.querySelector('.adh-header__title')).toBeNull()
-    expect(lead.firstElementChild).toBe(screen.getByTestId('adh-site-switcher'))
+    // The brand ROW, not the lead: the lead is a column that also stacks the badges,
+    // so the switcher's own position is one level in (see .adh-header__brand-row).
+    expect(lead.querySelector('.adh-header__brand-row')?.firstElementChild).toBe(
+      screen.getByTestId('adh-site-switcher'),
+    )
     // The switcher gets the current site and the registry-resolved settings target.
     expect(switcherProps.current?.currentSiteId).toBe('products')
     expect(switcherProps.current?.settingsHref).toContain('/home/settings')
@@ -165,14 +182,21 @@ describe('SiteHeader auth source injection', () => {
       expect(opts).toEqual({ clientId: 'demo', siteId: 'hub', onAfterLogout })
     }
     // ...and everything it returned crossed into the bar: `user` to the toolkit header,
-    // `userIsAdmin` and the derived signed-in flag on to adh's own switcher. The menu
-    // is stubbed above, so what is observable here is the value it was handed — the
-    // stub prints the name — not the bar's printed copy, which is now the avatar
-    // alone (pinned in the toolkit's own header-contract.test.tsx).
+    // the derived signed-in flag on to adh's own switcher, and `userIsAdmin` to the
+    // dev-tools menu. Both menus are stubbed above, so what is observable here is the
+    // value each was handed — the avatar stub prints the name — not the bar's printed
+    // copy, which is now the avatar alone (pinned in the toolkit's own
+    // header-contract.test.tsx).
     expect(screen.getByTestId('adh-avatar-menu').textContent).toBe('Ada')
     expect(headerProps.current?.user).toEqual({ name: 'Ada' })
     expect(switcherProps.current?.authenticated).toBe(true)
-    expect(switcherProps.current?.userIsAdmin).toBe(true)
+    expect(devToolsProps.current?.userIsAdmin).toBe(true)
+    // ...and NOT to the switcher. This is the constraint the second menu exists for: the
+    // site menu must render the same rows in a dev build, a shipped build, and for an
+    // admin, so no capability flag may reach it at all. An admin unlock that leaked back
+    // into the switcher would be invisible in any screenshot and in every other test here.
+    expect(switcherProps.current).not.toHaveProperty('userIsAdmin')
+    expect(switcherProps.current).not.toHaveProperty('routes')
   })
 
   it('resolves the function form of navLinks against the signed-in flag', () => {

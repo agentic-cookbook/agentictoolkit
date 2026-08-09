@@ -138,9 +138,9 @@ export const FULL_PALETTE_THEMES = [
   'green-matrix',
   'green-matrix-glass',
   'old-school-terminal',
-  // The ADH family's own two. `charcoal` is the palette the family wore by default until
-  // `fishlamp` replaced it below — saved as a theme in its own right so the old look stays
-  // pickable and recoverable rather than living only in the base theme it is layered over.
+  // The ADH family's own two. `charcoal` is the family default (see DEFAULT_SITE_THEME);
+  // it was saved as a theme in its own right when `fishlamp` briefly held that job, which
+  // is what made pointing the default back at it a one-word edit rather than a re-authoring.
   'charcoal',
   'fishlamp',
 ] as const satisfies readonly ThemeKey[]
@@ -160,13 +160,15 @@ export type SwitcherThemeKey = AdhThemeKey | FullPaletteThemeKey
  *  This ONE constant dresses all ~45 family sites: no site passes a theme, they all render
  *  `<AdhThemeStyle />` with no props, so changing it here is the whole change.
  *
- *  It is `fishlamp` — the dark-always palette drawn from fishlamp.com. The previous value
- *  was DEFAULT_ADH_THEME itself, which is why SiteDefaultTheme has a branch for the two
- *  matching (it renders nothing then, the base block already being the site's theme); that
- *  branch is now the un-taken one, and the base stays emitted underneath for the `.text-*`
- *  typography utilities no full-palette theme defines. `charcoal` is that former default
- *  saved as a theme, so pointing this back at the old look is a one-word edit. */
-export const DEFAULT_SITE_THEME: SwitcherThemeKey = 'fishlamp'
+ *  It is `charcoal` — the palette the family wore before `fishlamp` briefly replaced it,
+ *  kept as a theme in its own right for exactly this reason. The value before either of
+ *  them was DEFAULT_ADH_THEME itself, which is why SiteDefaultTheme has a branch for the
+ *  two matching (it renders nothing then, the base block already being the site's theme);
+ *  that branch stays the un-taken one — `charcoal` is a full-palette theme, not the base —
+ *  and the base stays emitted underneath for the `.text-*` typography utilities no
+ *  full-palette theme defines. `fishlamp` remains pickable in the switcher, so swapping the
+ *  family back to it is a one-word edit here. */
+export const DEFAULT_SITE_THEME: SwitcherThemeKey = 'charcoal'
 
 /** Themes whose `--font-*` stack IS the base theme's — the Iosevka cut adh self-hosts and
  *  ships `@font-face` rules for. AdhThemeStyle preloads those faces only when the theme the

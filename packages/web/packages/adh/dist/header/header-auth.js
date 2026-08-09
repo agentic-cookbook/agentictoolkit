@@ -35,8 +35,10 @@ function makeSmartHeaderAuth(cfg = {}) {
     const login = () => beginLogin({ clientId, returnTo: returnTo?.() ?? defaultReturnTo(opts.siteId) });
     return {
       user: user ? toAvatarUser(user, avatarFallback) : null,
-      // Unlocks the site menu's dev tail (Routes, site families, Debug Options)
-      // in every env for a signed-in adh admin — see AdhHeaderAuthProps.
+      // Unlocks the dev-tools menu (Routes, site families, Debug Options) in every
+      // env for a signed-in adh admin — see AdhHeaderAuthProps. It reaches only that
+      // menu: the site menu beside it is deliberately flag-free, so it renders the
+      // same rows for an admin as for anyone else.
       userIsAdmin: isAdmin(user),
       // Spinner while the session resolves, not a flash of the signed-out buttons.
       authLoading: isLoading,

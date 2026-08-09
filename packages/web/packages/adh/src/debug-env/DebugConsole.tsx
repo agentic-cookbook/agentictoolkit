@@ -61,8 +61,8 @@ export function rootTopicsFor({
  * like a gate.
  *
  * This is a SECOND, independent gate, and it is the load-bearing one. The console's own
- * door — the site menu's "Debug Options" row — also opens for a signed-in adh admin in
- * production (`devToolsUnlocked`), which used to hand that admin a half-working site-theme
+ * door — the "Debug Options" row in the dev-tools menu ({@link DevToolsMenu}) — also opens
+ * for a signed-in adh admin in production, which used to hand that admin a half-working site-theme
  * editor: no alt-theme <style> nodes exist in production, so nothing could actually be
  * switched, but the editor still opened and still applied live override CSS. Gating on the
  * BUILD rather than on the viewer removes the feature from production outright.

@@ -845,6 +845,7 @@ function AdhHeader({
   sites,
   onSwitchSite,
   siteSwitcher,
+  debugMenu,
   pageTitle,
   center,
   badges = [],
@@ -870,15 +871,18 @@ function AdhHeader({
     /* @__PURE__ */ jsx9(PreviewNotice, { notice: previewNotice, detail: previewDetail }),
     /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
       /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
-        siteSwitcher ?? /* @__PURE__ */ jsx9(
-          SiteSwitcher,
-          {
-            siteName,
-            siteNameHref,
-            sites,
-            onSwitchSite
-          }
-        ),
+        /* @__PURE__ */ jsxs6("div", { className: "adh-header__brand-row", children: [
+          siteSwitcher ?? /* @__PURE__ */ jsx9(
+            SiteSwitcher,
+            {
+              siteName,
+              siteNameHref,
+              sites,
+              onSwitchSite
+            }
+          ),
+          debugMenu
+        ] }),
         badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
           // The ui Badge owns the skin; the adh-header__badge* classes stay
           // as stable hooks — they're a theme-editor surface.
@@ -1014,13 +1018,12 @@ import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath,
 import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
 
 // src/header/SiteMenuSwitcher.tsx
-import { Fragment as Fragment6 } from "react";
+import { Fragment as Fragment5 } from "react";
 import { usePathname as usePathname4 } from "next/navigation";
 
 // src/header/SiteMenu.tsx
-import { useEffect as useEffect4, useMemo as useMemo3, useState as useState4 } from "react";
+import { useMemo as useMemo3 } from "react";
 import { usePathname as usePathname3 } from "next/navigation";
-import dynamic from "next/dynamic";
 import { CircleHelp as CircleHelp2, Settings as Settings3 } from "lucide-react";
 
 // src/footer/SitesOverview.tsx
@@ -1029,11 +1032,10 @@ import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 var SITES_OVERVIEW_POPOVER_ID = "adh-sites-overview";
 
 // src/header/SiteMenu.tsx
-import { detectEnv as detectEnv3, getSite as getSite2, siteHeaderTitle } from "@agentic-toolkit/adh-registry";
+import { getSite as getSite2, siteHeaderTitle } from "@agentic-toolkit/adh-registry";
 import {
   HubMark as HubMark2,
   NavigationPopover as NavigationPopover2,
-  useClientHost as useClientHost3,
   useWorkspacesMenu as useWorkspacesMenu2
 } from "@agentic-toolkit/adh/header";
 import { useRecents } from "@agentic-toolkit/adh/header/recents";
@@ -1457,131 +1459,6 @@ function buildSiteNavEntries(navLinks, { homeHref, pathname }) {
   }));
 }
 
-// src/header/debugSiteGroups.ts
-import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from "@agentic-toolkit/adh-registry";
-var DEBUG_SECTION = 2;
-function buildDebugSiteGroups() {
-  return [
-    {
-      kind: "topic",
-      section: DEBUG_SECTION,
-      label: "Marketing sites",
-      links: MARKETING_SITE_IDS.map((site) => ({ site, external: true }))
-    },
-    {
-      kind: "topic",
-      section: DEBUG_SECTION,
-      label: "Main sites",
-      links: MAIN_SITE_IDS.map((site) => ({ site, external: true }))
-    }
-  ];
-}
-
-// src/header/devToolsEntries.ts
-import { DEV_BUILD, isDevDeploymentEnv } from "@agentic-toolkit/adh-registry/deployment-env";
-import "@agentic-toolkit/adh-registry";
-import {
-  buildRouteItems as buildRouteItems2
-} from "@agentic-toolkit/adh/header";
-var DEV_TOOLS_BUILD_ENABLED = DEV_BUILD;
-function isDevEnv(env) {
-  return isDevDeploymentEnv(env);
-}
-function buildDevToolsEntries({
-  routes,
-  effectiveEnv,
-  realEnv,
-  adminUnlocked,
-  override,
-  pathname,
-  onOpenDebug
-}) {
-  const out = [];
-  if (routes && routes.length > 0 && (adminUnlocked || isDevEnv(effectiveEnv))) {
-    out.push({
-      kind: "topic",
-      section: DEBUG_SECTION,
-      label: "Routes",
-      icon: menuIcon("routes"),
-      items: buildRouteItems2(routes, pathname)
-    });
-  }
-  if (adminUnlocked || isDevEnv(realEnv)) {
-    out.push({
-      kind: "leaf",
-      section: DEBUG_SECTION,
-      // `blurb` is what actually RENDERS a leaf's description (see NavigationPopover's
-      // leaf branch) — without it the "Sim: prod" hint below would be set but invisible.
-      blurb: true,
-      item: {
-        key: "debug-options",
-        label: "Debug Options",
-        // Carries the old header pill's "Sim: prod" state, so it stays obvious the
-        // site is being viewed AS production rather than for real. Kept OUT of the
-        // label so the row's accessible name is stably "Debug Options".
-        description: override === "production" ? "Sim: prod" : void 0,
-        icon: menuIcon("debug"),
-        onSelect: onOpenDebug
-      }
-    });
-  }
-  return out;
-}
-
-// src/header/envOverride.ts
-import { useSyncExternalStore as useSyncExternalStore2 } from "react";
-import { detectEnv as detectEnv2 } from "@agentic-toolkit/adh-registry";
-var STORAGE_KEY = "adh:debug:env-override";
-var ENV_VALUES = ["production", "staging", "testing", "local"];
-function parseEnvOverride(raw) {
-  return raw != null && ENV_VALUES.includes(raw) ? raw : null;
-}
-function resolveEffectiveEnv(override, detected) {
-  return override ?? detected;
-}
-function readOverride() {
-  if (typeof window === "undefined") return null;
-  try {
-    return parseEnvOverride(window.localStorage.getItem(STORAGE_KEY));
-  } catch {
-    return null;
-  }
-}
-var listeners = globalThis.__adhEnvOverrideListeners ??= /* @__PURE__ */ new Set();
-function emit() {
-  for (const fn of listeners) fn();
-}
-function subscribe(onChange) {
-  listeners.add(onChange);
-  const onStorage = (e) => {
-    if (e.key === STORAGE_KEY) onChange();
-  };
-  if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
-  return () => {
-    listeners.delete(onChange);
-    if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
-  };
-}
-function getEnvOverride() {
-  return readOverride();
-}
-function setEnvOverride(env) {
-  if (typeof window === "undefined") return;
-  try {
-    if (env !== null) window.localStorage.setItem(STORAGE_KEY, env);
-    else window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-  }
-  emit();
-}
-function useEnvOverride() {
-  return useSyncExternalStore2(subscribe, readOverride, () => null);
-}
-function useEffectiveEnv(hostname) {
-  const override = useEnvOverride();
-  return resolveEffectiveEnv(override, hostname ? detectEnv2(hostname) : null);
-}
-
 // src/header/fleetMenuGroups.ts
 var FLEET_SECTION = 1;
 function leaf(link) {
@@ -1724,10 +1601,7 @@ var FLEET_MENU_GROUPS = [
 
 // src/header/SiteMenu.tsx
 import { useHelp } from "@agentic-toolkit/adh/help";
-import { Fragment as Fragment5, jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
-var DebugConsoleWindow = dynamic(
-  () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
-);
+import { jsx as jsx13 } from "react/jsx-runtime";
 function SiteMenu({
   groups,
   currentSiteId,
@@ -1740,19 +1614,11 @@ function SiteMenu({
   onSettings,
   loginHref,
   signupHref,
-  navLinks,
-  routes,
-  userIsAdmin,
-  suppressDevTools
+  navLinks
 }) {
   const hub = getSite2("hub");
   const label = hub ? siteHeaderTitle(hub) : "Agentic Developer Hub";
-  const devToolsUnlocked = DEV_TOOLS_BUILD_ENABLED || userIsAdmin === true;
-  const menuGroups = useMemo3(
-    () => devToolsUnlocked ? [...groups, ...buildDebugSiteGroups()] : groups,
-    [groups, devToolsUnlocked]
-  );
-  const { entries, navigate, homeHref } = useSiteMenu(menuGroups, {
+  const { entries, navigate, homeHref } = useSiteMenu(groups, {
     currentSiteId,
     resolveHref,
     personalSlug,
@@ -1832,42 +1698,6 @@ function SiteMenu({
     }) : [],
     [linksCollapsed, navLinks, authenticated, homeHref, pathname]
   );
-  const [generated, setGenerated] = useState4();
-  const wantGeneratedRoutes = devToolsUnlocked && !suppressDevTools && !(routes && routes.length > 0);
-  useEffect4(() => {
-    if (!wantGeneratedRoutes) return;
-    let cancelled = false;
-    void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
-      if (cancelled) return;
-      const paths = SITE_ROUTES[currentSiteId];
-      setGenerated({
-        siteId: currentSiteId,
-        sections: paths?.length ? [{ label: "Site", routes: paths.map((path) => ({ path })) }] : []
-      });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [wantGeneratedRoutes, currentSiteId]);
-  const generatedRoutes = generated && generated.siteId === currentSiteId ? generated.sections : void 0;
-  const effectiveRoutes = routes && routes.length > 0 ? routes : generatedRoutes;
-  const host = useClientHost3();
-  const effectiveEnv = useEffectiveEnv(host);
-  const realEnv = host ? detectEnv3(host) : null;
-  const override = useEnvOverride();
-  const [debugOpen, setDebugOpen] = useState4(false);
-  const devToolsSection = useMemo3(
-    () => devToolsUnlocked && !suppressDevTools ? buildDevToolsEntries({
-      routes: effectiveRoutes,
-      effectiveEnv,
-      realEnv,
-      adminUnlocked: userIsAdmin === true,
-      override,
-      pathname,
-      onOpenDebug: () => setDebugOpen(true)
-    }) : [],
-    [devToolsUnlocked, suppressDevTools, effectiveRoutes, effectiveEnv, realEnv, userIsAdmin, override, pathname]
-  );
   const openHelp = useHelp().open;
   const allEntries = useMemo3(
     () => [
@@ -1879,10 +1709,9 @@ function SiteMenu({
         item: { key: "help", label: "Help", icon: menuIcon("help"), onSelect: () => openHelp() }
       },
       ...recentsSection,
-      ...entries,
-      ...devToolsSection
+      ...entries
     ],
-    [navSection, topSection, recentsSection, entries, devToolsSection, openHelp]
+    [navSection, topSection, recentsSection, entries, openHelp]
   );
   function showOverview() {
     requestAnimationFrame(() => {
@@ -1907,58 +1736,55 @@ function SiteMenu({
       el.addEventListener("toggle", onToggle);
     });
   }
-  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
-    /* @__PURE__ */ jsx13(
-      NavigationPopover2,
-      {
-        entries: allEntries,
-        onChoose: navigate,
-        triggerLabel: `${label} \u2014 switch site`,
-        triggerText: label,
-        triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
-        triggerContent,
-        triggerClassName,
-        placeholder: "Search sites, or browse topics",
-        emptyLabel: "No matching sites",
-        searchCommand: {
-          matches: (q) => q.toLowerCase() === "help",
-          label: "Help \u2014 about the sites",
-          shortcut: "overview",
-          onSelect: showOverview
-        },
-        commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
-          "button",
-          {
-            type: "button",
-            className: "adh-site-switcher__help",
-            "aria-label": "User settings",
-            onClick: () => {
-              close({ restoreFocus: false });
-              requestAnimationFrame(() => onSettings());
-            },
-            children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
-          }
-        ) : authenticated && settingsHref ? (
-          // A real link so middle-click / new-tab work; native nav tears down the
-          // page, so no explicit close needed.
-          /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
-        ) : /* @__PURE__ */ jsx13(
-          "button",
-          {
-            type: "button",
-            className: "adh-site-switcher__help",
-            "aria-label": "About the Agentic Developer family",
-            onClick: () => {
-              close({ restoreFocus: false });
-              showOverview();
-            },
-            children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
-          }
-        )
-      }
-    ),
-    debugOpen && !suppressDevTools && /* @__PURE__ */ jsx13(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
-  ] });
+  return /* @__PURE__ */ jsx13(
+    NavigationPopover2,
+    {
+      entries: allEntries,
+      onChoose: navigate,
+      triggerLabel: `${label} \u2014 switch site`,
+      triggerText: label,
+      triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
+      triggerContent,
+      triggerClassName,
+      placeholder: "Search sites, or browse topics",
+      emptyLabel: "No matching sites",
+      searchCommand: {
+        matches: (q) => q.toLowerCase() === "help",
+        label: "Help \u2014 about the sites",
+        shortcut: "overview",
+        onSelect: showOverview
+      },
+      commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
+        "button",
+        {
+          type: "button",
+          className: "adh-site-switcher__help",
+          "aria-label": "User settings",
+          onClick: () => {
+            close({ restoreFocus: false });
+            requestAnimationFrame(() => onSettings());
+          },
+          children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+        }
+      ) : authenticated && settingsHref ? (
+        // A real link so middle-click / new-tab work; native nav tears down the
+        // page, so no explicit close needed.
+        /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+      ) : /* @__PURE__ */ jsx13(
+        "button",
+        {
+          type: "button",
+          className: "adh-site-switcher__help",
+          "aria-label": "About the Agentic Developer family",
+          onClick: () => {
+            close({ restoreFocus: false });
+            showOverview();
+          },
+          children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+        }
+      )
+    }
+  );
 }
 
 // src/header/MarketingSiteMenu.tsx
@@ -1982,12 +1808,12 @@ function isWorkspaceMenuRoute(currentSiteId, pathname) {
 }
 
 // src/header/PrefetchSiblingSites.tsx
-import { useEffect as useEffect5 } from "react";
-import { detectEnv as detectEnv4 } from "@agentic-toolkit/adh-registry";
+import { useEffect as useEffect4 } from "react";
+import { detectEnv as detectEnv2 } from "@agentic-toolkit/adh-registry";
 function PrefetchSiblingSites() {
-  useEffect5(() => {
+  useEffect4(() => {
     if (typeof window === "undefined") return;
-    if (detectEnv4(window.location.hostname) !== "local") return;
+    if (detectEnv2(window.location.hostname) !== "local") return;
     const hostPattern = window.location.host.replace(/^[^.]+/, "*");
     const rules = {
       prerender: [
@@ -2009,18 +1835,231 @@ function PrefetchSiblingSites() {
 }
 
 // src/header/SiteMenuSwitcher.tsx
-import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx16, jsxs as jsxs9 } from "react/jsx-runtime";
 function SiteMenuSwitcher(props) {
   const pathname = usePathname4() ?? "/";
   const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
-  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
+  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
     /* @__PURE__ */ jsx16(PrefetchSiblingSites, {}),
     onWorkspaceRoute ? /* @__PURE__ */ jsx16(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx16(MarketingSiteMenu, { ...props })
   ] });
 }
 
+// src/header/DevToolsMenu.tsx
+import { useEffect as useEffect5, useMemo as useMemo4, useState as useState4 } from "react";
+import { usePathname as usePathname5 } from "next/navigation";
+import dynamic from "next/dynamic";
+import { Bug as Bug2 } from "lucide-react";
+import { detectEnv as detectEnv4 } from "@agentic-toolkit/adh-registry";
+import {
+  NavigationPopover as NavigationPopover3,
+  useClientHost as useClientHost3
+} from "@agentic-toolkit/adh/header";
+
+// src/header/debugSiteGroups.ts
+import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from "@agentic-toolkit/adh-registry";
+var DEBUG_SECTION = 2;
+function buildDebugSiteGroups() {
+  return [
+    {
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Marketing sites",
+      links: MARKETING_SITE_IDS.map((site) => ({ site, external: true }))
+    },
+    {
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Main sites",
+      links: MAIN_SITE_IDS.map((site) => ({ site, external: true }))
+    }
+  ];
+}
+
+// src/header/devToolsEntries.ts
+import { DEV_BUILD, isDevDeploymentEnv } from "@agentic-toolkit/adh-registry/deployment-env";
+import "@agentic-toolkit/adh-registry";
+import {
+  buildRouteItems as buildRouteItems2
+} from "@agentic-toolkit/adh/header";
+var DEV_TOOLS_BUILD_ENABLED = DEV_BUILD;
+function isDevEnv(env) {
+  return isDevDeploymentEnv(env);
+}
+function buildDevToolsEntries({
+  routes,
+  effectiveEnv,
+  realEnv,
+  adminUnlocked,
+  override,
+  pathname,
+  onOpenDebug
+}) {
+  const out = [];
+  if (routes && routes.length > 0 && (adminUnlocked || isDevEnv(effectiveEnv))) {
+    out.push({
+      kind: "topic",
+      section: DEBUG_SECTION,
+      label: "Routes",
+      icon: menuIcon("routes"),
+      items: buildRouteItems2(routes, pathname)
+    });
+  }
+  if (adminUnlocked || isDevEnv(realEnv)) {
+    out.push({
+      kind: "leaf",
+      section: DEBUG_SECTION,
+      // `blurb` is what actually RENDERS a leaf's description (see NavigationPopover's
+      // leaf branch) — without it the "Sim: prod" hint below would be set but invisible.
+      blurb: true,
+      item: {
+        key: "debug-options",
+        label: "Debug Options",
+        // Carries the old header pill's "Sim: prod" state, so it stays obvious the
+        // site is being viewed AS production rather than for real. Kept OUT of the
+        // label so the row's accessible name is stably "Debug Options".
+        description: override === "production" ? "Sim: prod" : void 0,
+        icon: menuIcon("debug"),
+        onSelect: onOpenDebug
+      }
+    });
+  }
+  return out;
+}
+
+// src/header/envOverride.ts
+import { useSyncExternalStore as useSyncExternalStore2 } from "react";
+import { detectEnv as detectEnv3 } from "@agentic-toolkit/adh-registry";
+var STORAGE_KEY = "adh:debug:env-override";
+var ENV_VALUES = ["production", "staging", "testing", "local"];
+function parseEnvOverride(raw) {
+  return raw != null && ENV_VALUES.includes(raw) ? raw : null;
+}
+function resolveEffectiveEnv(override, detected) {
+  return override ?? detected;
+}
+function readOverride() {
+  if (typeof window === "undefined") return null;
+  try {
+    return parseEnvOverride(window.localStorage.getItem(STORAGE_KEY));
+  } catch {
+    return null;
+  }
+}
+var listeners = globalThis.__adhEnvOverrideListeners ??= /* @__PURE__ */ new Set();
+function emit() {
+  for (const fn of listeners) fn();
+}
+function subscribe(onChange) {
+  listeners.add(onChange);
+  const onStorage = (e) => {
+    if (e.key === STORAGE_KEY) onChange();
+  };
+  if (typeof window !== "undefined") window.addEventListener("storage", onStorage);
+  return () => {
+    listeners.delete(onChange);
+    if (typeof window !== "undefined") window.removeEventListener("storage", onStorage);
+  };
+}
+function getEnvOverride() {
+  return readOverride();
+}
+function setEnvOverride(env) {
+  if (typeof window === "undefined") return;
+  try {
+    if (env !== null) window.localStorage.setItem(STORAGE_KEY, env);
+    else window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+  }
+  emit();
+}
+function useEnvOverride() {
+  return useSyncExternalStore2(subscribe, readOverride, () => null);
+}
+function useEffectiveEnv(hostname) {
+  const override = useEnvOverride();
+  return resolveEffectiveEnv(override, hostname ? detectEnv3(hostname) : null);
+}
+
+// src/header/DevToolsMenu.tsx
+import { Fragment as Fragment6, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
+var DebugConsoleWindow = dynamic(
+  () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
+);
+function DevToolsMenu({ userIsAdmin, ...rest }) {
+  const unlocked = DEV_TOOLS_BUILD_ENABLED || userIsAdmin === true;
+  if (!unlocked) return null;
+  return /* @__PURE__ */ jsx17(DevToolsMenuPopover, { ...rest, adminUnlocked: userIsAdmin === true });
+}
+function DevToolsMenuPopover({
+  currentSiteId,
+  resolveHref,
+  personalSlug,
+  routes,
+  adminUnlocked
+}) {
+  const pathname = usePathname5() ?? "/";
+  const groups = useMemo4(() => buildDebugSiteGroups(), []);
+  const { entries, navigate } = useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug });
+  const [generated, setGenerated] = useState4();
+  const wantGeneratedRoutes = !(routes && routes.length > 0);
+  useEffect5(() => {
+    if (!wantGeneratedRoutes) return;
+    let cancelled = false;
+    void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
+      if (cancelled) return;
+      const paths = SITE_ROUTES[currentSiteId];
+      setGenerated({
+        siteId: currentSiteId,
+        sections: paths?.length ? [{ label: "Site", routes: paths.map((path) => ({ path })) }] : []
+      });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [wantGeneratedRoutes, currentSiteId]);
+  const generatedRoutes = generated && generated.siteId === currentSiteId ? generated.sections : void 0;
+  const effectiveRoutes = routes && routes.length > 0 ? routes : generatedRoutes;
+  const host = useClientHost3();
+  const effectiveEnv = useEffectiveEnv(host);
+  const realEnv = host ? detectEnv4(host) : null;
+  const override = useEnvOverride();
+  const [debugOpen, setDebugOpen] = useState4(false);
+  const devToolsSection = useMemo4(
+    () => buildDevToolsEntries({
+      routes: effectiveRoutes,
+      effectiveEnv,
+      realEnv,
+      adminUnlocked,
+      override,
+      pathname,
+      onOpenDebug: () => setDebugOpen(true)
+    }),
+    [effectiveRoutes, effectiveEnv, realEnv, adminUnlocked, override, pathname]
+  );
+  const allEntries = useMemo4(
+    () => [...entries, ...devToolsSection],
+    [entries, devToolsSection]
+  );
+  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
+    /* @__PURE__ */ jsx17(
+      NavigationPopover3,
+      {
+        entries: allEntries,
+        onChoose: navigate,
+        triggerLabel: "Debug tools",
+        triggerContent: /* @__PURE__ */ jsx17(Bug2, { className: "adh-nav-popover__mark", "aria-hidden": true }),
+        triggerClassName: "adh-nav-popover__trigger--icon",
+        placeholder: "Search sites, routes and tools",
+        emptyLabel: "No matching dev tools"
+      }
+    ),
+    debugOpen && /* @__PURE__ */ jsx17(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
+  ] });
+}
+
 // src/header/SiteHeader.tsx
-import { jsx as jsx17 } from "react/jsx-runtime";
+import { jsx as jsx18 } from "react/jsx-runtime";
 function SiteHeader({
   siteId,
   pageTitle,
@@ -2063,11 +2102,11 @@ function SiteHeader({
   const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
   const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
   const switcherSettingsHref = onSettings ? void 0 : settingsHref ?? resolveHubHref("/home/settings");
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx18(
     AdhHeader2,
     {
       siteName,
-      siteSwitcher: /* @__PURE__ */ jsx17(
+      siteSwitcher: /* @__PURE__ */ jsx18(
         SiteMenuSwitcher,
         {
           currentSiteId: siteId,
@@ -2078,7 +2117,15 @@ function SiteHeader({
           settingsHref: switcherSettingsHref,
           loginHref: resolvedLoginHref,
           signupHref: resolvedSignupHref,
-          navLinks: resolvedNavLinks,
+          navLinks: resolvedNavLinks
+        }
+      ),
+      debugMenu: /* @__PURE__ */ jsx18(
+        DevToolsMenu,
+        {
+          currentSiteId: siteId,
+          resolveHref: resolveSwitchHref,
+          personalSlug,
           routes,
           userIsAdmin
         }
@@ -2092,7 +2139,7 @@ function SiteHeader({
       previewNotice,
       previewDetail,
       homeHref: siteHomePath(siteId),
-      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx17("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx18("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
       user,
       authLoading,
       loginHref: resolvedLoginHref,
@@ -2120,6 +2167,7 @@ export {
   AvatarMenu,
   DEBUG_SECTION,
   DEV_TOOLS_BUILD_ENABLED,
+  DevToolsMenu,
   FLEET_MENU_GROUPS,
   FLEET_SECTION,
   HubMark,

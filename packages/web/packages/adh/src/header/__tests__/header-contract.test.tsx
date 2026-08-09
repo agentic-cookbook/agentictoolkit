@@ -108,7 +108,8 @@ describe('AdhHeader (registry-free)', () => {
   //    must not be one: the admin-gated route map is adh registry vocabulary. The intent
   //    the brief was pinning — admin-only navigation never appears in a header that was
   //    not given one — is pinned at its real seam: this header renders no admin surface
-  //    of its own, and `userIsAdmin` reaches only a slot-supplied switcher. (`userIsAdmin`
+  //    of its own, and `userIsAdmin` reaches only what a caller puts in a slot — adh
+  //    hands it to the `debugMenu` one. (`userIsAdmin`
   //    stays on AdhHeaderAuthProps because shared/auth's HeaderAuthState is derived from
   //    that type and must keep its shape.) ──
   it('exposes no admin surface of its own — userIsAdmin only reaches a caller-supplied switcher', () => {
@@ -143,9 +144,32 @@ describe('AdhHeader (registry-free)', () => {
     // sitting alongside. A slot that silently DOUBLES the switcher passes a naive
     // "is the custom one there?" check and shows up in a screenshot later.
     expect(screen.queryByRole('button', { name: 'Hub — switch site' })).toBeNull()
-    // Exactly one node claims the lead slot, and it is the caller's.
-    const lead = screen.getByRole('banner').querySelector('.adh-header__lead')!
-    expect(lead.firstElementChild?.textContent).toBe('Custom switcher')
+    // Exactly one node claims the brand row, and it is the caller's. (The row, not the
+    // lead: the lead is a column that also stacks the badges, so the switcher's own
+    // position is one level in — see .adh-header__brand-row.)
+    const row = screen.getByRole('banner').querySelector('.adh-header__brand-row')!
+    expect(row.children).toHaveLength(1)
+    expect(row.firstElementChild?.textContent).toBe('Custom switcher')
+  })
+
+  it('renders debugMenu AFTER the switcher, on the same row', () => {
+    render(
+      <AdhHeader
+        siteName="Hub"
+        siteSwitcher={<button type="button">Custom switcher</button>}
+        debugMenu={<button type="button">Dev tools</button>}
+        badges={[{ label: 'preview' }]}
+      />,
+    )
+    const row = screen.getByRole('banner').querySelector('.adh-header__brand-row')!
+    // BESIDE the switcher, not under it. The lead is a column (the badge below proves
+    // it), so a slot rendered as a bare sibling of the switcher would stack instead —
+    // a layout bug no assertion on mere presence can see, and the reason the row exists.
+    expect(Array.from(row.children).map((c) => c.textContent)).toEqual([
+      'Custom switcher',
+      'Dev tools',
+    ])
+    expect(row.contains(screen.getByText('preview'))).toBe(false)
   })
 
   it('renders preAuthLinks after the nav links and before the auth cluster', () => {

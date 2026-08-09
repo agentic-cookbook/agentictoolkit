@@ -348,6 +348,19 @@
   min-width: 0;
 }
 
+/* The lead's first ROW: the site-name switcher and, beside it, whatever the header's
+   `debugMenu` slot holds (adh puts its dev-tools dropdown there). A row of its own
+   because .adh-header__lead is a COLUMN — the badges stack UNDER the brand, so a
+   sibling dropped straight into the lead would land under the brand too, not after it.
+   Renders identically to the bare switcher when the slot is empty, which on a shipped
+   site is always. */
+.adh-header__brand-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
 /* One line, always — a wrapped brand is what blows out the fixed-height bar. */
 .adh-header__lead .adh-header__title {
   white-space: nowrap;

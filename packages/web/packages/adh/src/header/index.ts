@@ -38,6 +38,11 @@ export { SiteHeader } from './SiteHeader'
 export type { SiteHeaderProps } from './SiteHeader'
 export { SiteMenuSwitcher } from './SiteMenuSwitcher'
 export type { SiteMenuSwitcherProps } from './SiteMenuSwitcher'
+// The dev-tools dropdown that sits BESIDE the site menu (AdhHeader's `debugMenu`
+// slot). Everything build-gated or admin-gated lives in here and nowhere else, which
+// is what lets SiteMenu above be the same menu in a dev build and a shipped one.
+export { DevToolsMenu } from './DevToolsMenu'
+export type { DevToolsMenuProps } from './DevToolsMenu'
 // The two config-only menus behind the SiteMenuSwitcher dispatcher + their shared base
 // — exported so demos/tests can render a specific auth state directly (the
 // dispatcher itself picks by route).

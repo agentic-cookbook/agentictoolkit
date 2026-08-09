@@ -845,6 +845,7 @@ function AdhHeader({
   sites,
   onSwitchSite,
   siteSwitcher,
+  debugMenu,
   pageTitle,
   center,
   badges = [],
@@ -870,15 +871,18 @@ function AdhHeader({
     /* @__PURE__ */ jsx9(PreviewNotice, { notice: previewNotice, detail: previewDetail }),
     /* @__PURE__ */ jsxs6("div", { className: "adh-header__container", children: [
       /* @__PURE__ */ jsxs6("div", { className: "adh-header__lead", children: [
-        siteSwitcher ?? /* @__PURE__ */ jsx9(
-          SiteSwitcher,
-          {
-            siteName,
-            siteNameHref,
-            sites,
-            onSwitchSite
-          }
-        ),
+        /* @__PURE__ */ jsxs6("div", { className: "adh-header__brand-row", children: [
+          siteSwitcher ?? /* @__PURE__ */ jsx9(
+            SiteSwitcher,
+            {
+              siteName,
+              siteNameHref,
+              sites,
+              onSwitchSite
+            }
+          ),
+          debugMenu
+        ] }),
         badges.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__badges", "aria-hidden": "true", children: badges.map((badge) => (
           // The ui Badge owns the skin; the adh-header__badge* classes stay
           // as stable hooks — they're a theme-editor surface.

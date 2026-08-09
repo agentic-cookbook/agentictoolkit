@@ -61,6 +61,16 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  default and the slot are mutually exclusive by
      *  construction: when this is set the default is not rendered at all. */
     siteSwitcher?: ReactNode;
+    /** A second dropdown rendered immediately AFTER the switcher, on the same row.
+     *
+     *  Its own slot rather than something the caller folds into `siteSwitcher`,
+     *  because the point of it is that the two menus are INDEPENDENT: adh fills this
+     *  with its dev-tools menu, which appears only in a dev build or for an admin,
+     *  and the switcher beside it must render identically either way. A caller that
+     *  nested the two would put the disappearing thing inside the one that must not
+     *  change. Empty/absent on every other host, and absent here whenever the menu
+     *  is locked — the row simply holds one child then. */
+    debugMenu?: ReactNode;
     /** Optional page/section title, shown centered in the bar. */
     pageTitle?: string;
     /** Optional interactive content centered in the bar (e.g. a live status
@@ -111,5 +121,5 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

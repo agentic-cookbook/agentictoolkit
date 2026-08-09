@@ -9,28 +9,29 @@ import { DEBUG_SECTION } from './debugSiteGroups'
 import { menuIcon } from './menu-icons'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The dev-only tail of the site menu: a "Routes" flyout (this site's own routes)
-// and a "Debug Options" row (opens the Debug console). Both used to be pills in
-// the header bar; they live in the menu now so the header fits a phone.
+// The second half of the header's dev-tools dropdown: a "Routes" flyout (this
+// site's own routes) and a "Debug Options" row (opens the Debug console). Both
+// used to be pills in the header bar, then rows at the tail of the site menu;
+// they are their own menu now, so the site menu ships unchanged between builds.
 //
-// Appended after the Marketing/Main site-family flyouts and sharing their
-// DEBUG_SECTION, so the whole dev tail reads as one contiguous run (a divider
-// falls between sections, never within one).
+// Rendered after the Marketing/Main site-family flyouts and sharing their
+// DEBUG_SECTION, so the whole menu reads as one contiguous run (a divider falls
+// between sections, never within one).
 //
 // Pure (no hooks/DOM) so the env gating below — the part that must never leak a
 // debug affordance to an ordinary production visitor — is unit-testable.
-// {@link SiteMenu} supplies the envs and the admin unlock.
+// {@link DevToolsMenu} supplies the envs and the admin unlock.
 
 /**
  * Whether this BUILD carries the dev tooling for everyone: true in the three dev
  * envs, false in production. See {@link DEV_BUILD} for the folding rules — this is
- * that same flag under the name the site menu has always used for it.
+ * that same flag under the name the header's dev tooling has always used for it.
  *
- * NOT the only door anymore: a signed-in adh admin unlocks the same rows at
- * runtime in ANY env, production included (see {@link SiteMenu}'s
- * `devToolsUnlocked` and DevToolsOptions.adminUnlocked). That admin unlock is why
- * a dev affordance that must NOT exist in production can't rely on this flag alone
- * — the site-theme editor is gated on DEV_BUILD directly for exactly that reason.
+ * NOT the only door: a signed-in adh admin unlocks the same menu at runtime in ANY
+ * env, production included (see {@link DevToolsMenu}'s `unlocked` and
+ * DevToolsOptions.adminUnlocked). That admin unlock is why a dev affordance that
+ * must NOT exist in production can't rely on this flag alone — the site-theme
+ * editor is gated on DEV_BUILD directly for exactly that reason.
  */
 export const DEV_TOOLS_BUILD_ENABLED = DEV_BUILD
 

@@ -16,12 +16,12 @@ describe('@agentic-toolkit/adh/server is the union of both pre-merge surfaces', 
     // The VALUES track whatever the family currently wears, and the two are INDEPENDENT:
     // DEFAULT_ADH_THEME is the always-on base/typography layer, DEFAULT_SITE_THEME the
     // palette layered over it. They were briefly the same key (`adh` IS the Iosevka cut,
-    // so the typography layer was also the presentation); `fishlamp` — the dark-always
-    // palette — is layered over that base now, which is the arrangement this file has to
+    // so the typography layer was also the presentation); `charcoal` — a full-palette
+    // theme — is layered over that base now, which is the arrangement this file has to
     // keep distinguishing, since a merge that collapsed the two exports would still pass
     // an assertion written as `toBe(DEFAULT_ADH_THEME)`.
     expect(server.DEFAULT_ADH_THEME).toBe('adh')
-    expect(server.DEFAULT_SITE_THEME).toBe('fishlamp')
+    expect(server.DEFAULT_SITE_THEME).toBe('charcoal')
   })
 
   // AdhThemeStyle is the symbol all 20 consumers actually import, and adh's is the

@@ -3,13 +3,13 @@ import { type PopoverEntry, type RouteSection } from '@agentic-toolkit/adh/heade
 /**
  * Whether this BUILD carries the dev tooling for everyone: true in the three dev
  * envs, false in production. See {@link DEV_BUILD} for the folding rules — this is
- * that same flag under the name the site menu has always used for it.
+ * that same flag under the name the header's dev tooling has always used for it.
  *
- * NOT the only door anymore: a signed-in adh admin unlocks the same rows at
- * runtime in ANY env, production included (see {@link SiteMenu}'s
- * `devToolsUnlocked` and DevToolsOptions.adminUnlocked). That admin unlock is why
- * a dev affordance that must NOT exist in production can't rely on this flag alone
- * — the site-theme editor is gated on DEV_BUILD directly for exactly that reason.
+ * NOT the only door: a signed-in adh admin unlocks the same menu at runtime in ANY
+ * env, production included (see {@link DevToolsMenu}'s `unlocked` and
+ * DevToolsOptions.adminUnlocked). That admin unlock is why a dev affordance that
+ * must NOT exist in production can't rely on this flag alone — the site-theme
+ * editor is gated on DEV_BUILD directly for exactly that reason.
  */
 export declare const DEV_TOOLS_BUILD_ENABLED: boolean;
 export declare function isDevEnv(env: SiteEnv | null): boolean;

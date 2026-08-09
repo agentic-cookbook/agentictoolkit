@@ -18,8 +18,8 @@ export type SiteMenuSwitcherProps = SiteMenuChromeProps
  * satellites, and signed out it renders the {@link MarketingSiteMenu}. All menu
  * logic lives in {@link SiteMenu}; the two configs are fully independent.
  *
- * REGISTRY-AWARE composition (adh's site menu taxonomy — recents, workspaces, dev
- * tools). Named `SiteMenuSwitcher` rather than `SiteSwitcher`: this package already
+ * REGISTRY-AWARE composition (adh's site menu taxonomy — recents, workspaces, the
+ * fleet tree). Named `SiteMenuSwitcher` rather than `SiteSwitcher`: this package already
  * has a `SiteSwitcher` — the registry-FREE primitive (plain caller-supplied
  * `sites` list, no menu taxonomy) that `AdhHeader`'s `siteSwitcher` slot expects.
  * The two are unrelated components that happen to share a role name; this one is

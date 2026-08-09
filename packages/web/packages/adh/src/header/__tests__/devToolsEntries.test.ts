@@ -3,8 +3,8 @@ import { buildDevToolsEntries, isDevEnv } from '../devToolsEntries'
 import { type PopoverEntry, type RouteSection } from '@agentic-toolkit/adh/header'
 import { type SiteEnv } from '@agentic-toolkit/adh-registry'
 
-// The dev-only tail of the site menu: the "Routes" flyout + the "Debug Options"
-// row. The safety property under test is that NEITHER can leak to an ordinary
+// The second half of the dev-tools dropdown: the "Routes" flyout + the "Debug
+// Options" row. The safety property under test is that NEITHER can leak to an ordinary
 // production visitor — while a signed-in adh admin (adminUnlocked) gets BOTH in
 // every env, production included. Separately: the two rows read DIFFERENT envs
 // on purpose (see devToolsEntries.ts): Routes follows the EFFECTIVE env, Debug

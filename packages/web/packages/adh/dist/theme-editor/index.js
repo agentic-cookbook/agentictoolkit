@@ -50,7 +50,7 @@ function FooterPreview() {
 }
 function SiteMenuPreview() {
   return /* @__PURE__ */ jsxs("div", { className: "flex items-center gap-3 p-5", children: [
-    /* @__PURE__ */ jsx(SiteMenuSwitcher, { currentSiteId: "hub", suppressDevTools: true }),
+    /* @__PURE__ */ jsx(SiteMenuSwitcher, { currentSiteId: "hub" }),
     /* @__PURE__ */ jsx("span", { className: "font-mono text-xs text-apt-text-dim", children: "\u2190 click to open the menu" })
   ] });
 }
