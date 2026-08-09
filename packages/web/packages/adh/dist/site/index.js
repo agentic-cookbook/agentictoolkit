@@ -12,6 +12,9 @@ function defineSite(site) {
     seo: site.seo,
     robotsDisallow: site.robotsDisallow ?? FAMILY_ROBOTS_DISALLOW,
     sitemap: site.sitemap,
+    homeGate: site.homeGate,
+    workspaceGate: site.workspaceGate,
+    authCallback: site.authCallback,
     shell: {
       siteId: site.id,
       header: site.header,

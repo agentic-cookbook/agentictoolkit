@@ -23,7 +23,12 @@
 // site never needs them.
 export { SiteHomeRoute } from './SiteHomeRoute'
 export { defineSiteHome, noSubPath } from './SiteHomeModel'
-export type { SiteHomeModel, SiteHomeContext, SiteHomeScope } from './SiteHomeModel'
+export type {
+  SiteHomeModel,
+  SiteHomeContext,
+  SiteHomeScope,
+  SiteHomeShellProps,
+} from './SiteHomeModel'
 export { SiteHomeShell } from './SiteHomeShell'
 export { WorkspaceBar } from './WorkspaceBar'
 export { WorkspacePicker } from './WorkspacePicker'

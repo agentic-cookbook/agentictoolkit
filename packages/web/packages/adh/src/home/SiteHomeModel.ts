@@ -1,7 +1,7 @@
 'use client'
 
 import { notFound } from 'next/navigation'
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import type { Workspace } from '@agentic-toolkit/data'
 
 // The contract a site implements to have a workspace landing view at `/<workspace>`.
@@ -48,6 +48,20 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
 }
 
 /**
+ * What a workspace shell is handed: the workspace as the URL spells it (absent at `/home`),
+ * and the site's own view as a FUNCTION to call once a workspace has actually resolved.
+ *
+ * Declared here rather than in SiteHomeShell so a site's model can name the type without
+ * importing the shell — and therefore without pulling `@agentic-toolkit/data` in behind it.
+ */
+export interface SiteHomeShellProps {
+  /** The workspace segment as it stands in the URL, if any. */
+  workspaceSlug?: string
+  /** The site's view. Called — not rendered — once a workspace is resolved AND in the URL. */
+  children: (scope: SiteHomeScope) => ReactNode
+}
+
+/**
  * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
  * it.
  */
@@ -74,6 +88,22 @@ export interface SiteHomeModel<View> {
   /** This site's workspace landing view. Called only once a workspace has resolved, so nothing
    *  here has to cope with an absent one. */
   render: (ctx: SiteHomeContext<View>) => ReactNode
+  /**
+   * This site's own shell around `render`, in place of the shared `<SiteHomeShell>`.
+   *
+   * The seam that lets `app/home/page.tsx` and `app/[workspace]/[[...path]]/page.tsx` be the
+   * same bytes in a site whose workspace chrome is not the family's. `hub` is the one that
+   * sets it, and for a reason that is a product question rather than a layout one: its picker
+   * carries teams and the per-workspace feature grants that decide which rows may open what,
+   * and the shared shell's `workspacesApi.list()` returns neither. Feeding those through the
+   * shared shell would mean either every site grows teams or the hub loses them — so the shell
+   * is the seam and the answer stays open.
+   *
+   * A shell owns three things and a replacement owes all three: resolving `/home`'s absent
+   * workspace and replacing the URL with it, holding `children` until that resolution agrees
+   * with the URL, and drawing the chooser. See SiteHomeShell for what each is defending.
+   */
+  shell?: ComponentType<SiteHomeShellProps>
 }
 
 /**

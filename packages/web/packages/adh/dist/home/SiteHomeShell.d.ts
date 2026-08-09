@@ -1,8 +1,12 @@
-import { type ReactElement, type ReactNode } from 'react';
-import type { SiteHomeScope } from './SiteHomeModel';
+import { type ReactElement } from 'react';
+import type { SiteHomeShellProps } from './SiteHomeModel';
 /**
  * The shared shell for a feature site's workspace route: one labelled workspace chooser in a bar
  * directly under the header, and below it that site's own HTDV scoped to the chosen workspace.
+ *
+ * The DEFAULT, not the only one: a site may declare `shell` on its model and get its own. One
+ * does — see SiteHomeModel.shell for which and why. Everything this file defends is owed by a
+ * replacement too, so read the reasons below before writing one.
  *
  * Every site that scopes to a workspace used to grow its own chooser inside its HTDV stack —
  * eating the widest column, reimplemented per feature package, and the answer did not travel.
@@ -22,12 +26,5 @@ import type { SiteHomeScope } from './SiteHomeModel';
  *
  * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
  */
-export declare function SiteHomeShell({ workspaceSlug, children, }: {
-    /** The workspace segment as it stands in the URL, if any. */
-    workspaceSlug?: string;
-    /** This site's HTDV. Called — not rendered — once a workspace is resolved AND in the URL, with
-     *  that workspace and the base already scoped to it. Sites do not implement this directly;
-     *  SiteHomeRoute does, from the site's SiteHomeModel. */
-    children: (scope: SiteHomeScope) => ReactNode;
-}): ReactElement;
+export declare function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement;
 //# sourceMappingURL=SiteHomeShell.d.ts.map

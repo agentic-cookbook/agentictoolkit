@@ -1,13 +1,13 @@
 'use client'
 
-import { useCallback, type ReactElement, type ReactNode } from 'react'
+import { useCallback, type ReactElement } from 'react'
 import { usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
 import { WorkspaceBar } from './WorkspaceBar'
 import { useWorkspaceRoute } from './useWorkspaceRoute'
 import { workspacePathTail } from './workspacePathTail'
-import type { SiteHomeScope } from './SiteHomeModel'
+import type { SiteHomeShellProps } from './SiteHomeModel'
 
 // Module scope, so its identity is stable: useResourceList takes `load` as a fetch dependency and
 // a new identity each render would loop.
@@ -16,6 +16,10 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
 /**
  * The shared shell for a feature site's workspace route: one labelled workspace chooser in a bar
  * directly under the header, and below it that site's own HTDV scoped to the chosen workspace.
+ *
+ * The DEFAULT, not the only one: a site may declare `shell` on its model and get its own. One
+ * does — see SiteHomeModel.shell for which and why. Everything this file defends is owed by a
+ * replacement too, so read the reasons below before writing one.
  *
  * Every site that scopes to a workspace used to grow its own chooser inside its HTDV stack —
  * eating the widest column, reimplemented per feature package, and the answer did not travel.
@@ -35,17 +39,7 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  *
  * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
  */
-export function SiteHomeShell({
-  workspaceSlug,
-  children,
-}: {
-  /** The workspace segment as it stands in the URL, if any. */
-  workspaceSlug?: string
-  /** This site's HTDV. Called — not rendered — once a workspace is resolved AND in the URL, with
-   *  that workspace and the base already scoped to it. Sites do not implement this directly;
-   *  SiteHomeRoute does, from the site's SiteHomeModel. */
-  children: (scope: SiteHomeScope) => ReactNode
-}): ReactElement {
+export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement {
   // `error` is not optional to read here. A failed list leaves `items` at its previous value —
   // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
   // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so

@@ -78,7 +78,35 @@ export interface SiteDefinition {
   /** Whether the cold-load silent-SSO probe runs on the site's non-landing routes
    *  (default `true`). See the prop's own doc on MarketingRootHtmlProps. */
   silentSso?: boolean
+  /** This site's gate for `/home`, in place of the family's `<HomeGate>`.
+   *
+   *  The same kind of seam as `header` and `providers`, opened for the same reason: one
+   *  site needing a different gate used to mean a different `app/home/layout.tsx`, and a
+   *  route file that differs is a route file nothing keeps in step. `hub` sets it because
+   *  it owns `/login` — an unauthenticated visitor goes there rather than out through the
+   *  cross-site SSO flow HomeGate performs. Omit and the family gate is used. */
+  homeGate?: SiteGate
+  /** This site's gate for `/<workspace>`, in place of the family's `<HomeGate>`. Separate
+   *  from `homeGate` because the two answer different questions: `/home` needs only a
+   *  signed-in caller, while `/<workspace>` names a principal the caller may not be a
+   *  member of. `hub` resolves that membership; the family's sites do not need to, because
+   *  the shared shell only ever puts a workspace of the caller's own in the URL. */
+  workspaceGate?: SiteGate
+  /** This site's SSO callback body, in place of the family's `<AuthCallback>`.
+   *
+   *  A ReactNode rather than a component type because the two take different props: the
+   *  family's exchanges a one-time `#code` for a session, and `hub` — which HOSTS the
+   *  authorization server — runs the fuller `<SsoCallback>` flow against its own auth
+   *  context. Omit and the family callback is used. */
+  authCallback?: ReactNode
 }
+
+/** A gate: a client component that decides whether the route below it may render at all.
+ *
+ *  Mounted from a SERVER layout, which is what keeps `robots: { index: false }` on the
+ *  route — a client component cannot export metadata, so a site whose gate is its layout
+ *  has no way to say "not indexable" and the gated pages end up in the index. */
+export type SiteGate = ComponentType<{ children: ReactNode }>
 
 /**
  * A site's assembled configuration: what `defineSite` returns and what every mount under
@@ -108,6 +136,17 @@ export interface SiteConfig {
    *  component's own props minus `children`, so adding a seam there is a compile error
    *  here rather than a field sites silently cannot pass. */
   shell: Omit<MarketingRootHtmlProps, 'children'>
+  /** The route seams, passed through undefaulted — see the fields of the same name on
+   *  SiteDefinition.
+   *
+   *  Undefaulted deliberately: the family's defaults live in `@agentic-toolkit/auth`, and
+   *  resolving them here would put that package's module graph (a token store and a
+   *  refresh timer at module scope) behind `app/robots.ts` and `app/sitemap.ts`, which
+   *  import this config and render no UI at all. The route file that mounts a gate is
+   *  already importing the default; the `??` belongs there. */
+  homeGate?: SiteGate
+  workspaceGate?: SiteGate
+  authCallback?: ReactNode
 }
 
 /**
@@ -123,6 +162,9 @@ export function defineSite(site: SiteDefinition): SiteConfig {
     seo: site.seo,
     robotsDisallow: site.robotsDisallow ?? FAMILY_ROBOTS_DISALLOW,
     sitemap: site.sitemap,
+    homeGate: site.homeGate,
+    workspaceGate: site.workspaceGate,
+    authCallback: site.authCallback,
     shell: {
       siteId: site.id,
       header: site.header,

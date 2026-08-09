@@ -153,10 +153,7 @@ function workspacePathTail(pathname) {
 // src/home/SiteHomeShell.tsx
 import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
-function SiteHomeShell({
-  workspaceSlug,
-  children
-}) {
+function SiteHomeShell({ workspaceSlug, children }) {
   const { items: workspaces, error } = useResourceList("workspaces", loadWorkspaces);
   const hrefFor = useCallback2((slug) => `/${slug}`, []);
   const pathname = usePathname() ?? "";
@@ -186,7 +183,8 @@ function SiteHomeRoute({ model }) {
   const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
   const workspaceSlug = params?.workspace;
   const view = model.parse(rest);
-  return /* @__PURE__ */ jsx4(SiteHomeShell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
+  const Shell = model.shell ?? SiteHomeShell;
+  return /* @__PURE__ */ jsx4(Shell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
 }
 
 // src/home/SiteHomeModel.ts

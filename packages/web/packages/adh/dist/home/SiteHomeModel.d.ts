@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react';
-import type { Workspace } from '@agentic-toolkit/data';
+import type { ComponentType, ReactNode } from 'react';
 /**
- * What the shell hands whatever it renders below itself. Every field is derived from the
+ * What the shell hands whatever it renders below itself. Both fields are derived from the
  * RESOLVED workspace, not from the URL segment the caller was handed — the two disagree while
  * resolution is in flight, and this scope only exists after they agree.
  */
@@ -12,21 +11,23 @@ export interface SiteHomeScope {
     /** `/${workspaceSlug}` — the base the site's own view is mounted at. Built here so no site
      *  builds it, and so the grammar changes in one place. */
     scopedBase: string;
-    /**
-     * The resolved workspace's own ROW, not just its slug — carried because the shell already has
-     * it and a feature that needs any of it otherwise has to fetch the same list a second time.
-     *
-     * `kind` is the field that earned this: a surface whose wording or shape differs between a
-     * personal workspace and an organization (the integrations site's first destination reads "My
-     * Integrations" vs "Org Integrations") can only ask the row. Re-fetching for one enum would
-     * duplicate the request this shell exists to own, and would answer LATER than the render that
-     * needs it, so the label would flip under the user's cursor on every mount.
-     */
-    workspace: Workspace;
 }
 /** A scope plus whatever this site's `parse` made of the segments below the workspace. */
 export interface SiteHomeContext<View> extends SiteHomeScope {
     view: View;
+}
+/**
+ * What a workspace shell is handed: the workspace as the URL spells it (absent at `/home`),
+ * and the site's own view as a FUNCTION to call once a workspace has actually resolved.
+ *
+ * Declared here rather than in SiteHomeShell so a site's model can name the type without
+ * importing the shell — and therefore without pulling `@agentic-toolkit/data` in behind it.
+ */
+export interface SiteHomeShellProps {
+    /** The workspace segment as it stands in the URL, if any. */
+    workspaceSlug?: string;
+    /** The site's view. Called — not rendered — once a workspace is resolved AND in the URL. */
+    children: (scope: SiteHomeScope) => ReactNode;
 }
 /**
  * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
@@ -55,6 +56,22 @@ export interface SiteHomeModel<View> {
     /** This site's workspace landing view. Called only once a workspace has resolved, so nothing
      *  here has to cope with an absent one. */
     render: (ctx: SiteHomeContext<View>) => ReactNode;
+    /**
+     * This site's own shell around `render`, in place of the shared `<SiteHomeShell>`.
+     *
+     * The seam that lets `app/home/page.tsx` and `app/[workspace]/[[...path]]/page.tsx` be the
+     * same bytes in a site whose workspace chrome is not the family's. `hub` is the one that
+     * sets it, and for a reason that is a product question rather than a layout one: its picker
+     * carries teams and the per-workspace feature grants that decide which rows may open what,
+     * and the shared shell's `workspacesApi.list()` returns neither. Feeding those through the
+     * shared shell would mean either every site grows teams or the hub loses them — so the shell
+     * is the seam and the answer stays open.
+     *
+     * A shell owns three things and a replacement owes all three: resolving `/home`'s absent
+     * workspace and replacing the URL with it, holding `children` until that resolution agrees
+     * with the URL, and drawing the chooser. See SiteHomeShell for what each is defending.
+     */
+    shell?: ComponentType<SiteHomeShellProps>;
 }
 /**
  * Declares a site's workspace-route model.

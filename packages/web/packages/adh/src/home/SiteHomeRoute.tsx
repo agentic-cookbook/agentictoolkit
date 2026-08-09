@@ -54,9 +54,14 @@ export function SiteHomeRoute<View>({ model }: { model: SiteHomeModel<View> }): 
   // grammar for 404s on the first render and asks the backend nothing.
   const view = model.parse(rest)
 
+  // The site's own shell, or the family's. Read from the model rather than chosen here because
+  // it is the same per-site declaration `parse` and `render` are — see SiteHomeModel.shell for
+  // the one site that sets it and why. Resolved on every render and not memoized: it is a
+  // field read, and the value is a module-scope component either way, so its identity is
+  // already stable and React remounts nothing.
+  const Shell = model.shell ?? SiteHomeShell
+
   return (
-    <SiteHomeShell workspaceSlug={workspaceSlug}>
-      {(scope) => model.render({ ...scope, view })}
-    </SiteHomeShell>
+    <Shell workspaceSlug={workspaceSlug}>{(scope) => model.render({ ...scope, view })}</Shell>
   )
 }
