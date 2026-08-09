@@ -33,11 +33,15 @@ var SITE_ROUTE_SEGMENTS = [
   "forum",
   "people",
   "topics",
-  // cookbook — the corpus lives under `docs` (below), but its nine section words are still
-  // spoken for: `next.config.ts` 308s `/<section>/:path*` into `/docs/<section>/:path*` so the
-  // book's original URLs keep resolving, and a redirect answers before any route does. This is
-  // the cost recorded in that site's `.claude/rules/site-design.md` — adding a section to the
-  // book adds a reserved slug for the whole family.
+  // cookbook — the corpus IS these nine words. Each is a real directory,
+  // `app/(reader)/<section>/[[...slug]]`, so `/guidelines/testing/test-pyramid` is a document's
+  // own address with nothing in front of it; the route group contributes no segment. They are
+  // reserved because a static segment beats `[workspace]`, not because a redirect claims them —
+  // there is no `/docs` prefix any more, and the entry in RESERVED_HANDLE_WORDS below is taste,
+  // not this site. `projects` is cookbook's ninth section directory as well as the hub's
+  // feature-page redirect, and is listed once, under the hub. This is the cost recorded in that
+  // site's `.claude/rules/site-design.md` — adding a section to the book adds a reserved slug
+  // for the whole family.
   "introduction",
   "principles",
   "guidelines",
