@@ -147,6 +147,11 @@ export default defineConfig({
     // 'use client' leaves imported from server modules (directive boundary again), and
     // SiteWordmark is published standalone so a site can render the mark without
     // pulling the landing page in behind it.
+    // The per-site declaration (`defineSite`) every family site's app/ tree reads. Its own
+    // entry rather than a member of marketing/index, because robots.ts, sitemap.ts and the
+    // details pages import a site's config too and none of them wants the landing deck
+    // behind it. No module state and no runtime self-imports, so it owes no `external`.
+    'site/index': 'src/site/index.ts',
     'marketing/index': 'src/marketing/index.ts',
     'marketing/LandingHeroGate': 'src/marketing/LandingHeroGate.tsx',
     'marketing/SiteWordmark': 'src/marketing/SiteWordmark.tsx',

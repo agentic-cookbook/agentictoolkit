@@ -206,6 +206,11 @@
       "development": "./src/debug-console/index.tsx",
       "import": "./dist/debug-console/index.js"
     },
+    "./site": {
+      "types": "./dist/site/index.d.ts",
+      "development": "./src/site/index.ts",
+      "import": "./dist/site/index.js"
+    },
     "./marketing": {
       "types": "./dist/marketing/index.d.ts",
       "development": "./src/marketing/index.ts",
