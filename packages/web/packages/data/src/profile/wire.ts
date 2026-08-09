@@ -2,13 +2,22 @@
 // `@agentic-toolkit/adh-api-types` — the convention every client in this package follows, so a
 // consumer needs one dependency to talk to the API rather than two that must agree.
 //
-// Sources, so a drift can be checked against something:
+// `__tests__/wire.test-d.ts` is what CHECKS the transcription — it measures every shape below
+// against the generated types and fails `tsc` on a rename, a removal or a retype. The generated
+// package is a devDependency reached only from that file, which the build excludes, so the rule
+// above still holds for everything that ships. Read the two together: without the gate, a
+// backend column rename leaves every consumer compiling and the field reading `undefined` in the
+// Profile editor and the public UserCard.
+//
+// Sources, and the operation the gate measures each against:
 //   SocialLink / Address   backend `db/schema/content.ts` (socialLinksInContent /
 //                          addressesInContent) — these two routes are hand-written
 //                          (`routes/ownerScopedContent.ts`) but keep the generic-CRUD wire shape,
-//                          which is the whole row.
+//                          which is the whole row. GET/POST `/content/social-links`,
+//                          `/content/addresses`.
 //   PrivacyGrant           backend `routes/privacy.ts` — a THREE-column projection, not the row.
-//   UsageRow               backend `lib/usage/summary.ts` `UsageSummaryRow`.
+//                          GET `/account/privacy`.
+//   UsageRow               backend `lib/usage/summary.ts` `UsageSummaryRow`. GET `/usage/summary`.
 
 // ── Owner-polymorphic profile content ─────────────────────────────────────────────────────
 //

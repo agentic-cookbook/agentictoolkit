@@ -57,7 +57,7 @@ export const organizationsApi = {
       return await authedJson<Organization>(`/api/organization/organizations/${enc(id)}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(compact(input as Record<string, unknown>)),
+        body: JSON.stringify(compact(input)),
       });
     } catch (err) {
       rethrowConflict(err, "That organization slug is already taken.");

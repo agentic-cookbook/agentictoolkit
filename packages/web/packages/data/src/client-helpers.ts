@@ -14,9 +14,10 @@ export const enc = encodeURIComponent;
  * absent optionals). `null` is preserved — it is an explicit "clear this column".
  *
  * Constrained to `object`, not `Record<string, unknown>`: a declared `interface` has no implicit
- * index signature, so the tighter bound accepted inline patch literals and REJECTED the wire
- * body interfaces right beside them — pushing every client to restate its columns instead of
- * naming the type it already ships. `Object.entries` needs nothing more than an object.
+ * index signature (an inline object type and a `type` alias do), so the tighter bound accepted
+ * inline patch literals and REJECTED the wire body interfaces right beside them — pushing every
+ * client to restate its columns instead of naming the type it already ships.
+ * `Object.entries` needs nothing more than an object.
  */
 export function compact<T extends object>(body: T): Partial<T> {
   return Object.fromEntries(

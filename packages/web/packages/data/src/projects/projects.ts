@@ -291,9 +291,11 @@ export const projectsApi = {
     );
   },
 
-  // The wire body IS the parameter type. Restating the columns here let `keyPrefix` reach the
-  // wire type and the endpoint while staying unsayable at the only call site a UI has — a
-  // divergence nothing catches until someone tries the rename. One name, one place.
+  /** PATCH the fields named, leaving every other one alone.
+   *
+   *  The wire body IS the parameter type. Restating the columns here let `keyPrefix` reach the
+   *  wire type and the endpoint while staying unsayable at the only call site a UI has — a
+   *  divergence nothing catches until someone tries the rename. One name, one place. */
   async update(id: string, patch: ProjectPatchBody): Promise<Project> {
     // `compact` keeps explicit null (it drops only undefined), so an
     // `archivedAt: null` un-archive is sent, not stripped.
