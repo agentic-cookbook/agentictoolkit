@@ -286,9 +286,10 @@ export const MAIN_SITE_IDS: SiteId[] = [
 ]
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',
-  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education', 'knowledgebases',
-  'narratives', 'notifications', 'personabuilder', 'personas', 'products', 'projects', 'recipes',
-  'registries', 'research', 'sites', 'storage', 'teambuilder', 'teamregistry', 'tools',
+  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education', 'gamification',
+  'integrations', 'knowledgebases', 'narratives', 'notebook', 'notifications', 'orgs',
+  'personabuilder', 'personas', 'products', 'projects', 'recipes', 'registries', 'research',
+  'sites', 'storage', 'teambuilder', 'teamregistry', 'tools',
 ]
 
 /** Sensible groupings for the site menu + footer overview, in display order.
@@ -299,13 +300,18 @@ export const MARKETING_SITE_IDS: SiteId[] = [
 export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   {
     label: 'Develop',
-    ids: ['bitbag', 'hub', 'cookbook', 'projects', 'narratives', 'devteam', 'toolkit', 'mcp', 'codereviews', 'research'],
+    ids: ['bitbag', 'hub', 'cookbook', 'projects', 'narratives', 'devteam', 'toolkit', 'mcp', 'codereviews', 'research', 'notebook'],
   },
   {
+    // orgs and integrations sit with the other things a workspace is CONFIGURED with —
+    // orgs beside teamregistry/teambuilder (the same tenancy layer, one level up),
+    // integrations beside authentication/notifications (an external service wired in).
     label: 'Build',
-    ids: ['personas', 'personabuilder', 'personaregistry', 'registries', 'teamregistry', 'teambuilder', 'myagenticteams', 'ecosystems', 'knowledgebases', 'storage', 'tools', 'sites', 'domains', 'authentication', 'devices', 'notifications', 'dashboards'],
+    ids: ['personas', 'personabuilder', 'personaregistry', 'registries', 'teamregistry', 'teambuilder', 'orgs', 'myagenticteams', 'ecosystems', 'knowledgebases', 'storage', 'tools', 'sites', 'domains', 'authentication', 'integrations', 'devices', 'notifications', 'dashboards'],
   },
-  { label: 'Sell', ids: ['products', 'customers', 'billing'] },
+  // gamification is configured PER PRODUCT (its root topic list is the workspace's
+  // products), so it belongs to the product group, not to Build.
+  { label: 'Sell', ids: ['products', 'customers', 'billing', 'gamification'] },
   {
     label: 'Learn & community',
     ids: ['academy', 'news', 'community', 'communities', 'hub-help', 'support'],
