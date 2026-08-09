@@ -236,6 +236,7 @@
       "development": "./src/marketing/MarketingSiteHeader.tsx",
       "import": "./dist/marketing/MarketingSiteHeader.js"
     },
+    "./family.css": "./dist/styles/adh-family.css",
     "./styles.css": "./dist/styles/adh-site.css",
     "./sources.css": "./sources.css",
     "./legal.css": "./dist/styles/adh-legal.css",
