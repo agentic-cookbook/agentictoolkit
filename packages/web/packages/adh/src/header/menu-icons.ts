@@ -10,9 +10,9 @@
 //   - a chrome key (for the non-site rows): 'home', 'workspaces', 'recents',
 //     'login', 'signup', 'routes', 'debug'.
 //   - a fleet-menu key (`iconKey`), for the rows the registry cannot name: the
-//     grouping topics that are no single site ('plan', 'build') and the
-//     destinations that have no registry entry yet ('organizations', 'notebook',
-//     'integrations', 'registry'). See fleetMenuGroups.
+//     grouping topics that are no single site ('plan', 'build'), the topic that
+//     deliberately does not wear its own site's glyph ('learn'), and the one
+//     destination with no registry entry at all ('registry'). See fleetMenuGroups.
 //
 // Icons reuse the glyph the platform already associates with the thing wherever
 // one exists (feature icons from hub `FEATURE_META`, the workspace type icons,
@@ -77,7 +77,6 @@ import {
   NotebookText,
   Package,
   Plug,
-  Puzzle,
   Route,
   School,
   ScrollText,
@@ -163,12 +162,11 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   // you decide before writing anything, blocks for the things you assemble after.
   plan: ClipboardList,
   build: Blocks,
-  // Destinations with no registry entry yet. Each reuses the glyph its eventual site
-  // would carry — 'organizations' the same Building as the in-hub `/organizations`
-  // route, so the two read as one destination once the site exists.
-  organizations: Building,
-  notebook: NotebookPen, // notes (agenticdevelopernotebook.com)
-  integrations: Puzzle,
+  // The one fleet destination with no registry entry at all: the family has no
+  // consultant-registry site, so Hire ▸ Registry is an absolute href that keys its
+  // own icon here (see fleetMenuGroups). Its three former neighbours — orgs,
+  // notebook and integrations — became registry sites, so they are keyed by site id
+  // among the marketing family below.
   registry: BookMarked, // hire's consultant registry
   // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
   // submenu already wears — a topic that duplicates one of its children's icons
@@ -213,8 +211,12 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   domains: Globe,
   ecosystems: Network, // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
   education: School,
+  gamification: Trophy, // matches the '/gamification' route
+  integrations: Plug, // matches the '/integrations' route
   knowledgebases: BookOpen, // matches FEATURE_META `knowledgebases`
+  notebook: NotebookPen, // "Notes" in the fleet menu
   notifications: Bell,
+  orgs: Building, // "Organizations" in the fleet menu
   personabuilder: UserCog, // configure personas
   personas: UserCircle, // matches FEATURE_META `personas` (+ the '/personas' route)
   products: Package,

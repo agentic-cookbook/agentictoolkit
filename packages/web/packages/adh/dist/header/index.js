@@ -1113,7 +1113,6 @@ import {
   NotebookText,
   Package,
   Plug,
-  Puzzle,
   Route,
   School,
   ScrollText,
@@ -1203,13 +1202,11 @@ var MENU_ICONS = {
   // you decide before writing anything, blocks for the things you assemble after.
   plan: ClipboardList,
   build: Blocks,
-  // Destinations with no registry entry yet. Each reuses the glyph its eventual site
-  // would carry — 'organizations' the same Building as the in-hub `/organizations`
-  // route, so the two read as one destination once the site exists.
-  organizations: Building,
-  notebook: NotebookPen,
-  // notes (agenticdevelopernotebook.com)
-  integrations: Puzzle,
+  // The one fleet destination with no registry entry at all: the family has no
+  // consultant-registry site, so Hire ▸ Registry is an absolute href that keys its
+  // own icon here (see fleetMenuGroups). Its three former neighbours — orgs,
+  // notebook and integrations — became registry sites, so they are keyed by site id
+  // among the marketing family below.
   registry: BookMarked,
   // hire's consultant registry
   // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
@@ -1262,9 +1259,17 @@ var MENU_ICONS = {
   ecosystems: Network,
   // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
   education: School,
+  gamification: Trophy,
+  // matches the '/gamification' route
+  integrations: Plug,
+  // matches the '/integrations' route
   knowledgebases: BookOpen,
   // matches FEATURE_META `knowledgebases`
+  notebook: NotebookPen,
+  // "Notes" in the fleet menu
   notifications: Bell,
+  orgs: Building,
+  // "Organizations" in the fleet menu
   personabuilder: UserCog,
   // configure personas
   personas: UserCircle,
@@ -1488,14 +1493,7 @@ var FLEET_MENU_GROUPS = [
       { route: "/details", label: "Details", description: "What the hub does" }
     ]
   }),
-  // No registry site yet (agenticdeveloperorgs.com), so an absolute href — see
-  // MenuLink's `href` variant for what that costs.
-  leaf({
-    href: "https://agenticdeveloperorgs.com",
-    label: "Organizations",
-    description: "Your organizations",
-    iconKey: "organizations"
-  }),
+  leaf({ site: "orgs" }),
   topic({
     label: "Learn",
     description: "Guides & courses",
@@ -1522,12 +1520,9 @@ var FLEET_MENU_GROUPS = [
     links: [
       { site: "projects" },
       { site: "narratives", description: "Your development story" },
-      {
-        href: "https://agenticdevelopernotebook.com",
-        label: "Notes",
-        description: "Your notebook",
-        iconKey: "notebook"
-      },
+      // The registry calls this site "Notebook"; the menu row is "Notes", so the
+      // registry's own tagline ("Notes & notebooks") would echo the row's label.
+      { site: "notebook", label: "Notes", description: "Your notebook" },
       { site: "research" }
     ]
   }),
@@ -1574,12 +1569,7 @@ var FLEET_MENU_GROUPS = [
       { site: "devices" },
       { site: "domains" },
       { site: "education" },
-      {
-        href: "https://agenticdeveloperintegrations.com",
-        label: "Integrations",
-        description: "Connect other tools",
-        iconKey: "integrations"
-      },
+      { site: "integrations" },
       { site: "registries" }
     ]
   }),
@@ -1589,6 +1579,8 @@ var FLEET_MENU_GROUPS = [
     link: { site: "consulting" },
     links: [
       { site: "consultants" },
+      // The family has no consultant-registry site, so this row is an absolute href —
+      // the last one in the tree. See MenuLink's `href` variant for what it costs.
       {
         href: "https://agenticdeveloperregistry.com",
         label: "Registry",

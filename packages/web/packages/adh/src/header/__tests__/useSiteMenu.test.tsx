@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Users, Hexagon, Puzzle } from 'lucide-react'
+import { Users, Hexagon, BookMarked } from 'lucide-react'
 import { DEV_DEPLOYMENT_ENVS } from '@agentic-toolkit/adh-registry/deployment-env'
 
 // useSiteMenu resolves the declarative config into PopoverEntry rows: icons from the
@@ -57,7 +57,7 @@ describe('useSiteMenu', () => {
     // A topic that IS a site wears that site's glyph without restating it.
     expect(topic(entries, 'Hub')?.icon).toBe(Hexagon)
     // A row with no registry site keys its own (see MenuLink's `href` variant).
-    expect(row(entries, 'href:https://agenticdeveloperintegrations.com')?.icon).toBe(Puzzle)
+    expect(row(entries, 'href:https://agenticdeveloperregistry.com')?.icon).toBe(BookMarked)
   })
 
   it('marks the current site, and points its row at a bare same-origin path', () => {
@@ -72,12 +72,14 @@ describe('useSiteMenu', () => {
     const { result } = renderHook(() =>
       useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', resolveHref }),
     )
-    const integrations = row(result.current.entries, 'href:https://agenticdeveloperintegrations.com')
-    expect(integrations?.href).toBe('https://agenticdeveloperintegrations.com')
-    expect(integrations?.current).toBeUndefined()
-    // Verbatim means verbatim: the wrap runs for its neighbours in the same submenu
-    // (see the SSO case below), so this is the row opting out, not the wrap being off.
-    expect(resolveHref).not.toHaveBeenCalledWith('https://agenticdeveloperintegrations.com')
+    const registry = row(result.current.entries, 'href:https://agenticdeveloperregistry.com')
+    expect(registry?.href).toBe('https://agenticdeveloperregistry.com')
+    expect(registry?.current).toBeUndefined()
+    // Verbatim means verbatim: the wrap DID run for its neighbour in the same submenu —
+    // Hire ▸ Consultants, asserted here rather than pointed at, so this reads as the row
+    // opting out and can never be the wrap being off for the whole render.
+    expect(row(result.current.entries, 'consultants')?.href).toContain('https://as.test/authorize?return=')
+    expect(resolveHref).not.toHaveBeenCalledWith('https://agenticdeveloperregistry.com')
   })
 
   // ── The workspace carry ────────────────────────────────────────────────────────

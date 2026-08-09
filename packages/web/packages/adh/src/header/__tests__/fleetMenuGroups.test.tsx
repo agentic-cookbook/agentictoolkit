@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { getSite } from '@agentic-toolkit/adh-registry'
+import { getSite, SITES } from '@agentic-toolkit/adh-registry'
 
 // The fleet tree — the family as nine top-level rows. Its contract is mostly about what
 // a reader SEES, so most of this resolves the config through the engine rather than
@@ -121,16 +121,31 @@ describe('FLEET_MENU_GROUPS', () => {
       if ('site' in link) expect(getSite(link.site), link.site).toBeTruthy()
   })
 
-  // The rows for sites that do not exist as an app yet. Each is a deliberate exception
-  // (see MenuLink's `href` variant) and each pays the same price, so they are pinned by
-  // name: a row that quietly joins this list has lost its per-env host and SSO wrap.
-  it('writes out an absolute URL only for the four destinations with no site', () => {
+  // The one destination the family has no site for. It is a deliberate exception (see
+  // MenuLink's `href` variant) and it pays the price, so it is pinned by name: a row that
+  // quietly joins this list has lost its per-env host, its SSO wrap and its `current`.
+  it('writes out an absolute URL only for the one destination with no site', () => {
     const raw = allLinks().filter((l): l is Extract<MenuLink, { href: string }> => 'href' in l)
-    expect(raw.map((l) => l.label)).toEqual(['Organizations', 'Notes', 'Integrations', 'Registry'])
+    expect(raw.map((l) => l.label)).toEqual(['Registry'])
     for (const l of raw) {
       expect(l.href, l.label).toMatch(/^https:\/\//)
       // Nothing can key its icon off a registry id it does not have.
       expect(l.iconKey, `${l.label} must name its own icon`).toBeTruthy()
+    }
+  })
+
+  // The half the pinned list above cannot see. A row is written `{ href }` BECAUSE the
+  // registry has no such site — so the day one ships, this row's URL becomes a registry
+  // host and the exception silently becomes a defect. That is not hypothetical: three
+  // rows here (Organizations, Notes, Integrations) sat absolute for exactly as long as it
+  // took another branch to add their registry entries, and nothing failed. The list above
+  // fails only when a row is ADDED; this fails when the registry catches one up.
+  it('has no absolute row pointing at a site the registry now has', () => {
+    const hosts = new Map(SITES.map((s) => [s.prodHost, s.id]))
+    for (const l of allLinks()) {
+      if (!('href' in l)) continue
+      const id = hosts.get(new URL(l.href).host)
+      expect(id, `${l.label} is site '${id}' now — make it { site: '${id}' }`).toBeUndefined()
     }
   })
 })

@@ -71,14 +71,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { route: '/details', label: 'Details', description: 'What the hub does' },
     ],
   }),
-  // No registry site yet (agenticdeveloperorgs.com), so an absolute href — see
-  // MenuLink's `href` variant for what that costs.
-  leaf({
-    href: 'https://agenticdeveloperorgs.com',
-    label: 'Organizations',
-    description: 'Your organizations',
-    iconKey: 'organizations',
-  }),
+  leaf({ site: 'orgs' }),
   topic({
     label: 'Learn',
     description: 'Guides & courses',
@@ -105,12 +98,9 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
     links: [
       { site: 'projects' },
       { site: 'narratives', description: 'Your development story' },
-      {
-        href: 'https://agenticdevelopernotebook.com',
-        label: 'Notes',
-        description: 'Your notebook',
-        iconKey: 'notebook',
-      },
+      // The registry calls this site "Notebook"; the menu row is "Notes", so the
+      // registry's own tagline ("Notes & notebooks") would echo the row's label.
+      { site: 'notebook', label: 'Notes', description: 'Your notebook' },
       { site: 'research' },
     ],
   }),
@@ -157,12 +147,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'devices' },
       { site: 'domains' },
       { site: 'education' },
-      {
-        href: 'https://agenticdeveloperintegrations.com',
-        label: 'Integrations',
-        description: 'Connect other tools',
-        iconKey: 'integrations',
-      },
+      { site: 'integrations' },
       { site: 'registries' },
     ],
   }),
@@ -172,6 +157,8 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
     link: { site: 'consulting' },
     links: [
       { site: 'consultants' },
+      // The family has no consultant-registry site, so this row is an absolute href —
+      // the last one in the tree. See MenuLink's `href` variant for what it costs.
       {
         href: 'https://agenticdeveloperregistry.com',
         label: 'Registry',
