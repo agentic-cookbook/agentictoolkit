@@ -89,22 +89,34 @@ export interface SiteDef {
   hasTesting: boolean
   /** Site exposes the shared auth-gated /home route (drives route carry). */
   hasHome: boolean
-  /** Shape of the site's authenticated WORKSPACE route — the path a cross-site
-   *  switch carries the active workspace slug onto (see {@link siteWorkspaceHref}).
-   *  The three shapes exist because the PR #197 rollout could not use one:
-   *   - `'root'`   → `/<slug>`      — 33 sites (`app/[workspace]/[[...path]]`).
-   *   - `'nested'` → `/home/<slug>` — cookbook, personaregistry, research, whose
-   *     one-segment routes a root `/<slug>` would swallow.
-   *   - `'hub'`    → `/<slug>/home` — the hub's own pre-existing shape.
-   *  Absent ⇒ the site has NO workspace route, and a switch from a workspace
-   *  falls back to its landing.
+  /** The site's authenticated WORKSPACE route — the path a cross-site switch carries
+   *  the active workspace slug onto (see {@link siteWorkspaceHref}).
    *
-   *  ⚠️ This is NOT derivable from `hasHome`, and must not be re-derived from it:
-   *  `community` has a `/home` (hasHome: true) but no `[workspace]` route at all,
-   *  so keying off `hasHome` would send every workspace switch to a 404. The
-   *  values are stamped from the actual route tree and held to it by
-   *  `registry.test.ts` ("workspaceRoute matches the route tree"). */
-  workspaceRoute?: 'root' | 'nested' | 'hub'
+   *  There is ONE shape now: `/<slug>`, `app/[workspace]/[[...path]]`, the same bytes in
+   *  every site that has one. The field once held three, because the PR #197 rollout could
+   *  not use one — cookbook, personaregistry and research nested theirs under `/home/<slug>`
+   *  to keep their own one-segment routes, and the hub hung its workspace off a public
+   *  profile at `/<slug>/home`. Both of those are gone: the root segment addresses a
+   *  principal on every site, and everything else took a static prefix.
+   *
+   *  So the remaining distinction is not the SHAPE but who can read a slug back OUT of a
+   *  path (see {@link siteWorkspaceSlug}):
+   *   - `'root'` — the template's sites. Their static top-level routes are the family's,
+   *     which is exactly {@link SITE_LANDING_SEGMENTS}, so this package can tell a slug
+   *     from a page.
+   *   - `'hub'`  — the hub, which serves top-level routes no other site has (`/login`,
+   *     `/explore`, `/settings`, …). The list of those is `reservedWorkspaceSlugs()` in
+   *     `@agentic-toolkit/adh`, which depends on this package and so cannot be read from
+   *     here; the hub's parse lives there with it.
+   *  Absent ⇒ the site has NO workspace route, and a switch from a workspace falls back
+   *  to its landing.
+   *
+   *  ⚠️ This is NOT derivable from `hasHome`, and must not be re-derived from it: `bitbag`,
+   *  `status` and `admin` are workspace-less, while `hub-help` has neither — a `/home` and a
+   *  `[workspace]` are separate facts about a site's route tree, and keying one off the other
+   *  would send a workspace switch to a 404. The values are stamped from the actual route
+   *  tree and held to it by `registry.test.ts` ("workspaceRoute matches the route tree"). */
+  workspaceRoute?: 'root' | 'hub'
   /** Part of the derived family roster ({@link LISTED_SITES}, and the footer
    *  interlinks under it). Defaults to true; set false to keep a site in the registry
    *  — so its own header still resolves a label and its pages keep serving — while
@@ -163,7 +175,7 @@ export const SITES: SiteDef[] = [
   { id: 'bitbag', label: 'Bitbag', fullLabel: 'Bitbag', description: 'The Agentic Developer persona', prodHost: 'bitbag.ai', hasStaging: true, hasTesting: true, hasHome: false, sectionLabel: 'Core platform' },
   // --- the core site family ---
   { id: 'hub', label: 'Hub', fullLabel: 'Agentic Developer Hub', description: 'The Agentic Developer Hub', prodHost: 'agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'hub', dividerBefore: true },
-  { id: 'cookbook', label: 'Cookbook', fullLabel: 'Agentic Developer Cookbook', description: 'Recipes & patterns', prodHost: 'agenticdevelopercookbook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'cookbook', label: 'Cookbook', fullLabel: 'Agentic Developer Cookbook', description: 'Recipes & patterns', prodHost: 'agenticdevelopercookbook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'projects', label: 'Projects', fullLabel: 'Agentic Developer Projects', description: 'Project planning', prodHost: 'agenticdeveloperprojects.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // narratives: the ecosystem-story site at agenticdevelopernarratives.com
   // (deployed in a later phase). It's ALSO an in-hub feature workspace at
@@ -175,7 +187,7 @@ export const SITES: SiteDef[] = [
   // real description rather than its own host — it is a footer interlink like
   // every other content site.
   { id: 'narratives', label: 'Narratives', fullLabel: 'Agentic Developer Narratives', description: 'Ecosystem stories', prodHost: 'agenticdevelopernarratives.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
-  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'devteam', label: 'Team', fullLabel: 'Agentic Developer Team', description: 'Your agentic dev team', prodHost: 'agenticdeveloperteam.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'toolkit', label: 'Toolkit', fullLabel: 'Agentic Developer Toolkit', description: 'The developer toolkit', prodHost: 'agenticdevelopertoolkit.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // myagenticteams: off-pattern consumer brand (not agenticdeveloper<x>.com), so
@@ -183,7 +195,7 @@ export const SITES: SiteDef[] = [
   { id: 'myagenticteams', label: 'My Teams', fullLabel: 'My Agentic Teams', description: 'Build your own agentic teams', prodHost: 'myagenticteams.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'mcp', label: 'MCP', fullLabel: 'Agentic Developer MCP', description: 'MCP server', prodHost: 'mcp.agenticdeveloperhub.com', hasStaging: true, hasTesting: false, hasHome: false, crawlable: false },
   // <gen:sites> managed by scaffold-sites.py — do not edit by hand
-  { id: 'community', label: 'Community', fullLabel: 'Agentic Developer Community', description: 'Forums & discussion', prodHost: 'agenticdevelopercommunity.com', hasStaging: true, hasTesting: true, hasHome: true, dividerBefore: true, sectionLabel: 'Developer platform' },
+  { id: 'community', label: 'Community', fullLabel: 'Agentic Developer Community', description: 'Forums & discussion', prodHost: 'agenticdevelopercommunity.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', dividerBefore: true, sectionLabel: 'Developer platform' },
   { id: 'support', label: 'Support', fullLabel: 'Agentic Developer Support', description: 'Get support', prodHost: 'agenticdevelopersupport.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'help', label: 'Help', fullLabel: 'Agentic Developer Help', description: 'Help topics', prodHost: 'agenticdeveloperhelp.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', listed: false },
   { id: 'hub-help', label: 'Help', fullLabel: 'Agentic Developer Hub Help', description: 'Help topics', prodHost: 'help.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false },
@@ -211,7 +223,7 @@ export const SITES: SiteDef[] = [
   { id: 'teambuilder', label: 'Team Builder', fullLabel: 'Agentic Team Builder', description: 'Build agentic teams', prodHost: 'agenticteambuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'codereviews', label: 'Code Reviews', fullLabel: 'Agentic Developer Code Reviews', description: 'Code reviews', prodHost: 'agenticdevelopercodereviews.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'personabuilder', label: 'Persona Builder', fullLabel: 'Agentic Persona Builder', description: 'Configure personas', prodHost: 'agenticpersonabuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
-  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'nested' },
+  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'orgs', label: 'Organizations', fullLabel: 'Agentic Developer Organizations', description: 'Manage organizations', prodHost: 'agenticdeveloperorgs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotebook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
@@ -549,27 +561,32 @@ export const HUB_WORKSPACE_SEGMENTS = new Set<string>([
  *  It sends the visitor to the SITE, never to the hub's own view of that site's
  *  feature (`/<slug>/<feature>`, see HUB_FEATURE_SEGMENT): the menu is a cross-site
  *  navigator, and picking "Storage" from it means the Storage site.
- *  The shape per site comes from {@link SiteDef.workspaceRoute}. */
+ *
+ *  One line, and that is the route convergence's whole point: this used to switch on
+ *  {@link SiteDef.workspaceRoute} for three destinations. The value still decides WHETHER
+ *  there is one — it is the fact that the site mounts `app/[workspace]` — but no longer
+ *  where, because every site that mounts it mounts the same bytes. */
 export function siteWorkspaceHref(target: SiteDef, slug: string): string | undefined {
-  if (!slug) return undefined
-  switch (target.workspaceRoute) {
-    case 'root':
-      return `/${slug}`
-    case 'nested':
-      return `/home/${slug}`
-    case 'hub':
-      return `/${slug}/home`
-    default:
-      return undefined
-  }
+  if (!slug || !target.workspaceRoute) return undefined
+  return `/${slug}`
 }
 
 /** The top-level path segments a `workspaceRoute: 'root'` site owns that are NOT a
  *  workspace slug. Those sites put their workspace at `/<slug>`, so its segment sits
  *  in the same position as every public page they ship — this is the set that tells
- *  the two apart, and it is exactly the static top-level routes those 33 sites have
+ *  the two apart, and it is exactly the static top-level routes those sites have
  *  (asserted against the generated route map by registry.test's lockstep case, so a
- *  page added at a site's root fails there until it is listed here).
+ *  page added at a site's root fails there until it is listed here, and a page retired
+ *  fails until it is removed).
+ *
+ *  It is the UNION over those sites, not a per-site set, and after the route convergence
+ *  that union is no longer just the template's seven: the sites whose own routes used to
+ *  force a nested workspace now put it at the root beside them, so cookbook's nine corpus
+ *  sections and community's board are in here too. Listing a segment one site owns costs
+ *  the others nothing — every one of these is already reserved family-wide by
+ *  `SITE_ROUTE_SEGMENTS` in `@agentic-toolkit/adh/site`, so no workspace can be named any
+ *  of them anywhere, and a segment that reads as "not a slug" on a site that does not serve
+ *  it is a page that 404s either way.
  *
  *  Only the STATIC ones can be listed, so an unknown segment (`/typo`) reads as a
  *  workspace slug. That is deliberate rather than tolerated: a slug the destination
@@ -577,34 +594,65 @@ export function siteWorkspaceHref(target: SiteDef, slug: string): string | undef
  *  unknown slug with the user's real workspace. A wrong guess here costs a redirect;
  *  the alternative — refusing to carry any slug — costs the carry on every site. */
 export const SITE_LANDING_SEGMENTS = new Set<string>([
+  // The template's own — every site in the family serves these.
   'auth',
-  'demo',
   'details',
   'home',
   'privacy',
   'terms',
   'tour',
+  // cookbook — the corpus IS these nine words, each an `app/(reader)/<section>/[[...slug]]`
+  // directory with nothing in front of it. `projects` and `recipes` are section names as
+  // well as sibling sites' ids; that collision is only about this set, not about the ids.
+  'appendix',
+  'compliance',
+  'guidelines',
+  'ingredients',
+  'introduction',
+  'principles',
+  'projects',
+  'recipes',
+  'reference',
+  // community — the forum. `forum` is the board that was this site's `/home` until `/home`
+  // became the family's workspace redirect.
+  'admin',
+  'categories',
+  'discussions',
+  'forum',
+  'people',
+  'topics',
+  // personaregistry — the two public namespaces beside the workspace, plus profiles.
+  'org',
+  'persona',
+  'user',
+  // research — public papers and the search page.
+  'papers',
+  'search',
+  // integrations — the OAuth return the site owns at its own root.
+  'integrations',
+  // toolkit — the component demo.
+  'demo',
 ])
 
 /** The workspace slug `pathname` names on `site`, or null when it names none — the
- *  exact inverse of {@link siteWorkspaceHref}, and what the site menu reads to carry
- *  the visitor's CURRENT workspace across a site switch.
+ *  inverse of {@link siteWorkspaceHref}, and what the site menu reads to carry the
+ *  visitor's CURRENT workspace across a site switch.
  *
  *  Only meaningful for an authenticated visitor: every workspace route in the family
  *  sits behind an auth gate, so a signed-out path that happens to parse is not one.
- *  The caller owns that check (see useSiteMenu). */
+ *  The caller owns that check (see useSiteMenu).
+ *
+ *  ⚠️ Answers for a `'root'` site only. Building a workspace path needs nothing but the
+ *  slug, but reading one back needs the list of first segments that are NOT slugs, and
+ *  the hub's is its own — `reservedWorkspaceSlugs()` in `@agentic-toolkit/adh`, a package
+ *  that depends on this one. So the hub returns null here and `useSiteMenu` asks
+ *  `hubWorkspaceSlug` for it directly, which is the only caller either has. Answering
+ *  the hub from {@link SITE_LANDING_SEGMENTS} instead would be worse than refusing: it
+ *  is the template's set, so `/login` and `/explore` would read as workspace slugs. */
 export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | null {
-  const segs = (pathname || '/').split('/').filter(Boolean)
-  switch (site.workspaceRoute) {
-    case 'hub':
-      return hubWorkspaceSlug(pathname)
-    case 'nested':
-      return segs[0] === 'home' && segs[1] ? segs[1] : null
-    case 'root':
-      return segs[0] && !SITE_LANDING_SEGMENTS.has(segs[0]) ? segs[0] : null
-    default:
-      return null
-  }
+  if (site.workspaceRoute !== 'root') return null
+  const seg = (pathname || '/').split('/').filter(Boolean)[0]
+  return seg && !SITE_LANDING_SEGMENTS.has(seg) ? seg : null
 }
 
 /** Resolve an absolute URL to a specific path on another site, in the current

@@ -86,17 +86,19 @@ describe('useSiteMenu', () => {
   // This menu is a cross-site navigator: from inside a workspace, picking another site
   // lands in the SAME workspace on THAT site, at that site's own workspace route.
   describe('workspace carry', () => {
-    it('carries the slug to each site shape, from a `root` site', () => {
-      // storage puts its workspace at /<slug>; the row for a 'nested' site must arrive
-      // at /home/<slug> and the hub at /<slug>/home — never at the raw path we came from.
+    it('carries the slug as ONE shape — `/<slug>` — to every site in the family', () => {
+      // The three rows that used to disagree, asserted together because agreeing is the
+      // point: `projects` was already `/<slug>`, `cookbook` arrived at `/home/<slug>` and
+      // the hub at `/<slug>/home`. All three are `/<slug>` now, so a site's shape is no
+      // longer something the carry has to know — and never the raw path we came from.
       const entries = at('agenticdeveloperstorage.com', '/acme/buckets', () =>
         renderHook(() =>
           useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage', authenticated: true }),
         ).result.current.entries,
       )
       expect(row(entries, 'projects')?.href).toBe('https://agenticdeveloperprojects.com/acme')
-      expect(row(entries, 'cookbook')?.href).toBe('https://agenticdevelopercookbook.com/home/acme')
-      expect(topic(entries, 'Hub')?.href).toBe('https://agenticdeveloperhub.com/acme/home')
+      expect(row(entries, 'cookbook')?.href).toBe('https://agenticdevelopercookbook.com/acme')
+      expect(topic(entries, 'Hub')?.href).toBe('https://agenticdeveloperhub.com/acme')
       // The site we are already on stays a bare path — and stays IN the workspace.
       expect(row(entries, 'storage')?.href).toBe('/acme')
     })
@@ -116,9 +118,12 @@ describe('useSiteMenu', () => {
           useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'storage', authenticated: true }),
         ).result.current.entries,
       )
-      // community has a /home but no [workspace] route — the reason `workspaceRoute`
-      // exists as a field rather than being read off `hasHome`.
-      expect(row(entries, 'community')?.href).toBe('https://agenticdevelopercommunity.com/')
+      // status is a deployed site with no workspace at all — no `hasHome`, no
+      // `workspaceRoute`. It is the reason `workspaceRoute` is a field rather than a
+      // thing read off the route tree: a site can be in the menu and in the fleet and
+      // still have nowhere for a workspace slug to land. (community used to be this
+      // example, and stopped being one the day it grew an `app/[workspace]`.)
+      expect(row(entries, 'status')?.href).toBe('https://status.agenticdeveloperhub.com/')
     })
 
     it('carries nothing signed OUT, where a first segment is only a public page', () => {
@@ -167,13 +172,17 @@ describe('useSiteMenu', () => {
     expect(result.current.homeHref.length).toBeGreaterThan(0)
   })
 
-  it('resolves homeHref against personalSlug off a hub workspace path (the apex)', () => {
-    // usePathname is '/' (the apex) — no active workspace slug — so the hub's Home must
-    // fall back to the personal slug instead of a slug-less /home, which redirects blind.
+  it('leaves homeHref slug-less on the hub, even holding a personalSlug', () => {
+    // `/home` is the family's "take me to my workspace" URL: it resolves the stored
+    // preference (falling back to the user's own workspace) and replaces itself with
+    // `/<workspace>`. So it is a redirect SIGNAL, not a page under a slug — prefixing it
+    // to `/me/home` would name a route no site has since the workspace moved to the root
+    // segment. Asserted while holding a personalSlug, because that is exactly the input
+    // that used to produce the prefix.
     const { result } = renderHook(() =>
       useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', personalSlug: 'me' }),
     )
-    expect(result.current.homeHref).toBe('/me/home')
+    expect(result.current.homeHref).toBe('/home')
   })
 
   // The cross-site theme carry: picking a theme on one site and hopping to another keeps

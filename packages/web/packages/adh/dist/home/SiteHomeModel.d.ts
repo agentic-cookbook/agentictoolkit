@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
+import type { Workspace } from '@agentic-toolkit/data';
 /**
- * What the shell hands whatever it renders below itself. Both fields are derived from the
+ * What the shell hands whatever it renders below itself. Every field is derived from the
  * RESOLVED workspace, not from the URL segment the caller was handed — the two disagree while
  * resolution is in flight, and this scope only exists after they agree.
  */
@@ -11,6 +12,17 @@ export interface SiteHomeScope {
     /** `/${workspaceSlug}` — the base the site's own view is mounted at. Built here so no site
      *  builds it, and so the grammar changes in one place. */
     scopedBase: string;
+    /**
+     * The resolved workspace's own ROW, not just its slug — carried because the shell already has
+     * it and a feature that needs any of it otherwise has to fetch the same list a second time.
+     *
+     * `kind` is the field that earned this: a surface whose wording or shape differs between a
+     * personal workspace and an organization (the integrations site's first destination reads "My
+     * Integrations" vs "Org Integrations") can only ask the row. Re-fetching for one enum would
+     * duplicate the request this shell exists to own, and would answer LATER than the render that
+     * needs it, so the label would flip under the user's cursor on every mount.
+     */
+    workspace: Workspace;
 }
 /** A scope plus whatever this site's `parse` made of the segments below the workspace. */
 export interface SiteHomeContext<View> extends SiteHomeScope {
