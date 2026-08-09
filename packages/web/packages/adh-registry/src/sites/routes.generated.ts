@@ -239,7 +239,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   ],
   hub: [
     '/',
-    '/[workspace]',
+    '/[workspace]/[[...path]]',
     '/[workspace]/all-data/[[...table]]',
     '/[workspace]/applications/[[...path]]',
     '/[workspace]/auth/[[...path]]',

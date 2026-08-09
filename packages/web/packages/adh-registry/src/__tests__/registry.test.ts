@@ -208,9 +208,6 @@ describe('LISTED_SITES (the family roster)', () => {
       // <gen:order> managed by scaffold-sites.py — do not edit by hand
       'community',
       'support',
-      // hub-help (help.adh.com) is the family's listed Help site; the old landing
-      // (id 'help') is delisted. HAND-MANAGED — adh's `.shipr` marks it `core`, not
-      // `generated`, so re-running scaffold-sites.py deletes this line.
       'hub-help',
       'news',
       'academy',
