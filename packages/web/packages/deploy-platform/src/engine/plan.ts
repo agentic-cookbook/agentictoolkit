@@ -47,9 +47,17 @@ export interface EndpointLite {
    *  `StatusAddApi` view of an endpoint, and is passed straight to `endpointUnconfigured`
    *  by `wireMatchingEndpoints`). Declared HERE because it was NOT, so a host that mapped
    *  its rows onto this type dropped the flag and the endpoint axis wired every opted-out
-   *  monitor anyway — a silent bug the type could have refused. Optional, and every reader
-   *  checks it against `true`: a caller with no such vocabulary means "not opted out". */
-  ignoreProjectWarning?: boolean;
+   *  monitor anyway — a silent bug the type could have refused.
+   *
+   *  REQUIRED, unlike {@link EndpointLike}'s, and the difference is deliberate.
+   *  `EndpointLike` is the classifier's INPUT: a host with no opt-out vocabulary at all
+   *  legitimately has nothing to say, so absence reads as "not opted out". `EndpointLite`
+   *  is an ADAPTER's output — the shape a host maps its own rows into, one field at a
+   *  time. There, omission is never a host without the vocabulary; it is a host that
+   *  forgot, which is exactly how the regression above shipped. Making the adapter name
+   *  the answer (`false` when it means false) is the only version of this the compiler
+   *  can check, and it costs one word per adapter. */
+  ignoreProjectWarning: boolean;
 }
 export interface ProjectLite {
   platform: string;

@@ -68,7 +68,7 @@ describe("runAutoConfigure — a derived slug can never strand a project", () =>
     // A Railway site already holds slug "shared" in g1. The Vercel project derives the SAME
     // base name — `(group, slug)` is UNIQUE, so creating it verbatim 409s, the project is
     // skipped, and it is skipped again on EVERY future run (nothing about it ever changes).
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://shared.com", kind: "http", environment: "production", platform: "vercel", deployProject: "shared-production" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://shared.com", kind: "http", environment: "production", platform: "vercel", deployProject: "shared-production", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-old", slug: "shared", groupId: "g1" }]),
       createEndpoint: vi.fn(async () => created),
@@ -96,6 +96,7 @@ describe("runAutoConfigure — a derived slug can never strand a project", () =>
         environment: null,
         platform: "vercel",
         deployProject: null, // unwired, so it can't sibling-match the next project
+        ignoreProjectWarning: false,
       })),
     });
 
@@ -119,11 +120,11 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
     // `lewis.agenticdeveloperhub.com` is a new site (no existing endpoint owns that host),
     // but the family already lives in g-adh — putting it in the fallback group would sit it
     // next to unrelated products while its siblings live elsewhere.
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
       ]),
       createEndpoint: vi.fn(async () => created),
     });
@@ -134,11 +135,11 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
   });
 
   it("falls back to the chosen group when the family is unknown, split, or provider-issued", async () => {
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://brandnew.example.org", kind: "http", environment: "production", platform: "vercel", deployProject: "brandnew" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://brandnew.example.org", kind: "http", environment: "production", platform: "vercel", deployProject: "brandnew", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
       ]),
       createEndpoint: vi.fn(async () => created),
     });
@@ -150,11 +151,11 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
 
   it("REPORTS the redirect — a site filed elsewhere than the chosen group comes back as a note", async () => {
     // Overriding the operator's pick silently reads as "it went where you said". It didn't.
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
       ]),
       createEndpoint: vi.fn(async () => created),
     });
@@ -166,7 +167,7 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
   });
 
   it("says nothing when the site landed in the group the operator actually chose", async () => {
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://brandnew.example.org", kind: "http", environment: "production", platform: "vercel", deployProject: "brandnew" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://brandnew.example.org", kind: "http", environment: "production", platform: "vercel", deployProject: "brandnew", ignoreProjectWarning: false };
     const api = makeApi({ createEndpoint: vi.fn(async () => created) });
 
     const res = await runAutoConfigure([proj("brandnew", "brandnew.example.org")], { api, create: { groupId: "g-other" } });
@@ -178,11 +179,11 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
   it("forceGroup makes the operator's pick AUTHORITATIVE — the domain-family rule is not consulted", async () => {
     // A board grouped by ENVIRONMENT, not product: the family rule would file a production
     // site under Testing because a testing endpoint happens to share its domain family.
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
       ]),
       createEndpoint: vi.fn(async () => created),
     });
@@ -196,15 +197,15 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
   it("a family SPLIT across two groups is ambiguous → the chosen group wins", async () => {
     // Two groups already hold sites in `agenticdeveloperhub.com`. Picking either half would
     // be a guess; the operator's selection is the only non-guess available.
-    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status" };
+    const created: EndpointLite = { id: "srv-1", siteId: "site-1", url: "https://lewis.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "railway", deployProject: "adh-status", ignoreProjectWarning: false };
     const api = makeApi({
       listSites: vi.fn(async () => [
         { id: "s-hub", slug: "hub", groupId: "g-adh" },
         { id: "s-two", slug: "two", groupId: "g-split" },
       ]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
-        { id: "e2", siteId: "s-two", url: "https://two.agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "two" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
+        { id: "e2", siteId: "s-two", url: "https://two.agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "two", ignoreProjectWarning: false },
       ]),
       createEndpoint: vi.fn(async () => created),
     });
@@ -221,13 +222,13 @@ describe("runAutoConfigure — new sites join their domain family's group", () =
     const api = makeApi({
       listSites: vi.fn(async () => [{ id: "s-hub", slug: "hub", groupId: "g-adh" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production" },
+        { id: "e1", siteId: "s-hub", url: "https://agenticdeveloperhub.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "hub-production", ignoreProjectWarning: false },
       ]),
       createSite: vi.fn(async () => ({ id: "site-1" })),
       createEndpoint: vi
         .fn()
         .mockRejectedValueOnce(new Error("boom"))
-        .mockResolvedValue({ id: "srv-2", siteId: "site-1", url: "https://two.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "vercel", deployProject: "two" }),
+        .mockResolvedValue({ id: "srv-2", siteId: "site-1", url: "https://two.agenticdeveloperhub.com", kind: "http", environment: "production", platform: "vercel", deployProject: "two", ignoreProjectWarning: false }),
     });
 
     // First create fails and rolls back; the second must still see g-adh owning the family.
@@ -249,6 +250,7 @@ describe("runAutoConfigure — real-id intra-run chaining", () => {
       environment: "production",
       platform: "vercel",
       deployProject: "alpha",
+      ignoreProjectWarning: false,
     };
     const api = makeApi({ createEndpoint: vi.fn(async () => created) });
 
@@ -273,7 +275,7 @@ describe("runAutoConfigure — a renamed deploy project", () => {
     makeApi({
       listSites: vi.fn(async () => [{ id: "s1", slug: "mike", groupId: "g1" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s1", url: "https://mikefullerton.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "mikefullerton-com" },
+        { id: "e1", siteId: "s1", url: "https://mikefullerton.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "mikefullerton-com", ignoreProjectWarning: false },
       ]),
     });
 
@@ -298,7 +300,7 @@ describe("runAutoConfigure — a renamed deploy project", () => {
     const a = makeApi({
       listSites: vi.fn(async () => [{ id: "s1", slug: "lewis", groupId: "g1" }]),
       listAllEndpoints: vi.fn(async () => [
-        { id: "e1", siteId: "s1", url: "https://lewis.example.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "adh-status-monitoring-site" },
+        { id: "e1", siteId: "s1", url: "https://lewis.example.com", kind: "frontend", environment: "production", platform: "vercel", deployProject: "adh-status-monitoring-site", ignoreProjectWarning: false },
       ]),
     });
     const live = indexLiveProjects([{ platform: "railway", projectName: "adh-status" }], ["vercel", "railway"]);
@@ -399,8 +401,8 @@ describe("runAutoConfigure — match-only (no `create`)", () => {
     // The batch is SEQUENTIAL, so an unhandled throw would abandon every project after the
     // failing one — silently, since the run still resolves.
     const { api } = makeStore([
-      { id: "e1", siteId: "s1", url: "https://a.com", kind: "frontend", environment: null, platform: null, deployProject: null },
-      { id: "e2", siteId: "s2", url: "https://b.com", kind: "frontend", environment: null, platform: null, deployProject: null },
+      { id: "e1", siteId: "s1", url: "https://a.com", kind: "frontend", environment: null, platform: null, deployProject: null, ignoreProjectWarning: false },
+      { id: "e2", siteId: "s2", url: "https://b.com", kind: "frontend", environment: null, platform: null, deployProject: null, ignoreProjectWarning: false },
     ]);
     const orig = api.updateEndpoint;
     let n = 0;
@@ -425,6 +427,7 @@ describe("wireMatchingEndpoints — endpoint-axis wiring by full domain list", (
     environment: null,
     platform: null,
     deployProject: null,
+    ignoreProjectWarning: false,
     ...o,
   });
 

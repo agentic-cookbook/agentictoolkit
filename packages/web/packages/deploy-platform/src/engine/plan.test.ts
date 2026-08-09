@@ -8,6 +8,7 @@ const ep = (o: Partial<EndpointLite> & { id: string; siteId: string; url: string
   environment: null,
   platform: null,
   deployProject: null,
+  ignoreProjectWarning: false,
   ...o,
 });
 const proj = (projectName: string, domain: string | null, platform = "vercel"): ProjectLite => ({ platform, projectName, domain });
