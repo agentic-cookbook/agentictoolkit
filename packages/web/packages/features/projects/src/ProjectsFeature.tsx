@@ -12,6 +12,7 @@ import { projectsApi } from "@agentic-toolkit/data/projects";
 import { useResourceList } from "@agentic-toolkit/data";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
+import { ProjectsCommandPalette } from "./ProjectsCommandPalette";
 import { type BadgeVariant } from "./helpers";
 
 /**
@@ -168,49 +169,62 @@ export function ProjectsFeature({
   }));
 
   return (
-    <ResourceExplorer
-      all={all}
-      activeId={activeProjectId}
-      activeTopic={activeTopic}
-      activeLeafId={activeLeafId}
-      basePath={basePath}
-      items={projects}
-      reload={reload}
-      getId={(p) => p.id}
-      getLabel={(p) => p.name}
-      nameSuffix="Project"
-      itemIcon={<FolderKanban size={16} aria-hidden />}
-      topics={topics}
-      newLabel="New Project…"
-      landing={{
-        title: "All projects",
-        help: "Pick a project to view its overview, work items, and activity.",
-        emptyLabel: "No projects yet.",
-        getSublabel: (p) => p.status,
-        renderMeta: (p) => <StatusBadge status={p.status} />,
-      }}
-      renderDialog={(onClose, onCreated) => (
-        <CreateResourceDialog
-          ariaLabel="New project"
-          heading="New project"
-          blank={projectBlank}
-          validate={projectValidate}
-          create={(d) =>
-            projectsApi.create(
-              {
-                name: d.name.trim(),
-                description: d.description.trim() || undefined,
-              },
-              { workspace: workspaceSlug },
-            )
-          }
-          onClose={onClose}
-          onCreated={(project) => onCreated(project.id)}
-          renderForm={(draft, onChange, error) => (
-            <ProjectForm draft={draft} onChange={onChange} error={error} />
-          )}
-        />
-      )}
-    />
+    <>
+      {/* ⌘K. It sits beside the explorer rather than inside it because it is not part of the
+          hierarchy the explorer renders — it is a transient overlay that names a thing anywhere in
+          the workspace, including boards this rail is not showing. Mounted here, once per feature,
+          so the shortcut works from any topic without every pane knowing about it. */}
+      <ProjectsCommandPalette
+        basePath={basePath}
+        projects={projects}
+        workspaceSlug={workspaceSlug}
+        activeProjectId={activeProjectId}
+        activeTopic={activeTopic}
+      />
+      <ResourceExplorer
+        all={all}
+        activeId={activeProjectId}
+        activeTopic={activeTopic}
+        activeLeafId={activeLeafId}
+        basePath={basePath}
+        items={projects}
+        reload={reload}
+        getId={(p) => p.id}
+        getLabel={(p) => p.name}
+        nameSuffix="Project"
+        itemIcon={<FolderKanban size={16} aria-hidden />}
+        topics={topics}
+        newLabel="New Project…"
+        landing={{
+          title: "All projects",
+          help: "Pick a project to view its overview, work items, and activity.",
+          emptyLabel: "No projects yet.",
+          getSublabel: (p) => p.status,
+          renderMeta: (p) => <StatusBadge status={p.status} />,
+        }}
+        renderDialog={(onClose, onCreated) => (
+          <CreateResourceDialog
+            ariaLabel="New project"
+            heading="New project"
+            blank={projectBlank}
+            validate={projectValidate}
+            create={(d) =>
+              projectsApi.create(
+                {
+                  name: d.name.trim(),
+                  description: d.description.trim() || undefined,
+                },
+                { workspace: workspaceSlug },
+              )
+            }
+            onClose={onClose}
+            onCreated={(project) => onCreated(project.id)}
+            renderForm={(draft, onChange, error) => (
+              <ProjectForm draft={draft} onChange={onChange} error={error} />
+            )}
+          />
+        )}
+      />
+    </>
   );
 }

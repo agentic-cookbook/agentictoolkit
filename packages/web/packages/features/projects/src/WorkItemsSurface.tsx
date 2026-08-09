@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { useSearchParam } from "@agentic-toolkit/ui/hooks/useSearchParam";
+import { writeSearchParams } from "@agentic-toolkit/ui/lib/search-params";
 import {
   projectWorkItemsApi,
   type WorkItem,
@@ -43,6 +45,7 @@ import { useSavedViews } from "./useSavedViews";
 import { useViewMemory } from "./view-memory";
 import { EMPTY_VIEW_CONFIG, type WorkItemViewConfig } from "./saved-views";
 import { applyWorkItemFilter, isFilterActive, type WorkItemFilter } from "./filters";
+import { WORK_ITEM_PARAM } from "./work-item-link";
 import { ListView } from "./views/ListView";
 import { BoardView, type BoardCardDrop } from "./views/BoardView";
 import { TableView, type SortState } from "./views/TableView";
@@ -122,10 +125,19 @@ export function WorkItemsSurface({
   workspaceSlug?: string;
 }): ReactElement {
   const [moveError, setMoveError] = useState<string | null>(null);
-  // The open editor is internal state (the leaf carries the VIEW): `selectedId` is the item being
-  // edited. Creating is a MODAL, not a state of this pane — the detail always shows a real,
-  // selected record (see NewWorkItemDialog and the recipe's `must-create-in-modal`).
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  // The open editor is the URL's `?item=` (the leaf segment carries the VIEW): `selectedId` is the
+  // item being edited. Creating is a MODAL, not a state of this pane — the detail always shows a
+  // real, selected record (see NewWorkItemDialog and the recipe's `must-create-in-modal`).
+  //
+  // It is a search param rather than `useState` because this pane is no longer the only thing that
+  // opens a card: the command palette names one on a board the user was not looking at, and a
+  // deep-linked card has to survive a reload. Held in state and mirrored, those would be two copies
+  // — see work-item-link.ts for why the param, and not a sixth path segment.
+  const selectedId = useSearchParam(WORK_ITEM_PARAM);
+  const setSelectedId = useCallback(
+    (id: string | null) => writeSearchParams({ [WORK_ITEM_PARAM]: id }),
+    [],
+  );
   const [newOpen, setNewOpen] = useState(false);
   // The narrowing, held HERE rather than in the bar, for the same reason the items are: every
   // view renders the same subset, so a filter owned by one of them would be a different list per
@@ -419,7 +431,7 @@ export function WorkItemsSurface({
   );
 
   // Open the shared editor for an item (from any view's row/card click).
-  const onOpenItem = useCallback((id: string) => setSelectedId(id), []);
+  const onOpenItem = useCallback((id: string) => setSelectedId(id), [setSelectedId]);
 
   const closeEditor = () => setSelectedId(null);
 
@@ -456,6 +468,15 @@ export function WorkItemsSurface({
 
   const selected = selectedId ? (items ?? []).find((i) => i.id === selectedId) ?? null : null;
   const showEditor = selected !== null;
+
+  // A `?item=` naming a card this board does not have — deleted since the link was shared, or
+  // carried over from another project — clears itself once the real list has arrived. Guarded on
+  // `items !== null` so it never fires against the pre-load empty set and drops a good deep link one
+  // render before it could resolve.
+  useEffect(() => {
+    if (selectedId === null || items === null) return;
+    if (!items.some((i) => i.id === selectedId)) setSelectedId(null);
+  }, [selectedId, items, setSelectedId]);
 
   // What the board is showing, as the thing a saved view stores. `view` stands in as "list" only
   // while none is chosen, which is the one moment the bar is not on screen anyway.

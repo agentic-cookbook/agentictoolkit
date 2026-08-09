@@ -129,6 +129,16 @@ export { SelectionActions, type SelectionActionsProps } from "./selection-action
 export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
 export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"
 export { CreateResourceDialog, type CreateResourceDialogProps } from "./create-resource-dialog"
+// The command palette (⌘K) — the one surface that finds a thing by NAME rather than by place. It
+// renders the groups it is handed and filters nothing; `filterCommandItems` is the shared definition
+// of "matches", for a host narrowing its own static commands. Pairs with `hooks/useShortcut`.
+export {
+  CommandPalette,
+  filterCommandItems,
+  type CommandPaletteProps,
+  type CommandGroup,
+  type CommandItem,
+} from "./command-palette"
 export {
   UserCard,
   UserCardSkeleton,

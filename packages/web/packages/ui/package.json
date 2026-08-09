@@ -121,6 +121,16 @@
       "development": "./src/hooks/useExitGate.ts",
       "import": "./dist/hooks/useExitGate.js"
     },
+    "./hooks/useSearchParam": {
+      "types": "./dist/hooks/useSearchParam.d.ts",
+      "development": "./src/hooks/useSearchParam.ts",
+      "import": "./dist/hooks/useSearchParam.js"
+    },
+    "./hooks/useShortcut": {
+      "types": "./dist/hooks/useShortcut.d.ts",
+      "development": "./src/hooks/useShortcut.ts",
+      "import": "./dist/hooks/useShortcut.js"
+    },
     "./styles/globals.css": "./src/styles/globals.css",
     "./styles/components.css": "./src/styles/components.css",
     "./components/*": {

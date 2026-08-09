@@ -24,4 +24,47 @@ export function writeSearchParams(next: Record<string, string | null>): void {
     else url.searchParams.delete(key);
   }
   window.history.replaceState(null, "", url);
+  notify();
+}
+
+/* ── Watching the params ──────────────────────────────────────────────────────
+ *
+ * `history.replaceState` fires NOTHING — not `popstate`, not `hashchange` — so a param written by
+ * one component is invisible to another reading the same key. That was fine while every caller both
+ * wrote and read its own param, and stops being fine the moment the writer and the reader are two
+ * components (a command palette naming a row; the pane that opens it). This is the missing signal,
+ * and it stays here rather than in a React file so the store keeps no framework dependency —
+ * `useSearchParam` in ../hooks is the thin subscriber on top.
+ *
+ * `popstate` is folded in for the same reason: Back and Forward change the same params, and a reader
+ * that ignored them would keep showing what the user just navigated away from. */
+
+type Listener = () => void;
+
+const listeners = new Set<Listener>();
+
+function notify(): void {
+  // A copy, so a listener that unsubscribes itself while reacting can't skip the next one.
+  for (const listener of [...listeners]) listener();
+}
+
+/**
+ * Subscribe to search-param changes: every {@link writeSearchParams} call, plus the browser's own
+ * Back/Forward. Returns the unsubscribe. Client-only — on the server it is inert (and returns a
+ * no-op) rather than throwing, so a component may call it unconditionally.
+ *
+ * NOT a change DIFF: a listener fires on every write, including one that set the same value it
+ * already had. Compare in the reader — {@link readSearchParam} returns a primitive, so
+ * `useSyncExternalStore`'s own equality check does it for free.
+ */
+export function subscribeToSearchParams(listener: Listener): () => void {
+  if (typeof window === "undefined") return () => {};
+  // The `popstate` binding is refcounted by the listener set: attached with the first subscriber,
+  // removed with the last, so a page that never watches params never carries a listener.
+  if (listeners.size === 0) window.addEventListener("popstate", notify);
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) window.removeEventListener("popstate", notify);
+  };
 }

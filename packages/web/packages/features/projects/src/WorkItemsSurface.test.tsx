@@ -201,6 +201,10 @@ beforeEach(() => {
   // performs (see `useViewMemory`). Module scope also outlives `cleanup()`, so a filter one case
   // sets would still be narrowing the board in the next one.
   resetViewMemory();
+  // The OPEN ITEM is the URL's `?item=` (see work-item-link.ts), and jsdom keeps one document per
+  // test FILE — so a case that opened a card would leave the next one mounting straight into that
+  // card's editor instead of the list. Same class of survivor as the view memory above.
+  window.history.replaceState(null, "", "/");
   savedViewsList.mockResolvedValue([]);
   listForProject.mockResolvedValue([structuredClone(W1), structuredClone(W2)]);
   statusesList.mockResolvedValue([DONE, TODO_COL, DOING].map((s) => structuredClone(s))); // unsorted
