@@ -25,6 +25,11 @@ import { an } from "./lib/an";
  * PUT — which IS the rename, since the address is derived from the stored slug and the
  * route cascades the new one onto the handle and every descendant. The id this pane then
  * re-keys to is the server's derived answer (`updated.id`), not the typed identifier.
+ *
+ * THE FORM'S BASELINE IS THE DERIVED ADDRESS (prefix + the row's STORED SLUG), not the
+ * stored rdid — see `savedIdentifier` below. The distinction is invisible on a healthy
+ * row, where they are the same string, and it is the whole behaviour on a row whose
+ * handle drifted from its slug.
  */
 export function EcosystemSettingsPane({
   noun = "Ecosystem",
@@ -63,13 +68,30 @@ export function EcosystemSettingsPane({
 
   const active = items?.find((e) => e.id === ecosystemId);
 
-  // The fixed identifier prefix: the saved rdid's own type+scope (so an owner-scoped
+  // The fixed identifier prefix: a row's saved rdid's own type+scope (so an owner-scoped
   // product keeps `ecosystem.<owner>.` and a legacy top-level row keeps `ecosystem.`).
-  // A rdid-less row (uuid-addressed) falls back to top-level.
-  const prefix = active && isRdid(active.id) ? prefixFor("ecosystem", parseRdid(active.id).scope) : prefixFor("ecosystem");
+  // A rdid-less row (uuid-addressed) falls back to top-level. Taken PER ROW rather than
+  // once from `active`, because `savedIdentifier` below is rebuilt from it for whichever
+  // row the form hydrates from — and immediately after a rename that row is the one the
+  // hook re-selected, while `active` (keyed off the `ecosystemId` PROP) is briefly absent
+  // until the host navigates. Reading one row's slug through another row's prefix there
+  // would leave the form spuriously dirty on a save that succeeded.
+  const prefixOf = (e: Ecosystem) =>
+    isRdid(e.id) ? prefixFor("ecosystem", parseRdid(e.id).scope) : prefixFor("ecosystem");
+  const prefix = active ? prefixOf(active) : prefixFor("ecosystem");
   const scope = prefix.slice("ecosystem.".length).replace(/\.$/, "");
   const leafOf = (identifier: string) =>
     identifier.startsWith(prefix) ? identifier.slice(prefix.length) : identifier;
+
+  // THE ADDRESS THE ROW DERIVES TO — its parent chain plus its STORED SLUG — which is what
+  // this form edits and what a save is compared against. NOT `e.identifier`, the stored
+  // handle: the two agree for every row whose handle was last written by a slug rename, and
+  // disagree wherever a handle was written on its own (`PATCH /registry/identifiers/{rdid}`,
+  // a backfill, or a pre-2026-08-10 rename that cascaded the descendants and left this row's
+  // own handle behind — the hub's own product was in exactly that state). Seeding from the
+  // handle showed a "Slug" that was not the slug: typing the row's REAL slug read as a
+  // rename here, sent a value the server found unchanged, and saved nothing at all.
+  const savedIdentifier = (e: Ecosystem) => prefixOf(e) + e.slug;
 
   // The probe verdict the form's `validate` reads. It is STATE (not the derived value
   // below) because validate runs INSIDE useMasterDetailForm during render — before the
@@ -81,7 +103,7 @@ export function EcosystemSettingsPane({
     items,
     getId: (e) => e.id,
     blank: ecoBlank,
-    toInput: ecoToInput,
+    toInput: (e) => ({ ...ecoToInput(e), identifier: savedIdentifier(e) }),
     validate: (draft, others) => {
       if (!draft.name.trim()) return "Display name is required.";
       const slug = leafOf(draft.identifier.trim());
@@ -112,14 +134,27 @@ export function EcosystemSettingsPane({
     refresh,
   });
 
-  // Availability probe over the DERIVED identifier — skipped (null → "idle") while it
-  // matches the saved rdid, so opening Settings shows no status until the slug changes.
+  // Availability probe over the DERIVED identifier — skipped (null → "idle") while it matches
+  // the saved ADDRESS, so opening Settings shows no status until the slug changes.
   const draft = form.draft;
   const draftSlug = draft ? leafOf(draft.identifier.trim()) : "";
-  const changed = draft != null && (active == null || draft.identifier.trim() !== active.id);
+  const changed = draft != null && (active == null || draft.identifier.trim() !== savedIdentifier(active));
   const grammarOk = draftSlug !== "" && ecoCreateRdidValid(scope, draftSlug);
-  const probe = useRdidAvailability(changed && grammarOk ? prefix + draftSlug : null);
-  const derivedStatus: RdidAvailability = !draft || !changed ? "idle" : !grammarOk ? "invalid" : probe;
+  // AN ADDRESS THIS ROW ALREADY HOLDS IS NOT A COLLISION. `identifiersApi.exists` answers "does
+  // anything own this rdid", and on a drifted row the answer for the row's OWN handle is yes —
+  // itself. Probing it would report "already in use" and refuse the one save that heals the
+  // drift (setting the slug to what the handle already says), which is the most likely thing a
+  // user does when the two disagree. Unreachable on a healthy row: there the handle IS the saved
+  // address, so `changed` is already false and nothing is probed.
+  const targetsOwnHandle = active != null && grammarOk && prefix + draftSlug === active.id;
+  const probe = useRdidAvailability(changed && grammarOk && !targetsOwnHandle ? prefix + draftSlug : null);
+  const derivedStatus: RdidAvailability = !draft || !changed
+    ? "idle"
+    : !grammarOk
+      ? "invalid"
+      : targetsOwnHandle
+        ? "available"
+        : probe;
   useEffect(() => {
     if (derivedStatus !== status) setStatus(derivedStatus);
   }, [derivedStatus, status]);

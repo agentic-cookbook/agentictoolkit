@@ -11,7 +11,8 @@
 // for display + uniqueness); both map to the one backend `id`.
 //
 // Field map:
-//   UI identifier / id  <->  backend `id`            (the rdid; immutable)
+//   UI identifier / id  <->  backend `id`            (the rdid — the STORED handle)
+//   UI slug             <->  backend `slug`          (the row's own last segment)
 //   UI name             <->  backend `name`
 //   UI description      <->  backend `description`
 //   UI region           <->  backend `region`
@@ -57,6 +58,19 @@ function addressLeaf(identifier: string): string {
 export interface Ecosystem {
   id: string;
   identifier: string;
+  /**
+   * The stored slug — the row's OWN last segment, and the ONLY thing that moves its address.
+   *
+   * Exposed (rather than left to `identifier`'s last segment) because the two can disagree, and
+   * a settings form that edits "the slug" has to show the value the server will actually compare
+   * against. `identifier` is the STORED HANDLE; the address the row DERIVES to is
+   * `<parent chain>.<slug>`. A handle renamed on its own — `PATCH /registry/identifiers/{rdid}`,
+   * a backfill, or (before the 2026-08-10 fix) a rename whose cascade left the row's own handle
+   * behind — leaves the two divergent until the next slug write heals them. While they are
+   * divergent, presenting the handle's leaf as "the slug" makes retyping the row's REAL slug look
+   * like a rename and land as a no-op.
+   */
+  slug: string;
   name: string;
   description: string;
   region: string;
@@ -94,6 +108,7 @@ export function toEcosystem(r: EcosystemRow): Ecosystem {
   return {
     id: r.id,
     identifier: r.id,
+    slug: r.slug,
     name: r.name,
     description: r.description ?? "",
     region: r.region ?? "",
@@ -242,6 +257,14 @@ export const ecosystemsApi = {
     // is not the caller's to change (the form fixes it), so what differs is the last segment —
     // taken with {@link addressLeaf}, which is the server's own slice, so a malformed identifier
     // still lets the route reject the ADDRESS rather than a manufactured leaf/slug mismatch.
+    //
+    // The baseline is `id`, the STORED HANDLE, while a settings form supplies the address the row
+    // DERIVES to (`<parent chain>.<slug>` — see {@link Ecosystem.slug}). For the rows where those
+    // disagree this sends the row's own unchanged slug on every save, which is not a rename and is
+    // not treated as one: the route's locked value diff (`addressPatchMoves`) compares the stored
+    // slug against the submitted one and rules the write out before any cascade. A client-side
+    // baseline good enough to skip the field would need the slug this signature does not take, and
+    // getting it wrong the other way — withholding a real rename — is the failure that matters.
     const renamed = input.identifier != null && input.identifier !== id ? input.identifier : null;
     const body = compact({
       slug: renamed ? addressLeaf(renamed) : undefined,

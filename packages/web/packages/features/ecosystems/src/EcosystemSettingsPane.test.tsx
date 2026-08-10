@@ -13,8 +13,13 @@ import { render, screen, cleanup } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import type { Ecosystem } from "@agentic-toolkit/data/ecosystems";
 
+// The stub ECHOES the two props that carry the pane's answer to "what is this row's slug?", so
+// the sourcing test below asserts what the field was handed rather than what it rendered (the
+// real field is a controlled input in a package this file deliberately does not load).
 vi.mock("./EcosystemForm", () => ({
-  EcosystemFields: () => <div data-testid="eco-fields" />,
+  EcosystemFields: ({ prefix, slug }: { prefix: string; slug: string }) => (
+    <div data-testid="eco-fields" data-prefix={prefix} data-slug={slug} />
+  ),
   ecoCreateRdidValid: () => true,
   useRdidAvailability: () => "idle",
 }));
@@ -26,6 +31,7 @@ afterEach(cleanup);
 const WIDGETS: Ecosystem = {
   id: "ecosystem.acme.widgets",
   identifier: "ecosystem.acme.widgets",
+  slug: "widgets",
   name: "Widgets",
   description: "",
   region: "",
@@ -78,5 +84,27 @@ describe("EcosystemSettingsPane transfer seam", () => {
     const transfer = screen.getByTestId("transfer");
     const danger = screen.getByRole("region", { name: "Danger Zone" });
     expect(transfer.compareDocumentPosition(danger) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+// A row's rdid is the handle stored for it; its address is DERIVED from `<parent chain>.<slug>`.
+// They are the same string until something writes one without the other — a bare handle rename,
+// a backfill, or (before 2026-08-10) a slug rename whose cascade moved the descendants and left
+// the row's own handle behind. The hub's own product sat drifted that way, and the field labelled
+// "Slug" showed `agenticdeveloperhub` while the slug column said something else entirely.
+describe("EcosystemSettingsPane slug sourcing", () => {
+  const DRIFTED: Ecosystem = { ...WIDGETS, slug: "gadgets" };
+
+  it("hands the field the STORED SLUG, not the handle's last segment", () => {
+    renderPane({ ecosystemId: DRIFTED.id, items: [DRIFTED] });
+    const fields = screen.getByTestId("eco-fields");
+    expect(fields.getAttribute("data-slug")).toBe("gadgets");
+    // The scope still comes from the handle — a rename moves the leaf, never the parent chain.
+    expect(fields.getAttribute("data-prefix")).toBe("ecosystem.acme.");
+  });
+
+  it("shows the slug unchanged where handle and slug agree", () => {
+    renderPane();
+    expect(screen.getByTestId("eco-fields").getAttribute("data-slug")).toBe("widgets");
   });
 });
