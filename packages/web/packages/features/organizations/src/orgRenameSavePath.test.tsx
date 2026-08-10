@@ -5,7 +5,7 @@ import { describe, it, expect, afterEach, beforeEach, vi } from 'vitest'
 import { SettingsDirtyProvider } from '@agentic-toolkit/resource'
 
 // The provider mounts its own UnsavedChangesGuard when no rail host is above it — the same guard
-// the hub's WorkspaceChromeProvider mounts around every /[slug]/… route. That guard is the point
+// the hub's WorkspaceChromeProvider mounts around every /[workspace]/… route. That guard is the point
 // of these tests, so it must really be there.
 vi.mock('next/navigation', () => ({ useRouter: () => ({ push: vi.fn() }) }))
 vi.mock('@agentic-toolkit/auth', () => ({ reportUnexpectedAuthError: vi.fn() }))

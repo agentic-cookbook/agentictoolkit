@@ -9,7 +9,7 @@
  * else or plain 404s.
  *
  * That is why this lives in the toolkit rather than in a site. A slug is minted ONCE — it is
- * the principal's handle — and it is spent at the root of all 38 sites, so what may be
+ * the principal's handle — and it is spent at the root of all 42 sites, so what may be
  * reserved is a fact about the shared template, not about whichever site's form happens to
  * take the input. Two sites offer that form (personaregistry's settings pane and the hub's),
  * and each used to carry its own hand-written answer.
@@ -29,12 +29,12 @@
 /**
  * Top-level route segments the site template itself owns.
  *
- * Measured from the 38 `app/` trees, not assumed: `auth` and `home` exist in all 38 today,
+ * Measured from the 42 `app/` trees, not assumed: `auth` and `home` exist in all 42 today,
  * and `details`, `privacy`, `terms` and `tour` in every site that has been through the
  * template. They are listed unconditionally rather than per-site because the template is
  * what decides them — a site that lacks one today gets it on the next template change, and a
  * slug reserved slightly early costs a handle nobody has, while one reserved slightly late
- * costs a principal their address on 38 sites at once.
+ * costs a principal their address on 42 sites at once.
  */
 export const FAMILY_ROUTE_SEGMENTS: readonly string[] = [
   'auth', // app/auth — the SSO callback
@@ -44,7 +44,7 @@ export const FAMILY_ROUTE_SEGMENTS: readonly string[] = [
   'terms',
   'tour', // the landing deck's second route
   // Not a directory on any site: `marketingNextConfig` rewrites `/api/*` to the backend, so
-  // the segment is spoken for on all 38 without appearing in any `app/` tree.
+  // the segment is spoken for on all 42 without appearing in any `app/` tree.
   'api',
   // Next serves these from FILES at the root of `app/`, so they occupy the same segment as a
   // slug even though no directory names them.
@@ -62,13 +62,13 @@ export const FAMILY_ROUTE_SEGMENTS: readonly string[] = [
  * First URL segments an individual site adds beyond the template.
  *
  * Every one of these shadows a workspace on the site that owns it, and each is reserved on
- * all 38 anyway. That is the whole point of the list: a slug is minted once, so the question
+ * all 42 anyway. That is the whole point of the list: a slug is minted once, so the question
  * a mint form has to answer is not "is this free HERE" but "is this free ANYWHERE", and the
  * only list that can answer it is one list. Reserving cookbook's `papers`-shaped words on
  * academy costs a handle nobody holds; not reserving them costs a principal their address on
  * whichever site they forgot about.
  *
- * Measured from the 38 `app/` trees plus the two `next.config.ts` files that add redirects —
+ * Measured from the 42 `app/` trees plus the two `next.config.ts` files that add redirects —
  * a route group contributes nothing to the URL, so its children are first segments too, and a
  * redirect source occupies its segment as surely as a directory does. Regenerate the reading
  * rather than editing from memory; the sites move.
@@ -103,7 +103,11 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
   // (`login`, `signup`, `contact`, `settings` and `user` are below.) `old-landing` is the
   // superseded hero page, still routable and deliberately kept so, which makes it a segment
   // like any other. `features` is where the eight marketing pages moved to when the root
-  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`.
+  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`. The
+  // integrations SITE routes `integrations` too — `app/integrations/oauth-callback`, where a
+  // provider's OAuth redirect lands, at a path `oauthCallbackUrl()` builds from the window's own
+  // origin and so cannot vary per site. Every site that mounts that feature grows the same
+  // directory; the word is listed once.
   'features',
   'integrations',
   'join',
@@ -136,9 +140,35 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
 ]
 
 /**
+ * Segments a FEATURE'S OWN URL grammar matches literally, ahead of reading a slug.
+ *
+ * A fourth list rather than an entry in one of the three above, because the matcher is
+ * different and every one of those describes Next's router. A feature mounted under the
+ * workspace's catch-all parses the segments itself: `parseOrganizationsPath` compares the first
+ * one to `"all"` before treating it as an organization slug, so `/<workspace>/all` is the org-card
+ * landing and an organization slugged `all` has no address — the same shadowing a route directory
+ * does, with the feature's parser as the matcher instead of the router. Nothing under `app/` names
+ * the word, which is exactly why it needs writing down: there is no directory to read it off.
+ *
+ * Organizations is the feature that makes it matter, because it is the one whose resource id IS a
+ * claimable slug (`getId={(w) => w.slug}`). Teams, Projects and Ecosystems spend the identical
+ * word against opaque ids, where nothing can collide — but the word is listed once for the family
+ * either way, on the same reasoning as SITE_ROUTE_SEGMENTS: a slug is minted once, so the only
+ * question a form can answer is "is this free ANYWHERE".
+ *
+ * `frontend/tools/verify_reserved_route_slugs.py` re-derives these from the parser sources — both
+ * the comparison and the named constant one may be spelled as — and fails when a grammar starts
+ * matching a word neither list carries, so this cannot silently fall behind.
+ */
+export const GRAMMAR_SEGMENTS: readonly string[] = [
+  // organizations, teams, projects, ecosystems — `parse-path.ts`, the "all" landing.
+  'all',
+]
+
+/**
  * Names refused for a reason other than shadowing.
  *
- * Nothing here is reserved BECAUSE it shadows — that is what the two lists above are for.
+ * Nothing here is reserved BECAUSE it shadows — that is what the three lists above are for.
  * These are words a handle should not be able to claim because the handle appears next to the
  * site's own vocabulary, and `/admin`, `/login`, `/settings` read as the site speaking rather
  * than as a person.
@@ -227,6 +257,11 @@ export const RESERVED_HANDLE_WORDS: readonly string[] = [
  * lookup and a mixed-case entry would sit in the set matching nothing.
  */
 export function reservedWorkspaceSlugs(): ReadonlySet<string> {
-  const all = [...FAMILY_ROUTE_SEGMENTS, ...SITE_ROUTE_SEGMENTS, ...RESERVED_HANDLE_WORDS]
+  const all = [
+    ...FAMILY_ROUTE_SEGMENTS,
+    ...SITE_ROUTE_SEGMENTS,
+    ...GRAMMAR_SEGMENTS,
+    ...RESERVED_HANDLE_WORDS,
+  ]
   return new Set(all.map((s) => s.toLowerCase()))
 }

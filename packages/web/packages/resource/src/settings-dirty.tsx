@@ -60,13 +60,13 @@ export function useReportSettingsDirty(key: string, dirty: boolean): void {
  * mirrored into `anyDirty` STATE, because both bridges below are render values and a ref read
  * during render is not reactive:
  *
- *  - Inside a rail host (the hub's WorkspaceChromeProvider around every `/[slug]/…` route; a
+ *  - Inside a rail host (the hub's WorkspaceChromeProvider around every `/[workspace]/…` route; a
  *    feature site's RailHostBoundary) it publishes a {@link useRailExitGuard} entry while
  *    dirty. That is the host's ONE guard registry, so settings dirt reaches both the host's
  *    browser-level `UnsavedChangesGuard` (reload / tab close / link click / Back) and the
  *    composite `exitGuard` the stack consults before clearing a level (rail row switch,
  *    breadcrumb up).
- *  - With no host above (the `/home/settings` route, the header's User Settings overlay) there
+ *  - With no host above (the `/settings` route, the header's User Settings overlay) there
  *    is no chrome to mount that guard, so this mounts its own.
  *
  * Registration is gated on dirty, never on "a settings panel is mounted", so a clean pane never
