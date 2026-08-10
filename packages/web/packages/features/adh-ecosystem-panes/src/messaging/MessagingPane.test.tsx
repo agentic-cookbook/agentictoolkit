@@ -89,7 +89,7 @@ const readRegistry = () => fireEvent.click(screen.getByRole("button", { name: "R
 const expectRegistry = (state: "dirty" | "clean") =>
   expect(screen.getByText(`registry sees ${state}`)).toBeTruthy();
 
-// The pane renders under `/[slug]/products/…`, whose WorkspaceChromeProvider mounts a
+// The pane renders under `/[workspace]/products/…`, whose WorkspaceChromeProvider mounts a
 // SettingsDirtyProvider for the whole subtree. A half-composed message to a customer is exactly
 // the kind of work a rail switch, a breadcrumb, a link click or a reload used to discard in
 // silence — this form reported nothing, so all four went through without a word.

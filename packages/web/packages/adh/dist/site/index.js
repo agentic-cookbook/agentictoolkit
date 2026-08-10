@@ -160,8 +160,10 @@ var RESERVED_HANDLE_WORDS = [
   // than in SITE_ROUTE_SEGMENTS. The hub refused them anyway, on the grounds that a profile slug
   // reading as one of its own feature words is a URL nobody can parse at a glance, and that
   // judgement is kept. The first group mirrors `FEATURES` in the hub's `data/feature-routes.ts`;
-  // the rest are rail routes listed outside it, plus `ecosystems`, the retired segment Products
-  // replaced, held back so stale links resolve predictably instead of landing on a profile.
+  // the rest are rail routes listed outside it, plus the two RETIRED segments — `ecosystems`,
+  // which Products replaced, and `communities`, whose hub route rendered "Coming soon" until
+  // agenticdevelopercommunities.com took the topic over. Both are held back so a stale link
+  // resolves predictably instead of landing on whichever user claimed the handle.
   "all-data",
   "communities",
   "dashboards",
