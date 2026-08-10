@@ -90,4 +90,4 @@ export {
 } from "./settings-dirty";
 
 // The shared "gate didn't open" surfaces for a workspace-scoped feature (see workspace-gate).
-export { WorkspaceResolutionError, WorkspaceNotManageable } from "./workspace-gate";
+export { WorkspaceResolutionError, WorkspaceNotManageable, ComingSoon } from "./workspace-gate";

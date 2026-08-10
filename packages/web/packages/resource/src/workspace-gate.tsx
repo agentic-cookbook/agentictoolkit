@@ -3,9 +3,10 @@
 import type { ReactElement } from "react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 
-// The two shared failure surfaces for a workspace-scoped feature whose ecosystem gate did not
-// open. They live here rather than in any one host because three apps now render the gated
-// panes, and two copies of this copy is two different answers to the same question.
+// The shared surfaces a workspace-scoped feature shows INSTEAD of its pane: two for an ecosystem
+// gate that did not open, one for a feature that isn't built yet. They live here rather than in
+// any one host because three apps now render the gated panes, and two copies of this copy is two
+// different answers to the same question.
 
 /**
  * The shared failure surface for a workspace whose default-ecosystem resolution failed
@@ -39,6 +40,30 @@ export function WorkspaceNotManageable({ feature }: { feature: string }): ReactE
         title={`You don't have admin access to ${feature}`}
         description="Managing this workspace's infrastructure needs organization admin access — ask one of the organization's admins."
       />
+    </div>
+  );
+}
+
+/**
+ * Placeholder for a feature whose dedicated UI isn't built yet — it replaces the pane with a
+ * centered "Coming soon" label. The feature's data stays reachable in the meantime via All Data.
+ *
+ * Here, next to the two gate surfaces above, for the same reason: it is what a host renders
+ * INSTEAD of a pane, and the hub is no longer the only host that has to render it — Communities
+ * and Billing are product topics, so every mount of the Products feature reaches this.
+ */
+export function ComingSoon({
+  title,
+}: {
+  /** The feature's display title, shown above the "Coming soon" label. */
+  title: string;
+}): ReactElement {
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      <h1 className="font-mono text-lg tracking-wide text-apt-text">{title}</h1>
+      <p className="font-mono text-sm uppercase tracking-widest text-apt-text-dim">
+        Coming soon
+      </p>
     </div>
   );
 }

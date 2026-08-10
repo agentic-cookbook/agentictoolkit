@@ -1,0 +1,70 @@
+{
+  "name": "@agentic-toolkit/adh-products",
+  "version": "0.1.0",
+  "description": "The Products feature: @agentic-toolkit/ecosystems presented as Products, with its topic rail and the panes each topic opens.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:tier": "VOCABULARY, not mechanism — see scripts/check_boundaries.py. This package composes @agentic-toolkit/adh-ecosystem-panes and @agentic-toolkit/adh's help store, both of which are vocabulary, so it must carry the `adh-` prefix to sit on the right side of the guard's line. That is not incidental: the whole point of this package is a HUB CONCEPT (a Product is what adh calls an ecosystem, with adh's own topic rail on it), not the ecosystem machinery — which stays in @agentic-toolkit/ecosystems, mechanism, where a non-adh host can still mount it. The directory is `features/` only because the tsup/vitest presets live there.",
+  "comment:exports": "see @agentic-toolkit/adh for the full rationale. The barrel is `use client` (the feature composes client panes) and tsup hoists that directive over the chunk, so the topic RAIL — plain data — gets its own directive-free entry, the same split the tsup preset describes for ./parse and ./tables. Its consumer is any host that wants a product topic's id or label without mounting the feature.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./topics": {
+      "types": "./dist/topics.d.ts",
+      "development": "./src/topics.ts",
+      "import": "./dist/topics.js"
+    },
+    "./sources.css": "./sources.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/adh": "workspace:*",
+    "@agentic-toolkit/adh-ecosystem-panes": "workspace:*",
+    "@agentic-toolkit/authentication": "workspace:*",
+    "@agentic-toolkit/ecosystem-config": "workspace:*",
+    "@agentic-toolkit/ecosystems": "workspace:*",
+    "@agentic-toolkit/gamification": "workspace:*",
+    "@agentic-toolkit/integrations": "workspace:*",
+    "@agentic-toolkit/projects": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "lucide-react": "^1.16.0"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}
