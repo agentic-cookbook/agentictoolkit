@@ -19,6 +19,22 @@
 /** The separator between the category chain and the open note's id. */
 export const NOTE_SEPARATOR = "-";
 
+// TWO MORE RESERVED TOKENS, on the same guarantee. The category rail leads with two rows
+// that are not categories — "All" and "Uncategorized" — and each needs an identity no real
+// category can wear. `slugify` trims non-alphanumerics from both ends, so a slug never
+// STARTS with `-`; that one fact is what reserves the whole `-*` space, and it is written
+// down here rather than at either use site so there is one place to check it.
+//
+// Only `Uncategorized` reaches the URL (`/<base>/-none`, a state the list can actually be
+// in). `All` is the absence of a category, which the grammar already spells as no segments
+// at all — so its token is a ROW id only, and a URL never contains it.
+
+/** The category rail's "Uncategorized" row — notes with no category. Appears in the URL. */
+export const UNCATEGORIZED_SLUG = "-none";
+
+/** The category rail's "All" row. A row id only; the URL for "all" is the bare base. */
+export const ALL_CATEGORIES_ID = "-all";
+
 /** The selection NotebookFeature renders, parsed from a route's path segments.
  *  Maps 1:1 onto NotebookFeature's props (the host supplies `basePath`). */
 export interface NotebookPathSelection {

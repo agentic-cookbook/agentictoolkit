@@ -173,38 +173,44 @@ describe("ResearchFeature", () => {
       </Harness>,
     );
 
-    // The rail affordance opens the CREATE MODAL (HTD `must-create-in-modal`): title + category
-    // only. The body is written in the editor once the created doc opens — the backend accepts
-    // an empty body on create, so the doc exists immediately.
+    // The rail affordance opens the CREATE MODAL (HTD `must-create-in-modal`): the body, plus
+    // the category that places it. The body is asked for here rather than left to the editor
+    // because it is now the document's NAME — the title is its first line — so an empty create
+    // would mint an "Untitled" row the user then has to go and find.
     fireEvent.click(await screen.findByRole("button", { name: "New document" }));
 
     // Scope to the dialog: the editor's portaled action bar has its own Save button.
     const dialog = within(screen.getByRole("dialog", { name: "New document" }));
-    fireEvent.change(dialog.getByLabelText("Title"), {
-      target: { value: "Hello research" },
+    // Anchored regex, not the bare string: `Field` renders the hint INSIDE the <label>, so the
+    // accessible name is "Body The first line becomes the document's title."
+    fireEvent.change(dialog.getByLabelText(/^Body/), {
+      target: { value: "# Hello research\n\nFirst pass." },
     });
     fireEvent.click(dialog.getByRole("button", { name: "Save" }));
 
     await waitFor(() =>
       expect(create).toHaveBeenCalledWith(
-        // Blank category/tags are omitted from the create body; the content starts empty.
-        { content: "", title: "Hello research" },
+        // A blank category and an empty tag list are omitted from the create body. No title is
+        // sent at all — the backend derives it from the first line.
+        { content: "# Hello research\n\nFirst pass." },
         // No workspaceSlug prop in this harness → creator-owned (workspace undefined).
         { workspace: undefined },
       ),
     );
   });
 
-  it("opens the selected document (deep link via docId) with its title + body loaded", async () => {
+  it("opens the selected document (deep link via docId) with its body loaded", async () => {
     render(
       <Harness>
         <ResearchFeature basePath="/w1/research" docId="doc-1" />
       </Harness>,
     );
 
-    expect(await screen.findByDisplayValue("Federated learning notes")).not.toBeNull();
-    const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
-    expect(body.value).toBe("# Federated learning\n\nSome notes.");
+    // The body is the only editable text: there is no Title input to assert, by design — the
+    // title shown in the rail is derived from this field's first line.
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
+    expect(screen.queryByLabelText("Title")).toBeNull();
     await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined }));
   });
 
@@ -221,8 +227,9 @@ describe("ResearchFeature", () => {
       </Harness>,
     );
 
-    const title = (await screen.findByDisplayValue("Federated learning notes")) as HTMLInputElement;
-    fireEvent.change(title, { target: { value: "Federated learning notes v2" } });
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
+    fireEvent.change(body, { target: { value: "# Federated learning v2\n\nSome notes." } });
 
     const save = screen.getByRole("button", { name: "Save" });
     await act(async () => {
@@ -240,15 +247,16 @@ describe("ResearchFeature", () => {
   it("releases the in-flight latch when the save THROWS, so a retry still fires", async () => {
     update
       .mockRejectedValueOnce(new Error("Backend exploded."))
-      .mockResolvedValueOnce(structuredClone({ ...DOCUMENT, title: "Federated learning notes v2" }));
+      .mockResolvedValueOnce(structuredClone({ ...DOCUMENT, title: "Federated learning v2" }));
     render(
       <Harness>
         <ResearchFeature basePath="/w1/research" docId="doc-1" />
       </Harness>,
     );
 
-    const title = (await screen.findByDisplayValue("Federated learning notes")) as HTMLInputElement;
-    fireEvent.change(title, { target: { value: "Federated learning notes v2" } });
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
+    fireEvent.change(body, { target: { value: "# Federated learning v2\n\nSome notes." } });
 
     const save = screen.getByRole("button", { name: "Save" });
     await act(async () => {

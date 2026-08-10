@@ -35,6 +35,14 @@ export interface TopicDetailItem {
    *  sublabel shrinks + truncates after it. No effect in the icon-only (collapsed/covered)
    *  strips, which hide the label entirely. */
   inlineSublabel?: boolean
+  /** A few lines of the row's CONTENT, under the label — a note's body, a message's text. Dim,
+   *  clamped to {@link previewLines}, and shown only where the label is (never in the collapsed /
+   *  covered icon strips). Opt-in: a list that sets no `preview` renders exactly as it did. */
+  preview?: string
+  /** How many lines of {@link preview} to show, clamped to 0-4 (default 1). ZERO renders no
+   *  preview at all, so a list whose row height is a user preference can keep passing `preview`
+   *  and let this one number carry the setting — including its "off" position. */
+  previewLines?: number
   /** What this topic is for — one or two sentences. Feeds the standard no-selection
    *  overview (TopicOverview: one card per topic, icon + label + this text). */
   description?: string
@@ -89,6 +97,15 @@ export type RailSlot = ReactNode | ((collapsed: boolean) => ReactNode)
 // so every row needs a guaranteed leading icon; this fills in for rows that omit
 // one. `||` (not `??`) also fills in for a `false` node from `cond && <Icon/>`.
 const FALLBACK_ICON = <Circle size={16} aria-hidden />
+
+// The clamp for each supported preview height. A lookup and not `line-clamp-${n}`: Tailwind reads
+// the source text, so a class it never sees written out is a class it never generates.
+const PREVIEW_CLAMP: Record<number, string> = {
+  1: "line-clamp-1",
+  2: "line-clamp-2",
+  3: "line-clamp-3",
+  4: "line-clamp-4",
+}
 
 // The rail's natural (full) width and the collapsed icon-strip width. Dragging the rail's
 // trailing border narrower than a third of FULL snaps it to undisclosed; dragging it past
@@ -181,6 +198,15 @@ function TopicList({
     // A deletable expanded row reserves extra right padding so the label never runs under the
     // hover-revealed trash button (and the rail width accounts for it).
     const deletable = !!item.onDelete && !hideLabel
+    // The preview, resolved to the one thing the row renders: its text and its clamp. `previewLines`
+    // is clamped rather than trusted — it comes from a user setting, and a number outside 0-4 has no
+    // class to render, which would silently drop the clamp and print the whole note into the rail.
+    const previewLines = Math.max(0, Math.min(4, Math.trunc(item.previewLines ?? 1)))
+    const previewText = item.preview?.trim() ?? ""
+    const preview =
+      previewLines > 0 && previewText !== ""
+        ? { text: previewText, clamp: PREVIEW_CLAMP[previewLines] }
+        : null
     return (
       <button
         type="button"
@@ -204,7 +230,11 @@ function TopicList({
         }
         className={cn(
           // .settings-nav-item: mono, 0.8rem, tracking 0.02em.
-          "relative flex w-full items-center border-l-2 border-transparent bg-transparent transition-colors",
+          "relative flex w-full border-l-2 border-transparent bg-transparent transition-colors",
+          // A row that is one or two lines tall centres its icon against them; a row carrying a
+          // preview is mostly preview, so centring would float the icon down beside the body text
+          // instead of beside the name it labels.
+          preview ? "items-start" : "items-center",
           "[&_svg]:h-4 [&_svg]:w-4 [&_svg]:shrink-0",
           centered
             ? "justify-center py-1.5"
@@ -253,27 +283,48 @@ function TopicList({
             />
           )}
         </span>
-        {!hideLabel &&
-          (item.inlineSublabel && item.sublabel ? (
-            // Single-line row: label + dim sublabel share one line. The label grows and
-            // truncates first (it's the identifier that matters); the sublabel shrinks and
-            // truncates after it so a long secondary string can't crowd the label out.
-            <span data-htd-label className="flex min-w-0 flex-1 items-baseline gap-2">
-              <span className="min-w-0 flex-1 truncate">{item.label}</span>
-              <span className="min-w-0 shrink truncate text-[0.7rem] text-apt-text-dim">
-                {item.sublabel}
-              </span>
-            </span>
-          ) : (
-            <span data-htd-label className="min-w-0">
-              <span className="block truncate">{item.label}</span>
-              {item.sublabel && (
-                <span className="block truncate text-[0.7rem] text-apt-text-dim">
+        {!hideLabel && (
+          <span
+            data-htd-label
+            className={cn("min-w-0", item.inlineSublabel && item.sublabel && "flex-1")}
+          >
+            {item.inlineSublabel && item.sublabel ? (
+              // Single-line row: label + dim sublabel share one line. The label grows and
+              // truncates first (it's the identifier that matters); the sublabel shrinks and
+              // truncates after it so a long secondary string can't crowd the label out.
+              <span className="flex min-w-0 items-baseline gap-2">
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                <span className="min-w-0 shrink truncate text-[0.7rem] text-apt-text-dim">
                   {item.sublabel}
                 </span>
-              )}
-            </span>
-          ))}
+              </span>
+            ) : (
+              <>
+                <span className="block truncate">{item.label}</span>
+                {item.sublabel && (
+                  <span className="block truncate text-[0.7rem] text-apt-text-dim">
+                    {item.sublabel}
+                  </span>
+                )}
+              </>
+            )}
+            {/* The content preview sits under whichever headline shape the row uses, so a list can
+                opt into it without also giving up its inline sublabel. `whitespace-pre-line` keeps
+                the source's own line breaks — a note previewed as one run-on paragraph reads
+                nothing like the note. */}
+            {preview && (
+              <span
+                data-htd-preview
+                className={cn(
+                  "mt-0.5 block whitespace-pre-line text-[0.7rem] leading-snug text-apt-text-dim",
+                  preview.clamp,
+                )}
+              >
+                {preview.text}
+              </span>
+            )}
+          </span>
+        )}
         {/* Colour alone is not a signal. The dot lives inside the aria-hidden icon, so the row's
             accessible name carries the state instead — appended AFTER the label here (an
             accessible name is content order), and folded into `aria-label` when the label is

@@ -197,8 +197,9 @@ function TopBar({
     // Two stacked bars: the button bar (toolbar) on top, then the breadcrumb trail
     // UNDER it — not in the same row.
     <>
+      {/* Alignment is the toolbar content's own business — see the same strip in HTDV. */}
       {toolbar && (
-        <div className="flex shrink-0 items-center justify-end gap-2 border-b border-apt-border bg-apt-bg px-4 py-2">
+        <div className="flex shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-2">
           {toolbar}
         </div>
       )}
@@ -354,7 +355,10 @@ export function HierarchicalMenuDetail({
   /** Extra non-interactive crumbs appended after the level crumbs (e.g. an in-pane
    *  master/detail leaf label the package doesn't own). */
   trailingCrumbs?: { label: string }[]
-  /** Right-aligned content in the toolbar row above the breadcrumb (e.g. a "New…" button). */
+  /** Content for the full-width strip above the breadcrumb — a feature's own bar (search,
+   *  filters, a primary action) or a lone "New…" button. The strip is a flex row with no
+   *  justification of its own, so this node places itself (`w-full` + a flexible space to
+   *  reach the right edge). */
   toolbar?: ReactNode
   /** Right-justified affordance on the breadcrumb bar (e.g. a help "?" for the view). */
   help?: ReactNode

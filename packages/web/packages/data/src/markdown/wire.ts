@@ -29,6 +29,11 @@ export interface MarkdownDocumentRow {
 export interface MarkdownDocumentSummaryRow {
   id: string;
   title: string;
+  /** Server-derived preview: up to four body lines FOLLOWING the title line, newline-separated.
+   *  It is the only body text a list row has — this projection carries no `content` — so a
+   *  preview under the title costs nothing extra. OPTIONAL here though the backend always sends
+   *  it: a deploy older than this frontend omits it, and a preview is an aid, not a requirement. */
+  excerpt?: string;
   category?: string | null;
   tags: string[];
   visibility: "private" | "public";
@@ -43,10 +48,14 @@ export interface MarkdownListResponse {
 /** `POST /content/markdown` body. `author` exists on the backend but no hub
  *  call site ever sets it, so it's omitted. `note: true` files the new document in
  *  the owner's `notes` storage bucket — the ONLY thing that distinguishes a note
- *  from any other markdown document (see the notes client). */
+ *  from any other markdown document (see the notes client).
+ *
+ *  There is no `title` here or on the update body, deliberately: the backend DERIVES
+ *  it from the content (frontmatter, else the first line), so one document reads the
+ *  same way in every client instead of each inventing its own convention. It stays on
+ *  the row types below — reading a title is not writing one. */
 export interface MarkdownCreateBody {
   content: string;
-  title?: string;
   category?: string;
   tags?: string[];
   note?: boolean;
@@ -56,7 +65,6 @@ export interface MarkdownCreateBody {
  *  clear it (vs. omitted to leave unchanged). */
 export interface MarkdownUpdateBody {
   content?: string;
-  title?: string;
   category?: string | null;
   tags?: string[];
 }
@@ -86,6 +94,21 @@ export interface MarkdownCategoryNode {
 export interface MarkdownCategoryTreeBody {
   items: string[];
   nodes: MarkdownCategoryNode[];
+}
+
+/** One row of `GET /content/markdown/tags`'s `nodes` — the tag counterpart of
+ *  {@link MarkdownCategoryNode}. The id is what ADDRESSES the tag for a rename or a
+ *  delete (`/content/keywords/{id}`); a label cannot, because the links point at the id. */
+export interface MarkdownKeywordNode {
+  id: string;
+  label: string;
+}
+
+/** `GET /content/markdown/tags` — the flat LABEL list every existing consumer reads, plus
+ *  the same set with each label's row id. */
+export interface MarkdownTagSetBody {
+  items: string[];
+  nodes: MarkdownKeywordNode[];
 }
 
 /** `POST /content/markdown/categories` body. Omit `parentId` (or send null) for a root.

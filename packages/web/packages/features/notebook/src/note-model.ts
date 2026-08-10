@@ -9,21 +9,23 @@
 // backend never mints a `content.papers` marker for a document created through it.
 import type { CreateNoteBody, Note, UpdateNoteBody } from "@agentic-toolkit/data/notes";
 
-/** The fields the editor binds to: title + raw markdown body + classification. */
+/** The fields the editor binds to: the raw markdown body + classification.
+ *
+ *  A note has no title of its own — the title IS the first line of the body, derived
+ *  by the backend so every client shows the same one. Nothing here edits it, which is
+ *  why it is absent from the draft rather than present and read-only. */
 export interface NoteInput {
-  title: string;
   content: string;
   category: string;
   tags: string[];
 }
 
 export function noteBlank(): NoteInput {
-  return { title: "", content: "", category: "", tags: [] };
+  return { content: "", category: "", tags: [] };
 }
 
 export function noteToInput(note: Note): NoteInput {
   return {
-    title: note.title,
     content: note.content,
     category: note.category ?? "",
     tags: note.tags,
@@ -48,7 +50,6 @@ export function normalizeTags(tags: string[]): string[] {
 /** Clean a draft just before persisting (the body stays byte-exact). */
 export function noteNormalize(input: NoteInput): NoteInput {
   return {
-    title: input.title.trim(),
     content: input.content,
     category: input.category.trim(),
     tags: normalizeTags(input.tags),
@@ -59,7 +60,6 @@ export function noteNormalize(input: NoteInput): NoteInput {
  *  backend's own (`markdownDocuments.ts`), stated here so the form refuses first. */
 export function noteValidate(input: NoteInput): string | null {
   if (!input.content.trim()) return "A note body is required.";
-  if (input.title.length > 500) return "Title must be 500 characters or fewer.";
   if (input.category.length > 200) return "Category must be 200 characters or fewer.";
   return null;
 }
@@ -67,7 +67,6 @@ export function noteValidate(input: NoteInput): string | null {
 /** True when the draft differs from its baseline (drives the dirty flag). */
 export function noteDiffers(a: NoteInput, b: NoteInput): boolean {
   return (
-    a.title !== b.title ||
     a.content !== b.content ||
     a.category !== b.category ||
     a.tags.length !== b.tags.length ||
@@ -75,12 +74,11 @@ export function noteDiffers(a: NoteInput, b: NoteInput): boolean {
   );
 }
 
-/** Map a normalized draft to the create payload. An empty title/category is omitted
- *  (the backend derives the title and leaves the category unset). The `note` marker
- *  that files it in the owner's `notes` bucket is added by `notesApi`, not here. */
+/** Map a normalized draft to the create payload. An empty category is omitted (the
+ *  backend leaves it unset). The `note` marker that files it in the owner's `notes`
+ *  bucket is added by `notesApi`, not here. */
 export function toCreateBody(input: NoteInput): CreateNoteBody {
   const body: CreateNoteBody = { content: input.content };
-  if (input.title) body.title = input.title;
   if (input.category) body.category = input.category;
   if (input.tags.length) body.tags = input.tags;
   return body;
@@ -88,17 +86,56 @@ export function toCreateBody(input: NoteInput): CreateNoteBody {
 
 /** Map a normalized draft to the update payload. A blank category is sent as `null` to
  *  CLEAR it (the backend distinguishes null = clear from omitted = unchanged); we always
- *  send the full draft, so blank means clear here. A blank TITLE is sent as `""` for the
- *  same reason — omitting it would read as "unchanged" and the cleared field would come
- *  back filled in on the save's own response; sent empty, the backend re-derives one from
- *  the content, which is what a create with no title already does. */
+ *  send the full draft, so blank means clear here. */
 export function toUpdateBody(input: NoteInput): UpdateNoteBody {
   return {
     content: input.content,
-    title: input.title,
     category: input.category || null,
     tags: input.tags,
   };
+}
+
+/** Where in the notebook the RAIL is standing. `all` is the whole notebook; `uncategorized`
+ *  is the rail row for notes filed nowhere; `named` is a category chain's leaf. */
+export type CategoryScope =
+  | { kind: "all" }
+  | { kind: "uncategorized" }
+  | { kind: "named"; name: string };
+
+/** What a list request can actually ask for, once the rail's scope and the bar's filter are
+ *  folded together. */
+export interface ListCategoryQuery {
+  /** The one `?category=` name the request carries — `""` for no category parameter. */
+  query: string;
+  /** Keep only notes with NO category. The backend has no parameter for this axis (a blank
+   *  `category` means "don't filter"), so the caller applies it to the rows it gets back. */
+  uncategorizedOnly: boolean;
+  /** The two axes contradict each other, so nothing can match and no request is worth making. */
+  empty: boolean;
+}
+
+/**
+ * Fold the rail's SCOPE and the button bar's category FILTER into one list query.
+ *
+ * They are two different questions — "which part of the notebook am I in" and "narrow that to
+ * this category" — but both are exact category names, and a note has exactly one category. So
+ * two DIFFERENT names intersect to nothing. That is reported as `empty` rather than letting one
+ * axis quietly win: a user who scoped to Work and then filtered to Personal asked for notes in
+ * both, and an empty list is the true answer. Silently showing one or the other would look like
+ * a working filter that ignores half of what was asked.
+ */
+export function resolveListCategory(scope: CategoryScope, filter: string): ListCategoryQuery {
+  const narrowed = filter.trim();
+  const none = { query: "", uncategorizedOnly: false, empty: false };
+  if (scope.kind === "uncategorized") {
+    // A note in a named category is by definition not uncategorized.
+    if (narrowed) return { ...none, empty: true };
+    return { ...none, uncategorizedOnly: true };
+  }
+  if (scope.kind === "all") return narrowed ? { ...none, query: narrowed } : none;
+  if (!narrowed) return { ...none, query: scope.name };
+  if (narrowed.toLowerCase() === scope.name.toLowerCase()) return { ...none, query: scope.name };
+  return { ...none, empty: true };
 }
 
 /** Distinct, sorted tags present across a set of notes (for the filter dropdown). */

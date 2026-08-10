@@ -8,6 +8,7 @@ import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
+import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
 import {
@@ -40,12 +41,14 @@ import { PublishSection } from "./PublishSection";
 
 const EMPTY_FILTERS: FilterState = { q: "", category: "", tag: "" };
 
-/** The create modal's PLACEMENT draft (HTD recipe `must-create-in-modal` +
- *  `must-scope-create-modal-to-placement`): only what NAMES/classifies the new document.
- *  The body is written in the full editor that opens once the created doc is selected — the
- *  backend accepts an empty body on create (content is optional), so create-then-write works. */
+/** The create modal's draft (HTD recipe `must-create-in-modal` +
+ *  `must-scope-create-modal-to-placement`): the body, plus the category that PLACES it.
+ *
+ *  The body is here rather than left to the editor because it is now the document's NAME —
+ *  the title is derived from its first line — so a create with an empty body would mint an
+ *  "Untitled" row the user then has to go and find. */
 interface ResearchPlacement {
-  title: string;
+  content: string;
   category: string;
 }
 
@@ -447,24 +450,24 @@ export function ResearchPane({
         )}
       />
 
-      {/* Create is a scoped modal: title + category only (HTD recipe `must-create-in-modal`). The
-          body is written in the editor that opens once the created doc is selected — the backend
-          accepts an empty body on create, so the doc exists immediately and the editor fills it. */}
+      {/* Create is a scoped modal: the body + the category that places it (HTD recipe
+          `must-create-in-modal`). The editor that opens on the created doc is where the body is
+          FINISHED; it starts here because the first line is the document's title. */}
       {newOpen && (
         <CreateResourceDialog<ResearchPlacement, ResearchDocument>
           ariaLabel="New document"
           heading="New document"
-          blank={() => ({ title: "", category: "" })}
+          blank={() => ({ content: "", category: "" })}
           validate={(d) =>
-            !d.title.trim()
-              ? "A title is required."
+            !d.content.trim()
+              ? "A document body is required."
               : d.category.length > 200
                 ? "Category must be 200 characters or fewer."
                 : null
           }
           create={(d) =>
             markdownApi.create(
-              toCreateBody(researchNormalize({ title: d.title, content: "", category: d.category, tags: [] })),
+              toCreateBody(researchNormalize({ content: d.content, category: d.category, tags: [] })),
               { workspace: workspaceSlug },
             )
           }
@@ -482,13 +485,14 @@ export function ResearchPane({
           }}
           renderForm={(draft, onChange, error) => (
             <>
-              <Field label="Title">
-                <Input
+              <Field label="Body" hint="The first line becomes the document's title.">
+                <Textarea
                   /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
                   autoFocus
-                  value={draft.title}
-                  placeholder="Untitled document"
-                  onChange={(e) => onChange({ ...draft, title: e.target.value })}
+                  rows={6}
+                  value={draft.content}
+                  placeholder={"# My research\n\nWrite or paste markdown here."}
+                  onChange={(e) => onChange({ ...draft, content: e.target.value })}
                 />
               </Field>
               <Field label="Category" hint="Optional — group the document; you can change it later.">

@@ -1,117 +1,103 @@
 "use client";
 
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Combobox } from "@agentic-toolkit/ui/components/combobox";
-import { EntityChooser } from "@agentic-toolkit/ui/components/entity-chooser";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
+import { CategoryField, type CategoryTreeNode } from "@agentic-toolkit/ui/blocks/category-field";
 import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
 import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { NoteInput } from "./note-model";
 
-// Strip a filename's extension for a derived title (e.g. "notes.md" → "notes").
-function titleFromFilename(name: string): string {
-  return name.replace(/\.(md|markdown|txt)$/i, "").trim();
-}
-
-/**
- * Controlled, fields-only note editor — title, category, tags, and the raw markdown body.
- * The same editor the research surface uses, because a note is the same kind of thing: the
- * ONLY difference is that nothing here publishes. Save/Cancel/Delete live in the button bar
- * above; this component only renders the draft and reports edits.
- *
- * Category and tags both follow the `[Combobox autocomplete] [Choose…]` pattern: the
- * `Combobox` autocompletes from the owner's existing categories/keywords (`categoryOptions`
- * / `tagOptions`, fetched from the backend), and the `Choose` button (an `EntityChooser`)
- * opens a browse/filter/select/add surface. Category is a single value, assembled here; tags
- * are the shared {@link TagSetField}.
- *
- * The category field is what MOVES a note between categories — the rail beside it only
- * navigates. It offers the owner's category names FLAT, which is exact rather than lossy:
- * a name is unique per owner across the whole tree, so a name names one place in it.
- */
-export function NoteDetail({
-  draft,
-  onChange,
-  categoryOptions,
-  tagOptions,
-  error,
-}: {
+/** What both surfaces below bind to. */
+export interface NoteFieldsProps {
   draft: NoteInput;
   onChange: (next: NoteInput) => void;
   categoryOptions: string[];
+  /** The owner's category tree, for the breadcrumb + the rename behind each crumb. Omitted
+   *  (or empty) and the category renders as the single name it is. */
+  categoryNodes?: CategoryTreeNode[];
+  /** Rename a category from its crumb. Omit on a surface with no write access to the tree —
+   *  the crumbs then render as static text. */
+  onRenameCategory?: (node: CategoryTreeNode, nextName: string) => Promise<void>;
   tagOptions: string[];
   error?: string | null;
-}) {
+}
+
+/**
+ * The note's three fields, unframed — the raw markdown body, then the category and tags that
+ * file it, in that order.
+ *
+ * It is separate from {@link NoteDetail} so the CREATE modal and the editor are the same
+ * component rather than two lists of fields that drift: a modal already has a surface of its
+ * own, and nesting a `Card` inside one draws a box in a box. The frame is the only difference
+ * between the two, so the frame is all that is duplicated.
+ *
+ * There is no Title field, and its absence is the feature: the title IS the note's first
+ * line, derived by the backend so every client — this editor, the rail row, a device sync,
+ * the API — shows the same one. A note is text; naming it twice is how the two names drift.
+ *
+ * Category and tags are both OPTIONAL, and both are shared blocks rather than fields
+ * assembled here: {@link CategoryField} for the single hierarchical value (autocomplete +
+ * browse + the breadcrumb saying where in the tree it sits) and {@link TagSetField} for the
+ * set. The category field is what MOVES a note between categories — the rail beside it only
+ * navigates.
+ */
+export function NoteFields({
+  draft,
+  onChange,
+  categoryOptions,
+  categoryNodes,
+  onRenameCategory,
+  tagOptions,
+  error,
+}: NoteFieldsProps) {
+  return (
+    <div className="flex flex-col gap-5">
+      <MarkdownEditor
+        label="Note"
+        placeholder={"My note\n\nThe first line is the note's title."}
+        value={draft.content}
+        onChange={(content) => onChange({ ...draft, content })}
+        onUpload={(text) => onChange({ ...draft, content: text })}
+        toolbarExtras={
+          <MarkdownSpellCheck
+            value={draft.content}
+            onApply={(content) => onChange({ ...draft, content })}
+          />
+        }
+      />
+
+      <CategoryField
+        label="Category"
+        noun="category"
+        hint="Optional — where this note is filed. Type to autocomplete, or Choose to browse."
+        options={categoryOptions}
+        nodes={categoryNodes}
+        value={draft.category}
+        onChange={(category) => onChange({ ...draft, category })}
+        onRename={onRenameCategory}
+      />
+
+      <TagSetField
+        label="Tags"
+        noun="tag"
+        hint="Optional — a set of labels. Type to autocomplete, or Choose to browse."
+        options={tagOptions}
+        value={draft.tags}
+        onChange={(tags) => onChange({ ...draft, tags })}
+      />
+
+      <ErrorText error={error} />
+    </div>
+  );
+}
+
+/** {@link NoteFields} in the editor's own card — what the master/detail leaf renders. */
+export function NoteDetail(props: NoteFieldsProps) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-5">
-        <Field label="Title" hint="Optional — derived from the note's heading if left blank.">
-          <Input
-            value={draft.title}
-            placeholder="Untitled note"
-            onChange={(e) => onChange({ ...draft, title: e.target.value })}
-          />
-        </Field>
-
-        <Field
-          label="Category"
-          hint="Where this note is filed. Type to autocomplete, or Choose to browse."
-        >
-          <div className="flex items-stretch gap-2">
-            <Combobox
-              items={categoryOptions}
-              value={draft.category}
-              onValueChange={(category) => onChange({ ...draft, category })}
-              ariaLabel="Category"
-              placeholder="e.g. meetings"
-              className="flex-1"
-            />
-            <EntityChooser
-              options={categoryOptions}
-              value={draft.category || null}
-              onChange={(next) => onChange({ ...draft, category: next ?? "" })}
-              ariaLabel="Browse categories"
-              triggerLabel="Choose…"
-              inputLabel="Filter or add a category"
-              placeholder="Filter or add a category…"
-              className="w-44 shrink-0"
-            />
-          </div>
-        </Field>
-
-        <TagSetField
-          label="Tags"
-          noun="tag"
-          hint="A set of labels. Type to autocomplete, or Choose to browse."
-          options={tagOptions}
-          value={draft.tags}
-          onChange={(tags) => onChange({ ...draft, tags })}
-        />
-
-        <MarkdownEditor
-          label="Markdown body"
-          placeholder={"# My note\n\nWrite or paste markdown here, or upload a .md file."}
-          value={draft.content}
-          onChange={(content) => onChange({ ...draft, content })}
-          onUpload={(text, fileName) =>
-            onChange({
-              ...draft,
-              content: text,
-              title: draft.title.trim() || titleFromFilename(fileName),
-            })
-          }
-          toolbarExtras={
-            <MarkdownSpellCheck
-              value={draft.content}
-              onApply={(content) => onChange({ ...draft, content })}
-            />
-          }
-        />
-
-        <ErrorText error={error} />
+      <CardContent>
+        <NoteFields {...props} />
       </CardContent>
     </Card>
   );

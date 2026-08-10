@@ -145,6 +145,53 @@ describe('ListChooser — OK / Cancel buttons', () => {
   })
 })
 
+describe('ListChooser — keepOpenOnCommit', () => {
+  it('keeps the list up after Enter and resets the field for the next entry', () => {
+    const onChange = vi.fn()
+    render(<ListChooser items={ITEMS} value={null} onChange={onChange} keepOpenOnCommit {...LABELS} />)
+    const { input } = open()
+    fireEvent.keyDown(input, { key: 'ArrowDown' }) // React
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenCalledWith('react', { isNew: false })
+    expect(screen.getByRole('listbox', { name: 'Framework' })).toBeInTheDocument()
+    expect(input.value).toBe('') // field cleared, highlight dropped — ready for the next
+    fireEvent.change(input, { target: { value: 'Vue' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenNthCalledWith(2, 'vue', { isNew: false })
+    expect(screen.getByRole('listbox', { name: 'Framework' })).toBeInTheDocument()
+  })
+
+  it('keeps the list up after a click too', () => {
+    const onChange = vi.fn()
+    render(<ListChooser items={ITEMS} value={null} onChange={onChange} keepOpenOnCommit {...LABELS} />)
+    open()
+    fireEvent.click(screen.getByRole('option', { name: 'Svelte' }))
+    expect(onChange).toHaveBeenCalledWith('svelte', { isNew: false })
+    expect(screen.getByRole('listbox', { name: 'Framework' })).toBeInTheDocument()
+  })
+
+  it('dismisses on Shift+Enter without committing', () => {
+    const onChange = vi.fn()
+    render(<ListChooser items={ITEMS} value={null} onChange={onChange} keepOpenOnCommit {...LABELS} />)
+    const { input } = open()
+    fireEvent.change(input, { target: { value: 'Vue' } })
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    expect(onChange).not.toHaveBeenCalled()
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+
+  it('still closes on Shift+Enter-less accept when keepOpenOnCommit is off', () => {
+    const onChange = vi.fn()
+    render(<ListChooser items={ITEMS} value={null} onChange={onChange} {...LABELS} />)
+    const { input } = open()
+    fireEvent.change(input, { target: { value: 'Vue' } })
+    // Shift is not a modifier this mode reads, so it must not swallow the accept.
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    expect(onChange).toHaveBeenCalledWith('vue', { isNew: false })
+    expect(screen.queryByRole('listbox')).toBeNull()
+  })
+})
+
 describe('ListChooser — trigger label', () => {
   it('shows the committed item label on the trigger', () => {
     render(<ListChooser items={ITEMS} value="svelte" onChange={vi.fn()} {...LABELS} />)

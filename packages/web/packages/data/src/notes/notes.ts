@@ -19,7 +19,11 @@ import type {
   CreateMarkdownBody,
   UpdateMarkdownBody,
 } from "../markdown/markdown";
-import type { MarkdownCategoryNode, MarkdownCategoryCreateBody } from "../markdown/wire";
+import type {
+  MarkdownCategoryNode,
+  MarkdownCategoryCreateBody,
+  MarkdownKeywordNode,
+} from "../markdown/wire";
 
 /** A note WITH its body (the detail pane). Structurally a markdown document — the
  *  alias names the role, so a notebook never has to say "research" for its own rows. */
@@ -30,6 +34,8 @@ export type NoteSummary = ResearchSummary;
 export type NoteFilters = ResearchFilters;
 /** One category, with the parent pointer that makes the set a tree. */
 export type NoteCategory = MarkdownCategoryNode;
+/** One tag, with the id that addresses it for a rename or a delete. */
+export type NoteTag = MarkdownKeywordNode;
 
 /** Create body. `note: true` is this client's to add — a caller cannot forget it and
  *  quietly mint a document that never lands in the notes bucket. */
@@ -84,4 +90,17 @@ export const notesApi = {
   tags(opts?: { workspace?: string }): Promise<string[]> {
     return markdownApi.tags(opts);
   },
+
+  /** The same tags WITH their ids — what the tag manager renames and deletes by. */
+  tagSet(opts?: { workspace?: string }): Promise<NoteTag[]> {
+    return markdownApi.tagSet(opts);
+  },
 };
+
+/** Renaming, re-parenting and retiring those categories and tags. Re-exported rather than
+ *  folded into `notesApi`: unlike everything above it, the taxonomy is NOT the notebook's —
+ *  one owner has one vocabulary spanning notes, research papers and board cards, so a rename
+ *  here is a rename there. Keeping it a separate object is what says so at the call site.
+ *  (It also takes no `workspace`; see the module comment for why the generic door cannot
+ *  use one.) */
+export { taxonomyApi } from "../markdown/taxonomy";

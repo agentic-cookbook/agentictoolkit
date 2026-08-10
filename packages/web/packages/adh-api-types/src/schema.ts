@@ -15169,7 +15169,7 @@ export interface paths {
         };
         /**
          * List the caller's existing tag labels (autocomplete source)
-         * @description The account's full set of tag labels (content.keywords), scoped to the caller and ecosystem, distinct and alphabetical — the autocomplete/browse source for the research tag field.
+         * @description The account's full set of tag labels (content.keywords), scoped to the caller and ecosystem, distinct and alphabetical — the autocomplete/browse source for the research tag field. `nodes` is the same set with each label's row id, which is what addresses a tag for a rename or delete.
          */
         get: {
             parameters: {
@@ -15180,13 +15180,13 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Distinct tag labels, sorted alphabetically */
+                /** @description Tag labels (alphabetical) and the keyword nodes */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["StringList"];
+                        "application/json": components["schemas"]["MarkdownTagSet"];
                     };
                 };
                 /** @description Error */
@@ -57856,7 +57856,7 @@ export interface components {
         };
         /**
          * StringList
-         * @description A wrapper object `{ items: string[] }` (NOT a bare array). Returned by the tag/category facet and autocomplete endpoints.
+         * @description A wrapper object `{ items: string[] }` (NOT a bare array). Returned by the public tag/category facet endpoints and the project label list.
          */
         StringList: {
             /** @description The string values. */
@@ -57877,6 +57877,20 @@ export interface components {
             items: string[];
             /** @description The category rows, by sortOrder then name. */
             nodes: components["schemas"]["MarkdownCategoryNode"][];
+        };
+        /** MarkdownKeywordNode */
+        MarkdownKeywordNode: {
+            /** @description The row id — what ADDRESSES this tag for a rename or delete (`/content/keywords/{id}`). A label cannot: links point at the id, so renaming the row renames the tag everywhere it is used. */
+            id: string;
+            /** @description The tag text. Unique per owner + ecosystem. */
+            label: string;
+        };
+        /** MarkdownTagSet */
+        MarkdownTagSet: {
+            /** @description Tag labels, alphabetical. */
+            items: string[];
+            /** @description The same labels with their row ids, in the same order. */
+            nodes: components["schemas"]["MarkdownKeywordNode"][];
         };
         MarkdownDocument: {
             id: string;
@@ -57934,6 +57948,8 @@ export interface components {
             id: string;
             /** @description Server-derived, read-only: the frontmatter `title` then `name`, else the first non-empty line of the body (frontmatter and code fences ignored, leading markdown syntax stripped), else 'Untitled'. Capped at 500 characters. */
             title: string;
+            /** @description Server-derived, read-only preview: up to 4 body lines FOLLOWING the title line, newline-separated, each capped at 160 characters and stripped of leading markdown syntax. Empty when the body holds nothing past its title. Exists because this projection carries no `content` — it is what lets a list render a preview without fetching every document whole. */
+            excerpt: string;
             frontmatter?: {
                 [key: string]: unknown;
             } | null;

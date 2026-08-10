@@ -92,6 +92,17 @@ describe('EntityChooser — multi', () => {
     expect(onChange).toHaveBeenCalledWith(['attention'])
   })
 
+  it('stays open across accepts so a set is built in one visit', () => {
+    const onChange = vi.fn()
+    render(<EntityChooser multiple options={TAGS} value={[]} onChange={onChange} ariaLabel="Tags" />)
+    const input = openBrowser('Tags')
+    fireEvent.click(screen.getByRole('option', { name: 'attention' }))
+    expect(onChange).toHaveBeenCalledWith(['attention'])
+    expect(input).toBeInTheDocument() // browser still up for the next tag
+    fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
+    expect(input).not.toBeInTheDocument() // Shift+Enter is the way out
+  })
+
   it('does not re-add an option already in the set', () => {
     const onChange = vi.fn()
     // 'vision' is filtered out of the browser, but the guard also protects a typed dup.

@@ -39,6 +39,7 @@ export {
   useRailExitGuard,
   ToolbarPortal,
   useToolbarPortal,
+  FeatureBarPortal,
 } from "./rail-host";
 export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-host";
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { withTags, categoryNodes } from "../markdown";
-import type { MarkdownCategoryTreeBody } from "../wire";
+import { withTags, categoryNodes, tagNodes } from "../markdown";
+import type { MarkdownCategoryTreeBody, MarkdownTagSetBody } from "../wire";
 
 // Regression: the ResearchPane crashed ("tags is not iterable" / reading `length`
 // of undefined) when a document arrived without a `tags` array — which happens
@@ -68,5 +68,33 @@ describe("categoryNodes", () => {
 
   it("yields [] when NEITHER field is an array, rather than throwing", () => {
     expect(categoryNodes({} as unknown as MarkdownCategoryTreeBody)).toEqual([]);
+  });
+});
+
+// The tag twin of the above. It differs in one way worth pinning: a rebuilt id is the LABEL,
+// and the taxonomy door (`/content/keywords/{id}`) takes only row ids — so against such a
+// backend a rename or delete fails loudly. What must stay true is that it cannot fail QUIETLY
+// by addressing some other row, which holds because real ids are uuids.
+describe("tagNodes", () => {
+  const old = (items: string[]) => ({ items }) as unknown as MarkdownTagSetBody;
+
+  it("passes real nodes through unchanged (same reference, no needless copy)", () => {
+    const res = { items: ["draft"], nodes: [{ id: "k1", label: "draft" }] };
+    expect(tagNodes(res)).toBe(res.nodes);
+  });
+
+  it("prefers nodes even when they are EMPTY — a workspace with no tags is not skew", () => {
+    expect(tagNodes({ items: [], nodes: [] })).toEqual([]);
+  });
+
+  it("rebuilds an older backend's flat labels, in the order it sent them", () => {
+    expect(tagNodes(old(["alpha", "beta"]))).toEqual([
+      { id: "alpha", label: "alpha" },
+      { id: "beta", label: "beta" },
+    ]);
+  });
+
+  it("yields [] when NEITHER field is an array, rather than throwing", () => {
+    expect(tagNodes({} as unknown as MarkdownTagSetBody)).toEqual([]);
   });
 });

@@ -9,9 +9,12 @@ import type {
   UpdateMarkdownBody,
 } from "@agentic-toolkit/data/markdown";
 
-/** The fields the editor binds to: title + raw markdown body + classification. */
+/** The fields the editor binds to: the raw markdown body + classification.
+ *
+ *  A document has no editable title — the backend DERIVES it (frontmatter, else the
+ *  first line of the body) so every client shows the same one. It is therefore absent
+ *  from the draft rather than present and read-only. */
 export interface ResearchInput {
-  title: string;
   content: string;
   category: string;
   tags: string[];
@@ -23,12 +26,11 @@ export interface ResearchInput {
 export const PUBLIC_ROUTE_RE = /^[a-z0-9][a-z0-9_-]{1,127}$/;
 
 export function researchBlank(): ResearchInput {
-  return { title: "", content: "", category: "", tags: [] };
+  return { content: "", category: "", tags: [] };
 }
 
 export function researchToInput(doc: ResearchDocument): ResearchInput {
   return {
-    title: doc.title,
     content: doc.content,
     category: doc.category ?? "",
     tags: doc.tags,
@@ -53,7 +55,6 @@ export function normalizeTags(tags: string[]): string[] {
 /** Clean a draft just before persisting (the body stays byte-exact). */
 export function researchNormalize(input: ResearchInput): ResearchInput {
   return {
-    title: input.title.trim(),
     content: input.content,
     category: input.category.trim(),
     tags: normalizeTags(input.tags),
@@ -63,7 +64,6 @@ export function researchNormalize(input: ResearchInput): ResearchInput {
 /** Returns an error message, or null when the draft is valid. */
 export function researchValidate(input: ResearchInput): string | null {
   if (!input.content.trim()) return "A document body is required.";
-  if (input.title.length > 500) return "Title must be 500 characters or fewer.";
   if (input.category.length > 200) return "Category must be 200 characters or fewer.";
   return null;
 }
@@ -71,7 +71,6 @@ export function researchValidate(input: ResearchInput): string | null {
 /** True when the draft differs from its baseline (drives the dirty flag). */
 export function researchDiffers(a: ResearchInput, b: ResearchInput): boolean {
   return (
-    a.title !== b.title ||
     a.content !== b.content ||
     a.category !== b.category ||
     a.tags.length !== b.tags.length ||
@@ -79,11 +78,10 @@ export function researchDiffers(a: ResearchInput, b: ResearchInput): boolean {
   );
 }
 
-/** Map a normalized draft to the create payload. An empty title/category is
- *  omitted (the backend derives the title and leaves the category unset). */
+/** Map a normalized draft to the create payload. An empty category is omitted (the
+ *  backend leaves it unset). */
 export function toCreateBody(input: ResearchInput): CreateMarkdownBody {
   const body: CreateMarkdownBody = { content: input.content };
-  if (input.title) body.title = input.title;
   if (input.category) body.category = input.category;
   if (input.tags.length) body.tags = input.tags;
   return body;
@@ -95,7 +93,6 @@ export function toCreateBody(input: ResearchInput): CreateMarkdownBody {
 export function toUpdateBody(input: ResearchInput): UpdateMarkdownBody {
   return {
     content: input.content,
-    title: input.title || undefined,
     category: input.category || null,
     tags: input.tags,
   };

@@ -102,6 +102,25 @@ export function resolveCategoryChain(roots: CategoryNode[], slugs: string[]): Ca
   return chain;
 }
 
+/** One row of a flattened tree: the node and how deep it sits. */
+export interface FlatCategory {
+  node: CategoryNode;
+  depth: number;
+}
+
+/**
+ * Walk the forest depth-first into a flat, indent-carrying list — what a MANAGEMENT view
+ * needs, where every category is on screen at once rather than one level at a time. The
+ * rail walks the same tree the other way (one level per depth), so both readings come from
+ * the single fold above and cannot disagree about a corrupt parent pointer.
+ */
+export function flattenCategoryTree(roots: CategoryNode[], depth = 0): FlatCategory[] {
+  return roots.flatMap((node) => [
+    { node, depth },
+    ...flattenCategoryTree(node.children, depth + 1),
+  ]);
+}
+
 /**
  * Every category NAME the owner has, alphabetical — the editor's category autocomplete.
  * A FLAT list is still an unambiguous vocabulary because the backend keeps a name unique

@@ -3,6 +3,7 @@ import type { NoteCategory } from "@agentic-toolkit/data/notes";
 import {
   buildCategoryTree,
   categoryNames,
+  flattenCategoryTree,
   resolveCategoryChain,
   slugFor,
   type CategoryNode,
@@ -119,6 +120,36 @@ describe("resolveCategoryChain", () => {
 
   it("resolves the empty chain to the whole notebook", () => {
     expect(resolveCategoryChain(tree, [])).toEqual([]);
+  });
+});
+
+describe("flattenCategoryTree", () => {
+  it("walks depth-first, carrying each node's depth", () => {
+    // Parent immediately followed by its own subtree — what the manager dialog indents by.
+    const tree = buildCategoryTree([
+      row("a", "Work"),
+      row("b", "Meetings", "a"),
+      row("c", "Q3", "b"),
+      row("d", "Personal"),
+    ]);
+    expect(flattenCategoryTree(tree).map(({ node, depth }) => [node.id, depth])).toEqual([
+      ["a", 0],
+      ["b", 1],
+      ["c", 2],
+      ["d", 0],
+    ]);
+  });
+
+  it("shows a category whose parent is missing, as a root", () => {
+    // Same rule the fold applies: a corrupt pointer costs the row its PLACEMENT, never its
+    // existence — and the management view is exactly where that has to stay reachable.
+    expect(flattenCategoryTree(buildCategoryTree([row("b", "Orphan", "gone")]))).toEqual([
+      { node: expect.objectContaining({ id: "b" }), depth: 0 },
+    ]);
+  });
+
+  it("is empty for an empty forest", () => {
+    expect(flattenCategoryTree([])).toEqual([]);
   });
 });
 

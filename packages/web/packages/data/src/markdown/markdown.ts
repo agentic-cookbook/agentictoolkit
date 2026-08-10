@@ -19,6 +19,8 @@ import type {
   MarkdownCategoryNode,
   MarkdownCategoryTreeBody,
   MarkdownCategoryCreateBody,
+  MarkdownKeywordNode,
+  MarkdownTagSetBody,
 } from "./wire";
 
 /** A full document, body included (GET /content/markdown/:id, and the create /
@@ -34,6 +36,11 @@ export type UpdateMarkdownBody = MarkdownUpdateBody;
  *  makes the set a tree. Re-exported (not aliased) because a hierarchical consumer
  *  passes these rows around, not just their names. */
 export type { MarkdownCategoryNode, MarkdownCategoryCreateBody } from "./wire";
+
+/** One tag as this surface exposes it — the label, and the id that addresses it. Re-exported
+ *  for the same reason as {@link MarkdownCategoryNode}: a management UI passes the rows
+ *  around, not just their text. */
+export type { MarkdownKeywordNode } from "./wire";
 
 /** Caller-scoped list filters, all wired to the backend's query params: `q`
  *  (free-text across title/body/category/tags), `category` (exact), `tag` (set
@@ -103,6 +110,22 @@ export function categoryNodes(res: MarkdownCategoryTreeBody): MarkdownCategoryNo
   if (Array.isArray(res.nodes)) return res.nodes;
   const items = Array.isArray(res.items) ? res.items : [];
   return items.map((name, i) => ({ id: name, name, parentId: null, sortOrder: i }));
+}
+
+/** Fold the tags response into rows — the tag twin of {@link categoryNodes}, and the same
+ *  skew: a backend deploy older than this frontend answers `/tags` with `items` alone.
+ *
+ *  The degrade differs in what it costs, so it is worth being explicit: the synthesized id
+ *  is the label, and `/content/keywords/{id}` wants a row id. Listing and filtering still
+ *  work (both are by label); a rename or delete 404s and is reported as the failure it is.
+ *  It cannot hit the WRONG row — ids are uuids, so a label never collides with one — which
+ *  is the property that makes this degrade safe rather than merely convenient.
+ *
+ *  Exported for the unit test. */
+export function tagNodes(res: MarkdownTagSetBody): MarkdownKeywordNode[] {
+  if (Array.isArray(res.nodes)) return res.nodes;
+  const items = Array.isArray(res.items) ? res.items : [];
+  return items.map((label) => ({ id: label, label }));
 }
 
 export const markdownApi = {
@@ -240,5 +263,13 @@ export const markdownApi = {
    *  field (GET /content/markdown/tags), same shape + scoping as `categories`. */
   async tags(opts?: { workspace?: string }): Promise<string[]> {
     return (await authedJson<StringListBody>(`${BASE}/tags${workspaceQuery(opts)}`)).items;
+  },
+
+  /** The same tags WITH their row ids — what a manager needs to rename or delete one, and
+   *  what `tags()` above cannot carry. One endpoint serves both views, so they can never
+   *  disagree about the workspace's vocabulary; see {@link tagNodes} for the older-backend
+   *  degrade. */
+  async tagSet(opts?: { workspace?: string }): Promise<MarkdownKeywordNode[]> {
+    return tagNodes(await authedJson<MarkdownTagSetBody>(`${BASE}/tags${workspaceQuery(opts)}`));
   },
 };

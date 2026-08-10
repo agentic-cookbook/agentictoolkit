@@ -26,8 +26,10 @@ import {
  * leaf editor's unsaved-work guard flows into the one HTD's exit gate (so Back / breadcrumb-up /
  * re-click prompts Discard/Stay instead of silently discarding). Mirrors the hub's
  * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack),
- * trimmed to the standalone case: no toolbar slot, no shell workspace/feature levels, no
- * breadcrumb. Extracted from ResourceExplorer (which always self-hosted this way) so the
+ * trimmed to the standalone case: no editor toolbar slot, no shell workspace/feature levels, no
+ * breadcrumb. It does own the FEATURE bar — the full-width strip above the rails a feature fills
+ * via `FeatureBarPortal` — since on a feature site there is no shell above it to own one.
+ * Extracted from ResourceExplorer (which always self-hosted this way) so the
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
  */
@@ -54,6 +56,11 @@ export function StandaloneRailHost({
 }): ReactElement {
   const [registry, setRegistry] = useState<ReadonlyMap<string, RegisteredLevels>>(new Map());
   const [guards, setGuards] = useState<ReadonlyMap<string, PaneExitGuard>>(new Map());
+  // The feature bar: who wants the strip, and the strip's node once it exists. Two pieces of state
+  // and not one, because the node cannot be created until something claims it — a strip rendered
+  // unconditionally would put an empty bordered band above every feature site's rail.
+  const [barClaims, setBarClaims] = useState<ReadonlySet<string>>(new Set());
+  const [featureBarSlot, setFeatureBarSlot] = useState<HTMLElement | null>(null);
 
   const registerLevels = useCallback((id: string, entry: RegisteredLevels) => {
     setRegistry((prev) => {
@@ -78,6 +85,16 @@ export function StandaloneRailHost({
       const next = new Map(prev);
       if (guard === null) next.delete(id);
       else next.set(id, guard);
+      return next;
+    });
+  }, []);
+
+  const claimFeatureBar = useCallback((id: string, claimed: boolean) => {
+    setBarClaims((prev) => {
+      if (prev.has(id) === claimed) return prev;
+      const next = new Set(prev);
+      if (claimed) next.add(id);
+      else next.delete(id);
       return next;
     });
   }, []);
@@ -113,9 +130,18 @@ export function StandaloneRailHost({
     [registry],
   );
 
+  // `toolbarSlot` stays null: an editor's action bar keeps rendering inside its own pane here, as
+  // it always has. Only the FEATURE bar is hoisted, and only when a feature asks for one.
   const host = useMemo<RailHostRegistry>(
-    () => ({ registerLevels, unregisterLevels, registerExitGuard, toolbarSlot: null }),
-    [registerLevels, unregisterLevels, registerExitGuard],
+    () => ({
+      registerLevels,
+      unregisterLevels,
+      registerExitGuard,
+      toolbarSlot: null,
+      claimFeatureBar,
+      featureBarSlot,
+    }),
+    [registerLevels, unregisterLevels, registerExitGuard, claimFeatureBar, featureBarSlot],
   );
 
   return (
@@ -130,7 +156,20 @@ export function StandaloneRailHost({
           `onNavigate` is forwarded straight through, unmodified, to whatever this host's caller
           supplied — see the prop's doc above. */}
       <UnsavedChangesGuard when={guards.size > 0} onNavigate={onNavigate} />
-      <HierarchicalDetailView levels={mergedLevels} showBreadcrumb={false} exitGuard={exitGuard}>
+      {/* `toolbar` is the strip the stack already draws full-width above the rails — exactly where a
+          feature bar belongs. It is rendered only while claimed, and the ref hands its node to
+          FeatureBarPortal; `w-full` because the strip is a flex row and a bar with a flexible
+          space in it has to own the whole width to place anything at its right edge. */}
+      <HierarchicalDetailView
+        levels={mergedLevels}
+        showBreadcrumb={false}
+        exitGuard={exitGuard}
+        toolbar={
+          barClaims.size > 0 ? (
+            <div ref={setFeatureBarSlot} className="flex w-full items-center gap-2" />
+          ) : undefined
+        }
+      >
         {children}
       </HierarchicalDetailView>
     </RailHostContext.Provider>

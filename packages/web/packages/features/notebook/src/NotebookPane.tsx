@@ -1,66 +1,57 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Folder, NotebookPen } from "lucide-react";
+import { Boxes, Folder, Inbox, LayoutList, NotebookPen } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import type { CategoryTreeNode } from "@agentic-toolkit/ui/blocks/category-field";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
 import {
   StackLevels,
   useRailExitGuard,
   MasterDetailLeaf,
   useRecordAffordance,
   CreateResourceDialog,
+  FeatureBarPortal,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
+import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
   notesApi,
+  taxonomyApi,
   type Note,
   type NoteCategory,
   type NoteSummary,
+  type NoteTag,
 } from "@agentic-toolkit/data/notes";
 import {
   buildCategoryTree,
   categoryNames,
   resolveCategoryChain,
-  slugFor,
   type CategoryNode,
 } from "./category-tree";
 import {
+  noteBlank,
   noteDiffers,
   noteNormalize,
   noteToInput,
   noteValidate,
-  tagsOf,
+  resolveListCategory,
   toCreateBody,
   toUpdateBody,
+  type CategoryScope,
   type NoteInput,
 } from "./note-model";
-import { NoteDetail } from "./NoteDetail";
-import { NoteFilters, type FilterState } from "./NoteFilters";
+import { ALL_CATEGORIES_ID, UNCATEGORIZED_SLUG } from "./parse-path";
+import { usePreviewLines } from "./preview-lines";
+import { NoteDetail, NoteFields } from "./NoteDetail";
+import { NoteButtonBar, type FilterState } from "./NoteButtonBar";
+import { NoteListOptions } from "./NoteListOptions";
+import { CategoryManagerDialog } from "./CategoryManagerDialog";
+import { TagManagerDialog } from "./TagManagerDialog";
 
-const EMPTY_FILTERS: FilterState = { q: "", tag: "" };
-
-/** The create modal's PLACEMENT draft (HTD recipe `must-create-in-modal` +
- *  `must-scope-create-modal-to-placement`). Only the title: the note's category is the
- *  RAIL's current selection, which is the placement — asking for it again would let the
- *  modal file a note somewhere other than where the user opened it. It stays editable
- *  afterwards in the note's own Category field. */
-interface NotePlacement {
-  title: string;
-}
-
-/** The new-category modal's placement: which list its `+` was pressed in. */
-interface CategoryPlacement {
-  /** Rail depth of that list — where to navigate once the category exists. */
-  depth: number;
-  /** The category the new one goes UNDER (null at the root level). */
-  parentId: string | null;
-  parentName: string | null;
-}
+const EMPTY_FILTERS: FilterState = { q: "", category: "", tag: "" };
 
 function errorText(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -77,12 +68,22 @@ function errorText(err: unknown, fallback: string): string {
  *
  *  1. **No publishing.** A note has no public route, no visibility, and no publish section.
  *  2. **The category list is a TREE, and it is the rail.** Research publishes one flat
- *     document level; this publishes one level per category depth, then the notes. Selecting
- *     a category narrows the notes to the ones filed DIRECTLY in it — its subcategories are
- *     the next rail level, exactly as a folder holds its own files and its subfolders hold
- *     theirs. With nothing selected the list is the whole notebook, which is the useful
- *     landing: you open the notebook and see your notes, not an empty pane demanding a
- *     folder.
+ *     document level; this publishes a read-only ecosystems level, then one level per
+ *     category depth, then the notes. Selecting a category narrows the notes to the ones
+ *     filed DIRECTLY in it — its subcategories are the next rail level, exactly as a folder
+ *     holds its own files and its subfolders hold theirs. With nothing selected the list is
+ *     the whole notebook, which is the useful landing: you open the notebook and see your
+ *     notes, not an empty pane demanding a folder.
+ *
+ * Everything that acts on the LIST rather than on one note lives in {@link NoteButtonBar},
+ * published into the host's feature-bar slot — search, the two filters, the two taxonomy
+ * editors and Create Note. The rail's headers hold nothing but navigation, so the only `+`
+ * left in the notebook is the one that creates a category from inside the category editor.
+ *
+ * The rail and the bar both speak about categories, and they are NOT the same axis: the rail
+ * SCOPES (which part of the notebook you are standing in) while the bar NARROWS within it.
+ * `resolveListCategory` folds the two into one request and reports the contradiction rather
+ * than letting either quietly win.
  *
  * Routing is the caller's (see NotebookFeature): this pane takes the selection and two
  * navigate callbacks, so it can be driven and tested without a router.
@@ -117,78 +118,110 @@ export function NotebookPane({
   // ── Data ────────────────────────────────────────────────────────────────
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
   const [notes, setNotes] = useState<NoteSummary[] | null>(null);
-  // The unfiltered universe, only for the filter dropdown options — so narrowing the list
-  // (which refetches `notes`) never empties its own tag menu.
-  const [universe, setUniverse] = useState<NoteSummary[]>([]);
   const [listError, setListError] = useState<string | null>(null);
   const [categoryRows, setCategoryRows] = useState<NoteCategory[] | null>(null);
-  const [accountTags, setAccountTags] = useState<string[]>([]);
+  const [tagRows, setTagRows] = useState<NoteTag[]>([]);
+  const [ecosystems, setEcosystems] = useState<Ecosystem[] | null>(null);
+  const [ecosystemsError, setEcosystemsError] = useState<string | null>(null);
 
   // ── The category tree + the chain the URL names ──────────────────────────
   const tree = useMemo(() => buildCategoryTree(categoryRows ?? []), [categoryRows]);
   // Keyed on the JOINED slugs: the parser hands us a fresh array every render, so the array
   // itself is never a stable dep.
   const slugKey = categorySlugs.join("/");
+  // "Uncategorized" is a rail row, not a category, so it never resolves against the tree —
+  // it is recognised by its reserved slug and short-circuits the whole chain.
+  const uncategorized = categorySlugs[0] === UNCATEGORIZED_SLUG;
   const chain = useMemo(
-    () => resolveCategoryChain(tree, slugKey ? slugKey.split("/") : []),
-    [tree, slugKey],
+    () => (uncategorized ? [] : resolveCategoryChain(tree, slugKey ? slugKey.split("/") : [])),
+    [tree, slugKey, uncategorized],
   );
   // The RESOLVED chain is what every navigation is built from, not the raw URL slugs, so a
   // stale deep link normalises to what still exists the moment anything is clicked.
-  const chainSlugs = chain.map((node) => node.slug);
+  const chainSlugs = uncategorized ? [UNCATEGORIZED_SLUG] : chain.map((node) => node.slug);
   const activeCategory: CategoryNode | null = chain[chain.length - 1] ?? null;
   const activeCategoryName = activeCategory?.name ?? "";
   const categoryOptions = useMemo(() => categoryNames(categoryRows ?? []), [categoryRows]);
+  const tagOptions = useMemo(() => tagRows.map((tag) => tag.label), [tagRows]);
+  const previewLines = usePreviewLines();
 
   const loadList = useCallback(
     async (f: FilterState) => {
+      const scope: CategoryScope = uncategorized
+        ? { kind: "uncategorized" }
+        : activeCategoryName
+          ? { kind: "named", name: activeCategoryName }
+          : { kind: "all" };
+      const plan = resolveListCategory(scope, f.category);
+      // The rail and the filter name two different categories: nothing can match, so there is
+      // nothing worth asking the backend.
+      if (plan.empty) {
+        setNotes([]);
+        setListError(null);
+        return;
+      }
       try {
         // `category` is an EXACT name match on the backend, which is what makes a category
         // hold only its own notes; the subcategories are their own levels.
-        setNotes(
-          await notesApi.list(
-            { q: f.q, tag: f.tag, category: activeCategoryName },
-            { workspace: workspaceSlug },
-          ),
+        const rows = await notesApi.list(
+          { q: f.q, tag: f.tag, category: plan.query },
+          { workspace: workspaceSlug },
         );
+        setNotes(plan.uncategorizedOnly ? rows.filter((row) => !row.category) : rows);
         setListError(null);
       } catch (err) {
         reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "list" });
         setListError(errorText(err, "Failed to load notes."));
       }
     },
-    [workspaceSlug, activeCategoryName],
+    [workspaceSlug, activeCategoryName, uncategorized],
   );
 
-  const loadUniverse = useCallback(async () => {
-    try {
-      setUniverse(await notesApi.list({}, { workspace: workspaceSlug }));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "universe" });
-    }
-  }, [workspaceSlug]);
-
-  // The owner's categories + tags: the rail's rows and the editor's autocomplete sources.
-  // Refetched on save so a freshly coined category/tag appears next time — and so a note
-  // moved into a new category puts that category in the rail.
+  // The owner's categories + tags: the rail's rows, the bar's two filter menus, the editor's
+  // autocomplete sources and what the two manager dialogs edit. Refetched on save so a freshly
+  // coined category/tag appears next time — and so a note moved into a new category puts that
+  // category in the rail. Tags come back as id+label pairs because renaming or retiring one
+  // addresses the ROW, and a label is not an address.
   const loadTaxonomy = useCallback(async () => {
     try {
       // Workspace-scoped like the notes themselves: the backend scopes the category/tag
       // vocabulary to the same owner it scopes the documents to.
       const [categories, tags] = await Promise.all([
         notesApi.categories({ workspace: workspaceSlug }),
-        notesApi.tags({ workspace: workspaceSlug }),
+        notesApi.tagSet({ workspace: workspaceSlug }),
       ]);
       setCategoryRows(categories);
-      setAccountTags(tags);
+      setTagRows(tags);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
+    }
+  }, [workspaceSlug]);
+
+  // The workspace's ecosystems — the rail's read-only root level. Loaded once: nothing in the
+  // notebook writes an ecosystem, so nothing here can invalidate it.
+  const loadEcosystems = useCallback(async () => {
+    try {
+      setEcosystems(
+        workspaceSlug
+          ? await ecosystemsApi.listForWorkspace(workspaceSlug)
+          : await ecosystemsApi.list(),
+      );
+      setEcosystemsError(null);
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "ecosystems" });
+      // Say so rather than leaving the level reading "Loading…" forever.
+      setEcosystems([]);
+      setEcosystemsError(errorText(err, "Failed to load ecosystems."));
     }
   }, [workspaceSlug]);
 
   useEffect(() => {
     void loadTaxonomy();
   }, [loadTaxonomy]);
+
+  useEffect(() => {
+    void loadEcosystems();
+  }, [loadEcosystems]);
 
   // Refetch the list when the filters or the selected category change (debounced so typing
   // search doesn't fire a request per keystroke).
@@ -197,20 +230,17 @@ export function NotebookPane({
     return () => clearTimeout(id);
   }, [filters, loadList]);
 
-  useEffect(() => {
-    void loadUniverse();
-  }, [loadUniverse]);
-
   const refresh = useCallback(
-    () => Promise.all([loadList(filters), loadUniverse(), loadTaxonomy()]).then(() => undefined),
-    [filters, loadList, loadUniverse, loadTaxonomy],
+    () => Promise.all([loadList(filters), loadTaxonomy()]).then(() => undefined),
+    [filters, loadList, loadTaxonomy],
   );
 
   // ── Selection + draft ─────────────────────────────────────────────────────
   const selectedId = noteId ?? null;
   // Creating is a MODAL over the stack, never a blank leaf (HTD recipe `must-create-in-modal`).
   const [newNoteOpen, setNewNoteOpen] = useState(false);
-  const [newCategory, setNewCategory] = useState<CategoryPlacement | null>(null);
+  const [editingCategories, setEditingCategories] = useState(false);
+  const [editingTags, setEditingTags] = useState(false);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [draft, setDraft] = useState<NoteInput | null>(null);
   const [loadingNote, setLoadingNote] = useState(false);
@@ -357,6 +387,31 @@ export function NotebookPane({
   }
 
   // ── The rail ───────────────────────────────────────────────────────────────
+  // The workspace's ecosystems, purely as context: they say which vocabulary the categories
+  // and tags below belong to. Every row is `disabled`, which is this list's whole contract —
+  // a row that looked clickable and did nothing would read as broken, and there is nothing
+  // for a click to do while the notebook is scoped by the WORKSPACE rather than by one
+  // ecosystem within it.
+  const ecosystemsLevel: TopicLevel = {
+    id: "notebook-ecosystems",
+    title: "Ecosystems",
+    items: (ecosystems ?? []).map(
+      (eco): TopicDetailItem => ({
+        id: eco.id,
+        label: eco.name,
+        icon: <Boxes />,
+        sublabel: eco.identifier || undefined,
+        disabled: true,
+      }),
+    ),
+    selectedId: null,
+    itemNoun: "ecosystem",
+    onSelect: () => {},
+    onClear: () => {},
+    emptyLabel:
+      ecosystemsError ?? (ecosystems === null ? "Loading…" : "No ecosystems in this workspace."),
+  };
+
   // One level per category DEPTH, then the notes. The loop publishes the root list, then a
   // child list for each selected category that HAS children — so the rail is exactly as deep
   // as the tree the user has walked into, and a leaf category doesn't publish an empty list.
@@ -364,37 +419,54 @@ export function NotebookPane({
   {
     let siblings = tree;
     let title = "Categories";
-    let parent: CategoryNode | null = null;
     for (let depth = 0; ; depth++) {
       const picked: CategoryNode | undefined = chain[depth];
       const ancestors = chainSlugs.slice(0, depth);
-      const parentId = parent?.id ?? null;
-      const parentName = parent?.name ?? null;
+      // The root list leads with the two rows that are not categories. Both name a SCOPE the
+      // list can be in but no category expresses: the whole notebook, and the notes filed
+      // nowhere. Their ids come from the reserved `-*` space (see parse-path) so neither can
+      // ever collide with a real category's slug.
+      const leadRows: TopicDetailItem[] =
+        depth === 0
+          ? [
+              { id: ALL_CATEGORIES_ID, label: "All", icon: <LayoutList /> },
+              { id: UNCATEGORIZED_SLUG, label: "Uncategorized", icon: <Inbox />, dividerAfter: true },
+            ]
+          : [];
       categoryLevels.push({
         id: `notebook-categories-${depth}`,
         title,
-        items: siblings.map(
-          (node): TopicDetailItem => ({
-            id: node.slug,
-            label: node.name,
-            icon: <Folder />,
-            sublabel:
-              node.children.length === 1
-                ? "1 subcategory"
-                : node.children.length > 1
-                  ? `${node.children.length} subcategories`
-                  : undefined,
-          }),
-        ),
-        selectedId: picked?.slug ?? null,
+        items: [
+          ...leadRows,
+          ...siblings.map(
+            (node): TopicDetailItem => ({
+              id: node.slug,
+              label: node.name,
+              icon: <Folder />,
+              sublabel:
+                node.children.length === 1
+                  ? "1 subcategory"
+                  : node.children.length > 1
+                    ? `${node.children.length} subcategories`
+                    : undefined,
+            }),
+          ),
+        ],
+        selectedId:
+          picked?.slug ??
+          (depth > 0 ? null : uncategorized ? UNCATEGORIZED_SLUG : ALL_CATEGORIES_ID),
         // Every category discloses more lists (its notes, and any subcategories), so the
         // detail pane holds through an intermediate pick.
         leadsTo: "list",
         itemNoun: "category",
-        onSelect: (slug) => onSelectCategory([...ancestors, slug]),
+        onSelect: (slug) => {
+          if (depth === 0 && slug === ALL_CATEGORIES_ID) return onSelectCategory([]);
+          if (depth === 0 && slug === UNCATEGORIZED_SLUG) {
+            return onSelectCategory([UNCATEGORIZED_SLUG]);
+          }
+          onSelectCategory([...ancestors, slug]);
+        },
         onClear: () => onSelectCategory(ancestors),
-        onNew: () => setNewCategory({ depth, parentId, parentName }),
-        newLabel: parentName ? `New category in ${parentName}` : "New category",
         emptyLabel:
           categoryRows === null
             ? "Loading…"
@@ -405,11 +477,11 @@ export function NotebookPane({
       if (!picked || picked.children.length === 0) break;
       siblings = picked.children;
       title = picked.name;
-      parent = picked;
     }
   }
 
   const rows = notes ?? [];
+  const filtering = Boolean(filters.q || filters.category || filters.tag);
   const notesLevel: TopicLevel = {
     id: "notebook-notes",
     title: "Notes",
@@ -423,21 +495,28 @@ export function NotebookPane({
         sublabel:
           [activeCategory ? null : note.category, ...note.tags].filter(Boolean).join(" · ") ||
           undefined,
+        preview: previewLines > 0 ? note.excerpt || undefined : undefined,
+        previewLines,
+        // The open note can't be saved, and the row is where the user is looking when they
+        // wonder why Save is grey. The reason itself is on the field, in the editor.
+        blocked: note.id === selectedId && validationError !== null,
       }),
     ),
     selectedId,
     itemNoun: "note",
     onSelect: (id) => onSelectNote(id, chainSlugs),
     onClear: onCancel,
-    onNew: () => setNewNoteOpen(true),
-    newLabel: activeCategory ? `New note in ${activeCategory.name}` : "New note",
     emptyLabel:
       notes === null
         ? "Loading…"
-        : activeCategory
-          ? "No notes in this category yet."
-          : "No notes yet.",
-    railSlot: <NoteFilters filters={filters} onChange={setFilters} tags={tagsOf(universe)} />,
+        : filtering
+          ? "No notes match these filters."
+          : uncategorized
+            ? "Every note is filed in a category."
+            : activeCategory
+              ? "No notes in this category yet."
+              : "No notes yet.",
+    titleActions: <NoteListOptions />,
   };
 
   // Registered only while DIRTY so the host's guard count is a render-value dirty signal.
@@ -448,7 +527,28 @@ export function NotebookPane({
   const renderRecordAffordance = useRecordAffordance();
 
   const editing = selectedId !== null;
-  const validationHint = draft && dirty ? validationError : null;
+  // Deliberately NOT gated on `dirty`. Save is disabled the moment the draft is invalid, and
+  // a note written before the body became required opens invalid and untouched — under a
+  // dirty gate the button was grey with nothing on screen saying why. The reason belongs to
+  // the field, not to the edit.
+  const validationHint = draft ? validationError : null;
+
+  // Rename a category from the crumb the note is filed under. Passed to both editors so the
+  // tree is fixable from wherever the mistake is noticed, not only from the manager dialog.
+  const renameCategory = useCallback(
+    async (node: CategoryTreeNode, nextName: string) => {
+      await taxonomyApi.renameCategory(node.id, nextName);
+      await loadTaxonomy();
+    },
+    [loadTaxonomy],
+  );
+
+  const noteFieldProps = {
+    categoryOptions,
+    categoryNodes: categoryRows ?? [],
+    onRenameCategory: renameCategory,
+    tagOptions,
+  };
 
   // The frontier leaf: a portaled Save/Cancel/Delete bar over the editor (or a placeholder).
   // The lists live in the published rail above, so this renders ONLY the editor half.
@@ -469,10 +569,25 @@ export function NotebookPane({
 
   return (
     <>
-      {/* Every level in one publication: the category chain, then the notes. StackLevels (not
-          useStackLevel) because the count VARIES with the depth walked into, and it advances
-          the depth for the leaf below by exactly that many. */}
-      <StackLevels levels={[...categoryLevels, notesLevel]}>
+      {/* Published into the host's feature-bar slot, under the workspace bar. It sits outside
+          the rail because it acts on the LIST as a whole, not on the level the rail happens
+          to be showing. */}
+      <FeatureBarPortal>
+        <NoteButtonBar
+          filters={filters}
+          onChange={setFilters}
+          categories={categoryOptions}
+          tags={tagOptions}
+          onEditCategories={() => setEditingCategories(true)}
+          onEditTags={() => setEditingTags(true)}
+          onCreateNote={() => setNewNoteOpen(true)}
+        />
+      </FeatureBarPortal>
+
+      {/* Every level in one publication: the ecosystems, the category chain, then the notes.
+          StackLevels (not useStackLevel) because the count VARIES with the depth walked into,
+          and it advances the depth for the leaf below by exactly that many. */}
+      <StackLevels levels={[ecosystemsLevel, ...categoryLevels, notesLevel]}>
         <MasterDetailLeaf
           form={{ actions, editing, draft }}
           trailing={renderRecordAffordance?.({
@@ -490,10 +605,9 @@ export function NotebookPane({
                 <p className="text-sm text-apt-text-muted">Loading…</p>
               ) : (
                 <NoteDetail
+                  {...noteFieldProps}
                   draft={d}
                   onChange={onChange}
-                  categoryOptions={categoryOptions}
-                  tagOptions={accountTags}
                   error={validationHint}
                 />
               )}
@@ -502,27 +616,20 @@ export function NotebookPane({
         />
       </StackLevels>
 
-      {/* Create is a scoped modal: the title only. The note is filed in the category the rail
-          is currently on, and its body is written in the editor that opens once it exists —
-          the backend accepts an empty body on create. */}
+      {/* Create is the SAME three fields the editor shows, in the same order — one component,
+          so the two can't drift. The body is required here: a note whose title is its first
+          line has no identity until something is written, and creating an empty one used to
+          mint a note that could never be saved again. The category is seeded from the rail's
+          placement and stays editable, so the modal files it where it was opened without
+          being unable to say otherwise. */}
       {newNoteOpen && (
-        <CreateResourceDialog<NotePlacement, Note>
+        <CreateResourceDialog<NoteInput, Note>
           ariaLabel="New note"
           heading={activeCategory ? `New note in ${activeCategory.name}` : "New note"}
-          blank={() => ({ title: "" })}
-          validate={(d) => (!d.title.trim() ? "A title is required." : null)}
+          blank={() => ({ ...noteBlank(), category: activeCategoryName })}
+          validate={noteValidate}
           create={(d) =>
-            notesApi.create(
-              toCreateBody(
-                noteNormalize({
-                  title: d.title,
-                  content: "",
-                  category: activeCategoryName,
-                  tags: [],
-                }),
-              ),
-              { workspace: workspaceSlug },
-            )
+            notesApi.create(toCreateBody(noteNormalize(d)), { workspace: workspaceSlug })
           }
           onClose={() => setNewNoteOpen(false)}
           onCreated={(created) => {
@@ -536,73 +643,25 @@ export function NotebookPane({
             setFormError(null);
           }}
           renderForm={(d, onDraftChange, error) => (
-            <>
-              <Field label="Title">
-                <Input
-                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
-                  autoFocus
-                  value={d.title}
-                  placeholder="Untitled note"
-                  onChange={(e) => onDraftChange({ ...d, title: e.target.value })}
-                />
-              </Field>
-              {error && <p className="text-sm text-apt-red">{error}</p>}
-            </>
+            <NoteFields {...noteFieldProps} draft={d} onChange={onDraftChange} error={error} />
           )}
         />
       )}
 
-      {newCategory && (
-        <CreateResourceDialog<{ name: string }, NoteCategory>
-          ariaLabel="New category"
-          heading={
-            newCategory.parentName ? `New category in ${newCategory.parentName}` : "New category"
-          }
-          blank={() => ({ name: "" })}
-          validate={(d) =>
-            !d.name.trim()
-              ? "A name is required."
-              : d.name.length > 200
-                ? "Name must be 200 characters or fewer."
-                : null
-          }
-          create={(d) =>
-            notesApi.createCategory(
-              { name: d.name.trim(), parentId: newCategory.parentId },
-              { workspace: workspaceSlug },
-            )
-          }
-          onClose={() => setNewCategory(null)}
-          onCreated={(created) => {
-            const { depth } = newCategory;
-            setNewCategory(null);
-            // Navigate straight in. The refetch is deliberately NOT awaited: the chain
-            // resolves against whatever tree is loaded, so the new slug is simply unresolved
-            // for one frame (the rail sits on the parent) and snaps into place when the rows
-            // land — the URL is already right either way.
-            void refresh();
-            onSelectCategory([
-              ...chainSlugs.slice(0, depth),
-              slugFor(created.name, created.id),
-            ]);
-          }}
-          renderForm={(d, onDraftChange, error) => (
-            <>
-              <Field
-                label="Name"
-                hint="A category name is unique across your notebook — it names one place in it."
-              >
-                <Input
-                  /* eslint-disable-next-line jsx-a11y/no-autofocus -- focus the first field on open */
-                  autoFocus
-                  value={d.name}
-                  placeholder="e.g. Meetings"
-                  onChange={(e) => onDraftChange({ ...d, name: e.target.value })}
-                />
-              </Field>
-              {error && <p className="text-sm text-apt-red">{error}</p>}
-            </>
-          )}
+      {editingCategories && (
+        <CategoryManagerDialog
+          rows={categoryRows ?? []}
+          workspaceSlug={workspaceSlug}
+          onClose={() => setEditingCategories(false)}
+          onChanged={refresh}
+        />
+      )}
+
+      {editingTags && (
+        <TagManagerDialog
+          tags={tagRows}
+          onClose={() => setEditingTags(false)}
+          onChanged={refresh}
         />
       )}
 

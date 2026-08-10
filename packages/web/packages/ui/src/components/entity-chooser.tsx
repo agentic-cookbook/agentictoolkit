@@ -50,9 +50,10 @@ export type EntityChooserProps = EntityChooserSingleProps | EntityChooserMultiPr
  * entities — the account's categories or tags. It is a thin composition over
  * {@link ListChooser} (the list + roving-keyboard + add-new engine), adding only the
  * selection semantics: SINGLE mode is a one-value picker; MULTI mode maintains a set,
- * rendering it as removable chips above a "Choose…" trigger that adds one more entry
- * per open (already-selected options are hidden from the browser). It never
- * re-implements the list or keyboard logic — that all lives in `ListChooser`.
+ * rendering it as removable chips beside a "Choose…" trigger whose browser stays open
+ * across accepts, so one open adds as many entries as you like (already-selected
+ * options are hidden from it). It never re-implements the list or keyboard logic —
+ * that all lives in `ListChooser`.
  */
 export function EntityChooser(props: EntityChooserProps): React.ReactElement {
   const {
@@ -115,7 +116,20 @@ export function EntityChooser(props: EntityChooserProps): React.ReactElement {
             {v}
           </RemovableChip>
         ))}
-        <ListChooser items={available} value={null} onChange={(v) => add(v)} {...shared} className="w-auto" />
+        {/* `keepOpenOnCommit`: a set is built one entry at a time, so the browser stays up
+            after each accept and Shift+Enter dismisses it — adding three tags is three
+            Enters, not three trips through the trigger. The buttons say what they now do:
+            OK adds another, Cancel is how you leave. */}
+        <ListChooser
+          items={available}
+          value={null}
+          onChange={(v) => add(v)}
+          keepOpenOnCommit
+          okLabel="Add"
+          cancelLabel="Done"
+          {...shared}
+          className="w-auto"
+        />
       </div>
     )
   }

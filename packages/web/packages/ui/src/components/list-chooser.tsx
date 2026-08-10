@@ -35,6 +35,12 @@ export interface ListChooserProps {
   createLabel?: (text: string) => string
   /** Shown when no item matches the filter and creation is unavailable. */
   emptyLabel?: string
+  /** Keep the popup open after an accept, resetting the field for the next entry —
+   *  for a chooser that collects a SET (tags), where closing after every pick makes
+   *  adding three tags three round trips through the trigger. Shift+Enter then
+   *  dismisses (Escape and Cancel still do too). Default false: a single-value
+   *  chooser is done once it has its value, so it closes. */
+  keepOpenOnCommit?: boolean
   disabled?: boolean
   className?: string
 }
@@ -45,7 +51,9 @@ export interface ListChooserProps {
  * new entry (text matching no item, when `allowCreate`). Arrow keys move a roving
  * highlight through the filtered list and sync the highlighted label into the
  * field; Enter / OK accept the highlighted item or the typed entry; Esc / Cancel
- * close without committing. Built from the same primitives as `OptionMenu`
+ * close without committing. An accept closes the popup unless `keepOpenOnCommit`
+ * is set, in which case it resets for the next entry and Shift+Enter is what
+ * dismisses. Built from the same primitives as `OptionMenu`
  * (`Popover` + `Input` + `Button`) with a hand-managed roving selection.
  */
 export function ListChooser({
@@ -61,6 +69,7 @@ export function ListChooser({
   cancelLabel = "Cancel",
   createLabel = (text) => `Add “${text}”`,
   emptyLabel = "No matches",
+  keepOpenOnCommit = false,
   disabled = false,
   className,
 }: ListChooserProps): React.ReactElement {
@@ -123,7 +132,16 @@ export function ListChooser({
 
   function commit(v: string, isNew: boolean): void {
     onChange(v, { isNew })
-    setOpen(false)
+    if (!keepOpenOnCommit) {
+      setOpen(false)
+      return
+    }
+    // Same state the popup opens in, so the next entry starts from a clean field and an
+    // unhighlighted list rather than from the item just taken (which the parent has by now
+    // removed from `items`, leaving the highlight pointing at whatever slid into its index).
+    setQuery("")
+    setHighlight(-1)
+    inputRef.current?.focus()
   }
 
   function accept(): void {
@@ -161,7 +179,11 @@ export function ListChooser({
       move(-1)
     } else if (e.key === "Enter") {
       e.preventDefault()
-      accept()
+      // In keep-open mode Enter is "add another" and Shift+Enter is "I'm done" — the only
+      // way out that doesn't cost a trip to Escape or the mouse. Plain Enter still accepts
+      // when the popup closes anyway, so a stray Shift there must not swallow the accept.
+      if (keepOpenOnCommit && e.shiftKey) setOpen(false)
+      else accept()
     } else if (e.key === "Escape") {
       e.preventDefault()
       setOpen(false)
