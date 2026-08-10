@@ -25,8 +25,13 @@ describe('the header-links collapse breakpoint', () => {
   )
 
   it('is the same width in the hook as in the rule that hides .adh-header__links', () => {
+    // The rule no longer sits ALONE in its block — the phone breakpoint also shrinks the
+    // header's gutters and lets the brand ellipsise — so this matches the @media block that
+    // CONTAINS the rule, not one that is only it. The body pattern accepts plain text and
+    // whole nested rules but never a stray `}`, so it cannot run past the block's own end and
+    // borrow a later query's width; the second test is what rules out a second copy elsewhere.
     const rule = css.match(
-      /@media\s*\(([^)]+)\)\s*\{\s*\.adh-header__links\s*\{\s*display:\s*none;?\s*\}\s*\}/,
+      /@media\s*\(([^)]+)\)\s*\{(?:[^{}]|\{[^{}]*\})*?\.adh-header__links\s*\{\s*display:\s*none/,
     )
     expect(rule, 'no @media rule hiding .adh-header__links — did it move?').not.toBeNull()
 
