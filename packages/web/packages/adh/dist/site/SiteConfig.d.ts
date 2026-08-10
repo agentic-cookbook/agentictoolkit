@@ -129,11 +129,22 @@ export interface SiteConfig {
     /** The route seams, passed through undefaulted — see the fields of the same name on
      *  SiteDefinition.
      *
-     *  Undefaulted deliberately: the family's defaults live in `@agentic-toolkit/auth`, and
-     *  resolving them here would put that package's module graph (a token store and a
-     *  refresh timer at module scope) behind `app/robots.ts` and `app/sitemap.ts`, which
-     *  import this config and render no UI at all. The route file that mounts a gate is
-     *  already importing the default; the `??` belongs there. */
+     *  Undefaulted because a default here would be a default nobody can see: these are read by
+     *  exactly two route files, each of which has to name the family's gate anyway to type its
+     *  own `??`, and a config that quietly supplies one makes the mount's own line look dead.
+     *  So the `??` lives at the mount, where the reader is.
+     *
+     *  This used to claim a runtime reason — that resolving them would drag
+     *  `@agentic-toolkit/auth`'s module graph ("a token store and a refresh timer at module
+     *  scope") behind `app/robots.ts` and `app/sitemap.ts`. That was wrong twice over, and the
+     *  correction matters because sites were being told to reason from it: `@agentic-toolkit/auth`
+     *  is itself a `'use client'` barrel, so a server module importing it gets client REFERENCES
+     *  and never evaluates a line of it — which is why hub's `site.config.tsx` can hold four
+     *  client components and its `app/robots.ts` still executes nothing but this file. And there
+     *  is no such timer or store to drag: the package has no module-scope state and no
+     *  `setInterval` anywhere in its source. The paragraph above this one is the constraint that
+     *  IS real, and it runs the other way — a `'use client'` importer would pull `research`'s
+     *  server-only sitemap reads into a browser bundle. */
     homeGate?: SiteGate;
     workspaceGate?: SiteGate;
     authCallback?: ReactNode;
