@@ -140,27 +140,38 @@ vi.mock("@agentic-toolkit/data", async () => {
       // that makes the shell's error branch necessary: a null list and a failed list look
       // identical from `items` alone.
       const [error, setError] = useState<string | null>(null);
+      // Starts TRUE and is cleared by whichever path settles, exactly as the real hook does
+      // (use-resource-list.ts). It is the rung that keeps a SEEDED first render from reading as
+      // the server's answer, so a stub that hardcoded `false` would make the one test that seeds
+      // rows pass for the wrong reason — and one that hardcoded `true` would disable the 404
+      // entirely, which is most of what this file asserts.
+      const [isFetching, setIsFetching] = useState(true);
       // `_cacheKey` is a dependency here for the same reason it is one in the real hook
       // (use-resource-list.ts:133): a changed key is a different collection, and it refetches.
       // Nothing in the family changes it any more — one workspace list, one literal key — but the
       // stub mirrors the hook rather than the current callers, so it keeps saying so.
       useEffect(() => {
         let alive = true;
+        setIsFetching(true);
         void load()
           .then((rows) => {
             if (alive) {
               setError(null);
               setItems(rows);
+              setIsFetching(false);
             }
           })
           .catch((e: unknown) => {
-            if (alive) setError(e instanceof Error ? e.message : "Failed to load.");
+            if (alive) {
+              setError(e instanceof Error ? e.message : "Failed to load.");
+              setIsFetching(false);
+            }
           });
         return () => {
           alive = false;
         };
       }, [load, _cacheKey]);
-      return { items, reload: vi.fn(), error, setItems };
+      return { items, reload: vi.fn(), error, isFetching, setItems };
     },
     workspacesApi: { list: () => list() },
     workspacePrefsApi: {
@@ -1284,6 +1295,37 @@ describe("SiteHomeShell resolution", () => {
     restoreConsole();
     expect(screen.queryByTestId("not-found")).toBeNull();
     expect(screen.queryByTestId("feature")).toBeNull();
+  });
+
+  it("does NOT refuse a slug missing from a STALE SEED while the refetch is still out", async () => {
+    // The fourth rung. `useResourceList` seeds the first render from its module cache, so the list
+    // can be non-null AND predate the workspace the URL names — which is exactly the render a
+    // freshly-created workspace is absent from. Read as "settled without newco", that is a 404 on
+    // a workspace the caller just made.
+    //
+    // Held here by seeding rows that lack `newco` and never settling the refetch, so the only
+    // thing that could keep the shell from refusing is the in-flight flag: the list is non-null,
+    // it does not carry the slug, and no error has been recorded.
+    seedRows = WORKSPACES;
+    list.mockReturnValue(new Promise(() => {}));
+    const { restoreConsole } = renderGated({ workspaceSlug: "newco" });
+    await new Promise((r) => setTimeout(r, 0));
+    restoreConsole();
+    expect(screen.queryByTestId("not-found")).toBeNull();
+  });
+
+  it("...and DOES refuse it once that refetch lands without it", async () => {
+    // The other half, so the rung above is a delay and not an exemption: the same seeded mount,
+    // with the read allowed to settle, still refuses. Without this a stuck `isFetching` would
+    // disable the refusal outright and every test in this group would keep passing.
+    seedRows = WORKSPACES;
+    list.mockResolvedValue(WORKSPACES);
+    const { restoreConsole } = renderGated({ workspaceSlug: "newco" });
+    try {
+      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
+    } finally {
+      restoreConsole();
+    }
   });
 
   it("does NOT refuse when the list FAILED — a retryable error is not a 404", async () => {

@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 // isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
 // @agentic-toolkit/adh/site, whose reserved-slug list is what now answers them, and their cases
 // went with them (`adh/src/site/__tests__/hubWorkspacePath.test.ts`).
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -497,10 +497,12 @@ describe('siteWorkspaceSlug (the inverse: which workspace a path names)', () => 
     expect(siteWorkspaceSlug(cookbook, '/acme/recipes')).toBe('acme')
   })
   // Not an oversight and not a shape difference — the hub builds `/acme` like everyone
-  // else. Reading one back needs the set of first segments that AREN'T slugs, and the
-  // hub's is `reservedWorkspaceSlugs()` over in @agentic-toolkit/adh, which depends on
-  // this package. Answering from SITE_LANDING_SEGMENTS instead would read `/login` and
-  // `/explore` as workspaces, so this refuses and useSiteMenu asks hubWorkspaceSlug.
+  // else. Reading one back needs the set of first segments that AREN'T slugs, and the hub's
+  // is its own (HUB_ROUTE_SEGMENTS): answering from SITE_LANDING_SEGMENTS would read
+  // `/login` and `/explore` as workspaces. It refuses rather than switching on the set
+  // because a hub path needs more than one — `/home` and `/settings` carry no slug and
+  // resolve to the visitor's own — so hubWorkspaceSlug owns the whole answer and useSiteMenu
+  // asks it directly.
   it('refuses the hub rather than parsing it with the template’s landing set', () => {
     expect(siteWorkspaceSlug(hub, '/acme/knowledgebases/facts')).toBeNull()
     expect(siteWorkspaceSlug(hub, '/login')).toBeNull()
@@ -524,10 +526,13 @@ describe('siteWorkspaceSlug (the inverse: which workspace a path names)', () => 
     expect(siteWorkspaceSlug(getSite('status')!, '/acme')).toBeNull()
   })
   // The deliberate one: an unknown first segment on a 'root' site READS as a slug,
-  // because only the static routes can be listed. The destination repairs it — the
-  // hub's useWorkspaceRoute swaps an unresolvable slug for the user's real workspace —
-  // so a wrong guess costs one redirect, where refusing to guess would cost the carry
-  // on all 33 of those sites.
+  // because only the static routes can be listed. It is no longer repaired on arrival —
+  // useWorkspaceRoute used to swap an unresolvable slug for the visitor's real workspace,
+  // and the shared shell now 404s a settled list with no match instead, because landing
+  // silently in a DIFFERENT workspace is a worse answer than being told the address is
+  // wrong. `/not-a-real-page` was already a wrong address either way; what this costs is
+  // paid by a segment that is a real page and missing from the set, which is precisely
+  // what the lockstep case below refuses to let happen.
   it('reads an unknown segment as a slug rather than refusing', () => {
     expect(siteWorkspaceSlug(getSite('storage')!, '/not-a-real-page')).toBe('not-a-real-page')
   })
@@ -560,6 +565,32 @@ describe('siteWorkspaceSlug (the inverse: which workspace a path names)', () => 
     // …and the other way, so a retired page doesn't leave a segment listed here
     // forever, quietly refusing to carry a workspace whose slug happens to match it.
     expect([...SITE_LANDING_SEGMENTS].sort()).toEqual([...seen].sort())
+  })
+})
+
+describe('HUB_ROUTE_SEGMENTS (the same question, asked about the other root)', () => {
+  // LOCKSTEP, the same shape as the case above and for the same reason: a hand-written
+  // literal, so `gen-site-routes.py --check` holding SITE_ROUTES to the app trees is the only
+  // thing that can keep it honest. What it guards is the header's in-hub mode — this set is
+  // what `hubWorkspacePath.ts` reads to tell a hub PAGE from a workspace slug.
+  it("equals the hub's static top-level routes, in both directions", () => {
+    const seen = new Set<string>()
+    for (const route of SITE_ROUTES['hub'] ?? []) {
+      const seg = route.split('/').filter(Boolean)[0]
+      // `/` has no segment, and `[workspace]` IS the slug.
+      if (!seg || seg.startsWith('[')) continue
+      seen.add(seg)
+      expect(
+        HUB_ROUTE_SEGMENTS.has(seg),
+        `the hub serves /${seg}, so HUB_ROUTE_SEGMENTS must list it — otherwise the header ` +
+          `reads that page as a workspace and puts the signed-in workspace menu on it`,
+      ).toBe(true)
+    }
+    expect(seen.size).toBeGreaterThan(0) // non-vacuity
+    // …and the other way, which is the direction the mint-time list got wrong: a word listed
+    // here that the hub does not route is a slug somebody may legitimately hold, read as a
+    // page — the header then swaps the visitor's own slug into every feature link, silently.
+    expect([...HUB_ROUTE_SEGMENTS].sort()).toEqual([...seen].sort())
   })
 })
 

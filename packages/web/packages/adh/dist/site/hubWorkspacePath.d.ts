@@ -11,14 +11,25 @@
  * workspace tree by construction. `/acme/about` is a 404 INSIDE that tree, and the second-segment
  * test called it marketing.
  *
- * Reading the reserved list rather than a list of the hub's static routes is deliberate: it is
- * the same authority the slug MINT forms consult, so a word in it can never be anyone's workspace
- * slug, and `frontend/tools/verify_reserved_route_slugs.py` fails if a route directory or a
- * `redirects` source anywhere in the family is missing from it. A second hand-written list of the
- * hub's first segments would be the drift this whole shape exists to remove — and it is the
- * dangerous direction: a segment missing from it reads as a workspace, which is how
- * `/features/projects` (a marketing page whose id collides with a feature segment) wore the
- * signed-in menu the moment those pages moved under a prefix.
+ * The set it asks is `HUB_ROUTE_SEGMENTS` — the hub's OWN top-level routes, held to
+ * `SITE_ROUTES['hub']` in both directions by adh-registry's lockstep case. It used to ask
+ * `reservedWorkspaceSlugs()`, the union every slug MINT form refuses, on the reasoning that a
+ * wider list can only err toward "not a workspace" and that the dangerous direction is a route
+ * missing from a hand-written list: that is how `/features/projects` (a marketing page whose id
+ * collides with a feature segment) wore the signed-in menu the moment those pages moved under a
+ * prefix. The lockstep is what closes that direction, and it closes it better than width did —
+ * it fails on the commit that adds the route, rather than relying on somebody having reserved
+ * the word for an unrelated reason.
+ *
+ * What width could not do is be right in the other direction. The mint list is 41 words wider
+ * than what the API refuses (`RESERVED_PRINCIPAL_SLUGS`: the rdid type prefixes plus the route
+ * words — `teams`, `support`, `research`, `me` and 37 more are held back by the two forms on
+ * taste alone), and both lists refuse only at MINT time, so every one of those is a slug a
+ * principal can be holding right now. A workspace slugged any of them read as a hub route here:
+ * `hubWorkspaceSlug` returned null, and `useSiteMenu` substituted the visitor's OWN slug into
+ * every feature link while they were looking at someone else's workspace — a wrong destination
+ * that resolves, which is worse than the 404 the other direction gives. "Is this segment a hub
+ * route" is a question about the hub's route tree, and only the hub's route tree can answer it.
  *
  * It answers TRUE for a slug that resolves to nothing — `/typo` is a workspace address whose
  * workspace the caller is not in, and it renders the shared not-found. That is not the

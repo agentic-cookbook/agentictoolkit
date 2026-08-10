@@ -163,7 +163,10 @@ function workspacePathTail(pathname) {
 import { Fragment, jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
 function SiteHomeShell({ workspaceSlug, children }) {
-  const { items: workspaces, error } = useResourceList("workspaces", loadWorkspaces);
+  const { items: workspaces, error, isFetching } = useResourceList(
+    "workspaces",
+    loadWorkspaces
+  );
   const hrefFor = useCallback2((slug) => `/${slug}`, []);
   const pathname = usePathname() ?? "";
   const switchHrefFor = useCallback2(
@@ -177,7 +180,7 @@ function SiteHomeShell({ workspaceSlug, children }) {
     switchHrefFor
   });
   const workspace = workspaces?.find((w) => w.slug === resolved) ?? null;
-  if (workspaceSlug !== void 0 && workspaces !== null && !workspaces.some((w) => w.slug === workspaceSlug)) {
+  if (workspaceSlug !== void 0 && workspaces !== null && !isFetching && !workspaces.some((w) => w.slug === workspaceSlug)) {
     notFound();
   }
   return /* @__PURE__ */ jsxs2(Fragment, { children: [

@@ -69,6 +69,17 @@ export interface ResourceList<T> {
   reload: () => Promise<void>;
   /** The last load error, or null. */
   error: string | null;
+  /** True while a read is in flight — including the very first one, before `items` has ever
+   *  been anything but null.
+   *
+   *  `items` alone cannot answer "have I seen the server's answer yet", and that is the
+   *  question a caller has to ask before treating an absence as a fact. Non-null only means
+   *  SOME rows are on screen, which the module cache supplies on the first render after a
+   *  remount — so a row created since that seed was written is missing from a list that reads
+   *  as fully loaded, for exactly as long as the refetch takes. A caller that merely renders
+   *  those rows is right to ignore this; a caller that concludes something from a row NOT
+   *  being there (404, "no such workspace") has to wait for it to be false. */
+  isFetching: boolean;
   /** Replace the rows locally — an optimistic update — writing through to the cache so the value
    *  survives the remount too. Takes the next rows or an updater, like a React setter. */
   setItems: (next: T[] | null | ((prev: T[] | null) => T[] | null)) => void;
@@ -103,6 +114,11 @@ export function useResourceList<T>(
 
   const [items, setItemsState] = useState<T[] | null>(() => cached()?.rows ?? null);
   const [error, setError] = useState<string | null>(null);
+  // Starts TRUE, not false: the mount effect below always fetches, so there is a read in flight
+  // from the first render onwards and the honest initial answer is "not settled". Starting false
+  // would give every consumer one render in which a cache seed — or nothing at all — reads as the
+  // server's final word, which is the exact window this flag exists to close.
+  const [isFetching, setIsFetching] = useState(true);
 
   const store = useCallback(
     (rows: T[] | null) => {
@@ -142,17 +158,25 @@ export function useResourceList<T>(
   // winner stores, below.
   const fetchRows = useCallback(async () => load(), [load]);
 
+  // `isFetching` follows the same ticket as the state write, and for the same reason: only the
+  // LATEST request may clear it. An overtaken response returning first would otherwise announce
+  // "settled" while the request whose rows will actually land is still out.
   const reload = useCallback(async () => {
     const ticket = ++seq.current;
+    setIsFetching(true);
     try {
       const rows = await fetchRows();
       if (ticket !== seq.current) return;
       store(rows);
       setError(null);
       setItemsState(rows);
+      setIsFetching(false);
     } catch (e) {
       reportUnexpectedAuthError(e, { feature: "resource-list", step: "reload", basePath: cacheKey });
-      if (ticket === seq.current) setError(e instanceof Error ? e.message : "Failed to load.");
+      if (ticket === seq.current) {
+        setError(e instanceof Error ? e.message : "Failed to load.");
+        setIsFetching(false);
+      }
       throw e;
     }
   }, [fetchRows, store, cacheKey]);
@@ -180,17 +204,20 @@ export function useResourceList<T>(
   useEffect(() => {
     const ticket = ++seq.current;
     let alive = true;
+    setIsFetching(true);
     fetchRows()
       .then((rows) => {
         if (!alive || ticket !== seq.current) return;
         store(rows);
         setError(null);
         setItemsState(rows);
+        setIsFetching(false);
       })
       .catch((e) => {
         reportUnexpectedAuthError(e, { feature: "resource-list", step: "load", basePath: cacheKey });
         if (alive && ticket === seq.current) {
           setError(e instanceof Error ? e.message : "Failed to load.");
+          setIsFetching(false);
         }
       });
     return () => {
@@ -198,7 +225,7 @@ export function useResourceList<T>(
     };
   }, [fetchRows, store, cacheKey]);
 
-  return { items, reload, error, setItems };
+  return { items, reload, error, isFetching, setItems };
 }
 
 /** Minimal slice of the Next router this module needs. */

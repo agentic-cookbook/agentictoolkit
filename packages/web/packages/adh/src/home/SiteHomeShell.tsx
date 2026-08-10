@@ -54,7 +54,10 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // there is one workspace list per signed-in caller across the whole family. It used to be keyed
   // on the shell's base so two mounts at different bases could not read each other's rows — a
   // distinction that never existed, since both would have fetched the same list.
-  const { items: workspaces, error } = useResourceList<Workspace>('workspaces', loadWorkspaces)
+  const { items: workspaces, error, isFetching } = useResourceList<Workspace>(
+    'workspaces',
+    loadWorkspaces,
+  )
   // Memoized with no dependencies, because useWorkspaceRoute holds this in two effects' dependency
   // arrays — a fresh closure each render would re-run both on every render.
   const hrefFor = useCallback((slug: string) => `/${slug}`, [])
@@ -98,8 +101,8 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // WorkspaceGate has always given (`MemberGate`: "settled success with no match → notFound()"),
   // said here so the other 37 sites give it too.
   //
-  // The three rungs BELOW this one are the reason it is expressed as a positive test on a settled
-  // list rather than as `resolved === undefined`:
+  // Three of the four rungs BELOW this one are the reason it is expressed as a positive test on a
+  // settled list rather than as `resolved === undefined`:
   //   - still loading — `workspaces` is null, so this is false and the page holds. Resolution is
   //     `undefined` on that render too, which is why the two cannot be collapsed: they are the
   //     same value meaning opposite things.
@@ -109,18 +112,26 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   //   - no slug at all (`/home`) — nothing to refuse. The hook seeds one and replaces the URL,
   //     which is what makes that route the family's redirect signal.
   //
-  // A stale-but-non-null list is the one case this treats as settled when it might not be, and
-  // that is sound HERE rather than everywhere: `useResourceList` seeds from a module cache, so
-  // rows can predate a workspace created since — but no feature site can create one (organizations
-  // are minted on the hub, whose gate carries the extra `isFetching` rung for exactly that race),
-  // and a cross-site arrival is a full page load with a cold cache. If a feature site ever grows a
-  // create flow, this needs that rung too.
+  // The fourth rung is `!isFetching`, and it is not an optimization. `useResourceList`
+  // seeds from a module cache, so a non-null list can predate a workspace created since — and a
+  // seeded first render is EXACTLY the render on which a brand-new slug is absent. This used to
+  // read "no feature site can create one, so the seed is always current", with the hub's own gate
+  // named as the place that pays the extra rung; that premise was false when it was written. The
+  // `orgs` site mounts <OrganizationsFeature>, whose New Organization modal calls
+  // organizationsApi.create, so a feature site DOES mint workspaces. What kept it from 404ing is
+  // narrower than the claim: that flow navigates within its own base path rather than to
+  // `/<newSlug>`, so it never lands here mid-refetch. A guard resting on where one modal happens
+  // to navigate is a guard, not an argument — the flag says the same thing without depending on it.
+  //
+  // Only the 404 is gated, not the render: a stale seed still paints instantly, and the refetch
+  // settles behind it. What waits is the refusal, which is the one thing that cannot be taken back.
   //
   // Placed after every hook so the hook order is identical on the render that throws; a thrown
   // render never commits, so the replace and persistence effects above cannot fire behind it.
   if (
     workspaceSlug !== undefined &&
     workspaces !== null &&
+    !isFetching &&
     !workspaces.some((w) => w.slug === workspaceSlug)
   ) {
     notFound()

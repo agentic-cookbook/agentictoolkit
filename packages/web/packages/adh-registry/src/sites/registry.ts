@@ -105,9 +105,9 @@ export interface SiteDef {
    *     which is exactly {@link SITE_LANDING_SEGMENTS}, so this package can tell a slug
    *     from a page.
    *   - `'hub'`  — the hub, which serves top-level routes no other site has (`/login`,
-   *     `/explore`, `/settings`, …). The list of those is `reservedWorkspaceSlugs()` in
-   *     `@agentic-toolkit/adh`, which depends on this package and so cannot be read from
-   *     here; the hub's parse lives there with it.
+   *     `/explore`, `/settings`, …). Those are {@link HUB_ROUTE_SEGMENTS}, a second set
+   *     for the second root; the parse that reads them sits in `@agentic-toolkit/adh`
+   *     because it also answers for the two slug-less workspace routes.
    *  Absent ⇒ the site has NO workspace route, and a switch from a workspace falls back
    *  to its landing.
    *
@@ -588,11 +588,18 @@ export function siteWorkspaceHref(target: SiteDef, slug: string): string | undef
  *  of them anywhere, and a segment that reads as "not a slug" on a site that does not serve
  *  it is a page that 404s either way.
  *
- *  Only the STATIC ones can be listed, so an unknown segment (`/typo`) reads as a
- *  workspace slug. That is deliberate rather than tolerated: a slug the destination
- *  cannot resolve is repaired on arrival by `useWorkspaceRoute`, which replaces an
- *  unknown slug with the user's real workspace. A wrong guess here costs a redirect;
- *  the alternative — refusing to carry any slug — costs the carry on every site. */
+ *  Only the STATIC ones can be listed, so anything else reads as a workspace slug — which
+ *  is what makes this set's ACCURACY load-bearing rather than merely tidy. The destination
+ *  no longer repairs a slug it cannot resolve: `useWorkspaceRoute` used to replace an
+ *  unknown one with the visitor's own workspace, and this branch replaced that with a 404
+ *  on a settled list with no match, because silently rewriting the URL to a DIFFERENT
+ *  workspace is a worse answer than saying the address is wrong. So a page missing from
+ *  this set is carried across the switch as if it were a slug, and lands on a 404 instead
+ *  of a redirect. The lockstep case in registry.test.ts is what keeps that from happening:
+ *  it fails the moment a `'root'` site adds or retires a top-level route without this list
+ *  following. A genuinely unknown segment (`/typo`) still reads as a slug and still 404s —
+ *  that one was already a wrong address, and the alternative, refusing to carry any slug at
+ *  all, costs the carry on every site. */
 export const SITE_LANDING_SEGMENTS = new Set<string>([
   // The template's own — every site in the family serves these.
   'auth',
@@ -634,6 +641,70 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'demo',
 ])
 
+/** The hub's own static top-level path segments — what tells one of ITS pages from a
+ *  workspace slug, exactly as {@link SITE_LANDING_SEGMENTS} does for a `'root'` site.
+ *
+ *  Two sets rather than one, because the two sites' roots hold different words: the hub
+ *  serves `/login`, `/explore`, `/settings` and `/user/<handle>`, which no template site
+ *  has, and does not serve cookbook's `/guidelines` or community's `/forum`, which the
+ *  other set carries. Either set used on the other's site gives a wrong answer in both
+ *  directions at once.
+ *
+ *  Held to `SITE_ROUTES['hub']` in BOTH directions by registry.test's lockstep case, on
+ *  the same reasoning as the set above: a page added or retired at the hub's top level
+ *  fails there until this list follows.
+ *
+ *  ⚠️ WHY THIS SET AND NOT THE MINT-TIME ONE. `hubWorkspacePath.ts` used to answer from
+ *  `reservedWorkspaceSlugs()` — the union every slug FORM refuses — on the reasoning that
+ *  a wider list can only ever err toward "not a workspace", and that the dangerous
+ *  direction is a route missing from a hand-written list and read as a slug. Half of that
+ *  is right, and the lockstep below is what closes it. The other half is not: the mint
+ *  list is 41 words wider than what the API actually refuses (`RESERVED_PRINCIPAL_SLUGS`
+ *  in `backend/src/adh/src/lib/rdid.ts` is the rdid type prefixes plus the route words —
+ *  `teams`, `support`, `research`, `me` and 37 more are held back by the two forms on
+ *  taste alone), and every one of those is a slug a principal can hold: `organizations.ts`
+ *  validates a create with `assertPrincipalSlug`, which does not consult taste, and BOTH
+ *  lists are mint-time refusals that leave older rows exactly as they are. A workspace
+ *  slugged any of them then reads as a hub route — `hubWorkspaceSlug` returns null, and
+ *  the header quietly substitutes the visitor's OWN slug into every feature link while
+ *  they are looking at someone else's workspace. Answering a question about the hub's
+ *  routes from a list of taste words was the error; width was never the safe side.
+ *
+ *  The eight `/<feature-id>` → `/features/<id>` redirects in the hub's `next.config.ts`
+ *  are deliberately absent, the same way help's `/docs` redirect is absent from
+ *  {@link SITE_LANDING_SEGMENTS}: a redirect answers before anything renders, so those
+ *  words are never a pathname a component sees, and listing them would carve a permanent
+ *  exception into the lockstep — which is the drift this shape exists to prevent. */
+export const HUB_ROUTE_SEGMENTS = new Set<string>([
+  // The template's own — the same words every site in the family serves.
+  'auth',
+  'details',
+  'home',
+  'privacy',
+  'terms',
+  'tour',
+  // app/(auth)/ — the sign-in group. A route group contributes no segment of its own, so
+  // its children sit at the top level.
+  'join',
+  'login',
+  'oidc',
+  'signup',
+  // app/(hub)/ — the two marketing surfaces that stayed at the root.
+  'contact',
+  'explore',
+  // The hub's own trees. `features` is where the eight marketing feature pages moved when
+  // `[workspace]` claimed the root (`app/features/[id]`), and `user` is the public profile
+  // prefix that moved with them; `settings` is the account, which came off `/home` when that
+  // segment became the family's workspace redirect; `integrations` is the OAuth return that
+  // every site mounting that feature grows, at a path built from the window's own origin;
+  // `old-landing` is the superseded hero page, still routable and deliberately kept so.
+  'features',
+  'integrations',
+  'old-landing',
+  'settings',
+  'user',
+])
+
 /** The workspace slug `pathname` names on `site`, or null when it names none — the
  *  inverse of {@link siteWorkspaceHref}, and what the site menu reads to carry the
  *  visitor's CURRENT workspace across a site switch.
@@ -643,12 +714,18 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
  *  The caller owns that check (see useSiteMenu).
  *
  *  ⚠️ Answers for a `'root'` site only. Building a workspace path needs nothing but the
- *  slug, but reading one back needs the list of first segments that are NOT slugs, and
- *  the hub's is its own — `reservedWorkspaceSlugs()` in `@agentic-toolkit/adh`, a package
- *  that depends on this one. So the hub returns null here and `useSiteMenu` asks
- *  `hubWorkspaceSlug` for it directly, which is the only caller either has. Answering
- *  the hub from {@link SITE_LANDING_SEGMENTS} instead would be worse than refusing: it
- *  is the template's set, so `/login` and `/explore` would read as workspace slugs. */
+ *  slug; reading one back needs the list of first segments that are NOT slugs, and the
+ *  hub's is a different list — {@link HUB_ROUTE_SEGMENTS}, right above. Answering the hub
+ *  from {@link SITE_LANDING_SEGMENTS} would read `/login` and `/explore` as workspace
+ *  slugs, so this refuses rather than guessing.
+ *
+ *  It refuses instead of switching on the set because a hub path needs MORE than a set:
+ *  `/home` and `/settings` are workspace chrome carrying no slug, where the answer is the
+ *  signed-in visitor's own — a fact this package has no notion of. `hubWorkspacePath.ts`
+ *  in `@agentic-toolkit/adh` owns that whole answer and reads the set from here, and
+ *  `useSiteMenu` — the only caller either has — asks it directly. (The set itself lived
+ *  there too until it turned out to be answering from the mint-time reserved list; see
+ *  HUB_ROUTE_SEGMENTS for what that cost.) */
 export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | null {
   if (site.workspaceRoute !== 'root') return null
   const seg = (pathname || '/').split('/').filter(Boolean)[0]

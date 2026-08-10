@@ -48,10 +48,24 @@ describe('isHubWorkspacePath', () => {
     expect(isHubWorkspacePath('/details')).toBe(false)
     expect(isHubWorkspacePath('/login')).toBe(false)
     expect(isHubWorkspacePath('/explore')).toBe(false)
-    // Held back on taste rather than by a route, and refused just the same — the mint forms
-    // consult the same list, so no workspace can be slugged `about` to be shadowed here.
-    expect(isHubWorkspacePath('/about')).toBe(false)
     expect(hubWorkspaceSlug('/details')).toBeNull()
+  })
+
+  it('answers TRUE for a word the MINT forms refuse but the hub does not route', () => {
+    // The inversion this pair got wrong. It used to read `reservedWorkspaceSlugs()`, which is
+    // 41 words wider than what the API refuses (`RESERVED_PRINCIPAL_SLUGS` — the rdid type
+    // prefixes plus the route words; the rest are the two forms' taste), and both lists refuse
+    // only at MINT time. So a principal can be holding any of these, and every one of them read
+    // as a hub page: null slug, and useSiteMenu quietly swapping the visitor's own slug into
+    // every feature link while they looked at someone else's workspace.
+    //
+    // `teams` and `support` are hub FEATURE words — second segments, `/<workspace>/teams` —
+    // and `about` is pure taste. None of the three is a hub route, so none of them decides
+    // anything about a first segment.
+    for (const slug of ['teams', 'support', 'about', 'me', 'research']) {
+      expect(isHubWorkspacePath(`/${slug}`), slug).toBe(true)
+      expect(hubWorkspaceSlug(`/${slug}`), slug).toBe(slug)
+    }
   })
 
   it('rejects a public profile and a marketing feature page', () => {
@@ -73,9 +87,9 @@ describe('isHubWorkspacePath', () => {
     expect(hubWorkspaceSlug('/typo')).toBe('typo')
   })
 
-  it('is case-insensitive about a reserved word, as the mint forms are', () => {
-    // reservedWorkspaceSlugs() lowercases on the way out because callers lowercase the slug
-    // before the lookup; a path segment arrives however it was typed.
+  it('is case-insensitive about a route word, because a URL is', () => {
+    // HUB_ROUTE_SEGMENTS is all lowercase (it mirrors directory names); a path segment arrives
+    // however it was typed, and `/Details` is the same page as `/details`.
     expect(isHubWorkspacePath('/Details')).toBe(false)
     expect(hubWorkspaceSlug('/Details')).toBeNull()
   })

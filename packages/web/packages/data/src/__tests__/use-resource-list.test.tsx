@@ -48,6 +48,43 @@ describe('useResourceList cache scoping', () => {
   })
 })
 
+// `isFetching` answers "have I seen the server's answer yet", which `items` cannot: a cache seed
+// makes it non-null before any read has landed. A caller that CONCLUDES something from a row being
+// absent — the family's shell 404s an unknown workspace — is wrong for exactly as long as that gap
+// lasts, so these pin both ends of it.
+describe('useResourceList settled flag', () => {
+  function FlagProbe({ cacheKey, load }: { cacheKey: string; load: () => Promise<string[]> }) {
+    const { items, isFetching } = useResourceList(cacheKey, load)
+    return (
+      <div data-testid="items" data-fetching={isFetching}>
+        {items === null ? 'null' : items.join(',')}
+      </div>
+    )
+  }
+
+  it('is true on a SEEDED first paint, so cached rows are not read as the server’s answer', async () => {
+    const cacheKey = '/settled-seed'
+    signInAs('A')
+    render(<FlagProbe cacheKey={cacheKey} load={() => Promise.resolve(['a1'])} />)
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveAttribute('data-fetching', 'false'))
+    cleanup()
+
+    // The remount that matters: rows on screen from the first render, and nothing settled yet.
+    signInAs('A')
+    render(<FlagProbe cacheKey={cacheKey} load={() => new Promise<string[]>(() => {})} />)
+    expect(screen.getByTestId('items')).toHaveTextContent('a1')
+    expect(screen.getByTestId('items')).toHaveAttribute('data-fetching', 'true')
+  })
+
+  it('clears on a FAILED read too — settled is not the same as successful', async () => {
+    signInAs('A')
+    render(<FlagProbe cacheKey="/settled-fail" load={() => Promise.reject(new Error('boom'))} />)
+    // Left true, a failing list would look permanently in-flight and every caller waiting on it
+    // would wait forever — the shell's error branch included.
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveAttribute('data-fetching', 'false'))
+  })
+})
+
 // The reload-after-write pattern (mutate, then `reload()`) routinely has two GETs in flight at
 // once, and nothing makes the earlier one land first. These pin the rule that decides who wins:
 // the most recently ISSUED request, never the last to arrive.

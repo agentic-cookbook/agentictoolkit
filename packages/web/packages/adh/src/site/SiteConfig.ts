@@ -10,11 +10,13 @@ import type { MarketingRootHtmlProps } from '@agentic-toolkit/adh/marketing'
 
 /** The paths every site in the family keeps out of its production index.
  *
- *  Measured, not assumed: 36 of the 38 sites in content/landing/manifest.json spell this
- *  exact list in their own `app/robots.ts`. The two that differ differ deliberately —
- *  `help` allows its whole surface (`['/api/', '/auth/']`), and `hub` leaves `/home` out
- *  because that is its signed-in app rather than a wall in front of one. Both say so by
- *  passing `robotsDisallow`, which is the only way to disagree.
+ *  Measured, not assumed: all but two of the sites in content/landing/manifest.json want
+ *  exactly this list. The two that differ say so by passing `robotsDisallow`, which is the
+ *  only way to disagree — `help` allows its whole surface (`['/api/', '/auth/']`), and `hub`
+ *  adds `/settings` to it. A site that ADDS spreads this constant rather than restating it:
+ *  a hand-copied list is a list that stops tracking this one, and hub's did — it dropped
+ *  `/home` on the grounds that its `/home` is the signed-in app itself, which is a reason to
+ *  keep a crawler out rather than a reason to let one in.
  *
  *  `/api/` is the same-origin BFF proxy and `/auth/` the SSO callback: neither is a page,
  *  so neither is a crawl target on any tier. */

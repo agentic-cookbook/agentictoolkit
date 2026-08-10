@@ -83,11 +83,12 @@ export function useSiteMenu(
   //
   // Two shapes, because the two are known with different confidence:
   //
-  //  - The HUB's workspace paths are self-identifying — `/<slug>/<feature>` matched
-  //    against the shared segment set — so they need no auth signal. Its slug-less
-  //    workspace shells (`/home`, `/home/settings`, …) are workspace routes with no
-  //    slug segment to read, so the signed-in user's personal slug stands in; without
-  //    it the feature links resolve slug-less and the `[slug]` route 404s.
+  //  - The HUB's workspace paths are self-identifying — the first segment is a slug
+  //    unless the hub's own route tree has claimed the word (HUB_ROUTE_SEGMENTS) — so
+  //    they need no auth signal. Its two slug-less workspace routes (`/home`, which
+  //    resolves a workspace and replaces itself, and `/settings`, the account) carry no
+  //    slug segment to read, so the signed-in user's personal slug stands in; without it
+  //    the feature links resolve slug-less and the `[workspace]` route 404s.
   //  - Every OTHER site puts its workspace where a public page's segment could also
   //    sit (`/<slug>` beside `/details`), so the registry's `siteWorkspaceSlug` reads
   //    it only for a signed-in visitor — see UseSiteMenuOpts.authenticated.
