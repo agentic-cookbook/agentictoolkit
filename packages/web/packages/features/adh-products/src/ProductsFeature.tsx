@@ -59,10 +59,15 @@ import { PRODUCT_TOPICS } from "./topics";
 // same feature at /home now. The hub keeps a thin wrapper that supplies its own seams.
 
 // One icon per product topic. This map is the rail's own property and travels with
-// PRODUCT_TOPICS: the hub's FEATURE_META still names an icon for the topics that are ALSO
-// workspace-rail features, and the two agree by construction below (the test asserts the map is
-// total over PRODUCT_TOPICS, so a topic added there without an icon fails rather than rendering
-// a blank cell).
+// PRODUCT_TOPICS. The package's test asserts it is TOTAL over PRODUCT_TOPICS, so a topic added
+// there without an icon fails rather than rendering a blank cell.
+//
+// It does NOT agree with the hub's FEATURE_META by construction. FEATURE_META lives in the hub
+// SITE, which is not a package and so cannot be imported here at all; for the topics that are
+// also workspace-rail features these are two independent copies that happen to match today.
+// Changing a glyph in FEATURE_META will not change it here, and no test will notice — change
+// both, or the same feature wears different icons depending on whether you reached it from the
+// hub rail or from inside a product.
 const ICONS: Record<string, ReactNode> = {
   project: <FolderKanban size={16} aria-hidden />,
   storage: <HardDrive size={16} aria-hidden />,
@@ -102,7 +107,42 @@ export const PRODUCT_TOPIC_CONFIGS: EcosystemsTopicConfig[] = PRODUCT_TOPICS.map
 //
 // The product's auto-provisioned project needs the same slug for its Access member, and takes
 // `leaf` (the 4th URL segment) to deep-link the member.
-function productTopicPaneRenderer({
+
+/** The product's auto-provisioned project — subject-linked by the product's ecosystem id (an rdid
+ *  here; the backend resolves it at the edge).
+ *
+ *  A COMPONENT rather than an inline `if (!ecosystemId) return null` in the switch below, and that
+ *  is load-bearing: EcosystemsFeature reads a falsy `renderTopicPane` result as the host DECLINING
+ *  the topic and falls through to `renderFeaturePanel(topicId)`. `ecosystemId` is legitimately
+ *  `undefined` while the ecosystem resolves (the feature threads `string | undefined` throughout),
+ *  so declining there would hand "project" to a host that owns no such panel — the exhaustive
+ *  `never` default, which renders the literal id into the pane. Returning an element that renders
+ *  nothing keeps the claim and blanks the pane for that tick instead. */
+function ProductProjectPane({
+  ecosystemId,
+  workspaceSlug,
+  leaf,
+}: {
+  ecosystemId?: string;
+  workspaceSlug: string;
+  leaf?: TopicLeaf;
+}): ReactElement | null {
+  if (!ecosystemId) return null;
+  return (
+    <SubjectProjectPane
+      subjectKind="ecosystem"
+      subjectId={ecosystemId}
+      workspaceSlug={workspaceSlug || undefined}
+      memberSelection={leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined}
+    />
+  );
+}
+
+/** Exported for the package's own seam test, which asks the REAL switch which topic ids it
+ *  claims rather than re-listing them — a hand-kept copy of these cases only ever fails when a
+ *  topic is ADDED, and the failure that matters is a case being removed or renamed out from
+ *  under a rail row that still exists. Not re-exported from the barrel. */
+export function productTopicPaneRenderer({
   workspaceSlug,
   renderTransfer,
 }: {
@@ -112,17 +152,11 @@ function productTopicPaneRenderer({
   return function renderProductTopicPane(topicId, ctx) {
     switch (topicId) {
       case "project":
-        // The product's auto-provisioned project — subject-linked by the product's
-        // ecosystem id (rdid here; the backend resolves it at the edge).
-        if (!ctx.ecosystemId) return null;
         return (
-          <SubjectProjectPane
-            subjectKind="ecosystem"
-            subjectId={ctx.ecosystemId}
-            workspaceSlug={workspaceSlug || undefined}
-            memberSelection={
-              ctx.leaf ? { selectedId: ctx.leaf.leafId, onSelect: ctx.leaf.onSelect } : undefined
-            }
+          <ProductProjectPane
+            ecosystemId={ctx.ecosystemId}
+            workspaceSlug={workspaceSlug}
+            leaf={ctx.leaf}
           />
         );
       case "applications":
@@ -270,9 +304,11 @@ export interface ProductsFeatureProps {
   /**
    * The panes for the topics this package does NOT own — exactly
    * {@link HOST_RENDERED_TOPIC_IDS}. REQUIRED, not optional: every one of those topics is on the
-   * rail unconditionally, so a host that omitted this would ship four rows that render nothing,
-   * and nothing would say so. The hub passes its workspace feature-panel registry; a feature site
-   * passes its own smaller one.
+   * rail unconditionally, so a host that omitted this would ship blank surfaces with nothing to
+   * say so: two rail rows (Dashboards, Billing) plus the Storage group's All Data member, which
+   * is reached through the same seam without being a row of its own. Size the work off
+   * HOST_RENDERED_TOPIC_IDS, not off this sentence — that list is the contract.
+   * The hub passes its workspace feature-panel registry; a feature site passes its own smaller one.
    */
   renderFeaturePanel: (feature: string, opts?: { subLeaf?: TopicLeaf }) => ReactNode;
   /** Transfer Ownership for an open bucket or application — see {@link RenderTransferSection}.

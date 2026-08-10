@@ -14,6 +14,7 @@ import { SchemasPane } from "../schemas/SchemasPane";
 import { ecosystemUsersApi } from "../api/customers";
 import { applicationsPrototypeApi } from "../api/applications-prototype";
 import { AllDataPane } from "./AllDataPane";
+import { STORAGE_MEMBER_IDS, type StorageMemberId } from "./parse-path";
 import type { RenderTransferSection } from "../transfer-seam";
 
 /**
@@ -67,9 +68,11 @@ export function StorageGroup({
   // A plain org member can view the workspace but not manage its infrastructure ecosystem — its
   // reads/writes would 403 per-pane, so show the honest notice instead.
   if (ecosystemId && !canManage) return <WorkspaceNotManageable feature="Storage" />;
-  const items: GroupTopicItem[] = [
-    {
-      id: "buckets",
+  // Keyed by member id and then mapped over STORAGE_MEMBER_IDS, so the record is TOTAL over the
+  // grammar's list and the rail's order comes from it — that list stays the one description of
+  // what this group is, for the panes here and for the parse a host validates a URL against.
+  const panes: Record<StorageMemberId, Omit<GroupTopicItem, "id">> = {
+    buckets: {
       label: "Buckets",
       icon: <Table2 size={16} aria-hidden />,
       render: (subLeaf) => (
@@ -81,8 +84,7 @@ export function StorageGroup({
         />
       ),
     },
-    {
-      id: "access",
+    access: {
       label: "Access",
       icon: <KeyRound size={16} aria-hidden />,
       render: (subLeaf) => (
@@ -95,13 +97,13 @@ export function StorageGroup({
         />
       ),
     },
-    {
-      id: "all-data",
+    "all-data": {
       label: "All Data",
       icon: <Database size={16} aria-hidden />,
       render: () => renderAllData?.() ?? <AllDataPane />,
     },
-  ];
+  };
+  const items: GroupTopicItem[] = STORAGE_MEMBER_IDS.map((id) => ({ id, ...panes[id] }));
   return (
     <StackGroupDetail
       levelId="storage-group"

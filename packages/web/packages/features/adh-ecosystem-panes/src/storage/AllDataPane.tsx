@@ -4,8 +4,16 @@ import { useState } from "react";
 import { CrudDataBrowser, type CrudShell } from "@agentic-toolkit/crud";
 
 /**
- * All Data as a member of an ecosystem's Storage rail: the cross-schema CRUD browser over every
- * bucket-backed table.
+ * All Data as a member of an ecosystem's Storage rail: the cross-schema CRUD browser.
+ *
+ * SCOPE — read this before mounting it on a new host. It passes no `tables` prop, so the browser
+ * falls back to its own default: the WHOLE of CRUD_TABLES. That is every schema in
+ * allowed-schemas.json — access, billing, monitoring, system, team, usage and the rest — not just
+ * the bucket-backed ones the Storage rail is named after. The only narrowing is the browser's own
+ * admin-tier filter for a non-admin viewer. `CRUD_TABLES` is bounded at GENERATION time, not per
+ * host, so nothing at a mount site trims it: a host that wants a subset has to pass `tables`
+ * itself, and a host that mounts this as-is is publishing the full cross-schema browser under
+ * whatever its rail calls this row.
  *
  * Selection is LOCAL (component state), not URL-driven, and that is the point of this component
  * rather than a bare `<CrudDataBrowser basePath=…/>`. The enclosing ecosystem URL scheme cedes

@@ -14,12 +14,17 @@
     "**/*.css"
   ],
   "comment:tier": "VOCABULARY, not mechanism — see scripts/check_boundaries.py. These panes are typed against `@agentic-toolkit/adh-api-types` (adh's generated OpenAPI request/response bodies), which the guard bans from any `@agentic-toolkit/<x>` package whose <x> is not adh/adh-*. That import is the whole reason this is a package of its own rather than four more files in `ecosystem-config`: that package IS mechanism (an org site and a product host both mount it against their own backends), and widening it to name adh's API types would have made it unportable in a way nothing else there is. The `adh-` prefix is what puts this package on the right side of that line, and the directory is `features/` only because the tsup/vitest presets live there.",
-  "comment:exports": "see @agentic-toolkit/adh for the full rationale. The barrel is entirely `use client` panes, and tsup hoists that directive over the whole chunk — so the ONE thing here that is plain data, the bucket type catalogue, gets its own directive-free entry (the same split the tsup preset describes for ./parse and ./tables). Its non-UI consumers are the reason: tools/check-bucket-types-drift.py reads the source text to diff it against the backend schema, and the hub's bucket-types Playwright spec derives its expected count by CALLING buildAvailableTypes() in node — through the barrel that import would drag every pane, react-query and next/navigation into a bare node context.",
+  "comment:exports": "see @agentic-toolkit/adh for the full rationale. The barrel is entirely `use client` panes, and tsup hoists that directive over the whole chunk — so the two things here that are not panes get their own directive-free entries (the same split the tsup preset describes for ./parse and ./tables). ./bucket-types is the bucket type catalogue; its non-UI consumers are the reason: tools/check-bucket-types-drift.py reads the source text to diff it against the backend schema, and the hub's bucket-types Playwright spec derives its expected count by CALLING buildAvailableTypes() in node — through the barrel that import would drag every pane, react-query and next/navigation into a bare node context. ./parse is the Storage group's URL grammar, and its consumer is a host's ROUTE: the hub's storage page is a Server Component that has to parse (and 404) before it renders anything.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "development": "./src/index.ts",
       "import": "./dist/index.js"
+    },
+    "./parse": {
+      "types": "./dist/storage/parse-path.d.ts",
+      "development": "./src/storage/parse-path.ts",
+      "import": "./dist/storage/parse-path.js"
     },
     "./bucket-types": {
       "types": "./dist/schemas/available-types.d.ts",

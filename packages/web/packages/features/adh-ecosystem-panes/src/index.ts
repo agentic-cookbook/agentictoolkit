@@ -34,7 +34,10 @@ export { MessagingPane } from "./messaging/MessagingPane";
 // Buckets / Access / All Data as one rail. Not a fifth pane but an ARRANGEMENT of three, and it
 // is here because it too has two hosts: a workspace's promoted Storage rail and a product's
 // Storage topic.
-export { StorageGroup, type EcosystemScopeResolution } from "./storage/StorageGroup";
+// Its URL grammar is NOT re-exported here: a host route parses before it renders, and on the hub
+// that route is a Server Component, which this barrel's hoisted 'use client' would break. It has
+// its own subpath — see ./storage/parse-path.
+export { StorageGroup } from "./storage/StorageGroup";
 export { AllDataPane } from "./storage/AllDataPane";
 
 // The clients behind the panes. Exported because two of them are also DIRECTORIES a host

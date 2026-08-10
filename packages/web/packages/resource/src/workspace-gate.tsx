@@ -49,8 +49,8 @@ export function WorkspaceNotManageable({ feature }: { feature: string }): ReactE
  * centered "Coming soon" label. The feature's data stays reachable in the meantime via All Data.
  *
  * Here, next to the two gate surfaces above, for the same reason: it is what a host renders
- * INSTEAD of a pane, and the hub is no longer the only host that has to render it — Communities
- * and Billing are product topics, so every mount of the Products feature reaches this.
+ * INSTEAD of a pane, and the hub is no longer the only host that has to render it — Billing is
+ * a product topic, so every mount of the Products feature reaches this.
  */
 export function ComingSoon({
   title,

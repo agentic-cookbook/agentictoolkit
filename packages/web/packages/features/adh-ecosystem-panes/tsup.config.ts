@@ -1,7 +1,12 @@
 import { featureTsup } from '../tsup.preset'
 
-// Two entries. The barrel is `use client` end to end (every export is a pane), and tsup
-// hoists that directive over the chunk — so the bucket type catalogue, which is plain data
-// and pure functions, gets the second entry the preset describes for exactly this case.
-// Its consumers are why: a Playwright spec and a drift guard read it OUTSIDE React.
-export default featureTsup(['src/index.ts', 'src/schemas/available-types.ts'])
+// Three entries. The barrel is `use client` end to end (every export is a pane), and tsup
+// hoists that directive over the chunk — so the two things here that are NOT panes get the
+// extra entries the preset describes for exactly this case. Their consumers are why: the
+// bucket type catalogue is read OUTSIDE React (a Playwright spec and a drift guard), and the
+// storage URL grammar is called by a host's Server Component route, before any pane exists.
+export default featureTsup([
+  'src/index.ts',
+  'src/schemas/available-types.ts',
+  'src/storage/parse-path.ts',
+])
