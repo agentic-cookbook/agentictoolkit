@@ -11,7 +11,7 @@ var FAMILY_ROUTE_SEGMENTS = [
   "tour",
   // the landing deck's second route
   // Not a directory on any site: `marketingNextConfig` rewrites `/api/*` to the backend, so
-  // the segment is spoken for on all 38 without appearing in any `app/` tree.
+  // the segment is spoken for on all 42 without appearing in any `app/` tree.
   "api",
   // Next serves these from FILES at the root of `app/`, so they occupy the same segment as a
   // slug even though no directory names them.
@@ -54,7 +54,11 @@ var SITE_ROUTE_SEGMENTS = [
   // (`login`, `signup`, `contact`, `settings` and `user` are below.) `old-landing` is the
   // superseded hero page, still routable and deliberately kept so, which makes it a segment
   // like any other. `features` is where the eight marketing pages moved to when the root
-  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`.
+  // segment became `[workspace]`, and it is a real directory: `app/features/[id]/`. The
+  // integrations SITE routes `integrations` too — `app/integrations/oauth-callback`, where a
+  // provider's OAuth redirect lands, at a path `oauthCallbackUrl()` builds from the window's own
+  // origin and so cannot vary per site. Every site that mounts that feature grows the same
+  // directory; the word is listed once.
   "features",
   "integrations",
   "join",
@@ -84,6 +88,10 @@ var SITE_ROUTE_SEGMENTS = [
   "search",
   // toolkit — app/demo.
   "demo"
+];
+var GRAMMAR_SEGMENTS = [
+  // organizations, teams, projects, ecosystems — `parse-path.ts`, the "all" landing.
+  "all"
 ];
 var RESERVED_HANDLE_WORDS = [
   "about",
@@ -146,7 +154,12 @@ var RESERVED_HANDLE_WORDS = [
   "tokens"
 ];
 function reservedWorkspaceSlugs() {
-  const all = [...FAMILY_ROUTE_SEGMENTS, ...SITE_ROUTE_SEGMENTS, ...RESERVED_HANDLE_WORDS];
+  const all = [
+    ...FAMILY_ROUTE_SEGMENTS,
+    ...SITE_ROUTE_SEGMENTS,
+    ...GRAMMAR_SEGMENTS,
+    ...RESERVED_HANDLE_WORDS
+  ];
   return new Set(all.map((s) => s.toLowerCase()));
 }
 
