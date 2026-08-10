@@ -18,8 +18,14 @@
       "import": "./dist/index.js"
     },
     "./css/base.css": "./dist/css/base.css",
-    "./css/modes/*.css": "./dist/css/modes/*.css",
-    "./css/components/*.css": "./dist/css/components/*.css"
+    "./css/modes/*.css": {
+      "development": "./src/css/modes/*.css",
+      "default": "./dist/css/modes/*.css"
+    },
+    "./css/components/*.css": {
+      "development": "./src/css/components/*.css",
+      "default": "./dist/css/components/*.css"
+    }
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",

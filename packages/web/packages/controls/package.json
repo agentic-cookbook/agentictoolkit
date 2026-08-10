@@ -43,7 +43,6 @@
       "types": "./dist/user-settings/index.d.ts",
       "import": "./dist/user-settings/index.js"
     },
-    "./*/styles/*.css": "./dist/*/styles/*.css",
     "./appearance-mode-toggle/styles.css": "./dist/appearance-mode-toggle/styles/appearance-mode-toggle.css",
     "./dev-banner/styles.css": "./dist/dev-banner/styles/dev-banner.css",
     "./filtered-list/styles.css": "./dist/filtered-list/styles/filtered-list.css",
