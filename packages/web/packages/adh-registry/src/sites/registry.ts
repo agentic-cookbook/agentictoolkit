@@ -605,6 +605,7 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'auth',
   'details',
   'home',
+  'integrations',
   'privacy',
   'terms',
   'tour',
