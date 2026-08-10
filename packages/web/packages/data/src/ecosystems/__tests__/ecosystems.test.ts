@@ -147,13 +147,30 @@ describe("ecosystemsApi.update", () => {
     expect(sentBody().name).toBe("N");
   });
 
-  it("omits `slug` entirely when the identifier did not change", async () => {
+  it("still sends `slug` when the identifier equals the stored handle", async () => {
+    // NOT skipped as "unchanged". `id` is the stored HANDLE and the form edits the DERIVED address,
+    // so equality between them is not evidence the slug column is already right — see below.
     mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh", "adh"));
     await ecosystemsApi.update("ecosystem.fishlamp.adh", {
       identifier: "ecosystem.fishlamp.adh",
       name: "N",
     });
-    expect(sentBody()).not.toHaveProperty("slug");
+    expect(sentBody().slug).toBe("adh");
+  });
+
+  it("sends the HEALING rename — back onto the address the stale handle already claims", async () => {
+    // The drifted row: its handle says `…adh` while its slug column says `chosen`, so it derives to
+    // `ecosystem.fishlamp.chosen` and every surface that shows the handle disagrees with it.
+    // Renaming it back to `adh` is a genuine slug change (`chosen` -> `adh`) that happens to equal
+    // the id, and diffing the submitted identifier against the id dropped exactly this save: the
+    // PUT carried no `slug`, the route found nothing addressed to cascade, and the UI reported a
+    // rename that never happened. It is also the one save that ENDS the drift.
+    mockedJson.mockResolvedValueOnce(row("ecosystem.fishlamp.adh", "adh"));
+    const saved = await ecosystemsApi.update("ecosystem.fishlamp.adh", {
+      identifier: "ecosystem.fishlamp.adh",
+    });
+    expect(sentBody().slug).toBe("adh");
+    expect(saved.slug).toBe("adh");
   });
 
   it("omits `slug` when the caller edits fields without touching the identifier", async () => {

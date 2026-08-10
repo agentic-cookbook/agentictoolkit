@@ -68,17 +68,25 @@ export function EcosystemSettingsPane({
 
   const active = items?.find((e) => e.id === ecosystemId);
 
-  // The fixed identifier prefix: a row's saved rdid's own type+scope (so an owner-scoped
-  // product keeps `ecosystem.<owner>.` and a legacy top-level row keeps `ecosystem.`).
-  // A rdid-less row (uuid-addressed) falls back to top-level. Taken PER ROW rather than
-  // once from `active`, because `savedIdentifier` below is rebuilt from it for whichever
-  // row the form hydrates from — and immediately after a rename that row is the one the
-  // hook re-selected, while `active` (keyed off the `ecosystemId` PROP) is briefly absent
-  // until the host navigates. Reading one row's slug through another row's prefix there
-  // would leave the form spuriously dirty on a save that succeeded.
-  const prefixOf = (e: Ecosystem) =>
-    isRdid(e.id) ? prefixFor("ecosystem", parseRdid(e.id).scope) : prefixFor("ecosystem");
-  const prefix = active ? prefixOf(active) : prefixFor("ecosystem");
+  // The fixed identifier prefix: an rdid's own type+scope (so an owner-scoped product keeps
+  // `ecosystem.<owner>.` and a legacy top-level row keeps `ecosystem.`). A rdid-less id
+  // (uuid-addressed) falls back to top-level.
+  //
+  // Taken PER ROW rather than once from `active`, because `savedIdentifier` below is rebuilt from
+  // it for whichever row the form hydrates from — and immediately after a rename that row is the
+  // one the hook re-selected, while `active` (keyed off the `ecosystemId` PROP) is briefly absent
+  // until the host navigates. Reading one row's slug through another row's prefix there would
+  // report a save that succeeded as still-changed.
+  const prefixForId = (id: string) =>
+    isRdid(id) ? prefixFor("ecosystem", parseRdid(id).scope) : prefixFor("ecosystem");
+  const prefixOf = (e: Ecosystem) => prefixForId(e.id);
+  // The PANE's own prefix (what `leafOf`, `scope` and the probe target are built from) falls back
+  // to the id the host is still pointing at, NOT to top-level, for that same gap: a rename moves a
+  // row's leaf and never its scope, so the outgoing id carries the prefix the incoming row will
+  // have. Collapsing to `ecosystem.` there would re-split a scoped address as if it were
+  // top-level — `leafOf` would stop stripping the owner, and the form would call the row's own
+  // identifier invalid the instant it saved successfully.
+  const prefix = active ? prefixOf(active) : ecosystemId ? prefixForId(ecosystemId) : prefixFor("ecosystem");
   const scope = prefix.slice("ecosystem.".length).replace(/\.$/, "");
   const leafOf = (identifier: string) =>
     identifier.startsWith(prefix) ? identifier.slice(prefix.length) : identifier;
@@ -138,7 +146,13 @@ export function EcosystemSettingsPane({
   // the saved ADDRESS, so opening Settings shows no status until the slug changes.
   const draft = form.draft;
   const draftSlug = draft ? leafOf(draft.identifier.trim()) : "";
-  const changed = draft != null && (active == null || draft.identifier.trim() !== savedIdentifier(active));
+  // NOTHING TO COMPARE AGAINST IS NOT A CHANGE. `active` is absent for the moment between a
+  // successful rename and the host navigating to the new id, and treating that as "changed" fired
+  // the probe at the address the save had just minted — which of course exists, so the pane
+  // answered a rename that WORKED with "already in use" and disabled its own Save. Dirtiness is
+  // the form's (`form.dirty`); this flag only gates the availability probe, so withholding it
+  // while the baseline is unknown withholds a question that has no meaning yet.
+  const changed = draft != null && active != null && draft.identifier.trim() !== savedIdentifier(active);
   const grammarOk = draftSlug !== "" && ecoCreateRdidValid(scope, draftSlug);
   // AN ADDRESS THIS ROW ALREADY HOLDS IS NOT A COLLISION. `identifiersApi.exists` answers "does
   // anything own this rdid", and on a drifted row the answer for the row's OWN handle is yes —

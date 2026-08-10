@@ -253,21 +253,26 @@ export const ecosystemsApi = {
    * nothing — so there is nothing left to recover.
    */
   async update(id: string, input: Partial<EcosystemInput>): Promise<Ecosystem> {
-    // The rename's new LEAF, or undefined. The identifier's prefix is the parent's own address and
-    // is not the caller's to change (the form fixes it), so what differs is the last segment —
-    // taken with {@link addressLeaf}, which is the server's own slice, so a malformed identifier
-    // still lets the route reject the ADDRESS rather than a manufactured leaf/slug mismatch.
+    // The submitted address's LEAF, whenever the caller supplied an address at all. The
+    // identifier's prefix is the parent's own address and is not the caller's to change (the form
+    // fixes it), so what can differ is the last segment — taken with {@link addressLeaf}, which is
+    // the server's own slice, so a malformed identifier still lets the route reject the ADDRESS
+    // rather than a manufactured leaf/slug mismatch.
     //
-    // The baseline is `id`, the STORED HANDLE, while a settings form supplies the address the row
-    // DERIVES to (`<parent chain>.<slug>` — see {@link Ecosystem.slug}). For the rows where those
-    // disagree this sends the row's own unchanged slug on every save, which is not a rename and is
-    // not treated as one: the route's locked value diff (`addressPatchMoves`) compares the stored
-    // slug against the submitted one and rules the write out before any cascade. A client-side
-    // baseline good enough to skip the field would need the slug this signature does not take, and
-    // getting it wrong the other way — withholding a real rename — is the failure that matters.
-    const renamed = input.identifier != null && input.identifier !== id ? input.identifier : null;
+    // SENT ON PRESENCE, NOT ON A DIFF AGAINST `id`, because `id` is the wrong baseline to diff
+    // against. `id` is the STORED HANDLE; what a settings form edits is the address the row DERIVES
+    // to (`<parent chain>.<slug>` — see {@link Ecosystem.slug}), and the two disagree on exactly the
+    // drifted rows. Skipping the field when they happen to match silently drops the save that
+    // matters most there: a row whose handle says `…mike` while its slug column says `chosen`,
+    // renamed BACK to the `…mike` every other surface shows it under, is a real slug change that
+    // equals `id` — withheld, it 200s having changed nothing. Sending it also declares the save a
+    // rename to the route (`patchRenamesLeaf`), which is what licenses re-deriving the row's own
+    // handle rather than rescoping it as a descendant.
+    //
+    // Sending an unchanged slug costs nothing: the route's locked value diff (`addressPatchMoves`)
+    // compares the stored slug against the submitted one and rules the write out before any cascade.
     const body = compact({
-      slug: renamed ? addressLeaf(renamed) : undefined,
+      slug: input.identifier != null ? addressLeaf(input.identifier) : undefined,
       name: input.name,
       description: input.description,
       region: input.region,

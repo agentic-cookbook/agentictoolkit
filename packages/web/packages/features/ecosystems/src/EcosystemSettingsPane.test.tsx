@@ -9,24 +9,54 @@
 // PersonaEditor.test.tsx. Nothing else in the pane's tree touches react-query (@agentic-toolkit/
 // resource has no react-query dependency at all), so this one mock is the whole harness.
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, act } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import type { Ecosystem } from "@agentic-toolkit/data/ecosystems";
+import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 
-// The stub ECHOES the two props that carry the pane's answer to "what is this row's slug?", so
-// the sourcing test below asserts what the field was handed rather than what it rendered (the
-// real field is a controlled input in a package this file deliberately does not load).
+// The stub ECHOES the props that carry the pane's answer to "what is this row's slug?" and "what
+// does the availability probe say about it", so the tests below assert what the field was handed
+// rather than what it rendered (the real field is a controlled input in a package this file
+// deliberately does not load). Its button is the only way to type here, for the same reason.
 vi.mock("./EcosystemForm", () => ({
-  EcosystemFields: ({ prefix, slug }: { prefix: string; slug: string }) => (
-    <div data-testid="eco-fields" data-prefix={prefix} data-slug={slug} />
+  EcosystemFields: ({
+    prefix,
+    slug,
+    status,
+    onSlug,
+  }: {
+    prefix: string;
+    slug: string;
+    status: string;
+    onSlug: (v: string) => void;
+  }) => (
+    <div data-testid="eco-fields" data-prefix={prefix} data-slug={slug} data-status={status}>
+      <button type="button" onClick={() => onSlug("gizmos")}>
+        rename
+      </button>
+    </div>
   ),
   ecoCreateRdidValid: () => true,
-  useRdidAvailability: () => "idle",
+  // Spied so "what did the pane ask about" is assertable — `null` is the pane declining to ask.
+  useRdidAvailability: vi.fn(() => "available"),
+}));
+
+// Only the transport is replaced; the mappers and types stay real.
+vi.mock("@agentic-toolkit/data/ecosystems", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@agentic-toolkit/data/ecosystems")>()),
+  ecosystemsApi: { update: vi.fn() },
 }));
 
 import { EcosystemSettingsPane } from "./EcosystemSettingsPane";
+import { useRdidAvailability } from "./EcosystemForm";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.mocked(useRdidAvailability).mockClear();
+  vi.mocked(ecosystemsApi.update).mockReset();
+});
+
+/** The last identifier the pane asked the availability probe about — `null` when it asked nothing. */
+const probedFor = () => vi.mocked(useRdidAvailability).mock.calls.at(-1)?.[0] ?? null;
 
 const WIDGETS: Ecosystem = {
   id: "ecosystem.acme.widgets",
@@ -106,5 +136,63 @@ describe("EcosystemSettingsPane slug sourcing", () => {
   it("shows the slug unchanged where handle and slug agree", () => {
     renderPane();
     expect(screen.getByTestId("eco-fields").getAttribute("data-slug")).toBe("widgets");
+  });
+});
+
+// THE WINDOW AFTER A RENAME LANDS. The hook re-points its selection at the id the server returned,
+// so the form keeps editing the row it just saved — but `active` is found by the `ecosystemId`
+// PROP, which still names the OLD id until the host navigates. For that render the pane has a
+// draft and no active row, and it used to answer the gap by treating the address as top-level and
+// the draft as changed: it re-split `ecosystem.acme.gizmos` under a bare `ecosystem.` prefix and
+// probed the address the save had just minted — which exists, because the save minted it. A
+// successful rename therefore ended on "already in use", with Save disabled.
+describe("EcosystemSettingsPane between a rename and the host's navigation", () => {
+  const RENAMED: Ecosystem = {
+    ...WIDGETS,
+    id: "ecosystem.acme.gizmos",
+    identifier: "ecosystem.acme.gizmos",
+    slug: "gizmos",
+  };
+
+  /** Rename WIDGETS -> RENAMED through the pane, then land the parent's list refresh WITHOUT the
+   *  navigation — `ecosystemId` still points at the old id. */
+  async function renameAndRefresh() {
+    vi.mocked(ecosystemsApi.update).mockResolvedValue(RENAMED);
+    const view = renderPane();
+    await act(async () => {
+      screen.getByRole("button", { name: "rename" }).click();
+    });
+    await act(async () => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    view.rerender(
+      <EcosystemSettingsPane
+        noun="Product"
+        ecosystemId={WIDGETS.id}
+        items={[RENAMED]}
+        refresh={() => {}}
+      />,
+    );
+    return view;
+  }
+
+  it("sends the rename and keeps editing the row the server returned", async () => {
+    await renameAndRefresh();
+    expect(vi.mocked(ecosystemsApi.update)).toHaveBeenCalledWith(
+      "ecosystem.acme.widgets",
+      expect.objectContaining({ identifier: "ecosystem.acme.gizmos" }),
+    );
+    expect(screen.getByTestId("eco-fields").getAttribute("data-slug")).toBe("gizmos");
+  });
+
+  it("keeps the SCOPED prefix rather than collapsing to top-level", async () => {
+    await renameAndRefresh();
+    expect(screen.getByTestId("eco-fields").getAttribute("data-prefix")).toBe("ecosystem.acme.");
+  });
+
+  it("probes nothing, and reports no problem, while there is no row to compare against", async () => {
+    await renameAndRefresh();
+    expect(probedFor()).toBeNull();
+    expect(screen.getByTestId("eco-fields").getAttribute("data-status")).toBe("idle");
   });
 });
