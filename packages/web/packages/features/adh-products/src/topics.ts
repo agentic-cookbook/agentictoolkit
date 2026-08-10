@@ -36,7 +36,8 @@ export const PRODUCT_TOPICS = [
   // Vended sign-in CLIENTS (oauth.clients) for this product's customer realm — the apps a
   // developer registers so their site can sign its own customers in via GitHub-through-ADH.
   { id: "signin-apps", label: "Sign-in apps", dividerAfter: false },
-  { id: "communities", label: "Communities", dividerAfter: false },
+  // (Communities sat here. Every host rendered it as "Coming soon" and there is no communities
+  // surface to route to on any of them, so the row is gone rather than parked.)
   // The product's gamification REALM: enable/disable, skin, and per-surface toggles
   // (badges / leaderboards / streaks / recaps) — an engagement surface over its members.
   { id: "gamification", label: "Gamification", dividerAfter: false },
@@ -69,7 +70,6 @@ export type ProductTopicId = (typeof PRODUCT_TOPICS)[number]["id"];
  */
 export const HOST_RENDERED_TOPIC_IDS = [
   "dashboards",
-  "communities",
   "billing",
   "all-data",
 ] as const;

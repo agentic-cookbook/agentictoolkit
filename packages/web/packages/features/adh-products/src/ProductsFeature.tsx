@@ -15,7 +15,6 @@ import {
   Plug,
   MessageCircle,
   LayoutDashboard,
-  Users,
   CreditCard,
 } from "lucide-react";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
@@ -76,7 +75,6 @@ const ICONS: Record<string, ReactNode> = {
   // Users + Requests / Pending users / Invites); a people icon matches the label.
   invitations: <UsersRound size={16} aria-hidden />,
   "signin-apps": <LogIn size={16} aria-hidden />,
-  communities: <Users size={16} aria-hidden />,
   gamification: <Trophy size={16} aria-hidden />,
   auth: <KeyRound size={16} aria-hidden />,
   "feature-flags": <Flag size={16} aria-hidden />,

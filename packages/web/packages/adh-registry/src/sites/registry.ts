@@ -490,7 +490,10 @@ export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
   // The persona-data CRUD workspace lives at /<slug>/all-data (the /<slug>/personas
   // route is the persona editor); the 'personas' registry site switches into this view.
   personas: 'all-data',
-  communities: 'communities',
+  // (No `communities`. Its hub route only ever rendered "Coming soon" and has been removed, so
+  // the site has no workspace inside the hub — only its own marketing pages. Listing a segment
+  // here that the hub does not route would make HUB_WORKSPACE_SEGMENTS claim a workspace that
+  // isn't there.)
   messaging: 'messaging',
   // Ecosystems are managed as PRODUCTS in the hub (/<slug>/products — each product IS
   // an ecosystem), so both the ecosystems and products sites switch into that view.

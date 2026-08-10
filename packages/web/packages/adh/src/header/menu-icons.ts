@@ -99,7 +99,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   // --- Hub + its ecosystem sites (inline sub-items under Hub) ---
   hub: Hexagon,
   bitbag: Bot, // the hub's AI persona
-  community: Users, // matches FEATURE_META `communities`
+  community: Users, // the community site; the hub has no communities feature to match
   personaregistry: UserCircle, // matches FEATURE_META `personas`
   toolkit: Wrench, // matches the myagenticteams landing's toolkit glyph
   cookbook: ChefHat, // recipes/cookbook
@@ -133,7 +133,6 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   '/applications': AppWindow,
   '/auth': KeyRound,
   '/billing': CreditCard,
-  '/communities': Users,
   '/dashboards': LayoutDashboard,
   '/email-signup': Mail,
   '/feature-flags': Flag,
@@ -202,7 +201,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   authentication: Fingerprint, // customer auth / identity
   billing: CreditCard, // matches FEATURE_META `billing`
   codereviews: GitPullRequest,
-  communities: Users, // matches FEATURE_META `communities`
+  communities: Users, // marketing site only — the hub route was removed
   consultants: Briefcase,
   consulting: Handshake, // services CTA
   customers: Contact,

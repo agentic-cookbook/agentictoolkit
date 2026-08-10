@@ -252,7 +252,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/[workspace]/applications/[[...path]]',
     '/[workspace]/auth/[[...path]]',
     '/[workspace]/billing/[[...table]]',
-    '/[workspace]/communities/[[...table]]',
     '/[workspace]/dashboards/[[...topic]]',
     '/[workspace]/email-signup',
     '/[workspace]/feature-flags/[[...path]]',

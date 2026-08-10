@@ -1133,7 +1133,7 @@ var MENU_ICONS = {
   bitbag: Bot,
   // the hub's AI persona
   community: Users,
-  // matches FEATURE_META `communities`
+  // the community site; the hub has no communities feature to match
   personaregistry: UserCircle,
   // matches FEATURE_META `personas`
   toolkit: Wrench,
@@ -1173,7 +1173,6 @@ var MENU_ICONS = {
   "/applications": AppWindow,
   "/auth": KeyRound,
   "/billing": CreditCard,
-  "/communities": Users,
   "/dashboards": LayoutDashboard,
   "/email-signup": Mail,
   "/feature-flags": Flag,
@@ -1246,7 +1245,7 @@ var MENU_ICONS = {
   // matches FEATURE_META `billing`
   codereviews: GitPullRequest,
   communities: Users,
-  // matches FEATURE_META `communities`
+  // marketing site only — the hub route was removed
   consultants: Briefcase,
   consulting: Handshake,
   // services CTA
