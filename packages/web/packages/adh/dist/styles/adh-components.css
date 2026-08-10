@@ -432,6 +432,54 @@
   .adh-header__links {
     display: none;
   }
+
+  /* Putting the links down was not enough on its own. Signed in at 390px the bar
+     still wanted 429.8px: 233.8 of brand (site name + dev-tools square), 124 of nav
+     (site actions + avatar trigger), and 72 of pure gutter. The two rules below take
+     that last 429.8 apart from the cheap end first.
+
+     Gutters and the cluster gap are desktop-sized above this query, and 72px of a
+     390px screen is 18% of it spent on nothing. 1rem is what a phone gutter is
+     elsewhere in this sheet; the gap is only ever a MINIMUM separation here, since
+     `justify-content: space-between` is what actually holds the clusters apart. */
+  .adh-header__container {
+    padding: 0 1rem;
+    gap: 0.75rem;
+  }
+
+  /* …and the brand is the give of last resort. Above this width `.adh-header__lead`
+     is `flex-shrink: 0`, which is what keeps a crowded desktop bar from crushing the
+     site name — it is the bar's only child with text in it, so it is the only one a
+     squeeze can take from. The floor is what makes giving that up safe here: 8rem
+     still reads as a name, and no site name can widen the bar past the viewport any
+     more. The site NAME is the one term here whose width the
+     header does not control, so it is the term that has to yield — measured, hub
+     signed in at 390px put the nav's right edge at 405.8px against a 390px document,
+     i.e. a phone with a horizontally scrolling page and the avatar caret off-screen. */
+  .adh-header__lead {
+    flex-shrink: 1;
+    min-width: 8rem;
+  }
+
+  /* An ellipsis needs a shrinkable box at every level between the flex item and the
+     text. SiteSwitcher renders one of two shapes: a plain link, which IS the text's
+     box, or a popover trigger, which wraps the text in a bare `<span>`. Both are flex
+     items, so `overflow` clips without a `display` change, and `white-space: nowrap`
+     is already on `.adh-header__lead .adh-header__title` for both to inherit. */
+  .adh-header__lead .adh-header__title,
+  .adh-header__lead .adh-nav-popover__trigger > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The caret and the dev-tools square are fixed glyphs — 12px and 28px. Left
+     shrinkable they take their proportional share of the squeeze and both come out
+     misshapen, which buys the text almost nothing. */
+  .adh-header__lead .adh-nav-popover__chevron,
+  .adh-header__brand-row > .adh-nav-popover__trigger--icon {
+    flex-shrink: 0;
+  }
 }
 
 /* ── The workspace chooser ───────────────────────────────────────────────────────

@@ -182,8 +182,26 @@ export function ListWithDetailsPane<T>({
       />
 
       {/* Table + details split — list and details are PEERS in the column; the
-          divider renders as the details pane's always-visible header bar. */}
+          divider renders as the details pane's always-visible header bar.
+
+          The two sizing classes are what make the split's RATIO mean anything, and
+          neither is decorative. `flex-1` claims the column's remaining height: a
+          ResizableSplit left at its `flex: 0 1 auto` default sizes to CONTENT, and a
+          percentage flex-basis against a content-sized parent is circular, so the panes
+          come out at their natural heights and the divider drags nothing — measured, a
+          726px column held a 158px split with 568px of dead space under it.
+
+          `min-h-[16rem]` is the other half: `flex-1` is `flex-basis: 0`, so in a column
+          that is already over-full the split takes NEGATIVE free space and lands at
+          height 0. That is worse than it sounds — the top pane's `overflow-auto` then
+          clips the table out of hit-testing while `getBoundingClientRect` still reports
+          the unclipped rows, so the list looks present to a test and to a screenshot and
+          is unclickable to a person (measured at 1280x720: the list block got 46px and
+          this header alone is 54px). The floor makes the page's own scroll container take
+          the overflow instead, which is what it is there for. 16rem is the smallest height
+          that still shows a header row, a few rows, the divider and a line of detail. */}
       <ResizableSplit
+        className="min-h-[16rem] flex-1"
         storageKey={storageKey}
         header={detailsLabel}
         bottomLabel={detailsLabel}
