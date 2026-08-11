@@ -316,6 +316,65 @@ describe("AbilitiesPanel", () => {
     await waitFor(() => expect(isDisabled(box("toolA"))).toBe(false));
   });
 
+  // The point of caching the catalog per persona: clicking BACK to a persona shows its tools on
+  // the first frame, with no read and no "Loading…" in between. That is the whole user-visible
+  // difference — every other test here would pass just as well against a panel that re-read from
+  // scratch every time.
+  it("paints a persona's catalog from cache on the way back, without re-reading", async () => {
+    list.mockImplementation((id: string) => Promise.resolve(id === "p1" ? [ALPHA] : [BETA]));
+
+    const { rerender } = render(<AbilitiesPanel personaId="p1" />);
+    await screen.findByRole("checkbox", { name: "alpha" });
+    rerender(<AbilitiesPanel personaId="p2" />);
+    await screen.findByRole("checkbox", { name: "beta" });
+    expect(list).toHaveBeenCalledTimes(2);
+
+    rerender(<AbilitiesPanel personaId="p1" />);
+
+    // No `await`: p1's catalog is already on screen, and it never blanked on the way…
+    expect(screen.getByRole("checkbox", { name: "alpha" })).not.toBeNull();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    // …because it came from the cache rather than a third request.
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // An optimistic patch now lives in the CACHE rather than in component state, so a mutation
+  // abandoned by a persona switch would otherwise leave its guess standing under that persona for
+  // the rest of the staleness window — the settle that would have corrected it is exactly the one
+  // being dropped. Dropping it marks that persona's entry stale instead, so coming back re-reads.
+  it("re-reads a persona whose in-flight mutation was abandoned by a switch", async () => {
+    list.mockImplementation((id: string) =>
+      Promise.resolve(id === "p1" ? [structuredClone(TOOL_A)] : [BETA]),
+    );
+    let failP1!: (e: Error) => void;
+    grant.mockImplementation(
+      () =>
+        new Promise<ToolGrant>((_resolve, reject) => {
+          failP1 = reject;
+        }),
+    );
+
+    const { rerender } = render(<AbilitiesPanel personaId="p1" />);
+    await screen.findByRole("checkbox", { name: "toolA" });
+    fireEvent.click(box("toolA")); // optimistic granted=true, written into p1's entry
+    expect(box("toolA").getAttribute("aria-checked")).toBe("true");
+
+    rerender(<AbilitiesPanel personaId="p2" />);
+    await screen.findByRole("checkbox", { name: "beta" });
+
+    // p1's grant fails only now — too late to revert the optimistic patch it left behind.
+    await act(async () => {
+      failP1(new Error("nope"));
+    });
+
+    rerender(<AbilitiesPanel personaId="p1" />);
+
+    // p1 is stale, so it re-reads rather than serving the guess…
+    await waitFor(() => expect(list).toHaveBeenCalledTimes(3));
+    // …and the server's answer stands.
+    await waitFor(() => expect(box("toolA").getAttribute("aria-checked")).toBe("false"));
+  });
+
   // #14 — a genuinely null source is the only "Built-in"; a non-null (esp. delisted third-
   // party / integration) grant renders a distinct, clearly-not-native heading.
   it("labels non-null sources as their own groups, never Built-in (#14)", async () => {

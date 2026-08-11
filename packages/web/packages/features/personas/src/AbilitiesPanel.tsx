@@ -20,10 +20,12 @@ import { useOptimisticRowActions } from "./useOptimisticRowActions";
  * `personaId` prop instead of an agent-picker dropdown.
  *
  * Grant and autonomy mutations are optimistic: the row flips instantly and reverts if the
- * request rejects, reconciling from the server's response on success. The load/reset + per-row
+ * request rejects, reconciling from the server's response on success. The cached load + per-row
  * busy-tracking + optimistic-mutate/revert machine is the shared `useOptimisticRowActions` hook
- * (#11) — see its doc comment for the race-safety guarantees on a persona switch. Owner/admin-only
- * usage is enforced by the backend (403); the panel just surfaces the error.
+ * (#11) — see its doc comment for the race-safety guarantees on a persona switch. The catalog is
+ * cached per persona, so clicking back to a persona shows its tools on the first frame and
+ * re-reads behind them. Owner/admin-only usage is enforced by the backend (403); the panel just
+ * surfaces the error.
  */
 export function AbilitiesPanel({ personaId }: { personaId: string }) {
   // Base id for the per-tool rows (checkbox ↔ its tool-name label).
@@ -36,6 +38,7 @@ export function AbilitiesPanel({ personaId }: { personaId: string }) {
     busy: busyTools,
     runRowMutation,
   } = useOptimisticRowActions<ToolCatalogItem>(
+    "persona-tools",
     personaId,
     (id) => personaToolsApi.list(id),
     (t) => t.toolName,
@@ -83,7 +86,9 @@ export function AbilitiesPanel({ personaId }: { personaId: string }) {
     >
       <ErrorText error={loadError ?? error} />
       {tools === null ? (
-        <p className="text-sm text-apt-text-muted">Loading…</p>
+        // A failed read leaves the catalog null too, and the banner above already says why — so
+        // this must neither go on claiming the list is on its way nor call the catalog empty.
+        loadError === null && <p className="text-sm text-apt-text-muted">Loading…</p>
       ) : tools.length === 0 ? (
         <p className="text-sm text-apt-text-muted">No tools available.</p>
       ) : (

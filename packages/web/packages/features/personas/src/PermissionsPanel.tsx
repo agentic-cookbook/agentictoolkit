@@ -37,18 +37,20 @@ type MayActRow = { kind: MayActGrantableKind; granted: boolean };
  * backend intersects it with the caller's decidable set, so the response already contains only
  * this persona's pending rows; the panel no longer filters the response itself.
  *
- * Both sections' load/reset + per-row busy-tracking + optimistic-mutate/revert machinery is the
+ * Both sections' cached load + per-row busy-tracking + optimistic-mutate/revert machinery is the
  * shared `useOptimisticRowActions` hook (#11), one instance per section (may-act rows keyed by
- * `kind`, approvals keyed by `id`) — each instance's own monotonic load token guards ITS data
- * source independently, so a persona switch never lets a stale may-act or approvals response
- * from the abandoned persona corrupt the newly-selected persona's view. May-act toggles and
- * decisions each use their OWN `useAction()` instance, mirroring how the two source components
- * each tracked their own busy/error independently.
+ * `kind`, approvals keyed by `id`). Each holds its own cache entry — `persona-may-act:<id>` and
+ * `persona-approvals:<id>` — so reopening a persona paints its switches and queue from what was
+ * already read, a response can only land under the persona it was requested for, and a mutation
+ * that settles after a persona switch is dropped rather than written into the newly-selected
+ * persona's view. May-act toggles and decisions each use their OWN `useAction()` instance,
+ * mirroring how the two source components each tracked their own busy/error independently.
  */
 export function PermissionsPanel({ personaId }: { personaId: string }) {
   const { error: mayActError, run: runMayAct } = useAction();
   const renderRecordAffordance = useRecordAffordance();
   const mayAct = useOptimisticRowActions<MayActRow, MayActGrantableKind>(
+    "persona-may-act",
     personaId,
     (id) =>
       personaMayActApi
@@ -59,6 +61,7 @@ export function PermissionsPanel({ personaId }: { personaId: string }) {
 
   const { error: decideError, run: runDecide } = useAction();
   const approvals = useOptimisticRowActions<Approval>(
+    "persona-approvals",
     personaId,
     (id) => personaApprovalsApi.list("pending", id),
     (a) => a.id,
@@ -81,25 +84,31 @@ export function PermissionsPanel({ personaId }: { personaId: string }) {
     );
   }
 
-  // Decide one queued action. Gated by the load token captured at fire time so a decision (or
-  // its follow-up reload) that settles after a persona switch never touches the newly-selected
-  // persona's queue.
+  // Decide one queued action. Held by a claim taken at fire time so a decision — or its follow-up
+  // re-read — that settles after a persona switch never touches the newly-selected persona's
+  // queue, and marks the abandoned persona's queue stale instead of leaving the optimistic removal
+  // standing there uncorrected.
   function decide(approval: Approval, action: "approve" | "reject") {
-    const token = approvals.loadToken.current;
+    const held = approvals.claim();
     approvals.setBusy(approval.id, true);
     void runDecide(async () => {
       try {
         if (action === "approve") await personaApprovalsApi.approve(approval.id);
         else await personaApprovalsApi.reject(approval.id);
         // The decision landed — drop the decided row from the queue immediately, so it is gone
-        // from the UI (and can't be re-decided) even if the follow-up reload below throws. Only
+        // from the UI (and can't be re-decided) even if the follow-up re-read below throws. Only
         // reached after the decision itself resolved: a thrown approve/reject skips this and
         // leaves the row in place to retry.
-        if (approvals.isCurrent(token)) approvals.removeRow(approval.id);
-        const rows = await personaApprovalsApi.list("pending", personaId);
-        if (approvals.isCurrent(token)) approvals.setRows(rows);
+        if (!held.holds()) return;
+        approvals.removeRow(approval.id);
+        // Through the hook's own `reload`, not a second `list(personaId)` call: `reload` re-reads
+        // whichever persona is SELECTED and writes to that persona's entry, so there is no way for
+        // this closure's captured `personaId` to publish one persona's queue under another's. Its
+        // rejection still reaches the caller, which is what keeps a failed refresh visible.
+        await approvals.reload();
       } finally {
-        if (approvals.isCurrent(token)) approvals.setBusy(approval.id, false);
+        if (held.holds()) approvals.setBusy(approval.id, false);
+        else held.drop();
       }
     });
   }
@@ -134,7 +143,10 @@ export function PermissionsPanel({ personaId }: { personaId: string }) {
       <FieldGroup title="Pending actions">
         <ErrorText error={approvals.loadError ?? decideError} />
         {approvals.rows === null ? (
-          <p className="text-sm text-apt-text-muted">Loading…</p>
+          // A failed read leaves the queue null too, and the banner above already says why — so
+          // this must neither go on claiming the queue is on its way nor call it empty, which
+          // here would read as "nothing is waiting on you".
+          approvals.loadError === null && <p className="text-sm text-apt-text-muted">Loading…</p>
         ) : approvals.rows.length === 0 ? (
           <p className="text-sm text-apt-text-muted">No pending actions.</p>
         ) : (
