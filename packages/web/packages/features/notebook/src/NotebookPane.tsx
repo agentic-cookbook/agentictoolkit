@@ -14,8 +14,10 @@ import {
   useRecordAffordance,
   CreateResourceDialog,
   FeatureBarPortal,
+  useResourceItem,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
+import { useResourceItemPrefetch, useResourceItemWriter } from "@agentic-toolkit/data";
 import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
   notesApi,
@@ -241,85 +243,87 @@ export function NotebookPane({
   const [newNoteOpen, setNewNoteOpen] = useState(false);
   const [editingCategories, setEditingCategories] = useState(false);
   const [editingTags, setEditingTags] = useState(false);
-  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
-  const [draft, setDraft] = useState<NoteInput | null>(null);
-  const [loadingNote, setLoadingNote] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  // A failed save or delete belongs to the NOTE it was raised on, so it is stored with that id
+  // and read back only while that note is still open (see `formError` below). The loader this
+  // pane used to own cleared the message on every selection change; deriving it does the same
+  // for the URL path — Back, a deep link — which never runs through a click handler.
+  const [raisedError, setRaisedError] = useState<{ id: string | null; text: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Guards against an out-of-order body fetch clobbering a newer selection.
-  const selectToken = useRef(0);
-  // The note id currently hydrated into the form. The URL-sync effect skips re-fetching when
-  // it already matches — e.g. right after create seeds the returned note — so a just-opened
-  // note doesn't flash to "Loading…" + issue a redundant GET.
-  const loadedIdRef = useRef<string | null>(null);
   // Re-entrancy latch for `onSave`. The `saving` STATE can't do this job: it is a render
   // value, so two activations inside a single commit (a double-click on Save before React
   // paints the disabled button) both read the pre-save `false` and both PUT. A ref flips
   // synchronously on the way in and clears in `finally`.
   const savingRef = useRef(false);
 
-  const baseline: NoteInput | null = selectedNote ? noteToInput(selectedNote) : null;
-  const dirty = Boolean(draft && baseline && noteDiffers(draft, baseline));
-  const validationError = draft ? noteValidate(draft) : null;
-  // Dirty AND valid — `!loadingNote` is a DATA-AVAILABILITY term (there is no baseline to
-  // diverge from until the body has landed), not a busy term. The busy term is applied at
-  // the button, which already renders `disabled={!canSave || saving}`.
-  const canSave = Boolean(draft && baseline) && dirty && validationError === null && !loadingNote;
-  const canDelete = selectedId !== null && !saving && !deleting;
-
-  // Load a note's body into the form (or clear it when id is null). Token-guarded so an
-  // out-of-order fetch can't clobber a newer selection.
-  const loadBody = useCallback(
-    async (id: string | null) => {
-      const token = ++selectToken.current;
-      loadedIdRef.current = id; // the form is now bound to `id` (see the URL-sync effect)
-      setSelectedNote(null);
-      setDraft(null);
-      setFormError(null);
-      if (id == null) {
-        setLoadingNote(false);
-        return;
-      }
-      setLoadingNote(true);
-      try {
-        const full = await notesApi.get(id, { workspace: workspaceSlug });
-        if (selectToken.current !== token) return; // a newer selection won
-        setSelectedNote(full);
-        setDraft(noteToInput(full));
-      } catch (err) {
-        if (selectToken.current !== token) return;
-        reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "open" });
-        setFormError(errorText(err, "Failed to open the note."));
-      } finally {
-        if (selectToken.current === token) setLoadingNote(false);
-      }
-    },
+  // ── The open note ──────────────────────────────────────────────────────────
+  // Cached per WORKSPACE, because `?workspace=` decides which principal's copy a read returns —
+  // one key for a note id would let an org workspace paint the caller's own copy of it.
+  const noteCacheKey = `notes:${workspaceSlug ?? ""}`;
+  const loadNote = useCallback(
+    (id: string) => notesApi.get(id, { workspace: workspaceSlug }),
     [workspaceSlug],
   );
+  // Replaces the loader this pane hand-rolled: a `loadBody` + an out-of-order token + a "which
+  // id is the form bound to" ref + a URL-sync effect that had to remember to skip itself. All
+  // four existed to answer "is what's on screen the right note"; the cache answers it, and a
+  // note opened a second time now paints from memory instead of from a GET.
+  //
+  // No `seedFrom`: a list row is a NoteSummary, whose `excerpt` is not the body, so there is no
+  // partial Note to paint from. And no `absent`: this list is SCOPED by category and narrowed by
+  // the bar's filters, so a note missing from it has merely been filtered away — announcing that
+  // as a deletion would be a lie the user cannot argue with. The 404 is the honest signal.
+  const {
+    item: selectedNote,
+    isSettled,
+    isFetching: fetchingNote,
+    error: noteError,
+  } = useResourceItem<Note>(noteCacheKey, selectedId, loadNote);
+  const prefetchNote = useResourceItemPrefetch(noteCacheKey, loadNote);
+  const writeNote = useResourceItemWriter<Note>(noteCacheKey);
 
-  // Load (or clear) the note body when the open id in the URL changes — a deep-link landing,
-  // reload, browser back/forward, or an in-app navigation.
-  useEffect(() => {
-    // Skip when the form is already bound to this id (e.g. create just seeded the returned
-    // note, or loadBody already ran for it) — avoids a redundant GET + a "Loading…" flash.
-    if (loadedIdRef.current === selectedId) return;
-    void loadBody(selectedId);
-  }, [selectedId, loadBody]);
+  // The server's copy, as the form would hold it.
+  const baseline: NoteInput | null = selectedNote ? noteToInput(selectedNote) : null;
+  // The user's in-progress edits, or null when the form is simply showing what the server has.
+  //
+  // It carries the id it belongs to, and the draft is DERIVED from it rather than copied into
+  // state — which is what makes "instant paint, revalidate behind it" safe with no effect at
+  // all. A revalidation landing under a user who is not typing is adopted immediately; one
+  // landing under a user who IS typing loses to the override; and a selection change discards
+  // it, because an override for another note is not this note's draft.
+  const [override, setOverride] = useState<{ id: string; value: NoteInput } | null>(null);
+  const draft = override && override.id === selectedId ? override.value : baseline;
+
+  // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there
+  // is only ever one message, so "no error" needs no id to be about.
+  const formError = raisedError && raisedError.id === selectedId ? raisedError.text : null;
+  const setFormError = useCallback(
+    (text: string | null) => setRaisedError(text === null ? null : { id: selectedId, text }),
+    [selectedId],
+  );
+
+  const dirty = Boolean(draft && baseline && noteDiffers(draft, baseline));
+  const validationError = draft ? noteValidate(draft) : null;
+  // Dirty AND valid AND settled. `isSettled` is the successor to the old `!loadingNote` term and
+  // carries one more rule with it: a save composed against a CACHED copy would PUT fields the
+  // server has since changed. The busy term stays at the button, which already renders
+  // `disabled={!canSave || saving}`.
+  const canSave = Boolean(draft && baseline) && dirty && validationError === null && isSettled;
+  // Delete waits on the same signal for the same reason: it is a write against a copy that may
+  // already be out of date.
+  const canDelete = selectedId !== null && isSettled && !saving && !deleting;
 
   function onChange(next: NoteInput): void {
-    setDraft(next);
+    if (!selectedId) return;
+    setOverride({ id: selectedId, value: next });
     if (formError) setFormError(null);
   }
 
   function onCancel(): void {
-    selectToken.current++;
     onSelectNote(null, chainSlugs);
-    setSelectedNote(null);
-    setDraft(null);
+    setOverride(null);
     setFormError(null);
-    setLoadingNote(false);
   }
 
   // Returns true once the draft is persisted (false on a validation/save failure) so the
@@ -345,8 +349,11 @@ export function NotebookPane({
           workspace: workspaceSlug,
         });
         await refresh();
-        setSelectedNote(updated);
-        setDraft(noteToInput(updated));
+        // The response IS the server's copy, so record it rather than invalidating — a re-read
+        // would spend a request to arrive back at these exact bytes. Dropping the override then
+        // hands the form straight back to `baseline`, which is now what we just saved.
+        writeNote(updated.id, updated);
+        setOverride(null);
       }
       return true;
     } catch (err) {
@@ -373,9 +380,11 @@ export function NotebookPane({
     try {
       await notesApi.remove(selectedId, { workspace: workspaceSlug });
       setPendingDelete(false);
+      // Forget the body BEFORE leaving. Keeping it would paint a note we know is gone if the
+      // user navigated back to its URL, and only the GET behind that paint would take it away.
+      writeNote(selectedId, null);
       onSelectNote(null, chainSlugs);
-      setSelectedNote(null);
-      setDraft(null);
+      setOverride(null);
       await refresh();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "delete" });
@@ -505,6 +514,12 @@ export function NotebookPane({
     selectedId,
     itemNoun: "note",
     onSelect: (id) => onSelectNote(id, chainSlugs),
+    // Hovering (or tabbing to) a row for a moment warms its body, so the click that follows has
+    // nothing left to wait for.
+    onPrefetch: prefetchNote,
+    // The spinner in front of "Notes" — the one signal that a read is happening, now that the
+    // editor paints the cached copy instead of blanking to "Loading…".
+    busy: fetchingNote,
     onClear: onCancel,
     emptyLabel:
       notes === null
@@ -595,22 +610,26 @@ export function NotebookPane({
             pathValues: { id: selectedId },
             title: "Note API",
           })}
-          error={listError ?? formError}
+          error={listError ?? formError ?? noteError}
           emptyTitle={
-            loadingNote || notes === null ? "Loading…" : "Select a note to edit, or write a new one."
+            // Reached only with nothing cached for this id — otherwise `draft` is already the
+            // cached note and the editor below renders instead.
+            fetchingNote || notes === null
+              ? "Loading…"
+              : "Select a note to edit, or write a new one."
           }
           renderDetail={(d) => (
             <div className="flex flex-col gap-4">
-              {loadingNote ? (
-                <p className="text-sm text-apt-text-muted">Loading…</p>
-              ) : (
-                <NoteDetail
-                  {...noteFieldProps}
-                  draft={d}
-                  onChange={onChange}
-                  error={validationHint}
-                />
-              )}
+              {/* No "Loading…" branch: whatever is cached is on screen from the first frame, and
+                  the read settles behind it. `disabled` is what makes that safe — see
+                  `isSettled`. */}
+              <NoteDetail
+                {...noteFieldProps}
+                draft={d}
+                onChange={onChange}
+                error={validationHint}
+                disabled={!isSettled}
+              />
             </div>
           )}
         />
@@ -635,11 +654,12 @@ export function NotebookPane({
           onCreated={(created) => {
             setNewNoteOpen(false);
             void refresh();
-            // Open it: seed note/draft + mark it loaded so the URL-sync effect skips the fetch.
-            loadedIdRef.current = created.id;
+            // Record the created note BEFORE opening it, so the editor it opens into paints from
+            // the cache with no read at all — the create response already is the server's copy.
+            // (This is what the old `loadedIdRef` dance was for.)
+            writeNote(created.id, created);
             onSelectNote(created.id, chainSlugs);
-            setSelectedNote(created);
-            setDraft(noteToInput(created));
+            setOverride(null);
             setFormError(null);
           }}
           renderForm={(d, onDraftChange, error) => (

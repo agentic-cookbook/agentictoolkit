@@ -48,6 +48,7 @@ vi.mock("@agentic-toolkit/data/notes", () => ({
   },
 }));
 
+import { getToolkitQueryClient } from "@agentic-toolkit/data/query";
 import { NotebookPane } from "./NotebookPane";
 import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
@@ -123,6 +124,12 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+// The toolkit's QueryClient is at MODULE scope — one per browser tab, deliberately, so a topic
+// click cannot destroy the cache. In a test file that means ONE cache for every test in it: leave
+// it standing and a note a previous test opened is still cached and still fresh, so the next
+// test's `get` is never called and its assertion fails describing the feature working correctly.
+afterEach(() => getToolkitQueryClient().clear());
+
 /** The merged stack, captured per render so a test can assert on a level's SHAPE. */
 let levels: TopicLevel[] = [];
 
@@ -132,13 +139,19 @@ function levelById(id: string): TopicLevel {
   return hit;
 }
 
-/** Renders the published rows the way the hub's workspace shell would. */
+/** Renders the published rows the way the hub's workspace shell would.
+ *
+ *  It also stands in for the two signals the real `TopicRail` owns: the header spinner it shows
+ *  while `busy`, and the hover dwell after which it calls `onPrefetch`. The dwell's TIMING is the
+ *  rail's own business (and is tested there); what belongs here is whether this pane wires the
+ *  two at all — which is exactly the thing a typechecked optional prop cannot tell you. */
 function Rail({ published }: { published: TopicLevel[] }) {
   return (
     <div>
       {published.map((l) => (
         <div key={l.id}>
           <h3>{l.title}</h3>
+          {l.busy && <span data-testid={`busy-${l.id}`} />}
           {l.onNew && (
             <button type="button" onClick={() => l.onNew?.()}>
               {l.newLabel}
@@ -152,6 +165,7 @@ function Rail({ published }: { published: TopicLevel[] }) {
                   type="button"
                   disabled={item.disabled}
                   onClick={() => l.onSelect?.(item.id)}
+                  onPointerEnter={() => l.onPrefetch?.(item.id)}
                 >
                   {item.label}
                 </button>
@@ -197,21 +211,27 @@ function Harness({ children }: { children: ReactNode }) {
   );
 }
 
-function renderPane(props: { categorySlugs?: string[]; noteId?: string } = {}) {
+type PaneProps = { categorySlugs?: string[]; noteId?: string };
+
+function renderPane(props: PaneProps = {}) {
   const onSelectCategory = vi.fn();
   const onSelectNote = vi.fn();
-  render(
+  const tree = (p: PaneProps) => (
     <Harness>
       <NotebookPane
-        categorySlugs={props.categorySlugs ?? []}
-        noteId={props.noteId}
+        categorySlugs={p.categorySlugs ?? []}
+        noteId={p.noteId}
         onSelectCategory={onSelectCategory}
         onSelectNote={onSelectNote}
         workspaceSlug="acme"
       />
-    </Harness>,
+    </Harness>
   );
-  return { onSelectCategory, onSelectNote };
+  const { rerender } = render(tree(props));
+  // Re-render IN PLACE with a new selection — the way Back, a deep link and a rail click all
+  // arrive, since `onSelectNote` is a stub here and the open id is a prop. A fresh `render` would
+  // remount instead, resetting exactly the state some of these tests are about.
+  return { onSelectCategory, onSelectNote, select: (p: PaneProps) => rerender(tree(p)) };
 }
 
 describe("the rail", () => {
@@ -441,5 +461,116 @@ describe("the notes list options", () => {
     // Not "render it with zero lines" — a preview nobody asked for should not be on the row at
     // all, so nothing can leak it through padding or a screen reader.
     expect(levelById("notebook-notes").items[0].preview).toBeUndefined();
+  });
+});
+
+// The complaint these exist for: "each time I click a topic we fetch the contents from the
+// database, this makes the site feel super slow." Each test below asserts a read that does NOT
+// happen — which is the only way to state the fix, since a note painted from the cache and one
+// painted from a fresh GET look identical on screen.
+describe("the cache", () => {
+  it("paints a re-opened note from the cache instead of reading it again", async () => {
+    renderPane({ noteId: "note-1" });
+    const first = (await screen.findByLabelText("Note")) as HTMLTextAreaElement;
+    await waitFor(() => expect(first.value).toBe("# Standup\n\nDiscussed the migration."));
+    expect(get).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    renderPane({ noteId: "note-1" });
+    // Synchronous `get…`, not `findBy…`: there is nothing to wait for. The body is on the FIRST
+    // paint, and awaiting here would hide the difference between that and a fast refetch.
+    const again = screen.getByLabelText("Note") as HTMLTextAreaElement;
+    expect(again.value).toBe("# Standup\n\nDiscussed the migration.");
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("warms a hovered row's body, so the click that follows reads nothing", async () => {
+    renderPane();
+    const row = await screen.findByRole("button", { name: "Standup" });
+    await act(async () => {
+      fireEvent.pointerEnter(row);
+    });
+    expect(get).toHaveBeenCalledWith("note-1", { workspace: "acme" });
+    cleanup();
+
+    renderPane({ noteId: "note-1" });
+    const body = screen.getByLabelText("Note") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Standup\n\nDiscussed the migration.");
+    // The warm, and nothing since — the click spent no request of its own.
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  // The instant paint is only safe because of this: a cached copy may be out of date, so the form
+  // is READ-ONLY until the server's answer lands. Editing a stale copy and saving it would put
+  // fields back that the server has since changed, and nothing on screen would say so.
+  it("paints the cached body immediately but keeps it read-only until the server answers", async () => {
+    renderPane({ noteId: "note-1" });
+    const settled = (await screen.findByLabelText("Note")) as HTMLTextAreaElement;
+    await waitFor(() => expect(settled.value).toBe("# Standup\n\nDiscussed the migration."));
+    expect(settled.disabled).toBe(false);
+    cleanup();
+
+    // Hold the next read open, then mark the entry stale so the remount revalidates. That window —
+    // cached copy on screen, server's answer still in flight — is what the assertions below are.
+    get.mockReturnValue(new Promise<Note>(() => {}));
+    await act(async () => {
+      await getToolkitQueryClient().invalidateQueries();
+    });
+
+    renderPane({ noteId: "note-1" });
+    const body = screen.getByLabelText("Note") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Standup\n\nDiscussed the migration.");
+    expect(body.disabled).toBe(true);
+    // And the one thing that tells the user why: the spinner in front of the list's title.
+    expect(screen.getByTestId("busy-notebook-notes")).not.toBeNull();
+  });
+
+  it("opens a created note from the create response, with no read at all", async () => {
+    renderPane();
+    await screen.findByRole("button", { name: "Standup" });
+    fireEvent.click(screen.getByRole("button", { name: "Create Note" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "New note" }));
+    fireEvent.change(dialog.getByLabelText("Note"), {
+      target: { value: "# Retro\n\nWhat went well." },
+    });
+    await act(async () => {
+      dialog.getByRole("button", { name: "Save" }).click();
+    });
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    cleanup();
+
+    // The create response IS the server's copy, so opening what was just created costs nothing.
+    // (`onSelectNote` is a stub here, so the open is a fresh mount at the created id — which is
+    // also what a reload or a shared link does.)
+    renderPane({ noteId: "note-1" });
+    const body = screen.getByLabelText("Note") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Standup\n\nDiscussed the migration.");
+    expect(get).not.toHaveBeenCalled();
+  });
+
+  // The loader the cache replaced cleared the form error on every selection change. Without a
+  // replacement, the message from a failed save on one note greets the user on the next one,
+  // attached to a note that never failed.
+  it("leaves a failed save's message behind when another note is opened", async () => {
+    update.mockRejectedValueOnce(new Error("Backend exploded."));
+    get.mockImplementation(async (id) => ({
+      ...structuredClone(NOTE),
+      id,
+      content: `# ${id}\n\nBody.`,
+    }));
+    const { select } = renderPane({ noteId: "note-1" });
+    const body = (await screen.findByLabelText("Note")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# note-1\n\nBody."));
+    fireEvent.change(body, { target: { value: "# note-1 v2\n\nBody." } });
+    await act(async () => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    expect(await screen.findByText("Backend exploded.")).not.toBeNull();
+
+    select({ noteId: "note-2" });
+    await waitFor(() =>
+      expect((screen.getByLabelText("Note") as HTMLTextAreaElement).value).toBe("# note-2\n\nBody."),
+    );
+    expect(screen.queryByText("Backend exploded.")).toBeNull();
   });
 });

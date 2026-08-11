@@ -21,6 +21,11 @@ export interface NoteFieldsProps {
   onRenameCategory?: (node: CategoryTreeNode, nextName: string) => Promise<void>;
   tagOptions: string[];
   error?: string | null;
+  /** The note on screen is a CACHED copy and the server's answer has not landed yet. Every field
+   *  goes read-only for that window: an edit made against a stale copy would be saved over
+   *  whatever the server actually has, and the user would never know which one won. Always false
+   *  in the create modal, whose draft has no server copy to be stale against. */
+  disabled?: boolean;
 }
 
 /**
@@ -50,6 +55,7 @@ export function NoteFields({
   onRenameCategory,
   tagOptions,
   error,
+  disabled = false,
 }: NoteFieldsProps) {
   return (
     <div className="flex flex-col gap-5">
@@ -59,10 +65,12 @@ export function NoteFields({
         value={draft.content}
         onChange={(content) => onChange({ ...draft, content })}
         onUpload={(text) => onChange({ ...draft, content: text })}
+        disabled={disabled}
         toolbarExtras={
           <MarkdownSpellCheck
             value={draft.content}
             onApply={(content) => onChange({ ...draft, content })}
+            disabled={disabled}
           />
         }
       />
@@ -76,6 +84,7 @@ export function NoteFields({
         value={draft.category}
         onChange={(category) => onChange({ ...draft, category })}
         onRename={onRenameCategory}
+        disabled={disabled}
       />
 
       <TagSetField
@@ -85,6 +94,7 @@ export function NoteFields({
         options={tagOptions}
         value={draft.tags}
         onChange={(tags) => onChange({ ...draft, tags })}
+        disabled={disabled}
       />
 
       <ErrorText error={error} />
