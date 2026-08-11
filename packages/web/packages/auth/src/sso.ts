@@ -1,6 +1,15 @@
 'use client'
 
 import { AuthHttpError, extractErrorMessage, extractErrorCode } from './client'
+import {
+  assertPasswordlessPasskey,
+  assertSecondFactor,
+  LOGIN_SMS_PATH,
+  MFA_WEBAUTHN_OPTIONS_PATH,
+  PASSKEY_OPTIONS_PATH,
+  type MfaChallenge,
+  type MfaCodeMethod,
+} from './mfa'
 
 // Client-side entry point for cross-site single sign-on. The browser-facing
 // half of the engine in websites/backend/src/routes/oauthRedirect.ts: a top-level
@@ -146,14 +155,7 @@ export function providerSigninUrl(opts: {
 export function beginLogin(opts: BeginLoginOptions = {}): void {
   if (typeof window === 'undefined') return
   const { clientId = 'adh', returnTo, callbackPath = DEFAULT_CALLBACK_PATH } = opts
-  if (returnTo) {
-    try {
-      window.sessionStorage.setItem(RETURN_TO_KEY, returnTo)
-    } catch {
-      // sessionStorage can throw (private mode / disabled); the callback just
-      // falls back to its default redirect.
-    }
-  }
+  if (returnTo) stashReturnTo(returnTo)
   const ret = `${window.location.origin}${callbackPath}`
   window.location.href = buildAuthorizeUrl({ clientId, returnUrl: ret, authApiBase: opts.authApiBase })
 }
@@ -523,6 +525,24 @@ export function safeReturnTo(raw: string | null): string | null {
   }
 }
 
+/**
+ * Stash the in-site destination to land on once the AS round-trip completes.
+ *
+ * The AS echoes back only `return` — the callback URL — so an in-site destination
+ * has to be remembered on this side or it is lost. Every path that sends the
+ * browser to the AS with a destination in mind goes through here ({@link beginLogin}
+ * and {@link centralLoginTarget}), so the key is written in one place and read in
+ * one ({@link takeReturnTo}).
+ */
+export function stashReturnTo(returnTo: string): void {
+  try {
+    window.sessionStorage.setItem(RETURN_TO_KEY, returnTo)
+  } catch {
+    // sessionStorage can throw (private mode / disabled); the callback just falls
+    // back to its default redirect.
+  }
+}
+
 /** Read and clear the stashed post-login destination, validated to a same-origin relative path. */
 export function takeReturnTo(): string | null {
   if (typeof window === 'undefined') return null
@@ -565,47 +585,175 @@ export function readCentralParams(search?: string): CentralParams | null {
   return { clientId: params.get('clientId') ?? 'adh', returnUrl }
 }
 
-export interface CentralEmailLoginParams extends CentralParams {
+/** Which brand site a central login step owes its exchange code to, and where to
+ *  ask. Carried on EVERY step (the AS re-validates the pair each time — a pending
+ *  token names a user and their factors, deliberately not a destination). */
+export interface CentralLoginTarget extends CentralParams {
   /** AS base (e.g. https://api.agenticdeveloperhub.com); defaults to the env. */
   authApiBase?: string
+}
+
+/**
+ * The central-login target for the page calling this — the ONE decision that makes
+ * every credential login in the fleet the same login.
+ *
+ * When the AS relayed another site's login here it named the target; use it. When
+ * the visitor came DIRECTLY to this login page the AS named nothing, and the
+ * temptation is to read that as "no cross-site login is involved, so log in
+ * locally". That reading is the defect this function exists to remove: an in-site
+ * login mints only this origin's session, the central cookie is never set, and the
+ * visitor is signed in HERE and anonymous on all 40-odd other sites — which is
+ * exactly what a hub sign-in did, the one login in the fleet that established no
+ * central session. So a direct visit is not a different kind of login; it is the
+ * same central login with the parameters the AS WOULD have supplied for a login
+ * begun on this site: this client, and this site's own callback.
+ *
+ * The synthesized case is also the only one with an in-site destination to keep
+ * (the relayed one belongs to the other site), so it stashes `returnTo` for
+ * {@link takeReturnTo} — bundled here rather than left to the caller so a
+ * synthesized target can't be built without preserving where the visitor was going.
+ */
+export function centralLoginTarget(opts: {
+  /** This card's OAuth client, used when the AS named none. */
+  clientId: string
+  /** The callback route that receives the `#code` (default '/auth/callback'). */
+  callbackPath?: string
+  authApiBase?: string
+  /** In-site destination to land on after the exchange (synthesized case only). */
+  returnTo?: string
+}): CentralLoginTarget {
+  const relayed = readCentralParams()
+  if (relayed) return { ...relayed, authApiBase: opts.authApiBase }
+  if (opts.returnTo) stashReturnTo(opts.returnTo)
+  return {
+    clientId: opts.clientId,
+    returnUrl: `${window.location.origin}${opts.callbackPath ?? DEFAULT_CALLBACK_PATH}`,
+    authApiBase: opts.authApiBase,
+  }
+}
+
+/**
+ * POST one step of a central login and act on the answer. The three outcomes are
+ * the same for every step, which is why they are decided here once:
+ *
+ *  - **202** — the account owes a second factor. Returned to the caller as the
+ *    {@link MfaChallenge} to render; nothing has been minted.
+ *  - **2xx** — done. The AS has set the central session cookie on its own host and
+ *    handed back `<return>#code=…`; navigate there, so the exchange code lands on
+ *    the brand site that started the login.
+ *  - **anything else** — throw {@link AuthHttpError} (status + code), so a caller
+ *    can tell a 5xx (server broken, worth reporting) from a 4xx (wrong password).
+ *
+ * `credentials: 'include'` is the load-bearing part: the central session cookie is
+ * host-only on the AS host, so without it the response's Set-Cookie is dropped and
+ * the login degrades to exactly the site-only session this whole path replaces.
+ */
+async function centralLoginStep(
+  path: string,
+  target: CentralLoginTarget,
+  body: Record<string, unknown>,
+): Promise<MfaChallenge | null> {
+  const res = await fetch(asEndpoint(path, target.authApiBase), {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...body, clientId: target.clientId, return: target.returnUrl }),
+  })
+  // Before res.ok: 202 IS ok, and it carries a challenge rather than a redirect.
+  if (res.status === 202) return (await res.json()) as MfaChallenge
+  if (!res.ok) {
+    const failure = await res.json().catch(() => null)
+    const fallback = res.status >= 500 ? `Server error (${res.status})` : 'Login failed'
+    throw new AuthHttpError(
+      res.status,
+      extractErrorMessage(failure, fallback),
+      extractErrorCode(failure),
+    )
+  }
+  const { redirectUrl } = (await res.json()) as { redirectUrl: string }
+  window.location.href = redirectUrl
+  return null
+}
+
+export interface CentralEmailLoginParams extends CentralLoginTarget {
   /** Email, user id (slug), or verified phone (E.164) — the AS classifies it. */
   identifier: string
   password: string
 }
 
 /**
- * Central credential login: POST the AS /oauth/signin/login with the brand
- * clientId + return, then top-level navigate to the exchange redirect it returns
- * (`<return>#code=…`). `credentials:'include'` so the central-session cookie the
- * AS sets (host-only on the AS host) is stored — that cookie is what lets the
- * NEXT brand site log in silently. Throws with the server's message on failure
- * (the caller surfaces it; no navigation happens).
+ * Central credential login. On success the browser navigates to the brand site with
+ * the exchange code and this never returns; a `null` therefore means "navigating".
+ * A non-null {@link MfaChallenge} means the account owes a second factor — complete
+ * it with {@link centralCompleteMfaCode} / {@link centralCompleteMfaPasskey}, NOT
+ * with the site's own `/api/auth/login/mfa`: only the central completions mint the
+ * central session, and finishing a central password step on the site route is how a
+ * login ends up half-done.
  */
-export async function centralEmailLogin(p: CentralEmailLoginParams): Promise<void> {
-  const url = asEndpoint('/oauth/signin/login', p.authApiBase)
-  const res = await fetch(url, {
+export function centralEmailLogin(p: CentralEmailLoginParams): Promise<MfaChallenge | null> {
+  // The generic `identifier` key: the AS classifies email / slug / phone. The
+  // legacy `email` key would pin the lookup to email-only.
+  return centralLoginStep('/oauth/signin/login', p, {
+    identifier: p.identifier,
+    password: p.password,
+  })
+}
+
+/** Push an SMS code for a central login's pending challenge. Prepares a factor
+ *  rather than satisfying one, so it has no central twin on the AS — the shared
+ *  path is called against the AS directly for the same reason every other step is:
+ *  one host answers for the pending token it issued. */
+export async function centralSendMfaSms(
+  target: CentralLoginTarget,
+  token: string,
+): Promise<void> {
+  const res = await fetch(asEndpoint(LOGIN_SMS_PATH, target.authApiBase), {
     method: 'POST',
-    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    // The generic `identifier` key: the AS classifies email / slug / phone. The
-    // legacy `email` key would pin the lookup to email-only.
-    body: JSON.stringify({
-      identifier: p.identifier,
-      password: p.password,
-      clientId: p.clientId,
-      return: p.returnUrl,
-    }),
+    body: JSON.stringify({ token }),
   })
   if (!res.ok) {
-    // Throw AuthHttpError (status + code) so callers can tell a 5xx (server broken)
-    // from a 4xx (wrong password) and report only the former. A 5xx fallback message
-    // says so rather than the generic credential message.
-    const body = await res.json().catch(() => null)
-    const fallback = res.status >= 500 ? `Server error (${res.status})` : 'Login failed'
-    throw new AuthHttpError(res.status, extractErrorMessage(body, fallback), extractErrorCode(body))
+    const failure = await res.json().catch(() => null)
+    throw new AuthHttpError(
+      res.status,
+      extractErrorMessage(failure, 'Could not send a code.'),
+      extractErrorCode(failure),
+    )
   }
-  const { redirectUrl } = (await res.json()) as { redirectUrl: string }
-  window.location.href = redirectUrl
+}
+
+/** Satisfy a central login's second factor with a typed code (sms / totp / recovery). */
+export function centralCompleteMfaCode(
+  target: CentralLoginTarget,
+  token: string,
+  method: MfaCodeMethod,
+  code: string,
+): Promise<MfaChallenge | null> {
+  return centralLoginStep('/oauth/signin/login/mfa', target, { token, method, code })
+}
+
+/** Satisfy a central login's second factor with a passkey / security key. */
+export async function centralCompleteMfaPasskey(
+  target: CentralLoginTarget,
+  token: string,
+): Promise<MfaChallenge | null> {
+  const assertion = await assertSecondFactor(
+    token,
+    asEndpoint(MFA_WEBAUTHN_OPTIONS_PATH, target.authApiBase),
+  )
+  return centralLoginStep('/oauth/signin/login/mfa/webauthn', target, { ...assertion })
+}
+
+/** Central PASSWORDLESS passkey login: the assertion is the only factor. */
+export async function centralPasswordlessPasskey(
+  target: CentralLoginTarget,
+  identifier: string,
+): Promise<MfaChallenge | null> {
+  const assertion = await assertPasswordlessPasskey(
+    identifier,
+    asEndpoint(PASSKEY_OPTIONS_PATH, target.authApiBase),
+  )
+  return centralLoginStep('/oauth/signin/login/webauthn', target, { ...assertion })
 }
 
 export interface BeginLinkProviderOptions {

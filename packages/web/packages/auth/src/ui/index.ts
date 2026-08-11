@@ -6,7 +6,9 @@
 // auth-source contract whose HeaderAuthState is derived from AdhHeaderAuthProps, so
 // it can't drift from the header's contract — lives in @agentic-toolkit/adh.
 export { LoginCard } from './LoginCard'
-export type { LoginCardProps } from './LoginCard'
+export type { LoginCardProps, LoginMode } from './LoginCard'
+export { MfaStep } from './MfaStep'
+export type { MfaStepProps, MfaOperations } from './MfaStep'
 export { SignupCard } from './SignupCard'
 export type { SignupCardProps } from './SignupCard'
 export { GithubIcon } from './GithubIcon'

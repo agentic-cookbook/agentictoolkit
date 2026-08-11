@@ -14,8 +14,32 @@ export { AuthCallback } from './AuthCallback'
 export type { AuthCallbackProps } from './AuthCallback'
 export { SsoCallback } from './ui/SsoCallback'
 export type { SsoCallbackProps } from './ui/SsoCallback'
-export { beginLogin, beginLinkProvider, providerSigninUrl, ssoLogout, ssoSwitchUrl, takeReturnTo, safeReturnTo, centralEmailLogin, readCentralParams, PENDING_LINK_KEY } from './sso'
-export type { BeginLoginOptions, BeginLinkProviderOptions, SsoLogoutOptions, CentralParams, CentralEmailLoginParams } from './sso'
+export {
+  beginLogin,
+  beginLinkProvider,
+  providerSigninUrl,
+  ssoLogout,
+  ssoSwitchUrl,
+  stashReturnTo,
+  takeReturnTo,
+  safeReturnTo,
+  centralLoginTarget,
+  centralEmailLogin,
+  centralSendMfaSms,
+  centralCompleteMfaCode,
+  centralCompleteMfaPasskey,
+  centralPasswordlessPasskey,
+  readCentralParams,
+  PENDING_LINK_KEY,
+} from './sso'
+export type {
+  BeginLoginOptions,
+  BeginLinkProviderOptions,
+  SsoLogoutOptions,
+  CentralParams,
+  CentralLoginTarget,
+  CentralEmailLoginParams,
+} from './sso'
 export { isAdmin, hasCapability } from './types'
 export type { AuthUser, AuthTokens, UserAuthMethod, UserAttribute } from './types'
 export { configureAuth, authConfig } from './config'

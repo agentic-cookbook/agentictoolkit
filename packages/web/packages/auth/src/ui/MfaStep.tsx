@@ -1,12 +1,30 @@
 'use client'
 
 import { useState, type FormEvent, type ReactElement } from 'react'
-import { useAuth } from '../context'
+import { useOptionalAuth } from '../context'
 import type { MfaChallenge, MfaCodeMethod, MfaMethod } from '../mfa'
+
+/**
+ * The three wire calls a second-factor step makes. Injected, because a login has two
+ * possible outcomes and this step must serve both: satisfying a factor can mint THIS
+ * site's own session (the `useAuth` defaults) or the CENTRAL session every other site
+ * recognises (sso.ts's central client). The prompts, the throttling and the
+ * method-switching are identical either way, so the component is one and only the
+ * operations vary.
+ */
+export interface MfaOperations {
+  sendSms: (token: string) => Promise<unknown>
+  completeCode: (token: string, method: MfaCodeMethod, code: string) => Promise<unknown>
+  completePasskey: (token: string) => Promise<unknown>
+}
 
 export interface MfaStepProps {
   /** The challenge returned by login (the pending token + the available methods). */
   challenge: MfaChallenge
+  /** Which flavour of completion to run. Omitted ⇒ the AuthProvider's own, which
+   *  mint a session for THIS site; a central login must pass its own (see
+   *  {@link MfaOperations}). */
+  operations?: MfaOperations
   /** Called once a second factor has been satisfied and a session is established. */
   onSuccess: () => void
   /** Called when the user backs out to the password form. */
@@ -27,8 +45,28 @@ function isCodeMethod(m: MfaMethod): m is MfaCodeMethod {
   return m === 'sms' || m === 'totp' || m === 'recovery'
 }
 
-export function MfaStep({ challenge, onSuccess, onCancel }: MfaStepProps): ReactElement {
-  const { sendMfaSms, completeMfa, completeMfaPasskey } = useAuth()
+/** The default operations come from the AuthProvider; a step rendered without one
+ *  and without injected operations has nothing to complete against, and says so at
+ *  the click rather than blanking the page at render. */
+function requireAuth<T>(auth: T | null): T {
+  if (!auth) {
+    throw new Error(
+      'MfaStep needs either an AuthProvider or an explicit `operations` prop to complete a second factor.',
+    )
+  }
+  return auth
+}
+
+export function MfaStep({ challenge, operations, onSuccess, onCancel }: MfaStepProps): ReactElement {
+  // useOptionalAuth, not useAuth: with `operations` injected the provider is not
+  // needed at all, and a card completing a login centrally may well be rendered
+  // outside one. Absent both, the action reports it rather than the render throwing.
+  const auth = useOptionalAuth()
+  const ops: MfaOperations = operations ?? {
+    sendSms: (token) => requireAuth(auth).sendMfaSms(token),
+    completeCode: (token, method, code) => requireAuth(auth).completeMfa(token, method, code),
+    completePasskey: (token) => requireAuth(auth).completeMfaPasskey(token),
+  }
   const available = ORDER.filter((m) => challenge.methods.includes(m))
   const [method, setMethod] = useState<MfaMethod>(available[0] ?? 'totp')
   const [code, setCode] = useState('')
@@ -56,7 +94,7 @@ export function MfaStep({ challenge, onSuccess, onCancel }: MfaStepProps): React
 
   const handleSendSms = () =>
     run(async () => {
-      await sendMfaSms(challenge.token)
+      await ops.sendSms(challenge.token)
       setSmsSent(true)
     })
 
@@ -64,14 +102,14 @@ export function MfaStep({ challenge, onSuccess, onCancel }: MfaStepProps): React
     e.preventDefault()
     if (!isCodeMethod(method)) return
     void run(async () => {
-      await completeMfa(challenge.token, method, code.trim())
+      await ops.completeCode(challenge.token, method, code.trim())
       onSuccess()
     })
   }
 
   const handlePasskey = () =>
     run(async () => {
-      await completeMfaPasskey(challenge.token)
+      await ops.completePasskey(challenge.token)
       onSuccess()
     })
 

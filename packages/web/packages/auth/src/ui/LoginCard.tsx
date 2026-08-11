@@ -3,24 +3,43 @@
 import { useState, type FormEvent, type ReactElement, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
-import { reportAuthError, reportUnexpectedAuthError } from '../report'
-import { beginLinkProvider, centralEmailLogin, providerSigninUrl, readCentralParams, PENDING_LINK_KEY } from '../sso'
-import type { MfaChallenge } from '../mfa'
-import { MfaStep } from './MfaStep'
+import { reportUnexpectedAuthError } from '../report'
 import {
-  linkConfirmTitle,
-  linkConfirmBody,
-  linkConfirmAction,
-  linkFailedTitle,
-  linkStartFailedBody,
-} from '../labels'
+  centralCompleteMfaCode,
+  centralCompleteMfaPasskey,
+  centralEmailLogin,
+  centralLoginTarget,
+  centralPasswordlessPasskey,
+  centralSendMfaSms,
+  providerSigninUrl,
+  type CentralLoginTarget,
+} from '../sso'
+import type { MfaChallenge } from '../mfa'
+import { MfaStep, type MfaOperations } from './MfaStep'
 import { GithubIcon } from './GithubIcon'
 
 /** A login result that is a pending second-factor challenge rather than a session. */
 function isMfaChallenge(v: unknown): v is MfaChallenge {
   return typeof v === 'object' && v !== null && 'mfaRequired' in v
 }
+
+/**
+ * How a credential login COMPLETES.
+ *
+ * `'central'` (the default, and the only correct value for a site in the fleet)
+ * posts the authorization server, which sets the central session cookie on its own
+ * host and hands back a one-time exchange code for the callback. That central
+ * session is the entire reason a visitor who signs in on one site is recognised on
+ * the next one; a login that skips it is signed in exactly once, wherever it
+ * happened, and anonymous everywhere else.
+ *
+ * `'in-site'` calls {@link LoginCardProps.onEmailLogin} instead and mints only the
+ * calling app's own session. It exists for an app that IS its own authorization
+ * server — the builder, which has its own credentials, its own OAuth client and no
+ * relationship to the central session — and is a DECLARED exception, spelled out at
+ * the one call site that wants it, never a mode a page falls into by accident.
+ */
+export type LoginMode = 'central' | 'in-site'
 
 export interface LoginCardProps {
   /** OAuth client id used to build the GitHub start URL. */
@@ -42,13 +61,23 @@ export interface LoginCardProps {
    * survive. Pass the prop explicitly to be unambiguous.
    */
   authApiBase?: string
-  /** Called with the entered identifier (email, user id/slug, or phone) + password on
-   *  submit (wire to useAuth().login — the backend classifies the identifier). */
-  onEmailLogin: (identifier: string, password: string) => Promise<unknown>
-  /** Optional passwordless passkey sign-in (wire to useAuth().loginWithPasskey). When
-   *  provided, a "Sign in with a passkey" button is shown that uses the entered
-   *  identifier (email, user id, or phone). */
+  /** Where a credential login is completed — see {@link LoginMode}. Default 'central'. */
+  loginMode?: LoginMode
+  /** IN-SITE MODE ONLY: called with the entered identifier (email, user id/slug, or
+   *  phone) + password on submit (wire to useAuth().login — the backend classifies the
+   *  identifier). Unused in central mode, where the authorization server verifies the
+   *  credentials; required in in-site mode, which throws without it rather than
+   *  appearing to log in. */
+  onEmailLogin?: (identifier: string, password: string) => Promise<unknown>
+  /** IN-SITE MODE ONLY: passwordless passkey sign-in (wire to useAuth().loginWithPasskey).
+   *  Central mode runs the same ceremony against the AS instead, so it needs no handler —
+   *  use {@link LoginCardProps.showPasskey} to show the button there. */
   onPasskeyLogin?: (identifier: string) => Promise<unknown>
+  /** Show the "Sign in with a passkey" button. Defaults to `Boolean(onPasskeyLogin)`,
+   *  which is the whole story in in-site mode; central mode has no handler to infer it
+   *  from, so a site gating passkeys behind a feature flag passes the flag's answer
+   *  here. */
+  showPasskey?: boolean
   /** Where to navigate after a successful email login. */
   postLoginRedirect: string
   /** OAuth provider id (default "github"). */
@@ -119,8 +148,10 @@ export interface LoginCardProps {
 export function LoginCard({
   clientId,
   authApiBase,
+  loginMode = 'central',
   onEmailLogin,
   onPasskeyLogin,
+  showPasskey,
   postLoginRedirect,
   notice,
   githubProviderId = 'github',
@@ -173,11 +204,41 @@ export function LoginCard({
   // Set when password login returns a 202 second-factor challenge; swaps the card to
   // the MFA step instead of corrupting the session with the pending token.
   const [challenge, setChallenge] = useState<MfaChallenge | null>(null)
-  // Reactive account-link UI state — mutually exclusive, so ONE discriminated union
-  // (can't accidentally show both): `prompt` = confirm linking after a successful
-  // login (the OAuth callback stashed a pending intent); `error` = the link
-  // round-trip couldn't even be started. null = nothing to show.
-  const [linkState, setLinkState] = useState<{ kind: 'prompt' | 'error'; provider: string } | null>(null)
+  // The target the PASSWORD step used, kept for the completion. A pending token names
+  // a user and their enrolled factors — deliberately not a destination — so the AS
+  // re-validates clientId + return on every step, and a completion that re-derived
+  // them would deliver the exchange code to whichever site is being LOOKED at rather
+  // than the one that started the login. null in in-site mode, which has no target.
+  const [challengeTarget, setChallengeTarget] = useState<CentralLoginTarget | null>(null)
+
+  const isCentral = loginMode === 'central'
+  // In in-site mode the handler IS the passkey button's reason to exist; in central
+  // mode there is no handler to infer from, so the host says (a site gating passkeys
+  // behind a feature flag passes the flag's answer).
+  const passkeyVisible = showPasskey ?? Boolean(onPasskeyLogin)
+
+  /** The brand site this login owes its exchange code to — the AS's own parameters
+   *  when it relayed another site's login here, otherwise the ones it would have
+   *  supplied for a login begun on this page. */
+  function resolveCentralTarget(): CentralLoginTarget {
+    return centralLoginTarget({ clientId, callbackPath, authApiBase, returnTo: postLoginRedirect })
+  }
+
+  /** An in-site-mode handler that the call site failed to supply. Throwing beats
+   *  returning: a login button that quietly does nothing looks like a network
+   *  problem, and a mode whose whole job is to call this handler is misconfigured
+   *  without it (fail-fast). Call it from INSIDE the step runLogin awaits, never
+   *  before — outside that try the throw is an unhandled rejection, which leaves the
+   *  button doing exactly the silent nothing this is meant to prevent. */
+  function requireHandler<T>(handler: T | undefined, name: string): T {
+    if (!handler) {
+      throw new Error(
+        `LoginCard loginMode="in-site" needs \`${name}\` — in-site mode completes the login ` +
+          'against the calling app itself, so there is nothing to call without it.',
+      )
+    }
+    return handler
+  }
 
   function handleProvider(providerId: string) {
     // Local mode (the github self-enclosed app): go straight to its own start route.
@@ -185,136 +246,130 @@ export function LoginCard({
       window.location.href = githubStartHref
       return
     }
-    // When this card is the CENTRAL login page (reached via the AS /authorize for
-    // another brand site), the code must go back to THAT site, under the client
-    // the AS named — not the hub's own callback. Otherwise it's a plain in-site
-    // login: bounce to our own callback under this card's clientId.
-    const central = readCentralParams()
-    const ret = central ? central.returnUrl : `${window.location.origin}${callbackPath}`
-    const cid = central ? central.clientId : clientId
+    // Same resolver as the credential path, so a provider login and a password login
+    // agree on where the code goes: back to the site the AS named when it relayed a
+    // login here, else this site's own callback (with postLoginRedirect stashed).
+    const target = resolveCentralTarget()
     // providerSigninUrl goes straight to the login/OAuth API so /start and
     // /callback share a host (the OAuth state cookie is host-only), falling back
     // to the same-origin BFF proxy when no base is configured (local dev).
     window.location.href = providerSigninUrl({
-      clientId: cid,
+      clientId: target.clientId,
       providerId,
-      returnUrl: ret,
+      returnUrl: target.returnUrl,
       authApiBase,
     })
   }
 
-  async function handlePasskey() {
-    if (!onPasskeyLogin) return
+  /** Run a login step, showing its MFA challenge or navigating on success. Shared by
+   *  the password and passkey paths so both treat a 202 the same way. */
+  async function runLogin(
+    step: () => Promise<unknown>,
+    target: CentralLoginTarget | null,
+    failureLabel: string,
+  ): Promise<void> {
     setError(null)
+    setIsSubmitting(true)
+    try {
+      const result = await step()
+      // An enrolled second factor: switch to the MFA step rather than navigating —
+      // no session exists until it completes.
+      if (isMfaChallenge(result)) {
+        setChallengeTarget(target)
+        setChallenge(result)
+        return
+      }
+      // A central step has already assigned window.location; only an in-site one
+      // still owes the user a navigation.
+      if (!target) router.push(postLoginRedirect)
+    } catch (err) {
+      // Report a 5xx/network login failure; a 4xx (wrong password) is expected and
+      // skipped. Both the in-site (postCredentials) and central (centralLoginStep)
+      // paths throw AuthHttpError, so the gate can tell them apart.
+      reportUnexpectedAuthError(err, { feature: 'auth', step: 'login' })
+      setError(err instanceof Error ? err.message : failureLabel)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  async function handlePasskey() {
     if (!identifier.trim()) {
       setError(resolvedPasskeyRequiredLabel)
       return
     }
-    setIsSubmitting(true)
-    try {
-      await onPasskeyLogin(identifier.trim())
-      router.push(postLoginRedirect)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : passkeyFailedLabel)
-    } finally {
-      setIsSubmitting(false)
+    const trimmedIdentifier = identifier.trim()
+    if (!isCentral) {
+      await runLogin(
+        () => requireHandler(onPasskeyLogin, 'onPasskeyLogin')(trimmedIdentifier),
+        null,
+        passkeyFailedLabel,
+      )
+      return
     }
+    const target = resolveCentralTarget()
+    await runLogin(
+      () => centralPasswordlessPasskey(target, trimmedIdentifier),
+      target,
+      passkeyFailedLabel,
+    )
   }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setError(null)
-    setIsSubmitting(true)
-    try {
-      // Trim like the passkey path: a stray leading/trailing space (mobile autofill,
-      // copy-paste) would otherwise miss an exact email/slug match server-side. In
-      // email mode type=email already trims natively; this keeps identifier mode
-      // consistent.
-      const trimmedIdentifier = identifier.trim()
-      // Central login page → funnel the credential login through the AS so the
-      // exchange code returns to the originating brand site and the central
-      // session is established (centralEmailLogin navigates away on success).
-      // Direct visit → plain in-site login, then route to postLoginRedirect.
-      const central = readCentralParams()
-      if (central) {
-        await centralEmailLogin({
-          authApiBase,
-          clientId: central.clientId,
-          returnUrl: central.returnUrl,
-          identifier: trimmedIdentifier,
-          password,
-        })
-        return
-      }
-      const result = await onEmailLogin(trimmedIdentifier, password)
-      // An enrolled second factor: switch to the MFA step rather than navigating.
-      // Checked BEFORE account-linking — no session exists until MFA completes.
-      if (isMfaChallenge(result)) {
-        setChallenge(result)
-        return
-      }
-      // Reactive account-link: if the OAuth callback stashed a provider to connect
-      // after sign-in, surface a confirm modal HERE rather than bouncing through
-      // postLoginRedirect — the user stays on the (now dimmed) login page and
-      // explicitly opts into re-authorizing that provider. The modal owns the next
-      // navigation (see declineLink / acceptLink).
-      let pendingLink: string | null = null
-      try { pendingLink = window.sessionStorage.getItem(PENDING_LINK_KEY) } catch { /* storage blocked */ }
-      if (pendingLink) {
-        setLinkState({ kind: 'prompt', provider: pendingLink })
-        return
-      }
-      router.push(postLoginRedirect)
-    } catch (err) {
-      // Report a 5xx/network login failure; a 4xx (wrong password) is expected and
-      // skipped. Both the direct (postCredentials) and central (centralEmailLogin)
-      // paths now throw AuthHttpError, so the gate can tell them apart.
-      reportUnexpectedAuthError(err, { feature: 'auth', step: 'login' })
-      setError(err instanceof Error ? err.message : 'Login failed')
-    } finally {
-      setIsSubmitting(false)
+    // Trim like the passkey path: a stray leading/trailing space (mobile autofill,
+    // copy-paste) would otherwise miss an exact email/slug match server-side. In
+    // email mode type=email already trims natively; this keeps identifier mode
+    // consistent.
+    const trimmedIdentifier = identifier.trim()
+    if (!isCentral) {
+      await runLogin(
+        () => requireHandler(onEmailLogin, 'onEmailLogin')(trimmedIdentifier, password),
+        null,
+        'Login failed',
+      )
+      return
     }
-  }
-
-  function clearPendingLink(): void {
-    try { window.sessionStorage.removeItem(PENDING_LINK_KEY) } catch { /* ignore */ }
-  }
-
-  /** "Not now": drop the pending intent and continue to the normal destination. */
-  function declineLink(): void {
-    clearPendingLink()
-    setLinkState(null)
-    router.push(postLoginRedirect)
-  }
-
-  /** "Continue with <provider>": start the link round-trip (a top-level nav to the
-   *  AS). Clear the intent first so a refused/abandoned bounce can't re-trigger;
-   *  the returning `#link_code` carries everything the completion needs. */
-  function acceptLink(): void {
-    const provider = linkState?.kind === 'prompt' ? linkState.provider : null
-    if (!provider) return
-    clearPendingLink()
-    setLinkState(null)
-    try {
-      const started = beginLinkProvider({ providerId: provider, returnTo: postLoginRedirect, clientId, authApiBase })
-      // false => the CSRF nonce couldn't be stashed, so it did NOT navigate.
-      if (!started) setLinkState({ kind: 'error', provider })
-    } catch (err) {
-      // Never swallow a failure to start the link — REPORT it to the error pipeline
-      // (GlitchTip) AND surface an error modal, instead of letting an unexpected
-      // throw escape the click handler unseen.
-      reportAuthError(err, { feature: 'account-linking', step: 'acceptLink', provider })
-      setLinkState({ kind: 'error', provider })
-    }
+    // The ONLY credential path for a site in the fleet: the AS verifies the password,
+    // sets the central session on its own host, and hands back a one-time code for
+    // the target's callback. That central session is what makes a visitor who signed
+    // in here signed in on the other forty sites too.
+    const target = resolveCentralTarget()
+    await runLogin(
+      () => centralEmailLogin({ ...target, identifier: trimmedIdentifier, password }),
+      target,
+      'Login failed',
+    )
   }
 
   if (challenge) {
+    // Central completions, when the password step was central: only these mint the
+    // central session, and finishing a central challenge on the site's own
+    // /api/auth/login/mfa is how a login ends up half-done. Omitted in in-site mode,
+    // where MfaStep's AuthProvider defaults are correct.
+    const operations: MfaOperations | undefined = challengeTarget
+      ? {
+          sendSms: (token) => centralSendMfaSms(challengeTarget, token),
+          completeCode: (token, method, code) =>
+            centralCompleteMfaCode(challengeTarget, token, method, code),
+          completePasskey: (token) => centralCompleteMfaPasskey(challengeTarget, token),
+        }
+      : undefined
     return (
       <div className="auth-card">
         <MfaStep
           challenge={challenge}
-          onSuccess={() => router.push(postLoginRedirect)}
-          onCancel={() => setChallenge(null)}
+          operations={operations}
+          // Deliberately nothing to do in central mode: the completion has already
+          // assigned window.location to the brand site's callback, and a competing
+          // router.push here can cancel that navigation — which would strand the
+          // site that started the login signed OUT, holding a code it never
+          // received. Load-bearing, not an oversight.
+          onSuccess={challengeTarget ? () => {} : () => router.push(postLoginRedirect)}
+          onCancel={() => {
+            setChallenge(null)
+            setChallengeTarget(null)
+          }}
         />
       </div>
     )
@@ -392,7 +447,7 @@ export function LoginCard({
           <button type="submit" disabled={isSubmitting} className="auth-card__submit">
             {isSubmitting ? loadingLabel : emailButtonLabel}
           </button>
-          {onPasskeyLogin && (
+          {passkeyVisible && (
             <button
               type="button"
               onClick={handlePasskey}
@@ -410,31 +465,6 @@ export function LoginCard({
           {signupPromptLabel}{' '}
           <Link href={signupHref} className="auth-card__signup-link">{signupLinkLabel}</Link>
         </p>
-      )}
-
-      {/* Reactive account-link confirm + error modals. base-ui's Dialog portals to
-          <body>, so their position in this tree doesn't affect the card layout. */}
-      {linkState?.kind === 'prompt' && (
-        <AlertModal
-          open
-          tone="info"
-          title={linkConfirmTitle(linkState.provider)}
-          description={linkConfirmBody(linkState.provider)}
-          cancelLabel="Not now"
-          onCancel={declineLink}
-          confirmLabel={linkConfirmAction(linkState.provider)}
-          onConfirm={acceptLink}
-        />
-      )}
-      {linkState?.kind === 'error' && (
-        <AlertModal
-          open
-          tone="error"
-          title={linkFailedTitle}
-          description={linkStartFailedBody(linkState.provider)}
-          confirmLabel="OK"
-          onConfirm={() => { setLinkState(null); router.push(postLoginRedirect) }}
-        />
       )}
     </div>
   )
