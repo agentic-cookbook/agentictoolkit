@@ -45,13 +45,19 @@ export interface OrganizationsFeatureProps extends OrganizationsPathSelection {
  * the same things — an org is one entity with one set of knobs, and a user who learns it in one
  * place should not have to relearn it in the other.
  *
- * They are the org's OWN knobs and nothing else. Auth, Billing, Feature flags and Sign-in apps are
- * configured per PRODUCT — they say how one product's customers sign in, what it charges and what
- * it has switched on — so they live on the product rail (`@agentic-toolkit/adh-products`), not
- * here; an org that showed them would be claiming to own settings that belong to each product
- * under it. Membership is not a topic either: who is in the org is answered by its Teams, which
- * group its people and the permissions they share. (`MembersPanel` stays exported — the hub still
- * mounts it on its workspace rail.)
+ * They are the org's OWN knobs and nothing else. Auth, Feature flags and Sign-in apps are
+ * configured per PRODUCT — they say how one product's customers sign in and what it has switched
+ * on — so they live on the product rail (`@agentic-toolkit/adh-products`), not here; an org that
+ * showed them would be claiming to own settings that belong to each product under it.
+ *
+ * Billing left for a different reason, and NOT because some other rail configures it: it is
+ * unbuilt everywhere. This package's `BillingPane` and the hub's own `billing` feature both render
+ * "Coming soon", so the row answered nothing — and with the group gone, nothing mounts
+ * `BillingPane` at all. Whoever builds billing decides then whether an ORG is what gets billed.
+ *
+ * Membership is not a topic either: who is in the org is answered by its Teams, which group its
+ * people and the permissions they share. (`MembersPanel` stays exported — the hub still mounts it
+ * on its workspace rail.)
  */
 export function OrganizationsFeature({
   basePath,
