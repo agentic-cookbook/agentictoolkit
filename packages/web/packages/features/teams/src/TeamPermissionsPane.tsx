@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Shield } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { isNotFound } from "@agentic-toolkit/data";
+import { isNotFound, useResourceList } from "@agentic-toolkit/data";
 import {
   accessApi,
   ACCESS_FEATURES,
@@ -162,6 +162,10 @@ const grantsDiffer = (a: AccessGrantRow[], b: AccessGrantRow[]): boolean =>
   a.length !== b.length ||
   a.some((g, i) => g.itemVerbs !== b[i]!.itemVerbs || g.subitemVerbs !== b[i]!.subitemVerbs);
 
+/** The stand-in for a roles read that FAILED — module scope so it is one identity for the whole
+ *  process, since it is what `useMasterDetailForm`/`useMasterDetailLevel` compare `items` against. */
+const NO_ROLES: AccessRoleRow[] = [];
+
 const isAdminRole = (role: AccessRoleRow | null): boolean =>
   role != null && role.isSystem && role.slug === "admin";
 
@@ -187,112 +191,113 @@ export function TeamPermissionsPane({
   /** Deep-linkable role selection (`…/permissions/<roleId>`). */
   leaf?: TopicLeaf;
 }) {
-  const [roles, setRoles] = useState<AccessRoleRow[] | null>(null);
-  // The feature areas the matrix RENDERS. The backend's registry is the authority (it refines
-  // every submitted grant against it, and it is what the system roles were seeded from), so the
-  // pane asks for it — but this pane ships in products whose backend has no such endpoint, so an
-  // unreadable answer degrades to the hardcoded ACCESS_FEATURES and the pane behaves exactly as
-  // it did before. Seeded with the fallback so the very first render is already a working matrix.
-  const [features, setFeatures] = useState<readonly AccessFeatureRow[]>(ACCESS_FEATURES);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating a role is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new role is selected so its
   // REAL detail (the per-feature permission matrix + default-for) opens.
   const [newOpen, setNewOpen] = useState(false);
 
-  // The feature list already resolved for a workspace slug — SUCCESSES ONLY. Cached because
-  // `refresh` runs again after every save, and a resolved list never needs re-fetching. A failed
-  // or unreadable attempt is deliberately NOT cached (see `loadFeatures` below): caching the
-  // fallback would pin a transient hiccup to the two hardcoded rows for the component's entire
-  // lifetime, with no retry — not even on the post-save refresh().
-  const featureCache = useRef(new Map<string, readonly AccessFeatureRow[]>());
-  // Latest-wins guard: a stale in-flight list (from a previous slug) never clobbers the current one.
-  // Declared BEFORE loadFeatures because loadFeatures reports its own failures and so has to check
-  // the guard itself — see the `g === gen.current` tests below.
-  const gen = useRef(0);
-  const loadFeatures = useCallback(
-    async (slug: string, g: number): Promise<readonly AccessFeatureRow[]> => {
-      const cached = featureCache.current.get(slug);
-      if (cached) return cached;
-      // Every failure path lands here: the banner text to show, or null for the one expected
-      // degrade. Collected rather than set inline so the staleness check happens in ONE place —
-      // this function swallows its errors (it returns the fallback), so `refresh`'s own catch can
-      // never see them and its `g !== gen.current` guards cannot cover them.
-      let failure: string | null = null;
-      try {
-        const rows = await accessApi.listFeatures(slug);
-        // An EMPTY answer counts as unreadable, NOT as "this backend enforces nothing": zero rows
-        // would render a role editor that can grant nothing, and silently sweep every existing
-        // grant into `carried`. The fallback is the safer reading of a nonsensical answer.
-        if (rows.length > 0) {
-          featureCache.current.set(slug, rows);
-          return rows;
-        }
-        // …and it is exactly as unexpected as a malformed body: no deployment enforces nothing, and
-        // `listFeatures` resolves this shape rather than throwing (a well-formed empty list is a
-        // valid response at that layer — deciding it is unusable is THIS pane's call). Reported and
-        // surfaced on the same footing, or it would be the one unreadable answer that degrades with
-        // no sign anything went wrong.
-        reportUnexpectedAuthError(new Error("GET /access/features returned an empty list"), {
-          feature: "team-permissions",
-          step: "loadFeatures",
-        });
-        failure = "The feature list came back empty. Showing the default list instead.";
-      } catch (err) {
-        // A 404 is the expected degrade path — a product whose backend predates this endpoint —
-        // and must stay silent, matching the pre-endpoint behavior this pane is required to
-        // reproduce exactly. Anything else (a malformed body — `listFeatures` validates the shape
-        // and throws — a 5xx, or a network failure) is unexpected: report it the way this
-        // codebase reports comparable failures (see useMasterDetailForm's save/delete catches)
-        // and surface it, so a transient blip doesn't masquerade as an old backend with no sign
-        // anything went wrong.
-        if (!isNotFound(err)) {
-          reportUnexpectedAuthError(err, { feature: "team-permissions", step: "loadFeatures" });
-          failure = err instanceof Error ? err.message : "Failed to load the feature list.";
-        }
-      }
-      // STALENESS: only the newest load may paint a banner. A slow failure for workspace A that
-      // resolves after B has already loaded would otherwise stamp A's error over B's correct
-      // matrix, permanently — nothing clears `loadError` again until the next refresh(). The
-      // report above is deliberately NOT gated: an error that happened, happened.
-      if (failure !== null && g === gen.current) setLoadError(failure);
-      // Not cached: the fallback (either branch above) is retried on the next load.
-      return ACCESS_FEATURES;
-    },
-    [],
-  );
+  // The feature areas the matrix RENDERS. The backend's registry is the authority (it refines
+  // every submitted grant against it, and it is what the system roles were seeded from), so the
+  // pane asks for it — but this pane ships in products whose backend has no such endpoint, so an
+  // unreadable answer degrades to the hardcoded ACCESS_FEATURES and the pane behaves exactly as
+  // it did before.
+  //
+  // Cached per workspace, which is what retires this pane's own feature-cache ref AND its
+  // latest-wins generation counter: the query cache holds a resolved list across unmounts (the ref
+  // never did), and a reply for a previous workspace is a different cache entry rather than
+  // something a counter has to reject. The rule the ref encoded is kept — a failure is NOT cached,
+  // so it is retried on the next visit — by THROWING here instead of returning the fallback.
+  // Caching the fallback would pin a transient hiccup to the two hardcoded rows with no retry.
+  const loadFeatures = useCallback(async (): Promise<AccessFeatureRow[]> => {
+    if (!workspaceSlug) return [...ACCESS_FEATURES];
+    let rows: AccessFeatureRow[];
+    try {
+      rows = await accessApi.listFeatures(workspaceSlug);
+    } catch (err) {
+      // A 404 is the expected degrade path — a product whose backend predates this endpoint — and
+      // must stay silent, matching the pre-endpoint behavior this pane is required to reproduce
+      // exactly. It is also the one failure worth CACHING: a backend without the endpoint will
+      // 404 forever, so re-asking every visit buys nothing. Anything else (a malformed body —
+      // `listFeatures` validates the shape and throws — a 5xx, or a network failure) is
+      // unexpected: report it the way this codebase reports comparable failures (see
+      // useMasterDetailForm's save/delete catches) and rethrow, so it surfaces in the banner and
+      // a transient blip doesn't masquerade as an old backend with no sign anything went wrong.
+      if (isNotFound(err)) return [...ACCESS_FEATURES];
+      reportUnexpectedAuthError(err, { feature: "team-permissions", step: "loadFeatures" });
+      throw err;
+    }
+    // An EMPTY answer counts as unreadable, NOT as "this backend enforces nothing": zero rows
+    // would render a role editor that can grant nothing, and silently sweep every existing grant
+    // into `carried`. The fallback is the safer reading of a nonsensical answer — and it is
+    // exactly as unexpected as a malformed body: no deployment enforces nothing, and
+    // `listFeatures` resolves this shape rather than throwing (a well-formed empty list is a valid
+    // response at that layer — deciding it is unusable is THIS pane's call). Reported and surfaced
+    // on the same footing, or it would be the one unreadable answer that degrades with no sign
+    // anything went wrong.
+    if (rows.length > 0) return rows;
+    reportUnexpectedAuthError(new Error("GET /access/features returned an empty list"), {
+      feature: "team-permissions",
+      step: "loadFeatures",
+    });
+    throw new Error("The feature list came back empty. Showing the default list instead.");
+  }, [workspaceSlug]);
 
-  const refresh = useCallback(async () => {
-    const g = ++gen.current;
+  // `reportErrors: false` because `loadFeatures` above already reports, with the step that failed
+  // and — for the empty answer — an engineer-facing message the thrown one deliberately isn't.
+  const {
+    items: featureRows,
+    reload: reloadFeatures,
+    error: featuresError,
+  } = useResourceList<AccessFeatureRow>(
+    `workspace:${workspaceSlug ?? ""}:access-features`,
+    loadFeatures,
+    { reportErrors: false },
+  );
+  // Unreadable ⇒ the hardcoded list, which is what every throw above degrades to.
+  const features: readonly AccessFeatureRow[] = featureRows ?? ACCESS_FEATURES;
+  // The server has ANSWERED about the feature list — landed or failed. Not "succeeded": a failure
+  // settles the matrix onto the fallback just as finally as a success settles it onto the server's.
+  const featuresSettled = featureRows !== null || featuresError !== null;
+
+  const loadRoles = useCallback((): Promise<AccessRoleRow[]> => {
     // No workspace ⇒ a DEFINED empty list (not null), so the rail shows the "open from your hub"
     // message rather than an eternal "Loading…" spinner.
-    if (!workspaceSlug) {
-      setRoles([]);
-      return;
-    }
-    setLoadError(null);
-    try {
-      // Features FIRST, and `roles` stays null until BOTH land. `toInput`/`differs` close over
-      // `features`, and the hook re-derives the baseline from `toInput` on every render — so a
-      // draft built against one list and re-based against another would diff index-misaligned
-      // rows and could submit a grant under the wrong feature key. Ordering it here means no
-      // role is ever selectable before the list it will be projected onto is final.
-      const list = await loadFeatures(workspaceSlug, g);
-      if (g !== gen.current) return;
-      setFeatures(list);
-      const rows = await accessApi.listRoles(workspaceSlug);
-      if (g !== gen.current) return;
-      setRoles(rows);
-    } catch (err) {
-      if (g !== gen.current) return;
-      setRoles([]);
-      setLoadError(err instanceof Error ? err.message : "Failed to load roles.");
-    }
-  }, [workspaceSlug, loadFeatures]);
+    if (!workspaceSlug) return Promise.resolve([]);
+    // Features FIRST: no role is readable until the list it will be projected onto is final.
+    // `toInput`/`differs` close over `features`, and the master/detail hook re-derives the baseline
+    // from `toInput` on every render — so a draft built against one list and re-based against
+    // another would diff index-misaligned rows and could submit a grant under the wrong feature
+    // key. A promise that never settles is how this hook is held in Loading; the moment the
+    // features read answers, THIS fetcher's identity changes and the hook cancels the wait and
+    // reads for real.
+    if (!featuresSettled) return new Promise<AccessRoleRow[]>(() => {});
+    return accessApi.listRoles(workspaceSlug);
+  }, [workspaceSlug, featuresSettled]);
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const {
+    items: loadedRoles,
+    reload: reloadRoles,
+    error: rolesError,
+    isFetching,
+  } = useResourceList<AccessRoleRow>(`workspace:${workspaceSlug ?? ""}:access-roles`, loadRoles);
+
+  // TWO reads, one refresh. A save/delete re-reads the feature list as well as the roles, which is
+  // what keeps a feature list that was unreadable at mount from staying unreadable for the rest of
+  // the session: nothing else ever re-asks, because a failure is not cached and the fetcher's
+  // identity does not change while the workspace holds still. Features first — a role is projected
+  // onto that list — and swallowed, since its failure is already in `featuresError` and the banner,
+  // and it must not fail the save flow that called this.
+  const refresh = useCallback(async () => {
+    await reloadFeatures().catch(() => {});
+    await reloadRoles();
+  }, [reloadFeatures, reloadRoles]);
+
+  // A failed read used to be substituted with `[]` so the pane didn't hang on "Loading…" forever;
+  // the hook leaves `items` null instead, so make that substitution here.
+  const roles = loadedRoles ?? (rolesError ? NO_ROLES : null);
+  // One banner, two reads. Roles wins when both failed: it is the one that emptied the list, and
+  // the feature failure has already been absorbed into the fallback matrix.
+  const loadError = rolesError ?? featuresError;
 
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
 
@@ -405,6 +410,9 @@ export function TeamPermissionsPane({
         : !workspaceSlug
           ? "Open Teams from your hub workspace to manage roles."
           : "No roles yet.",
+    // The spinner before "Roles" — the only thing that says a revalidation is running behind rows
+    // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     // No workspace ⇒ no create affordance (the pane is only usable from a hub workspace; the
     // empty state says so). Elsewhere the `+` opens the scoped create modal.
     onNew: workspaceSlug ? () => setNewOpen(true) : undefined,

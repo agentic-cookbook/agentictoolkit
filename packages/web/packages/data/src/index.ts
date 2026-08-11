@@ -48,6 +48,7 @@ export {
   revalidateResources,
   makeEntityDeleteHandler,
   type ResourceList,
+  type ResourceListOptions,
 } from "./use-resource-list";
 
 // One cached item — instant paint from a seed, revalidated behind it, plus the hover prefetcher

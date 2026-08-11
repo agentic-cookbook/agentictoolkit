@@ -39,6 +39,18 @@ export function revalidateResources(match: (cacheKey: string) => boolean): void 
     .catch(() => {});
 }
 
+export interface ResourceListOptions {
+  /** Report a failed read to the auth reporter. Default true — a list read that fails is a
+   *  platform-wide signal worth having in one place rather than in thirty-odd catch blocks.
+   *
+   *  Pass FALSE when `load` already reports its own failures, which is not a preference: a fetcher
+   *  that reports and then rethrows would otherwise be reported TWICE for one failure, under two
+   *  different contexts, and the dedupe in `reportUnexpectedAuthError` keys on (message + context)
+   *  so it cannot collapse them. The fetcher wins that tie whenever it knows something this hook
+   *  does not — which step failed, or that a well-formed 200 was nonsense. */
+  reportErrors?: boolean;
+}
+
 export interface ResourceList<T> {
   /** The rows (null = nothing cached and nothing read yet), served instantly from the query cache
    *  on a remount. */
@@ -79,12 +91,16 @@ export interface ResourceList<T> {
  *   `projectsApi.list`) or a `useCallback`. A NEW identity intentionally triggers a refetch (the
  *   refetch-on-identity-change API — e.g. swapping the fetcher when a filter changes). An inline
  *   closure recreated every render is therefore a bug: it would re-read on every render and loop.
+ * @param opts See {@link ResourceListOptions} — only relevant to a fetcher that reports its own
+ *   failures.
  */
 export function useResourceList<T>(
   cacheKey: string,
   load: () => Promise<T[]>,
+  opts?: ResourceListOptions,
 ): ResourceList<T> {
   const tenantId = useTenantId();
+  const reportErrors = opts?.reportErrors ?? true;
   // The client comes from MODULE SCOPE and is passed to `useQuery` explicitly, not read from
   // React context. Thirty-nine call sites mount this hook and nothing guarantees a
   // ToolkitQueryProvider above any of them — reading context would turn a missing provider into a
@@ -98,11 +114,13 @@ export function useResourceList<T>(
         try {
           return await load();
         } catch (e) {
-          reportUnexpectedAuthError(e, {
-            feature: "resource-list",
-            step: "load",
-            basePath: cacheKey,
-          });
+          if (reportErrors) {
+            reportUnexpectedAuthError(e, {
+              feature: "resource-list",
+              step: "load",
+              basePath: cacheKey,
+            });
+          }
           throw e;
         }
       },
@@ -130,10 +148,20 @@ export function useResourceList<T>(
   // Loading until its scope arrives (`load` = a promise that never settles, which is how a feature
   // avoids flashing the unscoped set) would then wait on the old fetcher forever, and a slow first
   // read merely overtaken by a scope change would land its wrong-scope rows and keep them.
-  const loadRef = useRef(load);
+  //
+  // ONLY when the key held still. A scope that is part of BOTH the cache key and the fetcher — the
+  // usual shape, e.g. `workspace:<slug>:roles` read by a fetcher closing over `<slug>` — changes
+  // the two together, and react-query has ALREADY started a fresh read of the new key with the new
+  // fetcher by the time this effect runs. Cancelling that would abandon a correct in-flight read
+  // and issue a second one for the same rows: a wasted round trip on every scope switch, and worse
+  // than wasted against a fetcher whose next answer differs from its first (a `mockResolvedValueOnce`
+  // in a test, a one-shot token, a paginating cursor).
+  const lastRef = useRef({ load, cacheKey, tenantId });
   useEffect(() => {
-    if (loadRef.current === load) return;
-    loadRef.current = load;
+    const prev = lastRef.current;
+    lastRef.current = { load, cacheKey, tenantId };
+    if (prev.load === load) return;
+    if (prev.cacheKey !== cacheKey || prev.tenantId !== tenantId) return;
     const filters = { queryKey: resourceListKey(cacheKey, tenantId), exact: true };
     void client
       .cancelQueries(filters)
