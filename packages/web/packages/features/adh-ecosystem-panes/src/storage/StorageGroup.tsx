@@ -5,6 +5,7 @@ import { Table2, KeyRound, KeySquare, Database } from "lucide-react";
 import { AccessPane } from "@agentic-toolkit/authentication";
 import { StorageTokensPanel } from "@agentic-toolkit/ecosystem-config";
 import {
+  RailHostBoundary,
   StackGroupDetail,
   WorkspaceNotManageable,
   WorkspaceResolutionError,
@@ -51,6 +52,9 @@ export interface EcosystemScopeResolution {
  *
  * The group opens UNSELECTED — selecting an item never auto-selects a topic (StackGroupDetail's
  * own rule).
+ *
+ * Self-hosting: it wraps its rail in RailHostBoundary, so it draws one under the hub's chrome and
+ * on a bare feature site alike. See the boundary at the bottom of this file.
  */
 export function StorageGroup({
   scope,
@@ -151,13 +155,28 @@ export function StorageGroup({
     },
   };
   const items: GroupTopicItem[] = STORAGE_MEMBER_IDS.map((id) => ({ id, ...panes[id] }));
+  // StackGroupDetail PUBLISHES its rail rather than drawing one — StackLevels registers the level
+  // with the nearest rail host and is a documented NO-OP without one, so the rows go nowhere and
+  // only the leaf's "Select a topic." hint renders. That is what an unhosted mount looks like: not
+  // an error, not an empty list, a surface with nothing on it.
+  //
+  // The hub supplies a host (WorkspaceChromeProvider) and this boundary passes straight through
+  // there; agenticdeveloperstorage.com has no chrome of its own, so the boundary becomes the host.
+  // It lives HERE, on the component a site mounts, for the reason RailHostBoundary's own doc gives
+  // for every feature entry: a host each site had to remember to add is a host a site can forget,
+  // and forgetting it costs the whole rail with nothing to say so.
+  //
+  // Below the two gates above, not around them: they render a plain notice with no rails, and a
+  // standalone host around one would draw an empty stack frame around a sentence.
   return (
-    <StackGroupDetail
-      levelId="storage-group"
-      title="Storage"
-      items={items}
-      urlSelection={urlSelection}
-      renderSubLeaf={renderSubLeaf}
-    />
+    <RailHostBoundary>
+      <StackGroupDetail
+        levelId="storage-group"
+        title="Storage"
+        items={items}
+        urlSelection={urlSelection}
+        renderSubLeaf={renderSubLeaf}
+      />
+    </RailHostBoundary>
   );
 }
