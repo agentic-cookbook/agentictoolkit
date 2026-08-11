@@ -5,7 +5,7 @@ import { WorkspacePicker } from './WorkspacePicker'
 import type { WorkspaceOption } from './WorkspaceOption'
 
 /**
- * The labelled workspace switcher, in a full-width bar directly under the header.
+ * The labelled workspace switcher, CENTRED in a full-width bar directly under the header.
  *
  * Extracted from SiteHomeShell so the hub renders the SAME bar rather than a second copy: the
  * fleet's whole point is that the switcher looks and behaves identically on every site, and the
@@ -36,14 +36,21 @@ export function WorkspaceBar({
   action?: ReactNode
 }): ReactElement {
   return (
-    // The visible word is decorative to assistive tech — `aria-hidden`, because the trigger it
-    // labels already carries `ariaLabel="Workspace"` (see WorkspacePicker), and a <label> pointing
-    // at it would make a screen reader say "Workspace" twice.
+    // Three tracks, not a flex row: the label+picker group sits in the middle one so it is centred
+    // on the BAR, not merely centred in what the action leaves over. A flex row can't do this —
+    // the hub's action is `ml-auto`, so the group it pushes right of centre is off-centre by
+    // exactly the action's width, and a site that passes no action would centre it differently
+    // again. The empty first and third tracks are what make the two cases identical.
     <div className="adh-home__toolbar">
-      <span className="adh-home__toolbar-label" aria-hidden>
-        Workspace
-      </span>
-      <WorkspacePicker workspaces={workspaces} selected={selected} onSelect={onSelect} />
+      {/* The visible word is decorative to assistive tech — `aria-hidden`, because the trigger it
+          labels already carries `ariaLabel="Workspace"` (see WorkspacePicker), and a <label>
+          pointing at it would make a screen reader say "Workspace" twice. */}
+      <div className="adh-home__toolbar-control">
+        <span className="adh-home__toolbar-label" aria-hidden>
+          Workspace
+        </span>
+        <WorkspacePicker workspaces={workspaces} selected={selected} onSelect={onSelect} />
+      </div>
       {action}
     </div>
   )

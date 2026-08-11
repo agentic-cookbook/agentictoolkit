@@ -1,7 +1,7 @@
 import { type ReactElement, type ReactNode } from 'react';
 import type { WorkspaceOption } from './WorkspaceOption';
 /**
- * The labelled workspace switcher, in a full-width bar directly under the header.
+ * The labelled workspace switcher, CENTRED in a full-width bar directly under the header.
  *
  * Extracted from SiteHomeShell so the hub renders the SAME bar rather than a second copy: the
  * fleet's whole point is that the switcher looks and behaves identically on every site, and the

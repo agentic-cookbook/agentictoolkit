@@ -91,8 +91,11 @@ describe("ResourceExplorer standalone exit guard", () => {
     expect(await screen.findByText("editor pane")).toBeInTheDocument();
 
     // Re-clicking the SELECTED topic row would clear that level — with a dirty guard the package
-    // must raise the shared Discard/Stay alert instead of clearing immediately.
-    fireEvent.click(screen.getByText("Edit Topic"));
+    // must raise the shared Discard/Stay alert instead of clearing immediately. By ROLE, not by
+    // text: the standalone host now draws a breadcrumb, and the selected topic is its last crumb,
+    // so "Edit Topic" is on screen twice. Only the rail row is a button — the last crumb is static
+    // text (it is where you already are), which is exactly what makes this unambiguous.
+    fireEvent.click(screen.getByRole("button", { name: "Edit Topic" }));
 
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("button", { name: "Discard" })).toBeInTheDocument();
@@ -112,7 +115,7 @@ describe("ResourceExplorer standalone exit guard", () => {
 
     // The same re-click as above, but a clean pane registers no guard at all, so the level clears
     // with no prompt. This is the control for the test above: same gesture, same query, no dialog.
-    fireEvent.click(screen.getByText("Edit Topic"));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Topic" }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.queryByText("editor pane")).not.toBeInTheDocument();

@@ -51,12 +51,16 @@ function WorkspaceBar({
   action
 }) {
   return (
-    // The visible word is decorative to assistive tech — `aria-hidden`, because the trigger it
-    // labels already carries `ariaLabel="Workspace"` (see WorkspacePicker), and a <label> pointing
-    // at it would make a screen reader say "Workspace" twice.
+    // Three tracks, not a flex row: the label+picker group sits in the middle one so it is centred
+    // on the BAR, not merely centred in what the action leaves over. A flex row can't do this —
+    // the hub's action is `ml-auto`, so the group it pushes right of centre is off-centre by
+    // exactly the action's width, and a site that passes no action would centre it differently
+    // again. The empty first and third tracks are what make the two cases identical.
     /* @__PURE__ */ jsxs("div", { className: "adh-home__toolbar", children: [
-      /* @__PURE__ */ jsx2("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
-      /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected, onSelect }),
+      /* @__PURE__ */ jsxs("div", { className: "adh-home__toolbar-control", children: [
+        /* @__PURE__ */ jsx2("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
+        /* @__PURE__ */ jsx2(WorkspacePicker, { workspaces, selected, onSelect })
+      ] }),
       action
     ] })
   );

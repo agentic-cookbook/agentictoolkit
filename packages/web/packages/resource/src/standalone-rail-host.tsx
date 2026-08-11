@@ -25,10 +25,11 @@ import {
  * they do inside the hub shell — the master/detail lists register as deeper rail levels, and the
  * leaf editor's unsaved-work guard flows into the one HTD's exit gate (so Back / breadcrumb-up /
  * re-click prompts Discard/Stay instead of silently discarding). Mirrors the hub's
- * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack),
- * trimmed to the standalone case: no editor toolbar slot, no shell workspace/feature levels, no
- * breadcrumb. It does own the FEATURE bar — the full-width strip above the rails a feature fills
- * via `FeatureBarPortal` — since on a feature site there is no shell above it to own one.
+ * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack + the
+ * breadcrumb bar), trimmed to the standalone case: no editor toolbar slot, and no shell
+ * workspace/feature levels above the feature's own. It does own the FEATURE bar — the full-width
+ * strip above the rails a feature fills via `FeatureBarPortal` — since on a feature site there is
+ * no shell above it to own one.
  * Extracted from ResourceExplorer (which always self-hosted this way) so the
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
@@ -159,10 +160,22 @@ export function StandaloneRailHost({
       {/* `toolbar` is the strip the stack already draws full-width above the rails — exactly where a
           feature bar belongs. It is rendered only while claimed, and the ref hands its node to
           FeatureBarPortal; `w-full` because the strip is a flex row and a bar with a flexible
-          space in it has to own the whole width to place anything at its right edge. */}
+          space in it has to own the whole width to place anything at its right edge.
+
+          `rootLabel` is the leading crumb, and passing it is what makes the breadcrumb bar EXIST
+          here: the bar draws only when the trail is non-empty, and a standalone host's trail is
+          empty until something is selected — so without a root the bar would appear on click and
+          vanish on Back, which is worse than never having one. The first published level's own
+          title is that root, which is exactly what the hub's WorkspaceShell does (its `rootLabel`
+          and its level 0's title are the same `workspaceListLabel(active)` string): it is the one
+          label this package already holds — the feature's landing, e.g. "All projects" — and
+          clicking it runs `levels[0].onClear()`, which is the feature's own return-to-landing. The
+          `|| undefined` is for a feature that publishes an empty title (ResourceExplorer defaults
+          `landing?.title ?? ""`): `rootLabel=""` is still a crumb, and would draw a bar holding a
+          blank chevron-less nothing. `showBreadcrumb` is left at its default `true`. */}
       <HierarchicalDetailView
         levels={mergedLevels}
-        showBreadcrumb={false}
+        rootLabel={mergedLevels[0]?.title || undefined}
         exitGuard={exitGuard}
         toolbar={
           barClaims.size > 0 ? (
