@@ -45,6 +45,11 @@ export {
 } from "./rail-host";
 export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-host";
 
+// One cached item, wired to the stack's missing-item report. The query layer itself
+// (`useResourceItemQuery`) lives in `@agentic-toolkit/data`; this is the composition that talks to
+// the rail host.
+export { useResourceItem, type ResourceItem } from "./use-resource-item";
+
 // The HOST side of that contract. Only a rail host calls these — the hub's WorkspaceChromeProvider
 // is the one outside this package — and they exist so its copy and StandaloneRailHost's cannot
 // drift, alert copy included.

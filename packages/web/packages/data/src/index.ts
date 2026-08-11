@@ -50,6 +50,14 @@ export {
   type ResourceList,
 } from "./use-resource-list";
 
+// One cached item — instant paint from a seed, revalidated behind it, plus the hover prefetcher.
+export {
+  useResourceItemQuery,
+  useResourceItemPrefetch,
+  type ResourceItem,
+  type ResourceItemQuery,
+} from "./use-resource-item";
+
 // The caller's owner-scopable workspaces (personal + orgs) — the root of a feature
 // site's stack, and what `?workspace=<slug>` pins a list/create to. Its cache key ships too:
 // a rename invalidates the list from outside this module. `checkWorkspaceSlugAvailable` asks
