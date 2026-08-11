@@ -49,17 +49,25 @@ export function GroupMembersEditor({
   members,
   principals,
   onChanged,
+  readOnly = false,
 }: {
   groupId: string;
   members: AccessGroupMember[];
   principals: { users: Principal[]; apps: Principal[] };
   onChanged: () => void | Promise<void>;
+  /** The members on screen are not known to be the server's yet (a cached copy being
+   *  revalidated), so they can be READ but not changed: a remove aimed at a stale row could
+   *  target a member the server no longer has. */
+  readOnly?: boolean;
 }) {
   const [addType, setAddType] = useState<MemberType>("user");
   const [pickId, setPickId] = useState("");
   const [rawId, setRawId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // One gate for both reasons a change must not start: a write of our own is in flight, or what
+  // is painted isn't known to be current.
+  const locked = busy || readOnly;
 
   const pickable = principalsFor(addType, principals);
   const addedIds = new Set(
@@ -71,7 +79,7 @@ export function GroupMembersEditor({
   // empty / failed to load (so a user/app can still be added by id).
   const useRawInput = !options || options.length === 0;
   const memberId = useRawInput ? rawId.trim() : pickId;
-  const canAdd = !busy && memberId.length > 0 && memberId.length <= 36;
+  const canAdd = !locked && memberId.length > 0 && memberId.length <= 36;
 
   async function add() {
     if (!canAdd) return;
@@ -128,6 +136,7 @@ export function GroupMembersEditor({
                   variant="ghost"
                   size="icon"
                   onClick={() => remove(member)}
+                  disabled={locked}
                   title="Remove member"
                   aria-label={`Remove ${label}`}
                 >

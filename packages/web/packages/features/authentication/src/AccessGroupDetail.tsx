@@ -1,15 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { DetailSection } from "@agentic-toolkit/resource";
+import { DetailSection, useResourceItem } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { GroupGrantsEditor } from "./GroupGrantsEditor";
 import { GroupMembersEditor } from "./GroupMembersEditor";
@@ -53,23 +52,25 @@ export function AccessGroupDetail({
   const bucketId = group?.group.bucketId ?? draft.bucketId;
   const bucketTypes = buckets.find((b) => b.id === bucketId)?.types ?? [];
 
-  const [detail, setDetail] = useState<GroupDetail | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // The members + grants, cached per group. Coming back to a list already visited paints them
+  // with no read at all, and the re-read settles behind that paint. NO `seedFrom`: the rail row
+  // this detail opens from carries neither array, so seeding from it would render "No members
+  // yet." about a list that may well have members. The cache IS the seed here, on the second
+  // visit onward.
+  //
+  // `useResourceItem` (not the bare query) because a 404 here means the access list was DELETED
+  // out from under the user — the host owns the alert that says so and the pop that follows.
+  const {
+    item: detail,
+    isSettled,
+    error: loadError,
+    reload,
+  } = useResourceItem<GroupDetail>("bucket:access-groups", groupId, bucketAccessApi.getGroup);
 
-  const loadDetail = useCallback(async () => {
-    if (!groupId) return;
-    setLoadError(null);
-    try {
-      setDetail(await bucketAccessApi.getGroup(groupId));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "bucket-access", step: "load-group" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load access list.");
-    }
-  }, [groupId]);
-
-  useEffect(() => {
-    void loadDetail();
-  }, [loadDetail]);
+  // The re-read after a member/grant change, deliberately swallowing: the WRITE succeeded, and
+  // the editors report whatever `onChanged` throws as a failed save. A failed re-read belongs in
+  // this detail's own banner, which `loadError` already carries.
+  const reloadDetail = useCallback(() => reload().catch(() => {}), [reload]);
 
   return (
     <DetailSection title={title}>
@@ -125,12 +126,17 @@ export function AccessGroupDetail({
         <p className="text-xs text-apt-text-muted">
           Save this access list, then add its members and grants.
         </p>
-      ) : !groupId ? null : loadError ? (
-        <ErrorText error={loadError} />
-      ) : detail === null ? (
-        <p className="text-sm text-apt-text-muted">Loading…</p>
+      ) : !groupId ? null : detail === null ? (
+        loadError ? (
+          <ErrorText error={loadError} />
+        ) : (
+          <p className="text-sm text-apt-text-muted">Loading…</p>
+        )
       ) : (
         <>
+          {/* A failed RE-read over a cached copy: the banner says so and the copy stays, rather
+              than the content vanishing because the revalidation behind it failed. */}
+          <ErrorText error={loadError} />
           {everyone ? (
             <FieldGroup title="Members">
               <p className="text-sm text-apt-text-muted">
@@ -143,7 +149,11 @@ export function AccessGroupDetail({
               groupId={groupId}
               members={detail.members}
               principals={principals}
-              onChanged={loadDetail}
+              onChanged={reloadDetail}
+              // Read-only until the server's answer for THIS group is on screen. What is painted
+              // before then is the previous visit's copy, and a remove aimed at it could target a
+              // member the server no longer has.
+              readOnly={!isSettled}
             />
           )}
 
@@ -152,7 +162,8 @@ export function AccessGroupDetail({
             bucketId={bucketId}
             grants={detail.grants}
             bucketTypes={bucketTypes}
-            onChanged={loadDetail}
+            onChanged={reloadDetail}
+            readOnly={!isSettled}
           />
         </>
       )}

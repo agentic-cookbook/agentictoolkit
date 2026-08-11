@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { KeyRound } from "lucide-react";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useResourceList } from "@agentic-toolkit/data";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { bucketAccessApi } from "@agentic-toolkit/data/security";
-import { schemasApi } from "@agentic-toolkit/data/markdown";
+import { bucketAccessApi, type AccessGroup } from "@agentic-toolkit/data/security";
+import { schemasApi, type SchemaDefinition } from "@agentic-toolkit/data/markdown";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -81,82 +81,109 @@ export function AccessPane({
    *  application registry stays host-owned; injected for the same reason as usersDirectory. */
   applicationsDirectory: (ecosystemId: string | undefined) => Promise<AccessDirectoryApp[]>;
 }) {
-  const [items, setItems] = useState<AccessItem[] | null>(null);
-  const [buckets, setBuckets] = useState<BucketRef[]>([]);
-  const [principals, setPrincipals] = useState<{ users: Principal[]; apps: Principal[] }>({
-    users: [],
-    apps: [],
-  });
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating an access list is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new list is selected so
   // its REAL detail (members + grants) opens.
   const [newOpen, setNewOpen] = useState(false);
   const renderRecordAffordance = useRecordAffordance();
 
-  // Latest-wins guards: both loaders re-run when their inputs change identity (ecosystemId,
-  // or a host passing a fresh directory closure per render) AND are called imperatively
-  // after mutations — a generation stamp makes any overlapped older response a no-op
-  // instead of racing its stale result into state.
-  const refreshGen = useRef(0);
-  const principalsGen = useRef(0);
+  // FOUR reads, each cached on its own, replacing the two hand-rolled loaders and the two
+  // latest-wins generation counters they needed. A reply for an ecosystem the user has left is a
+  // different cache entry rather than something a counter has to reject, and the cache survives
+  // the unmount the counters never did.
+  //
+  // The buckets are read under the SAME cache key the Buckets pane uses, so the two panes share
+  // one fetch: opening Access after Buckets paints its list instantly and revalidates behind it.
+  // `useCallback` is load-bearing — the hook treats a NEW fetcher identity as "re-read".
+  const loadDefs = useCallback(() => schemasApi.list(ecosystemId), [ecosystemId]);
+  const {
+    items: defs,
+    reload: reloadDefs,
+    error: defsError,
+    isFetching: defsFetching,
+  } = useResourceList<SchemaDefinition>(`ecosystem:${ecosystemId ?? ""}:buckets`, loadDefs);
 
-  const refresh = useCallback(async () => {
-    const gen = ++refreshGen.current;
-    setLoadError(null);
-    try {
-      // Two calls, not 1+N: the ecosystem's buckets (for names + the type picker) and
-      // EVERY access group in one shot, joined client-side by bucketId. Groups whose
-      // bucket isn't in this ecosystem's set are dropped (the bucket filter == the
-      // ecosystem filter, since a group inherits its bucket's owner).
-      const [defs, allGroups] = await Promise.all([
-        schemasApi.list(ecosystemId),
-        bucketAccessApi.listAllGroups(),
-      ]);
-      const refs: BucketRef[] = defs.map((d) => ({
+  // Every access group the caller can see, in ONE call rather than a fan-out per bucket — and
+  // across every ecosystem, so it is cached WITHOUT a scope segment. The ecosystem filter is the
+  // join below.
+  const {
+    items: allGroups,
+    reload: reloadGroups,
+    error: groupsError,
+    isFetching: groupsFetching,
+  } = useResourceList<AccessGroup>("bucket:access-groups", bucketAccessApi.listAllGroups);
+
+  const buckets = useMemo<BucketRef[]>(
+    () =>
+      (defs ?? []).map((d) => ({
         id: d.id,
         name: d.name,
         types: d.tables.map((t) => ({ id: t.id, name: t.name })),
-      }));
-      const nameByBucket = new Map(refs.map((b) => [b.id, b.name]));
-      const items: AccessItem[] = allGroups
+      })),
+    [defs],
+  );
+
+  // Joined client-side by bucketId; a group whose bucket isn't in this ecosystem's set is dropped
+  // (the bucket filter IS the ecosystem filter, since a group inherits its bucket's owner). Null
+  // until BOTH reads have landed: a join against half the data is a SHORTER list, not a visibly
+  // partial one, so the rail would read it as "no access lists yet".
+  const items = useMemo<AccessItem[] | null>(() => {
+    if (defs === null || allGroups === null) return null;
+    const nameByBucket = new Map(buckets.map((b) => [b.id, b.name]));
+    return sortItems(
+      allGroups
         .filter((group) => nameByBucket.has(group.bucketId))
-        .map((group) => ({ group, bucketName: nameByBucket.get(group.bucketId) as string }));
-      if (gen !== refreshGen.current) return; // superseded by a newer load
-      setBuckets(refs);
-      setItems(sortItems(items));
-    } catch (err) {
-      if (gen !== refreshGen.current) return;
-      reportUnexpectedAuthError(err, { feature: "bucket-access", step: "load-access" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load access lists.");
-    }
-  }, [ecosystemId]);
+        .map((group) => ({ group, bucketName: nameByBucket.get(group.bucketId) as string })),
+    );
+  }, [defs, allGroups, buckets]);
 
-  const loadPrincipals = useCallback(async () => {
-    const gen = ++principalsGen.current;
-    try {
-      const [users, apps] = await Promise.all([
-        usersDirectory(ecosystemId),
-        applicationsDirectory(ecosystemId),
-      ]);
-      if (gen !== principalsGen.current) return; // superseded by a newer load
-      setPrincipals({
-        users: users.map((u) => ({ id: u.id, label: u.displayName || u.email })),
-        apps: apps.map((a) => ({ id: a.id, label: a.name })),
-      });
-    } catch (err) {
-      // Non-fatal: members can still be added by raw id without these lists.
-      reportUnexpectedAuthError(err, { feature: "bucket-access", step: "load-principals" });
-    }
-  }, [ecosystemId, usersDirectory, applicationsDirectory]);
+  const loadError = defsError ?? groupsError;
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // A create/update/delete re-reads both halves of the join — the groups because they changed,
+  // the buckets because a name shown on every row comes from there.
+  const refresh = useCallback(async () => {
+    await Promise.all([reloadDefs(), reloadGroups()]);
+  }, [reloadDefs, reloadGroups]);
 
-  useEffect(() => {
-    void loadPrincipals();
-  }, [loadPrincipals]);
+  // The host's directories, held in a ref so each FETCHER's identity depends on the ecosystem
+  // alone. A host that rebuilt these closures per render would otherwise re-read on every render
+  // — the hazard the old `principalsGen` counter existed to survive rather than to avoid. A
+  // fresh closure is not new data, so pinning the identity here is the whole fix.
+  const directories = useRef({ usersDirectory, applicationsDirectory });
+  directories.current = { usersDirectory, applicationsDirectory };
+
+  const loadUsers = useCallback(
+    async (): Promise<Principal[]> =>
+      (await directories.current.usersDirectory(ecosystemId)).map((u) => ({
+        id: u.id,
+        label: u.displayName || u.email,
+      })),
+    [ecosystemId],
+  );
+  const { items: principalUsers } = useResourceList<Principal>(
+    `ecosystem:${ecosystemId ?? ""}:access-principal-users`,
+    loadUsers,
+  );
+
+  const loadApps = useCallback(
+    async (): Promise<Principal[]> =>
+      (await directories.current.applicationsDirectory(ecosystemId)).map((a) => ({
+        id: a.id,
+        label: a.name,
+      })),
+    [ecosystemId],
+  );
+  const { items: principalApps } = useResourceList<Principal>(
+    `ecosystem:${ecosystemId ?? ""}:access-principal-apps`,
+    loadApps,
+  );
+
+  // Deliberately NOT folded into `loadError`: a directory that won't load leaves an empty member
+  // PICKER, and members can still be added by raw id. Nothing about the access lists failed.
+  const principals = useMemo(
+    () => ({ users: principalUsers ?? [], apps: principalApps ?? [] }),
+    [principalUsers, principalApps],
+  );
 
   const bucketNameFor = (id: string) => buckets.find((b) => b.id === id)?.name ?? "—";
 
@@ -240,7 +267,17 @@ export function AccessPane({
     itemIcon: <KeyRound size={16} aria-hidden />,
     newLabel: "New access list",
     leaf,
-    emptyLabel: items === null ? "Loading…" : "No access lists yet.",
+    // `loadError` FIRST: a failed read leaves `items` null, which on its own would sit on
+    // "Loading…" forever with only the banner saying otherwise.
+    emptyLabel: loadError
+      ? "Couldn't load access lists."
+      : items === null
+        ? "Loading…"
+        : "No access lists yet.",
+    // The spinner before "Access lists" — the only thing that says a revalidation is running
+    // behind rows the cache already put on screen. `emptyLabel` covers the FIRST read and
+    // nothing after.
+    busy: defsFetching || groupsFetching,
     onNew: () => setNewOpen(true),
   });
 
@@ -270,6 +307,8 @@ export function AccessPane({
             buckets={buckets}
             principals={principals}
           />
+        ) : loadError ? (
+          <EmptyState title="Couldn't load access lists." />
         ) : items === null ? (
           <EmptyState title="Loading…" />
         ) : (

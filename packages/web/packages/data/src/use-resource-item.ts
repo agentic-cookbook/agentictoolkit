@@ -32,6 +32,11 @@ export interface ResourceItem<T> {
   isFetching: boolean;
   /** The last read error, or null. */
   error: string | null;
+  /** Re-read this item and update the cache. Always hits the network; a no-op when there is no
+   *  id. Rejects for its own caller the way the list hook's `reload` does — a caller who only
+   *  wants the failure ON SCREEN can ignore the promise and read `error`, and one who must not
+   *  attribute it to whatever it just saved should say so explicitly. */
+  reload: () => Promise<void>;
 }
 
 export interface ResourceItemQuery<T> extends ResourceItem<T> {
@@ -112,12 +117,21 @@ export function useResourceItemQuery<T>(
   const isSettled =
     id == null || (!query.isPending && !query.isPlaceholderData && !query.isFetching);
 
+  // `refetch` is referentially stable, so `reload` is too — which is what lets callers hold it in
+  // a dependency array or hand it to a child as `onChanged`.
+  const { refetch } = query;
+  const reload = useCallback<ResourceItem<T>["reload"]>(async () => {
+    const res = await refetch();
+    if (res.error) throw res.error;
+  }, [refetch]);
+
   const err: unknown = query.error;
   return {
     item: query.data ?? null,
     isSettled,
     isFetching: id != null && (query.isFetching || query.isPending),
     error: err == null ? null : err instanceof Error ? err.message : "Failed to load.",
+    reload,
     isMissing: (opts?.absent ?? false) || isNotFound(query.error),
   };
 }

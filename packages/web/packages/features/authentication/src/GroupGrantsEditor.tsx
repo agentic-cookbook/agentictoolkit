@@ -36,18 +36,26 @@ export function GroupGrantsEditor({
   grants,
   bucketTypes,
   onChanged,
+  readOnly = false,
 }: {
   groupId: string;
   bucketId: string;
   grants: AccessGrant[];
   bucketTypes: { id: string; name: string }[];
   onChanged: () => void | Promise<void>;
+  /** The grants on screen are not known to be the server's yet (a cached copy being revalidated),
+   *  so they can be READ but not changed: an edit aimed at a stale row could hit a grant the
+   *  server no longer has. */
+  readOnly?: boolean;
 }) {
   const [addTarget, setAddTarget] = useState<GrantTargetType>("bucket");
   const [addTypeId, setAddTypeId] = useState("");
   const [addRowId, setAddRowId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // One gate for both reasons a change must not start: a write of our own is in flight, or what
+  // is painted isn't known to be current.
+  const locked = busy || readOnly;
 
   const hasBucketGrant = grants.some((g) => g.targetType === "bucket");
   const grantedTypeIds = new Set(
@@ -75,7 +83,7 @@ export function GroupGrantsEditor({
         ? addTypeId
         : addRowId.trim();
   const canAdd =
-    !busy &&
+    !locked &&
     (effectiveTarget === "bucket"
       ? true
       : effectiveTarget === "bucket_type"
@@ -149,7 +157,7 @@ export function GroupGrantsEditor({
               <span className="flex items-center gap-2">
                 <PermissionToggles
                   value={parseCrud(grant.crud)}
-                  disabled={busy}
+                  disabled={locked}
                   onChange={(next: Crud) => {
                     // Toggling every capability off means "no access" — remove the
                     // grant rather than persisting an empty, no-op grant row.
@@ -164,6 +172,7 @@ export function GroupGrantsEditor({
                   variant="ghost"
                   size="icon"
                   onClick={() => remove(grant)}
+                  disabled={locked}
                   title="Remove grant"
                   aria-label={`Remove grant on ${targetLabel(grant)}`}
                 >
