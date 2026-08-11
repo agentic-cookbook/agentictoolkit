@@ -17,7 +17,11 @@ import {
   useResourceItem,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
-import { useResourceItemPrefetch, useResourceItemWriter } from "@agentic-toolkit/data";
+import {
+  useResourceItemPrefetch,
+  useResourceItemWriter,
+  useResourceList,
+} from "@agentic-toolkit/data";
 import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
   notesApi,
@@ -57,6 +61,13 @@ const EMPTY_FILTERS: FilterState = { q: "", category: "", tag: "" };
 
 function errorText(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
+}
+
+/** Value equality for the filter triple. A filter typed and then retyped back to what it already
+ *  was must keep the SAME applied object: a new fetcher identity is `useResourceList`'s refetch
+ *  signal, and that one would spend a request to arrive back at rows already on screen. */
+function sameFilters(a: FilterState, b: FilterState): boolean {
+  return a.q === b.q && a.category === b.category && a.tag === b.tag;
 }
 
 /**
@@ -118,13 +129,89 @@ export function NotebookPane({
   workspaceSlug?: string;
 }) {
   // ── Data ────────────────────────────────────────────────────────────────
+  // Two filter values, not one. `filters` is what the button bar shows and changes on every
+  // keystroke; `applied` is what the list READS, and lags it by the debounce. The debounce used
+  // to sit on the request; it now sits on the query key, which is the same 200ms of typing
+  // without a request — and the key is what lets a filter set returned to paint from cache
+  // instead of re-reading.
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [notes, setNotes] = useState<NoteSummary[] | null>(null);
-  const [listError, setListError] = useState<string | null>(null);
-  const [categoryRows, setCategoryRows] = useState<NoteCategory[] | null>(null);
-  const [tagRows, setTagRows] = useState<NoteTag[]>([]);
-  const [ecosystems, setEcosystems] = useState<Ecosystem[] | null>(null);
-  const [ecosystemsError, setEcosystemsError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<FilterState>(EMPTY_FILTERS);
+  useEffect(() => {
+    const id = setTimeout(
+      () => setApplied((prev) => (sameFilters(prev, filters) ? prev : filters)),
+      200,
+    );
+    return () => clearTimeout(id);
+  }, [filters]);
+
+  // The owner's categories + tags: the rail's rows, the bar's two filter menus, the editor's
+  // autocomplete sources and what the two manager dialogs edit. Re-read on save so a freshly
+  // coined category/tag appears next time — and so a note moved into a new category puts that
+  // category in the rail. Tags come back as id+label pairs because renaming or retiring one
+  // addresses the ROW, and a label is not an address.
+  //
+  // Two lists rather than the one `Promise.all` this replaces: they are two routes, they cache
+  // separately, and the pair fetches in parallel either way. Both report under this pane's own
+  // step and rethrow, which is why each passes `reportErrors: false` — one failure reported
+  // twice, under two contexts, is worse than one.
+  //
+  // Workspace-scoped like the notes themselves: the backend scopes the category/tag vocabulary
+  // to the same owner it scopes the documents to, so the workspace is in the key.
+  const loadCategories = useCallback(async () => {
+    try {
+      return await notesApi.categories({ workspace: workspaceSlug });
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
+      throw err instanceof Error ? err : new Error("Failed to load categories.");
+    }
+  }, [workspaceSlug]);
+
+  const loadTags = useCallback(async () => {
+    try {
+      return await notesApi.tagSet({ workspace: workspaceSlug });
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
+      throw err;
+    }
+  }, [workspaceSlug]);
+
+  const {
+    items: categoryRows,
+    error: categoriesError,
+    reload: reloadCategories,
+  } = useResourceList<NoteCategory>(
+    `notes:${workspaceSlug ?? ""}:categories`,
+    loadCategories,
+    { reportErrors: false },
+  );
+  const { items: tagItems, reload: reloadTags } = useResourceList<NoteTag>(
+    `notes:${workspaceSlug ?? ""}:tags`,
+    loadTags,
+    { reportErrors: false },
+  );
+  const tagRows = tagItems ?? [];
+
+  // The workspace's ecosystems — the rail's read-only root level. Nothing in the notebook writes
+  // an ecosystem, so nothing here ever invalidates it; the cache is what makes that "read once"
+  // hold across a remount too, which is what an effect could never do.
+  const loadEcosystems = useCallback(async () => {
+    try {
+      return workspaceSlug
+        ? await ecosystemsApi.listForWorkspace(workspaceSlug)
+        : await ecosystemsApi.list();
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "ecosystems" });
+      throw err instanceof Error ? err : new Error("Failed to load ecosystems.");
+    }
+  }, [workspaceSlug]);
+
+  // The empty slug is not a missing key: it is the CALLER's own scope, which is the other route
+  // this fetcher can take.
+  const { items: ecosystems, error: ecosystemsError } = useResourceList<Ecosystem>(
+    `ecosystems:workspace:${workspaceSlug ?? ""}`,
+    loadEcosystems,
+    { reportErrors: false },
+  );
 
   // ── The category tree + the chain the URL names ──────────────────────────
   const tree = useMemo(() => buildCategoryTree(categoryRows ?? []), [categoryRows]);
@@ -144,97 +231,65 @@ export function NotebookPane({
   const activeCategory: CategoryNode | null = chain[chain.length - 1] ?? null;
   const activeCategoryName = activeCategory?.name ?? "";
   const categoryOptions = useMemo(() => categoryNames(categoryRows ?? []), [categoryRows]);
-  const tagOptions = useMemo(() => tagRows.map((tag) => tag.label), [tagRows]);
+  const tagOptions = useMemo(() => (tagItems ?? []).map((tag) => tag.label), [tagItems]);
   const previewLines = usePreviewLines();
 
-  const loadList = useCallback(
-    async (f: FilterState) => {
-      const scope: CategoryScope = uncategorized
-        ? { kind: "uncategorized" }
-        : activeCategoryName
-          ? { kind: "named", name: activeCategoryName }
-          : { kind: "all" };
-      const plan = resolveListCategory(scope, f.category);
-      // The rail and the filter name two different categories: nothing can match, so there is
-      // nothing worth asking the backend.
-      if (plan.empty) {
-        setNotes([]);
-        setListError(null);
-        return;
-      }
-      try {
-        // `category` is an EXACT name match on the backend, which is what makes a category
-        // hold only its own notes; the subcategories are their own levels.
-        const rows = await notesApi.list(
-          { q: f.q, tag: f.tag, category: plan.query },
-          { workspace: workspaceSlug },
-        );
-        setNotes(plan.uncategorizedOnly ? rows.filter((row) => !row.category) : rows);
-        setListError(null);
-      } catch (err) {
-        reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "list" });
-        setListError(errorText(err, "Failed to load notes."));
-      }
-    },
-    [workspaceSlug, activeCategoryName, uncategorized],
+  // What the rail's placement and the bar's category filter jointly ask for. Derived here rather
+  // than inside the fetcher so the KEY can be built from the same answer: the plan is what
+  // decides whether there is a request at all, and two different scopes must never share a key.
+  const plan = useMemo(() => {
+    const scope: CategoryScope = uncategorized
+      ? { kind: "uncategorized" }
+      : activeCategoryName
+        ? { kind: "named", name: activeCategoryName }
+        : { kind: "all" };
+    return resolveListCategory(scope, applied.category);
+  }, [uncategorized, activeCategoryName, applied.category]);
+
+  const loadNotes = useCallback(async () => {
+    // The rail and the filter name two different categories: nothing can match, so there is
+    // nothing worth asking the backend. An empty list, not a skipped read — under a cache the
+    // rows ARE the answer, and "no request" still has to produce one.
+    if (plan.empty) return [];
+    try {
+      // `category` is an EXACT name match on the backend, which is what makes a category
+      // hold only its own notes; the subcategories are their own levels.
+      const rows = await notesApi.list(
+        { q: applied.q, tag: applied.tag, category: plan.query },
+        { workspace: workspaceSlug },
+      );
+      return plan.uncategorizedOnly ? rows.filter((row) => !row.category) : rows;
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "list" });
+      // `errorText`'s wording, raised here so it survives the hook's own generic fallback.
+      throw err instanceof Error ? err : new Error("Failed to load notes.");
+    }
+  }, [plan, applied.q, applied.tag, workspaceSlug]);
+
+  // Keyed by the rail's SCOPE as well as the filters: walking into a category and back out is
+  // two keys, each already read, so the second walk is a repaint rather than a round trip. The
+  // scope has to be in the key spelled out — "uncategorized" is a scope no category name can
+  // express, and an unfiltered list under a named category is not the whole notebook.
+  const scopeKey = uncategorized ? UNCATEGORIZED_SLUG : activeCategoryName;
+  const {
+    items: notes,
+    error: listError,
+    reload: reloadNotes,
+  } = useResourceList<NoteSummary>(
+    `notes:${workspaceSlug ?? ""}:list:${scopeKey}|${applied.q}|${applied.category}|${applied.tag}`,
+    loadNotes,
+    { reportErrors: false },
   );
 
-  // The owner's categories + tags: the rail's rows, the bar's two filter menus, the editor's
-  // autocomplete sources and what the two manager dialogs edit. Refetched on save so a freshly
-  // coined category/tag appears next time — and so a note moved into a new category puts that
-  // category in the rail. Tags come back as id+label pairs because renaming or retiring one
-  // addresses the ROW, and a label is not an address.
-  const loadTaxonomy = useCallback(async () => {
-    try {
-      // Workspace-scoped like the notes themselves: the backend scopes the category/tag
-      // vocabulary to the same owner it scopes the documents to.
-      const [categories, tags] = await Promise.all([
-        notesApi.categories({ workspace: workspaceSlug }),
-        notesApi.tagSet({ workspace: workspaceSlug }),
-      ]);
-      setCategoryRows(categories);
-      setTagRows(tags);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
-    }
-  }, [workspaceSlug]);
-
-  // The workspace's ecosystems — the rail's read-only root level. Loaded once: nothing in the
-  // notebook writes an ecosystem, so nothing here can invalidate it.
-  const loadEcosystems = useCallback(async () => {
-    try {
-      setEcosystems(
-        workspaceSlug
-          ? await ecosystemsApi.listForWorkspace(workspaceSlug)
-          : await ecosystemsApi.list(),
-      );
-      setEcosystemsError(null);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "ecosystems" });
-      // Say so rather than leaving the level reading "Loading…" forever.
-      setEcosystems([]);
-      setEcosystemsError(errorText(err, "Failed to load ecosystems."));
-    }
-  }, [workspaceSlug]);
-
-  useEffect(() => {
-    void loadTaxonomy();
-  }, [loadTaxonomy]);
-
-  useEffect(() => {
-    void loadEcosystems();
-  }, [loadEcosystems]);
-
-  // Refetch the list when the filters or the selected category change (debounced so typing
-  // search doesn't fire a request per keystroke).
-  useEffect(() => {
-    const id = setTimeout(() => void loadList(filters), 200);
-    return () => clearTimeout(id);
-  }, [filters, loadList]);
-
+  // Swallowing, and it has to: every caller re-reads AFTER its own write succeeded, and their
+  // catch blocks say "Failed to save." / "Failed to delete.". A failed re-read is neither. The
+  // list's own failure still reaches the screen, as `listError`.
   const refresh = useCallback(
-    () => Promise.all([loadList(filters), loadTaxonomy()]).then(() => undefined),
-    [filters, loadList, loadTaxonomy],
+    () =>
+      Promise.all([reloadNotes(), reloadCategories(), reloadTags()])
+        .then(() => undefined)
+        .catch(() => {}),
+    [reloadNotes, reloadCategories, reloadTags],
   );
 
   // ── Selection + draft ─────────────────────────────────────────────────────
@@ -476,12 +531,15 @@ export function NotebookPane({
           onSelectCategory([...ancestors, slug]);
         },
         onClear: () => onSelectCategory(ancestors),
+        // The error first, for the same reason the ecosystems level puts it first: a failed read
+        // leaves the rows null, and "Loading…" forever is a lie the user can't act on.
         emptyLabel:
-          categoryRows === null
+          categoriesError ??
+          (categoryRows === null
             ? "Loading…"
             : depth === 0
               ? "No categories yet."
-              : "No subcategories.",
+              : "No subcategories."),
       });
       if (!picked || picked.children.length === 0) break;
       siblings = picked.children;
@@ -553,9 +611,12 @@ export function NotebookPane({
   const renameCategory = useCallback(
     async (node: CategoryTreeNode, nextName: string) => {
       await taxonomyApi.renameCategory(node.id, nextName);
-      await loadTaxonomy();
+      // Categories only — a rename can't touch the tag vocabulary. Swallowing for the usual
+      // reason: the rename already succeeded, so a failed re-read must not surface as one that
+      // didn't.
+      await reloadCategories().catch(() => {});
     },
-    [loadTaxonomy],
+    [reloadCategories],
   );
 
   const noteFieldProps = {

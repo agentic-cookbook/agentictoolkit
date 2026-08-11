@@ -573,3 +573,81 @@ describe("the cache", () => {
     expect(screen.queryByText("Backend exploded.")).toBeNull();
   });
 });
+
+// What the conversion is FOR. Every list this pane shows — the notes, the categories, the tags,
+// the ecosystems — now reads through the shared cache, so a scope already visited paints on the
+// first frame instead of blanking to "Loading…" while it is read again.
+describe("the lists read through the cache", () => {
+  const WORK_NOTE: NoteSummary = { ...SUMMARY, id: "note-9", title: "Roadmap", category: "Work" };
+
+  it("reads each category scope once, and repaints the one already read", async () => {
+    // The rows say which scope is on screen: the backend filters by EXACT name, so "Work" and
+    // the whole notebook are two different answers.
+    list.mockImplementation(async (f) =>
+      f?.category === "Work" ? [structuredClone(WORK_NOTE)] : [structuredClone(SUMMARY)],
+    );
+    const { select } = renderPane();
+    expect(await screen.findByRole("button", { name: "Standup" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+
+    select({ categorySlugs: ["work"] });
+    expect(await screen.findByRole("button", { name: "Roadmap" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(2);
+
+    // Back out. Synchronous, unlike both `findBy`s above: the whole-notebook key was already
+    // read, so its rows are on the FIRST frame and nothing is asked of the backend.
+    select({ categorySlugs: [] });
+    expect(screen.getByRole("button", { name: "Standup" })).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Roadmap" })).toBeNull();
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // The debounce moved: it used to delay the REQUEST, and now delays the query KEY. Same 200ms of
+  // typing without a read — and, unlike a debounced request, the value typed away from and back
+  // to is a repaint rather than a round trip.
+  it("spends one read on a settled search, and none on going back to it", async () => {
+    // A search answers with nothing, so the rows themselves say which key is on screen.
+    list.mockImplementation(async (f) => (f?.q ? [] : [structuredClone(SUMMARY)]));
+    renderPane();
+    expect(await screen.findByRole("button", { name: "Standup" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+
+    const search = screen.getByLabelText("Search notes");
+    fireEvent.change(search, { target: { value: "r" } });
+    fireEvent.change(search, { target: { value: "ro" } });
+    fireEvent.change(search, { target: { value: "roa" } });
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Standup" })).toBeNull());
+    // ONE read for three keystrokes, and it is the value the user stopped at.
+    expect(list).toHaveBeenCalledTimes(2);
+    expect(list).toHaveBeenLastCalledWith(
+      { q: "roa", tag: "", category: "" },
+      { workspace: "acme" },
+    );
+
+    fireEvent.change(search, { target: { value: "" } });
+    await waitFor(() => expect(screen.getByRole("button", { name: "Standup" })).not.toBeNull());
+    // The unfiltered rows came back from the cache: the key returned to one already read.
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  it("paints all four lists from cache on a remount, reading each once", async () => {
+    renderPane();
+    expect(await screen.findByRole("button", { name: "Standup" })).not.toBeNull();
+    expect(await screen.findByRole("button", { name: "Core" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(categories).toHaveBeenCalledTimes(1);
+    expect(tagSet).toHaveBeenCalledTimes(1);
+    expect(listForWorkspace).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    // Synchronous: the notes, the category rows and the ecosystems are all on the FIRST paint.
+    renderPane();
+    expect(screen.getByRole("button", { name: "Standup" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Work" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Core" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(categories).toHaveBeenCalledTimes(1);
+    expect(tagSet).toHaveBeenCalledTimes(1);
+    expect(listForWorkspace).toHaveBeenCalledTimes(1);
+  });
+});
