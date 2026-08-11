@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
+import { useResourceList } from "@agentic-toolkit/data";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -15,33 +16,50 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 /**
  * Access tokens for an application — backed by the real
  * /ecosystem/applications/:appId/tokens API. Creating a token reveals the full
- * secret exactly once; the list is fetched on demand and refreshed after each
+ * secret exactly once; the list is cached per application and refreshed after each
  * change, independent of the unsaved field edits.
+ *
+ * Only the PREFIX of each token is in this response — the secret exists in the create
+ * response and nowhere else — so what is cached here is metadata, not a credential.
  */
 export function AccessTokensSection({ appId }: { appId: string }) {
-  const [tokens, setTokens] = useState<AccessToken[]>([]);
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [mutationError, setMutationError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  // Reports under THIS section's telemetry context rather than the hook's generic one, which is
+  // what `reportErrors: false` below is for — otherwise one failure is reported twice.
+  const loadTokens = useCallback(async () => {
     try {
-      setTokens(await applicationsPrototypeApi.listTokens(appId));
+      return await applicationsPrototypeApi.listTokens(appId);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "access-tokens", step: "load" });
-      setError(err instanceof Error ? err.message : "Failed to load tokens.");
+      throw err instanceof Error ? err : new Error("Failed to load tokens.");
     }
   }, [appId]);
 
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // Cached per application, so reopening an app's tokens paints them on the first frame and
+  // re-reads behind that paint.
+  const {
+    items,
+    error: loadError,
+    reload,
+  } = useResourceList<AccessToken>(`application:${appId}:access-tokens`, loadTokens, {
+    reportErrors: false,
+  });
+  const tokens = items ?? [];
+  const error = mutationError ?? loadError;
+
+  // Swallowing, because `create`/`revoke` re-read AFTER their own write succeeded: a failed
+  // re-read must not be reported as a failed create or revoke. It still reaches the screen — as
+  // `loadError`.
+  const load = useCallback(() => reload().catch(() => {}), [reload]);
 
   async function create() {
     setBusy(true);
-    setError(null);
+    setMutationError(null);
     try {
       const { secret } = await applicationsPrototypeApi.createToken(appId, name);
       setRevealed(secret);
@@ -50,7 +68,7 @@ export function AccessTokensSection({ appId }: { appId: string }) {
       await load();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "access-tokens", step: "save" });
-      setError(err instanceof Error ? err.message : "Failed to create token.");
+      setMutationError(err instanceof Error ? err.message : "Failed to create token.");
     } finally {
       setBusy(false);
     }
@@ -63,7 +81,7 @@ export function AccessTokensSection({ appId }: { appId: string }) {
       await load();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "access-tokens", step: "delete" });
-      setError(err instanceof Error ? err.message : "Failed to revoke token.");
+      setMutationError(err instanceof Error ? err.message : "Failed to revoke token.");
     }
   }
 

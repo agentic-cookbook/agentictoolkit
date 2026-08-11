@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Plus } from "lucide-react";
 
+import { useResourceList } from "@agentic-toolkit/data";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
@@ -17,6 +18,11 @@ import { type SchemaGrant, newSchemaGrant } from "./permission-model";
  * top-level Schemas feature and set permissions on each. Structure is owned by
  * the Schemas feature; here we only grant + permission.
  */
+
+/** Module scope, so one identity serves every mount of this section — which is what lets the
+ *  catalog be read once for the whole ecosystem instead of once per application opened. */
+const loadSchemaDefinitions = (): Promise<SchemaDefinition[]> => schemasApi.list();
+
 export function SchemaPermissionsSection({
   grants,
   onChange,
@@ -24,13 +30,16 @@ export function SchemaPermissionsSection({
   grants: SchemaGrant[];
   onChange: (next: SchemaGrant[]) => void;
 }) {
-  const [definitions, setDefinitions] = useState<SchemaDefinition[] | null>(null);
+  // The ecosystem's schema catalog, cached: every application's permissions section wants the same
+  // list, and it was previously re-fetched for each one opened. A failure still leaves
+  // `definitions` null and the section quiet, exactly as before — but it is now REPORTED rather
+  // than becoming an unhandled rejection, which is what the hook's default error handling buys.
+  const { items: definitions } = useResourceList<SchemaDefinition>(
+    "schema-definitions",
+    loadSchemaDefinitions,
+  );
   const [picking, setPicking] = useState(false);
   const [pick, setPick] = useState("");
-
-  useEffect(() => {
-    void schemasApi.list().then(setDefinitions);
-  }, []);
 
   const defsById = new Map((definitions ?? []).map((d) => [d.id, d]));
   const grantedIds = new Set(grants.map((g) => g.schemaId));
