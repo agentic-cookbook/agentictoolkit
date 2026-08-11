@@ -5,7 +5,13 @@ import type { ReactElement } from "react";
 import { Building2, KeyRound, Server, Settings, UsersRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResourceExplorer, type ResourceTopic } from "@agentic-toolkit/resource";
-import { workspacesApi, WORKSPACES_QUERY_KEY, type Workspace } from "@agentic-toolkit/data";
+import {
+  useResourceItemPrefetch,
+  workspacesApi,
+  WORKSPACES_QUERY_KEY,
+  type Workspace,
+} from "@agentic-toolkit/data";
+import { organizationsApi, type Organization } from "@agentic-toolkit/data/organizations";
 import {
   EcosystemConfigGate,
   ServerBagsPane,
@@ -15,6 +21,7 @@ import { TeamsFeature } from "@agentic-toolkit/teams";
 import { parseTeamsPath } from "@agentic-toolkit/teams/parse";
 import {
   OrgSettingsGroup,
+  ORG_RECORD_CACHE_KEY,
   ORG_SETTINGS_DESCRIPTION,
   type OrgSettingsHrefs,
 } from "./OrgSettingsPane";
@@ -79,6 +86,16 @@ export function OrganizationsFeature({
   const organizations: Workspace[] | null = orgsQuery.data
     ? orgsQuery.data.filter((w) => w.kind === "organization")
     : null;
+
+  // Warm the org's own RECORD as the pointer rests on its row, onto the entry Settings ▸ Profile
+  // reads. The explorer already warms the ROUTE; the record is the other half of that click, and
+  // warming one half only makes the click as fast as its slower half. The id here is the slug —
+  // `getId` below says so — which is exactly what `organizationsApi.resolve` takes and what the
+  // Settings group caches under. The key is the group's own constant, not a matching literal.
+  const prefetchOrg = useResourceItemPrefetch<Organization>(
+    ORG_RECORD_CACHE_KEY,
+    organizationsApi.resolve,
+  );
 
   // Keyed on `refetch`, not on the query object: react-query hands back a NEW result object every
   // render, so depending on it would rebuild this callback every render while looking stable —
@@ -184,6 +201,7 @@ export function OrganizationsFeature({
       // `?workspace=` takes, and what every one of these topics scopes by. There is no separate
       // org id in a URL.
       getId={(w) => w.slug}
+      prefetchItem={prefetchOrg}
       getLabel={(w) => w.name}
       itemIcon={<Building2 size={16} aria-hidden />}
       nameSuffix="Organization"

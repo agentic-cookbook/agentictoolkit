@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Building2, Gauge, MapPin, Share2 } from "lucide-react";
 import { ErrorText, useAction } from "@agentic-toolkit/crud";
@@ -14,15 +14,31 @@ import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
 import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { approveNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
-import { checkWorkspaceSlugAvailable, WORKSPACES_QUERY_KEY } from "@agentic-toolkit/data";
+import {
+  checkWorkspaceSlugAvailable,
+  useResourceItemWriter,
+  WORKSPACES_QUERY_KEY,
+} from "@agentic-toolkit/data";
 import { organizationsApi, type Organization } from "@agentic-toolkit/data/organizations";
 import {
   StackGroupDetail,
   useReportSettingsDirty,
+  useResourceItem,
   type GroupTopicItem,
+  type ResourceItem,
   type TopicLeaf,
 } from "@agentic-toolkit/resource";
 import { SocialLinksPanel, AddressesPanel, UsagePanel } from "@agentic-toolkit/profile";
+
+/**
+ * The item-cache key the organization's own record is filed under, keyed by SLUG.
+ *
+ * Exported because warming an entry and reading one are done by different components — the feature
+ * prefetches on hover, this group reads on open — and two matching string literals in two files
+ * agree only by luck. A prefetch onto a key nothing reads costs a request and leaves the click
+ * exactly as slow as before, while every prop typechecks and every test of either half passes.
+ */
+export const ORG_RECORD_CACHE_KEY = "workspace-org";
 
 /**
  * Where a save that changes the org's identity should land the browser.
@@ -61,13 +77,41 @@ export function OrgSettingsGroup({
   /** The group's own row selection (`…/settings/<row>`). */
   leaf?: TopicLeaf;
 }): ReactElement {
+  // The org's own record — the body behind the Profile row, and the ONE read this group makes.
+  //
+  // Held HERE rather than inside the pane for two reasons. It is the only way the topic list can
+  // report the read: a member pane cannot reach the level its group publishes. And it starts the
+  // read when the group opens rather than when Profile is picked, so the record is usually already
+  // in hand by the time the row is clicked — the same head start the explorer's hover prefetch
+  // gives, taken one step later for anyone who arrives without hovering.
+  //
+  // `useResourceItem`, not a bare query: it paints the previously-read copy on the first frame and
+  // revalidates behind it, and it tells the host when the org has been archived out from under the
+  // stack — which is a real event here, because archiving is offered by this very pane, on another
+  // device or another tab.
+  const org = useResourceItem<Organization>(
+    ORG_RECORD_CACHE_KEY,
+    slug ?? null,
+    organizationsApi.resolve,
+  );
+  // Write the save's own answer back into the entry it came from, rather than invalidating: the
+  // caller is holding the server's copy, so a re-read would spend a request to arrive back at it.
+  // Keyed by `slug` — the id the read used — because a rename hands back a record that no longer
+  // carries it, and the saved copy would otherwise be filed under a slug nobody will look up.
+  const writeOrg = useResourceItemWriter<Organization>(ORG_RECORD_CACHE_KEY);
+  const onSaved = useCallback(
+    (next: Organization) => {
+      if (slug) writeOrg(slug, next);
+    },
+    [writeOrg, slug],
+  );
   const items: GroupTopicItem[] = useMemo(
     () => [
       {
         id: "profile",
         label: "Profile",
         icon: <Building2 size={16} aria-hidden />,
-        render: () => <OrgSettingsPane slug={slug} hrefs={hrefs} />,
+        render: () => <OrgSettingsPane org={org} hrefs={hrefs} onSaved={onSaved} />,
       },
       {
         id: "social",
@@ -88,13 +132,17 @@ export function OrgSettingsGroup({
         render: () => <UsagePanel workspaceSlug={slug} />,
       },
     ],
-    [slug, hrefs],
+    [slug, hrefs, org, onSaved],
   );
   return (
     <StackGroupDetail
       levelId="org-settings"
       title="Settings"
       items={items}
+      // The spinner in front of "Settings". The group's four rows are static, so what it reports is
+      // the body behind the one that is selected — and only Profile has a body this group fetches.
+      // The other three panes page their own contents and say so themselves.
+      busy={org.isFetching}
       urlSelection={leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined}
     />
   );
@@ -105,24 +153,23 @@ export const ORG_SETTINGS_DESCRIPTION =
   "This organization's own record — its name and handle, the links and addresses it publishes, " +
   "and what its people have used.";
 
-/** Edit an organization's own fields. Loads by slug; Save PATCHes only the changed fields, so a
- *  name/description edit never trips the slug's site-admin gate. */
+/** Edit an organization's own fields. Save PATCHes only the changed fields, so a name/description
+ *  edit never trips the slug's site-admin gate.
+ *
+ *  The record arrives already read — {@link OrgSettingsGroup} holds it, so the topic list can spin
+ *  while it lands. This turns the three states it can be in into the three things to render. */
 export function OrgSettingsPane({
-  slug,
+  org,
   hrefs,
+  onSaved,
 }: {
-  slug: string | undefined;
+  org: ResourceItem<Organization>;
   hrefs: OrgSettingsHrefs;
+  /** Record what the save returned. Owned by {@link OrgSettingsGroup}, which is where the id this
+   *  record is cached under lives — after a rename the saved copy no longer carries it. */
+  onSaved: (org: Organization) => void;
 }): ReactElement {
-  const qc = useQueryClient();
-  const orgQuery = useQuery({
-    queryKey: ["workspace-org", slug],
-    queryFn: () => organizationsApi.resolve(slug!),
-    // Nothing to resolve until a row is picked; without this the query fires on `undefined` and
-    // reports a 404 as if the organization had been deleted.
-    enabled: Boolean(slug),
-  });
-  if (orgQuery.isError) {
+  if (org.error) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center p-6">
         <EmptyState
@@ -132,12 +179,17 @@ export function OrgSettingsPane({
       </div>
     );
   }
-  if (!orgQuery.data) return loading();
+  if (!org.item) return loading();
   return (
     <OrgSettingsForm
-      org={orgQuery.data}
+      org={org.item}
       hrefs={hrefs}
-      onSaved={(next) => qc.setQueryData(["workspace-org", slug], next)}
+      // Locked until the server's answer for THIS org is on screen. A cached copy paints first and
+      // is revalidated behind it, so without the lock an edit could be typed into last week's name
+      // and then PATCHed over whatever the server has now. On the normal path the copy is fresh,
+      // nothing is in flight, and the form is live on the first frame.
+      readOnly={!org.isSettled}
+      onSaved={onSaved}
     />
   );
 }
@@ -148,10 +200,16 @@ export function OrgSettingsForm({
   org,
   hrefs,
   onSaved,
+  readOnly = false,
 }: {
   org: Organization;
   hrefs: OrgSettingsHrefs;
   onSaved: (org: Organization) => void;
+  /** The copy on screen has not been confirmed by the server yet — a cached record is painting
+   *  while its re-read is in flight. Locks the fields and Save, so nothing is typed into a stale
+   *  name and then written over what the server actually has. Defaults to false: a caller holding
+   *  a record it read itself has nothing to wait for. */
+  readOnly?: boolean;
 }): ReactElement {
   const [name, setName] = useState(org.name);
   const [slug, setSlug] = useState(org.slug);
@@ -297,7 +355,11 @@ export function OrgSettingsForm({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <FieldGroup title="Organization">
           <Field label="name">
-            <Input value={name} onChange={(e) => setName(e.target.value)} />
+            <Input
+              value={name}
+              disabled={readOnly}
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
           {/* The same control the New Organization dialog uses: `org.` is minted server-side and
               is never the user's to edit, so it is static text beside the editable leaf. */}
@@ -308,11 +370,13 @@ export function OrgSettingsForm({
             placeholder={org.slug}
             hint={slugHint}
             error={slugError}
+            disabled={readOnly}
             onChange={setSlug}
           />
           <Field label="description">
             <Textarea
               value={description}
+              disabled={readOnly}
               onChange={(e) => setDescription(e.target.value)}
               rows={4}
               placeholder="What this organization is about"
@@ -320,7 +384,7 @@ export function OrgSettingsForm({
           </Field>
           <ErrorText error={error} />
           <div className="flex justify-end">
-            <Button size="sm" disabled={busy || !dirty || slugBlocked} onClick={save}>
+            <Button size="sm" disabled={busy || !dirty || slugBlocked || readOnly} onClick={save}>
               {busy ? "Saving…" : "Save"}
             </Button>
           </div>

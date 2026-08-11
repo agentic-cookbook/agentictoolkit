@@ -43,12 +43,13 @@ const TOPICS: ResourceTopic[] = [
   { id: "edit", label: "Edit Topic", icon: null, render: () => <div>editor pane</div> },
 ];
 
-function renderExplorer(activeId?: string) {
+function renderExplorer(activeId?: string, prefetchItem?: (id: string) => void) {
   return render(
     <ResourceExplorer<Row>
       activeId={activeId}
       basePath="/home"
       items={ITEMS}
+      prefetchItem={prefetchItem}
       getId={(i) => i.id}
       getLabel={(i) => i.name}
       nameSuffix="Project"
@@ -100,6 +101,36 @@ describe("ResourceExplorer route prefetch", () => {
     act(() => void vi.advanceTimersByTime(100));
 
     expect(prefetch).toHaveBeenCalledWith("/home/p1/edit");
+  });
+
+  // The route and the record are two halves of one click, and only the route half is the
+  // explorer's own. A host that supplies `prefetchItem` and never has it called is the same
+  // failure this file's opening note describes, one layer in: every prop typechecks, the route is
+  // warm, and the click still waits on the body it opens with.
+  it("warms the row's own record alongside its route", () => {
+    const prefetchItem = vi.fn();
+    renderExplorer(undefined, prefetchItem);
+
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Project One" }));
+    act(() => void vi.advanceTimersByTime(100));
+
+    // The row's ID, not its href: the record cache is keyed by the entity id the host's loader
+    // takes, so passing the URL would warm an entry nothing will ever read.
+    expect(prefetchItem).toHaveBeenCalledWith("p1");
+    expect(prefetch).toHaveBeenCalledWith("/home/p1");
+  });
+
+  // Only the ENTITY list warms records. A topic row is not an entity — calling the host's loader
+  // with "edit" would fetch a record that does not exist, on every hover down the topics list.
+  it("warms no record from the topics list", () => {
+    const prefetchItem = vi.fn();
+    renderExplorer("p1", prefetchItem);
+
+    fireEvent.pointerEnter(screen.getByRole("button", { name: "Edit Topic" }));
+    act(() => void vi.advanceTimersByTime(100));
+
+    expect(prefetch).toHaveBeenCalledWith("/home/p1/edit");
+    expect(prefetchItem).not.toHaveBeenCalled();
   });
 
   // Sweeping past a row is not intent — see TopicList's dwell.

@@ -51,6 +51,7 @@ export function StackGroupDetail({
   items,
   levelId,
   title,
+  busy,
   leafHeader,
   emptyHint = "Select a topic.",
   urlSelection,
@@ -62,6 +63,15 @@ export function StackGroupDetail({
   /** The rail's heading (like every other stack rail): the group's name — "AI", the persona's
    *  name, etc. */
   title: string;
+  /** A read is in flight for this group — its own rows, or the body of the row it has selected.
+   *  Draws the spinner ahead of `title`.
+   *
+   *  A group's members are STATIC rows, so in practice this is always the second half: the body
+   *  behind whichever member is open. That body is read inside the member's own pane, which cannot
+   *  reach the level published here — so a caller who wants the spinner has to hold the read
+   *  itself and hand the member what it fetched. Omit it for a group whose members read nothing
+   *  per row. */
+  busy?: boolean;
   /** Rendered once above the active member's content, in the leaf (e.g. a Save/Cancel bar). */
   leafHeader?: ReactNode;
   /** Shown in the leaf until a member is chosen (no auto-selection into the child rail). */
@@ -95,6 +105,7 @@ export function StackGroupDetail({
     id: levelId,
     title,
     items: memberItems,
+    busy,
     selectedId: active?.id ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
