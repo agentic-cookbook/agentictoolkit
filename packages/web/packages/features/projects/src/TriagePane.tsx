@@ -307,6 +307,7 @@ export function TriagePane({
     items: queue,
     reload,
     error: loadError,
+    isFetching: fetchingQueue,
   } = useResourceList<WorkItem>(`project:${projectId}:triage`, loadQueue);
   // The SAME cache keys the board fills, so nothing here re-reads what the Work Items surface has
   // already loaded, and a column renamed there is what this offers.
@@ -366,6 +367,12 @@ export function TriagePane({
     selectedId: leaf.leafId,
     onSelect: (id) => leaf.onSelect(id),
     onClear: () => leaf.onSelect(null),
+    // The spinner in front of "Triage". The QUEUE's read is the whole of it here, and that is not
+    // a gap: this list's selected row has no body of its own to fetch — a decision is taken
+    // against the row already in `rows` — so the queue read is the only read this column makes.
+    // It covers the reload after every accept/decline, which is exactly when the column is
+    // catching up and the cached rows on screen are one decision out of date.
+    busy: fetchingQueue,
     emptyLabel: queue === null ? "Loading…" : "Nothing waiting — the inbox is clear.",
     itemNoun: words.one,
     overviewHelp: `${words.manyCap} filed into this board but not yet accepted onto it. Open one to place it, or decline it.`,

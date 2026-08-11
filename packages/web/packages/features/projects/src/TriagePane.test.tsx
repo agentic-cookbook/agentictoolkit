@@ -355,6 +355,31 @@ describe("TriagePane", () => {
     await waitFor(() => expect(listForProject).toHaveBeenCalledTimes(2));
   });
 
+  it("spins the list header while the queue is being read, and stops when it lands", async () => {
+    // Held open, so the in-flight moment is a state the test can stand in rather than a frame it
+    // has to catch. The real rail is mounted here (RailHostBoundary), so this asserts the spinner
+    // the user actually sees — not a harness stand-in for the flag.
+    let land = (_rows: WorkItem[]) => {};
+    listForProject.mockReturnValue(
+      new Promise<WorkItem[]>((resolve) => {
+        land = resolve;
+      }),
+    );
+    render(<Harness />);
+
+    const rail = await screen.findByRole("complementary", { name: "Topic list" });
+    expect(within(rail).getByRole("status", { name: "Loading" })).not.toBeNull();
+
+    // The point of the spinner on THIS column: the queue read is the only read it makes, and it
+    // runs again after every accept and decline — the moment the rows on screen are one decision
+    // out of date and the column is catching up.
+    land([structuredClone(ANCIENT)]);
+    await waitFor(() =>
+      expect(within(rail).queryByRole("status", { name: "Loading" })).toBeNull(),
+    );
+    expect(within(rail).getByRole("button", { name: /Login is broken on Safari/ })).not.toBeNull();
+  });
+
   it("says the inbox is clear rather than leaving the pane blank", async () => {
     listForProject.mockResolvedValue([]);
     render(<Harness />);

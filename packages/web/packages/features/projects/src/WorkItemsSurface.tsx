@@ -225,6 +225,7 @@ export function WorkItemsSurface({
     setItems,
     reload,
     error: loadError,
+    isFetching: fetchingItems,
   } = useResourceList<WorkItem>(`project:${projectId}:work-items`, loadItems);
   const { items: statusRows } = useResourceList<ProjectStatus>(
     `project:${projectId}:statuses`,
@@ -551,6 +552,13 @@ export function WorkItemsSurface({
     onNew: () => setNewOpen(true),
     newLabel: `New ${words.one}`,
     newActive: newOpen,
+    // The spinner in front of the board's name. This level's ROWS are the five views and are
+    // static — the read it reports is the BODY of whichever one is selected, which is the same
+    // cards for every view and therefore one flag rather than five. That is the spec's "its own
+    // rows, or the body of the row it has selected", and here only the second half can ever be
+    // true. It covers every `reload` a write triggers too, which is the moment the cards on
+    // screen are the optimistic answer rather than the server's.
+    busy: fetchingItems,
   });
 
   const activeView: ReactNode = useMemo(() => {

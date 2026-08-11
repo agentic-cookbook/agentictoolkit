@@ -67,6 +67,12 @@ export function KnowledgeBasesPane({
     selectedId: active?.table ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
+    // The spinner in front of "Knowledge Bases", and the ONE read this list has to report. Its
+    // rows arrive as a prop — the host's catalog, known synchronously — so the only thing it ever
+    // waits on is the viewer, which is what decides whether a row is readable and therefore
+    // whether it is offered at all. The selected table's body is not this level's to report: a
+    // CrudDataView pages its own rows and shows its own state for them.
+    busy: !viewerReady,
     // "No tables." would be a lie for the paint before auth settles, when the list is empty
     // because the answer isn't in yet.
     emptyLabel: viewerReady ? "No tables." : "Loading…",

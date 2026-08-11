@@ -450,6 +450,31 @@ describe("WorkItemsSurface", () => {
     expect(listForProject).toHaveBeenCalledWith("p1");
   });
 
+  it("spins the list header while the cards are being read, and stops when they land", async () => {
+    // Held open, so the in-flight moment is a state to stand in rather than a frame to catch.
+    let land = (_rows: WorkItem[]) => {};
+    listForProject.mockReturnValue(
+      new Promise<WorkItem[]>((resolve) => {
+        land = resolve;
+      }),
+    );
+    render(<Harness />);
+
+    // The real rail is mounted, so this is the spinner the user sees. What it reports is NOT this
+    // level's rows — the five views are static and always on screen — but the BODY behind the row
+    // that is selected, which is the same cards for every one of them. That is why one flag
+    // covers five rows rather than needing five.
+    const rail = await screen.findByRole("complementary", { name: "Topic list" });
+    expect(within(rail).getByRole("status", { name: "Loading" })).not.toBeNull();
+    for (const label of ["List", "Board", "Table", "Timeline", "Calendar"]) {
+      expect(within(rail).getByRole("button", { name: label })).not.toBeNull();
+    }
+
+    land([structuredClone(W1), structuredClone(W2)]);
+    await listLoaded();
+    expect(within(rail).queryByRole("status", { name: "Loading" })).toBeNull();
+  });
+
   // The three PLANNING values the surface loads for its views: the WORKSPACE's cycles (one list
   // answers every board its owner runs), the BOARD's milestones (a plan belongs to one board), and
   // the PROJECT's estimate scale (what a size means here). The first two are loaded at DIFFERENT

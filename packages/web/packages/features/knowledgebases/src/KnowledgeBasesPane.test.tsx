@@ -78,12 +78,14 @@ const TABLES: CrudTableMeta[] = [
 
 /** Renders the published level's rows as clickable buttons — enough to drive table selection the
  *  way the hub's workspace shell (or a standalone feature site's own rail) would. An empty level
- *  shows its `emptyLabel`, the way a real rail does. */
+ *  shows its `emptyLabel`, the way a real rail does, and stands in for the header spinner the real
+ *  rail draws while `busy` — a typechecked optional prop cannot tell you whether this pane sets it. */
 function Rail({ levels }: { levels: TopicLevel[] }) {
   const level = levels[0];
   if (!level) return null;
   return (
     <div>
+      {level.busy && <span data-testid={`busy-${level.id}`} />}
       {level.items.length === 0 && <p>{level.emptyLabel}</p>}
       {level.items.map((it) => (
         <button key={it.id} type="button" onClick={() => level.onSelect(it.id)}>
@@ -204,6 +206,31 @@ describe("KnowledgeBasesPane", () => {
       );
       expect(screen.queryByRole("button", { name: "blocks" })).toBeNull();
       expect(screen.getByText("Loading…")).not.toBeNull();
+    });
+
+    it("spins the list header while the viewer answer is outstanding, and stops when it lands", () => {
+      // The spinner and the empty label answer two different questions about the same moment, and
+      // only together do they read honestly: "Loading…" says why there are no rows, the spinner
+      // says the column is still working. The viewer is the ONLY read behind this list — its rows
+      // arrive as a prop — so it is also the only thing that can raise the flag.
+      viewerRef.current = { isAdmin: false, ready: false };
+      const { rerender } = render(
+        <Harness>
+          <KnowledgeBasesPane tables={TABLES} />
+        </Harness>,
+      );
+      expect(screen.getByTestId("busy-knowledgebases-tables")).not.toBeNull();
+
+      viewerRef.current = { isAdmin: false, ready: true };
+      rerender(
+        <Harness>
+          <KnowledgeBasesPane tables={TABLES} />
+        </Harness>,
+      );
+      // Cleared in the same paint that puts the rows up — a spinner still turning over a settled
+      // list says a read is outstanding when none is.
+      expect(screen.queryByTestId("busy-knowledgebases-tables")).toBeNull();
+      expect(screen.getByRole("button", { name: "blocks" })).not.toBeNull();
     });
   });
 

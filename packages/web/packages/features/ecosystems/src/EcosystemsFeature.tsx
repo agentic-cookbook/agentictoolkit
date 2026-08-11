@@ -157,10 +157,13 @@ const isGroupId = (id: string): id is GroupId => (GROUP_IDS as readonly string[]
  */
 function ChildEcosystemsLevel({
   items,
+  busy,
   basePath,
   onNew,
 }: {
   items: Ecosystem[] | null;
+  /** The children read is in flight. Drives the spinner ahead of "Child Ecosystems". */
+  busy: boolean;
   basePath: string;
   onNew: () => void;
 }): ReactElement {
@@ -179,6 +182,11 @@ function ChildEcosystemsLevel({
     onClear: () => {},
     onNew,
     newLabel: "New Ecosystem",
+    // The spinner in front of "Child Ecosystems". Nothing is selected WITHIN this list — a pick
+    // drills out to the child and re-scopes the whole rail — so its own rows are the only read it
+    // can report, and this is the one that matters: the query re-fetches every time the rail
+    // re-scopes, and the rows on screen until it lands are the previous ecosystem's children.
+    busy,
     emptyLabel: items === null ? "Loading…" : "No child ecosystems yet.",
   });
   return (
@@ -495,6 +503,7 @@ export function EcosystemsFeature({
         return (
           <ChildEcosystemsLevel
             items={children}
+            busy={childrenQuery.isFetching}
             basePath={basePath}
             onNew={() => openCreateDialog(false)}
           />
