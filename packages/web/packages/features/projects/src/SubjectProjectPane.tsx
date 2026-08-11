@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useCallback, useState, type ReactElement } from "react";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { useResourceItemQuery } from "@agentic-toolkit/data";
 import { projectsApi, type Project } from "@agentic-toolkit/data/projects";
 import { StackGroupDetail, type GroupTopicItem, type TopicLeaf } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
@@ -31,33 +32,31 @@ export function SubjectProjectPane({
    *  route cedes it via `ctx.leaf`). Omit for local selection (the persona editor). */
   memberSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
 }): ReactElement {
-  // null = confirmed absent; undefined = still loading. Same convention as the
-  // sibling panes (no react-query in this package).
-  const [project, setProject] = useState<Project | null | undefined>(undefined);
-  const [error, setError] = useState<string | null>(null);
-
   // Work Items' inner view switcher (list / board / …) — a real local leaf, so the
   // switcher works in the embedded context even though the host's URL grammar ends at
   // the member segment (the view choice is content state here, not navigation).
   const [viewLeaf, setViewLeaf] = useState<string | null>(null);
   const localViewLeaf: TopicLeaf = { leafId: viewLeaf, onSelect: setViewLeaf };
 
-  useEffect(() => {
-    let alive = true;
-    setProject(undefined);
-    setError(null);
-    projectsApi
-      .subjectProject(subjectKind, subjectId)
-      .then((p) => {
-        if (alive) setProject(p);
-      })
-      .catch((e) => {
-        if (alive) setError(e instanceof Error ? e.message : "Failed to load the project.");
-      });
-    return () => {
-      alive = false;
-    };
-  }, [subjectKind, subjectId]);
+  // Wrapped in an object, which is not ceremony: `null` is a real ANSWER here (no project is
+  // provisioned for this subject), so it cannot also stand for "nothing read yet" the way the
+  // cache's own null does. The wrapper keeps the two apart, which is what restores the tri-state
+  // this pane's three render branches are written against.
+  const loadSubjectProject = useCallback(
+    async () => ({ project: await projectsApi.subjectProject(subjectKind, subjectId) }),
+    [subjectKind, subjectId],
+  );
+
+  // Keyed on the PAIR: a persona and a product can carry the same identifier, and they resolve to
+  // two different projects. Reading through the cache is what makes re-entering a subject's
+  // Project topic paint the rail instead of blanking to "Loading…" — the read settles behind it.
+  const { item, error } = useResourceItemQuery<{ project: Project | null }>(
+    "subject-project",
+    `${subjectKind}:${subjectId}`,
+    loadSubjectProject,
+  );
+  // null = confirmed absent; undefined = still loading. Same convention as the sibling panes.
+  const project: Project | null | undefined = item?.project;
 
   // The second door into a board gets the same live wake as the first — a subject's project is a
   // project, and a card added to it from the standalone feature must repaint here too. Called

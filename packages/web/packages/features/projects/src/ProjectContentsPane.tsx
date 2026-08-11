@@ -139,7 +139,6 @@ export function ProjectContentsPane({
   // standalone feature site → the trailing slot renders nothing.
   const renderRecordAffordance = useRecordAffordance();
 
-  const [candidates, setCandidates] = useState<TargetDescriptor[]>([]);
   const [direction, setDirection] = useState<ArtifactDirection>("ingested");
   const [pick, setPick] = useState<string | null>(null);
   const [attaching, setAttaching] = useState(false);
@@ -167,19 +166,23 @@ export function ProjectContentsPane({
     error: loadError,
   } = useResourceList<ProjectArtifact>(`project:${projectId}:artifacts`, loadArtifacts);
 
-  const loadCandidates = useCallback(async () => {
-    try {
-      setCandidates(await projectArtifactsApi.attachable(projectId, { limit: CANDIDATE_LIMIT }));
-    } catch {
-      // A picker that cannot be filled is not an error worth a banner — the lists above still
-      // read, and the attach control's own empty state says what happened.
-      setCandidates([]);
-    }
-  }, [projectId]);
-
-  useEffect(() => {
-    void loadCandidates();
-  }, [loadCandidates]);
+  // Cached like the artifacts, so re-entering Material paints the picker's options too. The
+  // fetcher SWALLOWS into an empty list rather than rethrowing: a picker that cannot be filled is
+  // not an error worth a banner — the lists above still read, and the attach control's own empty
+  // state says what happened. A fetcher that cannot fail has no error to report, so the hook's
+  // error channel stays empty and nothing below reads one.
+  const loadCandidates = useCallback(
+    () =>
+      projectArtifactsApi
+        .attachable(projectId, { limit: CANDIDATE_LIMIT })
+        .catch(() => [] as TargetDescriptor[]),
+    [projectId],
+  );
+  const { items: candidateRows, reload: reloadCandidates } = useResourceList<TargetDescriptor>(
+    `project:${projectId}:attachable`,
+    loadCandidates,
+  );
+  const candidates = candidateRows ?? [];
 
   async function attach(): Promise<void> {
     const chosen = candidates.find((c) => candidateKey(c) === pick);
@@ -193,9 +196,13 @@ export function ProjectContentsPane({
         targetId: chosen.id,
       });
       setPick(null);
-      // The reload's own promise rejects on failure; the hook has already surfaced it as
-      // `loadError`, so there is nothing left for this caller to do with it.
-      await reloadArtifacts().catch(() => {});
+      // The candidates too, and this is what the cache made necessary: a hand-rolled effect
+      // re-read them on the next mount, so a just-attached target dropped out of the picker by
+      // itself. A cached list would keep offering it for the whole staleness window instead.
+      //
+      // The reloads' own promises reject on failure; the hook has already surfaced the artifacts'
+      // as `loadError`, so there is nothing left for this caller to do with either.
+      await Promise.all([reloadArtifacts(), reloadCandidates()]).catch(() => {});
     } catch (e) {
       setAttachError(e instanceof Error ? e.message : "Failed to attach.");
     } finally {
@@ -208,7 +215,8 @@ export function ProjectContentsPane({
     setAttachError(null);
     try {
       await projectArtifactsApi.unlink(projectId, artifact.id);
-      await reloadArtifacts().catch(() => {});
+      // The detached target is attachable again, so the picker has to hear about it too.
+      await Promise.all([reloadArtifacts(), reloadCandidates()]).catch(() => {});
     } catch (e) {
       setAttachError(e instanceof Error ? e.message : "Failed to detach.");
     } finally {

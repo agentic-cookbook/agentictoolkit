@@ -13,11 +13,12 @@
 //      for a deleted or unreachable target, and the row must survive it — dropping the row
 //      would quietly shrink a project's history.
 //
-// @agentic-toolkit/data is deliberately NOT mocked: the attached list runs through the REAL
-// useResourceList, including its module-scope cache. That cache is keyed `project:<id>:artifacts`
-// and OUTLIVES cleanup(), so rows carry between tests that use the same project id. Harmless
-// while they all stub the same four rows; a test that stubs a DIFFERENT list uses its own id, or
-// it would seed the next one's first paint with rows that test never asked for.
+// @agentic-toolkit/data is deliberately NOT mocked: both lists the pane reads — the attached
+// artifacts (`project:<id>:artifacts`) and the picker's candidates (`project:<id>:attachable`) —
+// run through the REAL useResourceList, including its module-scope cache. That cache is emptied
+// between tests by the package's `vitest-setup` teardown, so each test below starts from an empty
+// one; a test that stubs a DIFFERENT list still uses its own project id, which is what keeps the
+// two keys legible rather than what keeps them apart.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 
@@ -126,7 +127,11 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-/** Open the candidate picker and return its listbox. */
+/** Open the candidate picker and return its listbox.
+ *
+ *  The picker opens whether or not the candidates have landed — so every caller below reaches
+ *  its option with `findByRole`, not `getByRole`. The candidates now arrive through the shared
+ *  cache, and "the fetch was called" is a poll or two ahead of "the options are on screen". */
 function openPicker(): HTMLElement {
   fireEvent.click(screen.getByRole("button", { name: "Content" }));
   return screen.getByRole("listbox", { name: "Content" });
@@ -181,7 +186,7 @@ describe("ProjectContentsPane", () => {
     fireEvent.change(screen.getByLabelText("Direction"), { target: { value: "produced" } });
     openPicker();
     // Titles, not `(kind, id)` pointers — the pointer is the pane's business, not a reader's.
-    fireEvent.click(screen.getByRole("option", { name: "Pricing research" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Pricing research" }));
     fireEvent.click(screen.getByRole("button", { name: "Attach" }));
 
     await waitFor(() =>
@@ -207,7 +212,7 @@ describe("ProjectContentsPane", () => {
     await waitFor(() => expect(attachable).toHaveBeenCalled());
 
     openPicker();
-    fireEvent.click(screen.getByRole("option", { name: "A saved link" }));
+    fireEvent.click(await screen.findByRole("option", { name: "A saved link" }));
     fireEvent.click(screen.getByRole("button", { name: "Attach" }));
 
     await waitFor(() =>
@@ -236,7 +241,7 @@ describe("ProjectContentsPane", () => {
     await waitFor(() => expect(attachable).toHaveBeenCalled());
 
     openPicker();
-    fireEvent.click(screen.getByRole("option", { name: "Pricing research" }));
+    fireEvent.click(await screen.findByRole("option", { name: "Pricing research" }));
     fireEvent.click(screen.getByRole("button", { name: "Attach" }));
 
     expect(await screen.findByText("Target not found")).not.toBeNull();
@@ -272,5 +277,53 @@ describe("ProjectContentsPane", () => {
     expect(screen.queryByText("Loading…")).toBeNull();
     expect(screen.queryByText("Nothing ingested yet.")).toBeNull();
     expect(screen.queryByText("Nothing produced yet.")).toBeNull();
+  });
+
+  it("paints both lists from cache on a remount, reading each once", async () => {
+    render(<ProjectContentsPane projectId="p1" title="Contents" />);
+    expect(await screen.findByText("Competitor teardown")).not.toBeNull();
+    openPicker();
+    expect(await screen.findByRole("option", { name: "Pricing research" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(attachable).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    // Synchronous, unlike both `findBy`s above: the rows AND the picker's options are on the
+    // first paint. The picker is the half that used to re-read on every visit.
+    render(<ProjectContentsPane projectId="p1" title="Contents" />);
+    expect(screen.getByText("Competitor teardown")).not.toBeNull();
+    openPicker();
+    expect(screen.getByRole("option", { name: "Pricing research" })).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(1);
+    expect(attachable).toHaveBeenCalledTimes(1);
+  });
+
+  // What the cache made necessary. The hand-rolled effect re-read the candidates on the next
+  // mount, so a just-attached target dropped out of the picker by itself; a cached list would
+  // keep offering it for the whole staleness window instead.
+  it("re-reads the candidates after an attach, so what was just attached stops being offered", async () => {
+    render(<ProjectContentsPane projectId="p1" title="Contents" />);
+    openPicker();
+    fireEvent.click(await screen.findByRole("option", { name: "Pricing research" }));
+    expect(attachable).toHaveBeenCalledTimes(1);
+
+    // What the backend would answer next: the attached target is no longer attachable.
+    attachable.mockResolvedValue([structuredClone(CANDIDATES[1]!)]);
+    fireEvent.click(screen.getByRole("button", { name: "Attach" }));
+
+    await waitFor(() => expect(attachable).toHaveBeenCalledTimes(2));
+    // Picking closes the picker, so the assertion has to open it again — which is also how a
+    // user would find out, and the point: the next open offers what is still attachable.
+    openPicker();
+    expect(await screen.findByRole("option", { name: "Postmortem thread" })).not.toBeNull();
+    expect(screen.queryByRole("option", { name: "Pricing research" })).toBeNull();
+  });
+
+  it("re-reads the candidates after a detach, so the freed target is offered again", async () => {
+    render(<ProjectContentsPane projectId="p1" title="Contents" />);
+    fireEvent.click(await screen.findByRole("button", { name: "Detach Competitor teardown" }));
+
+    await waitFor(() => expect(unlink).toHaveBeenCalledWith("p1", "a1"));
+    await waitFor(() => expect(attachable).toHaveBeenCalledTimes(2));
   });
 });
