@@ -1,7 +1,17 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { notifyManager } from '@tanstack/react-query'
 import { useResourceList, revalidateResources } from '../use-resource-list'
+import { getToolkitQueryClient } from '../query'
+
+// Notify observers SYNCHRONOUSLY. react-query's default scheduler is a real `setTimeout(fn, 0)` —
+// it batches notifications into a macrotask — and `act(async …)` drains microtasks only, so a
+// render driven by a settled query has NOT happened when `await act(…)` returns. Without this the
+// assertions below would each have to become a `waitFor`, which is strictly weaker: `waitFor` also
+// passes on the value already on screen, so it cannot catch a stale response arriving one tick
+// late — the exact defect the out-of-order tests exist to pin.
+notifyManager.setScheduler((cb) => cb())
 
 // Drive the module cache's tenant scoping through the real path: the cache is
 // keyed by the current access token's `ecosystem_id`, which useResourceList
@@ -20,6 +30,9 @@ function Probe({ cacheKey, load }: { cacheKey: string; load: () => Promise<strin
 
 afterEach(() => {
   cleanup()
+  // The cache now outlives a single test (that is the point of it). Clear it so one test's rows
+  // can never seed another's first paint.
+  getToolkitQueryClient().clear()
   localStorage.clear()
 })
 
@@ -62,12 +75,18 @@ describe('useResourceList settled flag', () => {
     )
   }
 
-  it('is true on a SEEDED first paint, so cached rows are not read as the server’s answer', async () => {
+  it('is true on a SEEDED first paint whose rows are STALE, so they are not read as the server’s answer', async () => {
     const cacheKey = '/settled-seed'
     signInAs('A')
     render(<FlagProbe cacheKey={cacheKey} load={() => Promise.resolve(['a1'])} />)
     await waitFor(() => expect(screen.getByTestId('items')).toHaveAttribute('data-fetching', 'false'))
     cleanup()
+
+    // Mark the cached rows stale — what a live wake does, and what the passage of `staleTime`
+    // does. This step is the behaviour change: rows that are still FRESH now paint with
+    // `isFetching` FALSE, because they ARE the server's answer from under five minutes ago, and
+    // re-reading them is the round trip this whole change exists to remove.
+    revalidateResources(() => true)
 
     // The remount that matters: rows on screen from the first render, and nothing settled yet.
     signInAs('A')
