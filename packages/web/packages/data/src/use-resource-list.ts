@@ -120,16 +120,25 @@ export function useResourceList<T>(
   );
 
   // The documented refetch-on-identity-change contract. A NEW `load` identity means a new fetcher
-  // (a filter changed), and react-query keys on `queryKey` alone — it would keep serving the
-  // previous fetcher's rows forever. Invalidating on the flip re-reads with the new one.
+  // (a filter changed, or the scope it needed finally resolved), and react-query keys on
+  // `queryKey` alone — left to itself it would keep serving the previous fetcher's rows forever.
+  //
+  // CANCEL, then read. `invalidateQueries` alone is not enough, and the case it misses is the
+  // common one: react-query honours `cancelRefetch` only for a query that ALREADY has data
+  // (`Query.fetch` guards the cancel on `state.data !== undefined`), so an in-flight FIRST read is
+  // never replaced — it is adopted, and its promise handed back. A list deliberately held in
+  // Loading until its scope arrives (`load` = a promise that never settles, which is how a feature
+  // avoids flashing the unscoped set) would then wait on the old fetcher forever, and a slow first
+  // read merely overtaken by a scope change would land its wrong-scope rows and keep them.
   const loadRef = useRef(load);
   useEffect(() => {
     if (loadRef.current === load) return;
     loadRef.current = load;
-    void client.invalidateQueries({
-      queryKey: resourceListKey(cacheKey, tenantId),
-      exact: true,
-    });
+    const filters = { queryKey: resourceListKey(cacheKey, tenantId), exact: true };
+    void client
+      .cancelQueries(filters)
+      .then(() => client.refetchQueries(filters))
+      .catch(() => {});
   }, [load, client, cacheKey, tenantId]);
 
   // `refetch` is referentially stable, so `reload` is too — which is what lets callers hold it in

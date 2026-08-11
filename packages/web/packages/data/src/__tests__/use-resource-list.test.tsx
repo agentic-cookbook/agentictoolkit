@@ -197,6 +197,62 @@ describe('useResourceList out-of-order responses', () => {
   })
 })
 
+// A new `load` identity is a documented API — "re-read, the fetcher changed" — and it is the only
+// way a caller can say so, since the query key names the RESOURCE and does not move when the scope
+// the fetcher closes over does. Both shapes below are in the fleet.
+describe('useResourceList refetch on fetcher identity change', () => {
+  it('re-reads with the NEW fetcher when the first read is still outstanding', async () => {
+    // The shape a feature uses to avoid flashing the unscoped set: hold the list in Loading with a
+    // promise that never settles until the slug resolves to an id, then swap in the real fetcher.
+    // react-query cancels an in-flight read only when the query already HAS data, so left to
+    // itself it adopts the promise that never settles and the list loads forever.
+    signInAs('A')
+    const never = () => new Promise<string[]>(() => {})
+    const scoped = vi.fn(() => Promise.resolve(['scoped']))
+
+    const { rerender } = render(<Probe cacheKey="/late-scope" load={never} />)
+    expect(screen.getByTestId('items')).toHaveTextContent('null')
+
+    rerender(<Probe cacheKey="/late-scope" load={scoped} />)
+
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveTextContent('scoped'))
+    expect(scoped).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-reads with the new fetcher after rows have already landed', async () => {
+    // The filter swap: rows are on screen, the fetcher changes, and the rows that replace them
+    // must come from the NEW one. Nothing else in the hook's surface can express this — the key
+    // is the same list either way.
+    signInAs('A')
+    const unfiltered = vi.fn(() => Promise.resolve(['all']))
+    const filtered = vi.fn(() => Promise.resolve(['mine']))
+
+    const { rerender } = render(<Probe cacheKey="/filtered" load={unfiltered} />)
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveTextContent('all'))
+
+    rerender(<Probe cacheKey="/filtered" load={filtered} />)
+
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveTextContent('mine'))
+    expect(unfiltered).toHaveBeenCalledTimes(1)
+    expect(filtered).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not re-read when the fetcher identity is unchanged', async () => {
+    // The other half of the contract: a re-render alone is not a reason to hit the network, or
+    // every parent state change on the page would cost one request per mounted list.
+    signInAs('A')
+    const load = vi.fn(() => Promise.resolve(['rows']))
+
+    const { rerender } = render(<Probe cacheKey="/stable" load={load} />)
+    await waitFor(() => expect(screen.getByTestId('items')).toHaveTextContent('rows'))
+
+    rerender(<Probe cacheKey="/stable" load={load} />)
+    rerender(<Probe cacheKey="/stable" load={load} />)
+
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+})
+
 // `revalidateResources` is how a live stream reaches lists it holds no reference to. What must
 // hold: it re-reads exactly the MOUNTED lists whose key the predicate accepts — a pane nobody is
 // looking at must not fetch (a wake would otherwise cost a request per list ever rendered), and a
