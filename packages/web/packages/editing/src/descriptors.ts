@@ -56,12 +56,30 @@ export interface SelectOption<TValue> {
   readonly label: string
 }
 
-/** What every field may declare, whatever its control. */
+/**
+ * What every field may declare, whatever its control.
+ *
+ * The options are split across three types rather than pooled into one, because an
+ * option a control ignores is worse than an option it lacks: it reads at the call
+ * site as a behaviour that was asked for and granted. `placeholder` on a checkbox
+ * renders nowhere, and `required` on a checkbox can never fire — "empty" is
+ * null/blank/[] and `false` is none of those, so the box is satisfied unticked.
+ * Both were accepted silently. Now neither compiles.
+ */
 export interface FieldOptions {
   /** Caption above the control. */
   readonly label: string
   /** Dim helper line below the control; replaced by the error when there is one. */
   readonly hint?: ReactNode
+  /** Renders the control read-only without removing it from the layout. */
+  readonly disabled?: boolean
+}
+
+/**
+ * Every control whose value can be EMPTY — which is every one but the checkbox,
+ * since a boolean is always one of its two values.
+ */
+export interface RequirableFieldOptions extends FieldOptions {
   /**
    * Blocks Save while the value is empty, and shows "Required." under the field.
    * Deliberately NOT part of the repair pass: an empty required value cannot be
@@ -69,9 +87,12 @@ export interface FieldOptions {
    * button going quietly dead.
    */
   readonly required?: boolean
+}
+
+/** The controls the user types into, and the only ones a placeholder reaches. */
+export interface TextFieldOptions extends RequirableFieldOptions {
+  /** Greyed sample text shown while the control is empty. */
   readonly placeholder?: string
-  /** Renders the control read-only without removing it from the layout. */
-  readonly disabled?: boolean
 }
 
 export interface FieldDescriptor<TValue, TContext = unknown> {
@@ -101,7 +122,7 @@ export type DescriptorValue<TDescriptor> =
 
 function common(
   kind: ControlKind,
-  options: FieldOptions,
+  options: TextFieldOptions,
 ): Pick<
   FieldDescriptor<never, never>,
   "kind" | "label" | "hint" | "required" | "placeholder" | "disabled"
@@ -118,14 +139,14 @@ function common(
 
 /** A single-line string field. */
 export function text<TContext = unknown>(
-  options: FieldOptions & Validation<string, TContext>,
+  options: TextFieldOptions & Validation<string, TContext>,
 ): FieldDescriptor<string, TContext> {
   return { ...common("text", options), validate: options.validate, repair: options.repair }
 }
 
 /** A multi-line string field. */
 export function textarea<TContext = unknown>(
-  options: FieldOptions & { readonly rows?: number } & Validation<string, TContext>,
+  options: TextFieldOptions & { readonly rows?: number } & Validation<string, TContext>,
 ): FieldDescriptor<string, TContext> {
   return {
     ...common("textarea", options),
@@ -142,7 +163,7 @@ export function textarea<TContext = unknown>(
  * per surface and does not belong in a shared control.
  */
 export function rdid<TContext = unknown>(
-  options: FieldOptions & Validation<string, TContext>,
+  options: TextFieldOptions & Validation<string, TContext>,
 ): FieldDescriptor<string, TContext> {
   return { ...common("rdid", options), validate: options.validate, repair: options.repair }
 }
@@ -160,7 +181,7 @@ export function checkbox<TContext = unknown>(
  * narrowly) than the list will not accept it.
  */
 export function select<const TValue extends string | number, TContext = unknown>(
-  options: FieldOptions & {
+  options: RequirableFieldOptions & {
     readonly options: readonly SelectOption<TValue>[]
   } & Validation<TValue, TContext>,
 ): FieldDescriptor<TValue, TContext> {

@@ -55,6 +55,16 @@ export interface AlertModalProps {
   /** In-progress: replace the action buttons with a spinner and make the modal
    *  non-dismissable (no backdrop/Esc/✕ close) until the parent flips it. */
   busy?: boolean
+  /**
+   * Whether backdrop / Escape / ✕ may close the modal. Default `true`.
+   *
+   * Set `false` for a single-button alert whose confirm PERFORMS something
+   * (writes, deletes, navigates away). In alert mode every dismissal gesture
+   * routes to `onConfirm` — pressing Escape to make a dialog go away would run
+   * the action, which is the opposite of what the gesture means. `false` makes
+   * the button the only way through: no ✕, and every close reason is ignored.
+   */
+  dismissible?: boolean
   /** Keyboard shortcut policy.
    *  - `"default"`: Enter → confirm; Escape → cancel (confirm mode) or confirm (alert mode).
    *  - `"none"`: no keyboard shortcuts (Escape and Enter both ignored).
@@ -86,6 +96,7 @@ export interface AlertModalProps {
  * | keyboard="none"    | —            | —                         | onCancel/onConfirm×1 |
  * | destructive        | —            | —                         | onCancel/onConfirm×1 |
  * | busy (any)         | —            | —                         | —                    |
+ * | dismissible=false  | onConfirm ×1 | —                         | — (no ✕)             |
  *
  * Escape is owned entirely by Base-UI's `onOpenChange` (reason `"escape-key"`).
  * The window keydown listener handles Enter only, so there is no double-fire path.
@@ -103,6 +114,7 @@ export function AlertModal({
   cancelLabel,
   onCancel,
   busy = false,
+  dismissible = true,
   keyboard = "default",
   destructive = false,
   contentClassName,
@@ -143,6 +155,9 @@ export function AlertModal({
    *
    * Routing rules:
    * - busy: always block.
+   * - dismissible=false: always block. In alert mode a dismissal RUNS the
+   *   action, so an alert whose confirm performs something opts out entirely
+   *   rather than letting Escape perform it.
    * - reason "escape-key":
    *     keyboard disabled (none/destructive) → block (Escape must not act).
    *     keyboard enabled + confirm mode → onCancel.
@@ -154,7 +169,7 @@ export function AlertModal({
     next: boolean,
     eventDetails: DialogRoot.ChangeEventDetails,
   ): void {
-    if (next || busy) return
+    if (next || busy || !dismissible) return
 
     if (eventDetails.reason === "escape-key") {
       if (!keyboardEnabled) return // none / destructive — block
@@ -170,7 +185,7 @@ export function AlertModal({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={contentClassName} showClose={!busy}>
+      <DialogContent className={contentClassName} showClose={!busy && dismissible}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-apt-gold">
             {showIcon && <Icon className={cn("size-5 shrink-0", className)} aria-hidden />}

@@ -31,6 +31,15 @@ export interface EditingAlertProps {
   /** A write is in flight: no button, no dismiss. The repair prompt uses it so the
    *  user cannot acknowledge twice while the repairing save is still running. */
   readonly busy?: boolean
+  /**
+   * Whether Escape / backdrop / ✕ may close the alert. Default true.
+   *
+   * The repair PROMPT sets it false, because its confirm writes to the server:
+   * a one-button alert routes every dismissal gesture to `onConfirm`, so
+   * pressing Escape to make the dialog go away would save. The two
+   * acknowledgements that follow it stay dismissible — they do nothing.
+   */
+  readonly dismissible?: boolean
   readonly onConfirm: () => void
 }
 
@@ -48,6 +57,7 @@ function PlatformAlert({
   tone,
   confirmLabel,
   busy,
+  dismissible,
   onConfirm,
 }: EditingAlertProps): React.ReactElement {
   return (
@@ -58,6 +68,7 @@ function PlatformAlert({
       tone={tone}
       confirmLabel={confirmLabel ?? "OK"}
       busy={busy}
+      dismissible={dismissible}
       onConfirm={onConfirm}
     />
   )

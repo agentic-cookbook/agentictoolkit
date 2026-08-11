@@ -182,4 +182,120 @@ describe("loading data that fails the pane's own rules", () => {
     render(<Harness record={{ ...BROKEN, identifier: "adh.participants" }} onSave={vi.fn()} />)
     expect(screen.queryByTestId("alert")).not.toBeInTheDocument()
   })
+
+  it("sends the repair write to onRepair when the caller separates the two", async () => {
+    // `onSave` on a real pane often does more than persist — closes the pane,
+    // advances a wizard, toasts "Saved". None of that is right for a write the
+    // user did not ask for, so a caller can hand the repair its own narrower
+    // handler and `onSave` must then not be called at all.
+    const onSave = vi.fn(async () => {})
+    const onRepair = vi.fn(async () => {})
+    render(
+      <EditingHostProvider host={testHost}>
+        <EditingContainer
+          record={BROKEN}
+          fields={teamFields}
+          sections={teamSections}
+          context={{ orgSlug: "adh" }}
+          onSave={onSave}
+          onRepair={onRepair}
+        />
+      </EditingHostProvider>,
+    )
+    acknowledge()
+
+    await waitFor(() => expect(alertTitle()).toBe("Repair succeeded"))
+    expect(onRepair).toHaveBeenCalledWith({ ...BROKEN, identifier: "adh.participants" })
+    expect(onSave).not.toHaveBeenCalled()
+  })
+})
+
+describe("cancelling out of a repair", () => {
+  it("asks again rather than leaving the pane sitting on data it rejects", async () => {
+    // Cancel puts the BASELINE back — and after a refused repair write the
+    // baseline is still the broken row. With the prompt spent, the pane would sit
+    // on data its own rules reject, Save grey, nothing on screen: the exact dead
+    // end the repair pass exists to prevent. So Cancel re-arms the inspection.
+    const onSave = vi
+      .fn<(values: Team) => Promise<void>>()
+      .mockRejectedValueOnce(new Error("Backend said no."))
+      .mockResolvedValue(undefined)
+    render(<Harness record={BROKEN} onSave={onSave} />)
+
+    acknowledge()
+    await waitFor(() => expect(alertTitle()).toBe("Repair failed"))
+    acknowledge()
+    await waitFor(() => expect(screen.queryByTestId("alert")).not.toBeInTheDocument())
+
+    // The repaired value is sitting in the draft; throwing it away is what puts
+    // the broken identifier back on screen.
+    expect(control("identifier").value).toBe("adh.participants")
+    fireEvent.click(screen.getByRole("button", { name: /^Cancel/ }))
+    expect(control("identifier").value).toBe("participants")
+
+    await waitFor(() => expect(alertTitle()).toBe("Repair required"))
+    acknowledge()
+    await waitFor(() => expect(alertTitle()).toBe("Repair succeeded"))
+    expect(onSave).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe("the repair prompt on the PLATFORM alert, not the test one", () => {
+  /**
+   * The test host renders one OK button and nothing else, so every assertion above
+   * is blind to how a real dialog is dismissed — and the real one, `AlertModal`,
+   * routes Escape / the backdrop / ✕ to `onConfirm` in single-button alert mode,
+   * because dismissing an acknowledgement is acknowledging it. That is right for
+   * "Repair succeeded" and wrong for the prompt, whose confirm WRITES TO THE
+   * SERVER: a keystroke meaning "make this go away" would save.
+   *
+   * So this block mounts with NO host provider — `defaultEditingHost`, the real
+   * AlertModal — which is the only place that fact is observable.
+   */
+  function realHostPane(onSave: (values: Team) => Promise<void>): React.ReactElement {
+    return (
+      <EditingContainer
+        record={BROKEN}
+        fields={teamFields}
+        sections={teamSections}
+        context={{ orgSlug: "adh" }}
+        onSave={onSave}
+      />
+    )
+  }
+
+  it("does not write when Escape is pressed on the prompt", async () => {
+    const onSave = vi.fn(async () => {})
+    render(realHostPane(onSave))
+
+    await screen.findByText("This data needs some repair and will be saved.")
+    fireEvent.keyDown(document.body, { key: "Escape" })
+
+    // Still asking, and nothing written.
+    expect(screen.getByText("This data needs some repair and will be saved.")).toBeInTheDocument()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it("offers no ✕ on the prompt, so there is no pointer dismissal either", async () => {
+    render(realHostPane(vi.fn(async () => {})))
+    await screen.findByText("This data needs some repair and will be saved.")
+    expect(screen.queryByRole("button", { name: /^close$/i })).not.toBeInTheDocument()
+  })
+
+  it("writes on the button, and the acknowledgement that follows IS dismissible", async () => {
+    const onSave = vi.fn(async () => {})
+    render(realHostPane(onSave))
+
+    await screen.findByText("This data needs some repair and will be saved.")
+    fireEvent.click(screen.getByRole("button", { name: "OK" }))
+
+    await screen.findByText("Repair succeeded")
+    expect(onSave).toHaveBeenCalledTimes(1)
+
+    // "Repair succeeded" performs nothing, so Escape closing it is exactly what
+    // the user meant — and the pane must come out of the flow, not stay stuck.
+    fireEvent.keyDown(document.body, { key: "Escape" })
+    await waitFor(() => expect(screen.queryByText("Repair succeeded")).not.toBeInTheDocument())
+    expect(onSave).toHaveBeenCalledTimes(1)
+  })
 })

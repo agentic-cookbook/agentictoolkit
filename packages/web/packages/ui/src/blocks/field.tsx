@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import type { ReactElement, ReactNode } from "react"
 
 import { cn } from "../lib/utils"
 import { Label } from "../components/label"
@@ -29,11 +29,28 @@ export function Field({
         {label}
       </span>
       {children}
-      {error ? (
-        <span className="font-mono text-[0.7rem] text-apt-red">{error}</span>
-      ) : (
-        hint && <span className="font-mono text-[0.7rem] text-apt-text-dim">{hint}</span>
-      )}
+      <FieldFootnote hint={hint} error={error} />
     </Label>
   )
+}
+
+/**
+ * The hint/error line under a control, on its own so the one control that CANNOT
+ * use {@link Field} still reports its problem in the same place and the same words.
+ * A checkbox reads as "[box] label" rather than as a caption above a control, so it
+ * builds its own row (see `@agentic-toolkit/editing`'s bound controls) — and a
+ * second copy of these two spans is how one of them ends up missing a fix made to
+ * the other.
+ */
+export function FieldFootnote({
+  hint,
+  error,
+}: {
+  hint?: ReactNode
+  /** Shown in place of `hint` when set. */
+  error?: ReactNode
+}): ReactElement | null {
+  if (error) return <span className="font-mono text-[0.7rem] text-apt-red">{error}</span>
+  if (hint) return <span className="font-mono text-[0.7rem] text-apt-text-dim">{hint}</span>
+  return null
 }

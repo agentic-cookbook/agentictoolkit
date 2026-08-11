@@ -26,9 +26,14 @@ import * as React from "react"
  */
 
 export interface EditingScope {
-  /** 0 for the outermost container, 1 for a container inside it, and so on. */
-  readonly depth: number
-  /** A descendant publishes its aggregate dirtiness under a stable id. */
+  /**
+   * A descendant publishes its aggregate dirtiness under a stable id.
+   *
+   * The scope carries only this. A container's DEPTH is deliberately absent: the
+   * one question the nesting has to answer is "am I the root", and that is
+   * `parent === null` — reachable without anyone counting. A depth number would be
+   * a second way to ask it, free to disagree.
+   */
   reportDirty(id: string, dirty: boolean): void
 }
 
@@ -88,10 +93,7 @@ export function useDirtyRollup(ownDirty: boolean): DirtyRollup {
     }
   }, [parent, id])
 
-  const scope = React.useMemo<EditingScope>(
-    () => ({ depth: (parent?.depth ?? -1) + 1, reportDirty }),
-    [parent, reportDirty],
-  )
+  const scope = React.useMemo<EditingScope>(() => ({ reportDirty }), [reportDirty])
 
   return { aggregateDirty, isRoot: parent === null, scope }
 }

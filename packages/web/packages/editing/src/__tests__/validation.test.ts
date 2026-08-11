@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 
-import { checkbox, rdid, text } from "../descriptors"
-import { fieldError, isEmptyValue, REQUIRED_MESSAGE, validateValues } from "../validation"
+import { checkbox, rdid, select, text } from "../descriptors"
+import {
+  fieldError,
+  isEmptyValue,
+  REQUIRED_MESSAGE,
+  unlistedChoiceMessage,
+  validateValues,
+} from "../validation"
 import { RDID_MESSAGE, RDID_RE, teamFields } from "./fixtures"
 
 describe("isEmptyValue", () => {
@@ -51,6 +57,60 @@ describe("fieldError", () => {
 
   it("accepts any value for a field that declares no rule", () => {
     expect(fieldError(checkbox({ label: "Archived" }), true, undefined)).toBeNull()
+  })
+})
+
+describe("a select holding a value its own options do not offer", () => {
+  const visibility = select({
+    label: "Visibility",
+    options: [
+      { value: "private", label: "Private" },
+      { value: "team", label: "Team" },
+    ],
+  })
+
+  it("reports the stored value instead of passing it as valid", () => {
+    // A choice that was retired while rows still held it. This is the one field
+    // kind whose control cannot show a value it was not given a place for, so
+    // silence here would be worse than a normal validation failure: the pane
+    // would state a value the row does not hold (see controls.test.tsx), and the
+    // user would have no way to know their next Save overwrote something.
+    expect(fieldError(visibility, "retired", undefined)).toBe(unlistedChoiceMessage("retired"))
+  })
+
+  it("says nothing about a value the options do offer", () => {
+    // The control case: without it, a rule that rejected EVERY select value
+    // would pass the test above.
+    expect(fieldError(visibility, "team", undefined)).toBeNull()
+  })
+
+  it("matches on the option's own value, not on the DOM's string of it", () => {
+    // A numeric select round-trips as a number (controls.tsx maps the string
+    // back). A "2" arriving from anywhere else is a string in a numeric column,
+    // which is exactly the kind of stored value worth naming.
+    const retries = select({
+      label: "Retries",
+      options: [
+        { value: 1, label: "Once" },
+        { value: 2, label: "Twice" },
+      ],
+    })
+    expect(fieldError(retries, 2, undefined)).toBeNull()
+    expect(fieldError(retries, "2", undefined)).toBe(unlistedChoiceMessage("2"))
+  })
+
+  it("leaves an optional select that holds nothing alone", () => {
+    // "" is how an optional select says "unset" — not a value off the list.
+    expect(fieldError(visibility, "", undefined)).toBeNull()
+  })
+
+  it("still asks for a required select before complaining about the list", () => {
+    const required = select({
+      label: "Visibility",
+      required: true,
+      options: [{ value: "private", label: "Private" }],
+    })
+    expect(fieldError(required, "", undefined)).toBe(REQUIRED_MESSAGE)
   })
 })
 

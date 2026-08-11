@@ -1,11 +1,12 @@
 import "@testing-library/jest-dom/vitest"
 import * as React from "react"
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { EditingContainer } from "../container"
 import { EditingHostProvider } from "../host"
 import { section } from "../sections"
+import type { AnySection } from "../sections"
 import {
   RDID_MESSAGE,
   deferred,
@@ -238,30 +239,120 @@ describe("a record that arrives while the pane is open", () => {
     expect((control("displayName") as HTMLInputElement).value).toBe("Mine")
     expect(saveButton()).toBeEnabled()
   })
-})
 
-describe("a layout fault the type system cannot catch", () => {
-  beforeEach(() => {
-    vi.spyOn(console, "error").mockImplementation(() => {})
+  it("is not adopted AFTER the save that superseded it", async () => {
+    // The nastiest shape of this. A refetch lands mid-edit and is declined, the
+    // user saves, and the pane goes clean — at which point a naive re-seed sees a
+    // record identity it has not adopted yet and adopts it, silently replacing
+    // what the user just wrote with the row the server held a moment BEFORE the
+    // write. Nothing errors and the values look plausible; the edit is simply gone.
+    const onSave = vi.fn(async () => {})
+    const stale = { ...CLEAN, displayName: "From the server" }
+    const { rerender } = render(<Harness record={CLEAN} onSave={onSave} />)
+
+    type("displayName", "Mine")
+    rerender(<Harness record={stale} onSave={onSave} />)
+    fireEvent.click(saveButton())
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith({ ...CLEAN, displayName: "Mine" }))
+    // The parent re-renders with the row it still holds; the pane is clean now.
+    rerender(<Harness record={stale} onSave={onSave} />)
+    expect((control("displayName") as HTMLInputElement).value).toBe("Mine")
+    expect(saveButton()).toBeDisabled()
   })
 
-  it("is reported on the pane, not swallowed", () => {
-    render(
-      <EditingHostProvider host={testHost}>
-        <EditingContainer
-          record={CLEAN}
-          fields={teamFields}
-          sections={[
-            section("Team", ["displayName", "identifier"]),
-            section("Again", ["identifier", "archived"]),
-          ]}
-          context={{ orgSlug: "adh" }}
-          onSave={vi.fn()}
-        />
-      </EditingHostProvider>,
-    )
+  it("is picked up by Cancel, which is when it stops being a threat", () => {
+    // Cancel means "give me what the server has". A declined refetch IS that, and
+    // it is newer than the baseline — so throwing the draft away has to land on
+    // the declined row, not on the row the pane was seeded with.
+    const { rerender } = render(<Harness record={CLEAN} onSave={vi.fn()} />)
+    type("displayName", "Mine")
+    rerender(<Harness record={{ ...CLEAN, displayName: "From the server" }} onSave={vi.fn()} />)
+
+    fireEvent.click(screen.getByRole("button", { name: /^Cancel/ }))
+    expect((control("displayName") as HTMLInputElement).value).toBe("From the server")
+    expect(saveButton()).toBeDisabled()
+    expect(guardArmed()).toBe(false)
+  })
+})
+
+/**
+ * A layout the type system does not reject — because the caller lost the literal
+ * inference the check depends on. `sections` arrives here as a widened
+ * `AnySection[]`, which is what happens the moment a real pane builds its layout in
+ * a loop, behind a `let`, or through a helper. The runtime check is the whole
+ * reason that is survivable, so these are the tests of the safety net, not of the
+ * type.
+ */
+function DynamicLayout({ sections }: { sections: readonly AnySection[] }): React.ReactElement {
+  return (
+    <EditingHostProvider host={testHost}>
+      <EditingContainer
+        record={CLEAN}
+        fields={teamFields}
+        sections={sections as never}
+        context={{ orgSlug: "adh" }}
+        onSave={vi.fn()}
+      />
+    </EditingHostProvider>
+  )
+}
+
+/**
+ * Render a layout fault with console.error silenced, and hand back what it said.
+ * The spy is restored in the same call: un-restored, it outlives the file (there is
+ * no `restoreMocks` in vitest.config.ts) and swallows every later suite's React
+ * warnings — the ones that say a test is rendering something broken.
+ */
+function renderFaulty(sections: readonly AnySection[]): void {
+  const spy = vi.spyOn(console, "error").mockImplementation(() => {})
+  try {
+    render(<DynamicLayout sections={sections} />)
+    expect(spy).toHaveBeenCalled()
+  } finally {
+    spy.mockRestore()
+  }
+}
+
+describe("a layout fault the type system cannot catch", () => {
+  it("reports a field laid out twice", () => {
+    // The one direction the type genuinely cannot see even with literals: a union
+    // of section keys cannot tell one occurrence of a key from two, and a field
+    // laid out twice edits one value from two controls.
+    renderFaulty([
+      section("Team", ["displayName", "identifier"]),
+      section("Again", ["identifier", "archived"]),
+    ])
     expect(
       screen.getByText("These fields are laid out in more than one section: identifier."),
     ).toBeInTheDocument()
+  })
+
+  it("reports a field no section lays out", () => {
+    // The silent one. An unlaid field is INVISIBLE and still validated, so it can
+    // hold Save grey with nothing on screen to fix — the exact failure this package
+    // exists to remove.
+    renderFaulty([section("Team", ["displayName", "identifier"])])
+    expect(
+      screen.getByText("These fields are declared but no section lays them out: archived."),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/laid out in more than one section/)).not.toBeInTheDocument()
+  })
+
+  it("reports a section naming a field that does not exist", () => {
+    renderFaulty([
+      section("Team", ["displayName", "identifier", "nickname"]),
+      section("Danger", ["archived"]),
+    ])
+    expect(
+      screen.getByText('Section "Team" lays out unknown field "nickname".'),
+    ).toBeInTheDocument()
+  })
+
+  it("says nothing about a layout that covers every field exactly once", () => {
+    // The control. Without it a check that always complains would pass the three
+    // tests above.
+    render(<DynamicLayout sections={teamSections} />)
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
 })

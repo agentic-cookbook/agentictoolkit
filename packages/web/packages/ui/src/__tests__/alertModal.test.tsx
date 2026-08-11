@@ -398,6 +398,72 @@ describe('AlertModal — Escape key contract', () => {
 })
 
 // ---------------------------------------------------------------------------
+// dismissible=false — for the alert whose ONE button performs something
+//
+// The two tests above establish the hazard: in alert mode every dismissal
+// gesture routes to onConfirm, because dismissing an acknowledgement IS
+// acknowledging it. That is right until the confirm writes to a server, at
+// which point Escape — a keystroke that means "make this go away" — saves.
+// @agentic-toolkit/editing's repair prompt is exactly that alert, so the escape
+// hatch is to opt out of dismissal entirely and leave the button as the only
+// way through.
+// ---------------------------------------------------------------------------
+describe('AlertModal — dismissible=false', () => {
+  it('Escape does NOT confirm', () => {
+    const onConfirm = vi.fn()
+    render(
+      <AlertModal
+        open
+        title="This data needs some repair and will be saved."
+        confirmLabel="OK"
+        onConfirm={onConfirm}
+        dismissible={false}
+      />,
+    )
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(onConfirm).not.toHaveBeenCalled()
+  })
+
+  it('hides the close ✕, so there is no pointer dismissal to route', () => {
+    render(
+      <AlertModal
+        open
+        title="Heads up"
+        confirmLabel="OK"
+        onConfirm={vi.fn()}
+        dismissible={false}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /^close$/i })).toBeNull()
+  })
+
+  it('still confirms on the button, which is the whole point', () => {
+    const onConfirm = vi.fn()
+    render(
+      <AlertModal
+        open
+        title="Heads up"
+        confirmLabel="OK"
+        onConfirm={onConfirm}
+        dismissible={false}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'OK' }))
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves a dismissible alert alone — Escape still confirms by default', () => {
+    // The control. Without it, a change that made EVERY alert undismissable
+    // would pass the three tests above.
+    const onConfirm = vi.fn()
+    render(<AlertModal open title="Heads up" confirmLabel="OK" onConfirm={onConfirm} />)
+    fireEvent.keyDown(document.body, { key: 'Escape' })
+    expect(onConfirm).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('button', { name: /^close$/i })).not.toBeNull()
+  })
+})
+
+// ---------------------------------------------------------------------------
 // DialogActions — the equal-vs-natural rule lives in CSS, not in a measurement
 // ---------------------------------------------------------------------------
 describe('DialogActions — layout', () => {

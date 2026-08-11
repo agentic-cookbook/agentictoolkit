@@ -43,7 +43,9 @@ export type {
   FieldDescriptor,
   FieldOptions,
   Repairer,
+  RequirableFieldOptions,
   SelectOption,
+  TextFieldOptions,
   Validation,
   Validator,
 } from "./descriptors"

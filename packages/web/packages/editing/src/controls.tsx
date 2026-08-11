@@ -6,7 +6,7 @@ import { Checkbox } from "@agentic-toolkit/ui/components/checkbox"
 import { Input } from "@agentic-toolkit/ui/components/input"
 import { Select } from "@agentic-toolkit/ui/components/select"
 import { Textarea } from "@agentic-toolkit/ui/components/textarea"
-import { Field } from "@agentic-toolkit/ui/blocks/field"
+import { Field, FieldFootnote } from "@agentic-toolkit/ui/blocks/field"
 
 import type { AnyFieldDescriptor } from "./descriptors"
 
@@ -82,12 +82,19 @@ export function BoundField({
 
   if (descriptor.kind === "select") {
     const options = descriptor.options ?? []
+    const current = String(value ?? "")
+    // A value the option list does not contain — a retired choice still stored on
+    // the row, or no value at all. Left alone, the browser shows the FIRST option:
+    // the control would state a value the row does not hold, and Save would write
+    // it without the user ever choosing it. So the value gets an option of its own,
+    // and validation reports it (see validation.ts).
+    const unlisted = !options.some((option) => String(option.value) === current)
     return (
       <Field label={descriptor.label} hint={descriptor.hint} error={error}>
         <Select
           {...shared}
           aria-invalid={error ? true : undefined}
-          value={String(value ?? "")}
+          value={current}
           onChange={(event) => {
             // Map the DOM's string back to the option's own value, so a numeric
             // select round-trips as a number rather than silently becoming text.
@@ -95,6 +102,7 @@ export function BoundField({
             onChange(picked ? picked.value : event.target.value)
           }}
         >
+          {unlisted && <option value={current}>{current === "" ? "—" : current}</option>}
           {options.map((option) => (
             <option key={String(option.value)} value={String(option.value)}>
               {option.label}
@@ -121,19 +129,6 @@ export function BoundField({
       />
     </Field>
   )
-}
-
-/** Field's hint/error line, for the one control that does not use Field. */
-function FieldFootnote({
-  hint,
-  error,
-}: {
-  hint?: React.ReactNode
-  error?: string
-}): React.ReactElement | null {
-  if (error) return <span className="font-mono text-[0.7rem] text-apt-red">{error}</span>
-  if (hint) return <span className="font-mono text-[0.7rem] text-apt-text-dim">{hint}</span>
-  return null
 }
 
 function asText(value: unknown): string {

@@ -76,8 +76,19 @@ export interface EditingContainerProps<
   readonly sections: TSections &
     NoInfer<SectionsCheck<Extract<keyof TFields, string>, TSections>>
   /** Persist the edited record. Rejecting surfaces the reason above the buttons
-   *  and leaves the draft intact, so nothing is lost to a failed write. */
+   *  and leaves the draft intact, so nothing is lost to a failed write. Also
+   *  carries the repair pass's write unless {@link onRepair} is supplied. */
   readonly onSave: (values: TRecord) => void | Promise<void>
+  /**
+   * Persist a REPAIRED record. Defaults to {@link onSave}.
+   *
+   * The repair write is the one the user did not initiate — the container decided
+   * the loaded row needed fixing and asked only for an acknowledgement. A handler
+   * that does more than persist (closes the pane, advances a wizard, toasts
+   * "Saved") is wrong for it, so a caller whose `onSave` does any of that supplies
+   * the narrower write here instead.
+   */
+  readonly onRepair?: (values: TRecord) => void | Promise<void>
   /** Extra work Cancel should do (close the pane, deselect the row) after the
    *  draft is thrown away. */
   readonly onCancel?: () => void
@@ -107,6 +118,7 @@ export function EditingContainer<
   TContext = undefined,
 >(props: EditingContainerProps<TRecord, TFields, TSections, TContext>): React.ReactElement {
   const { record, onSave, onCancel, readOnly = false, className, children } = props
+  const onRepair = props.onRepair ?? onSave
   // The props are typed for the CALLER's benefit; inside, every field is just a
   // descriptor and every value is unknown. The casts are the one place the two
   // views meet, and they widen — they never assert anything the types did not
@@ -125,15 +137,37 @@ export function EditingContainer<
 
   const { aggregateDirty, isRoot, scope } = useDirtyRollup(dirty && !readOnly)
 
-  // Re-seed from a new record only while clean. A refetch that lands mid-edit must
-  // not overwrite what the user has typed; once they save or cancel, the next
-  // render adopts the newer row.
+  // RE-SEEDING. A refetch that lands mid-edit must not overwrite what the user has
+  // typed, so a new record identity is adopted only while clean.
+  //
+  // A declined refetch is still RECORDED, and this is the subtle half: leaving
+  // `seededRef` behind would make the first clean render after a save adopt the row
+  // that arrived *before* that save — silently replacing the values the user just
+  // wrote with the ones the server held a moment earlier. So the identity always
+  // advances, and the declined row is kept aside for Cancel, which is the one
+  // moment discarding the draft makes it the freshest thing the pane has.
   const seededRef = React.useRef<TRecord>(record)
+  const declinedRef = React.useRef<TRecord | null>(null)
+
+  // Every path that adopts values as "what the server now holds" goes through here,
+  // so a declined refetch is dropped the moment something newer supersedes it.
+  const adopt = React.useCallback(
+    (values: TRecord) => {
+      declinedRef.current = null
+      commit(values)
+    },
+    [commit],
+  )
+
   React.useEffect(() => {
-    if (record === seededRef.current || dirty) return
+    if (record === seededRef.current) return
     seededRef.current = record
-    commit(record)
-  }, [record, dirty, commit])
+    if (dirty) {
+      declinedRef.current = record
+      return
+    }
+    adopt(record)
+  }, [record, dirty, adopt])
 
   const errors = React.useMemo(
     () => validateValues(draft as Readonly<Record<string, unknown>>, fields, context),
@@ -149,20 +183,34 @@ export function EditingContainer<
   // button, and ButtonBar applies it (see useDirtyDraft's docblock).
   const canSave = dirty && Object.keys(errors).length === 0 && formError === null
 
-  // Layout faults the TYPE cannot see: a union of section keys cannot tell one
+  // Layout faults, checked at runtime as well as in the type. The duplicate is the
+  // one the type genuinely cannot see — a union of section keys cannot tell one
   // occurrence of a key from two, and a field laid out twice edits one value from
-  // two controls. Rendered on the pane rather than thrown, so a developer meets it
-  // the moment they open the surface and a user never meets a blank page.
+  // two controls. The other two directions ARE compile errors (`__unknownFields`,
+  // `__missingFields`), and are re-checked here because the type's grip depends on
+  // literal inference: a caller that builds its sections dynamically, or widens them
+  // through a `let` or a helper, loses `const` inference and the check with it. A
+  // field no section lays out is invisible AND still validated, so it can hold Save
+  // grey with nothing on screen to fix — the exact failure this package exists for.
+  //
+  // Rendered on the pane rather than thrown, so a developer meets it the moment they
+  // open the surface and a user never meets a blank page.
   const layoutFaults = React.useMemo(() => {
     const faults: string[] = []
     const duplicates = duplicatedKeys(sections)
     if (duplicates.length > 0) {
       faults.push(`These fields are laid out in more than one section: ${duplicates.join(", ")}.`)
     }
+    const laidOut = new Set<string>()
     for (const spec of sections) {
       for (const key of spec.keys) {
+        laidOut.add(key)
         if (!(key in fields)) faults.push(`Section "${spec.title}" lays out unknown field "${key}".`)
       }
+    }
+    const missing = Object.keys(fields).filter((key) => !laidOut.has(key))
+    if (missing.length > 0) {
+      faults.push(`These fields are declared but no section lays them out: ${missing.join(", ")}.`)
     }
     return faults
   }, [sections, fields])
@@ -175,7 +223,15 @@ export function EditingContainer<
   // only for a surface that can write. Keyed on the BASELINE identity rather than
   // on `record`: the baseline is what "the row as we hold it" means after a
   // successful save, and re-inspecting an already-repaired row would re-prompt.
+  //
+  // `inspectionEpoch` re-arms it after Cancel. Cancel throws the repaired draft away
+  // and puts the BROKEN baseline back, and without a re-inspection the pane would
+  // then sit on data its own rules reject, with Save grey and the prompt spent —
+  // dead in exactly the way the repair pass exists to prevent. The baseline identity
+  // is unchanged by a cancel, so the effect needs a reason to run beyond its own
+  // deps.
   const inspectedRef = React.useRef<TRecord | null>(null)
+  const [inspectionEpoch, setInspectionEpoch] = React.useState(0)
   React.useEffect(() => {
     if (readOnly) return
     if (inspectedRef.current === baseline) return
@@ -192,18 +248,18 @@ export function EditingContainer<
       return
     }
     setRepair({ phase: "prompt", plan })
-  }, [baseline, fields, context, readOnly])
+  }, [baseline, fields, context, readOnly, inspectionEpoch])
 
   const applyRepair = React.useCallback(async () => {
     const current = repair
     if (!current || current.phase !== "prompt") return
     setRepair({ phase: "applying", plan: current.plan })
     try {
-      await onSave(current.plan.repaired)
+      await onRepair(current.plan.repaired)
       // Mark the repaired row inspected BEFORE adopting it, so the effect above
       // sees its own result and does not prompt a second time.
       inspectedRef.current = current.plan.repaired
-      commit(current.plan.repaired)
+      adopt(current.plan.repaired)
       setRepair({ phase: "succeeded" })
     } catch (error) {
       // The write failed, so the baseline stays where it was and the repaired
@@ -212,7 +268,7 @@ export function EditingContainer<
       patch(current.plan.repaired)
       setRepair({ phase: "failed", message: messageOf(error) })
     }
-  }, [repair, onSave, commit, patch])
+  }, [repair, onRepair, adopt, patch])
 
   const handleSave = React.useCallback(async () => {
     if (!canSave || saving) return
@@ -221,19 +277,28 @@ export function EditingContainer<
     setSaveError(null)
     try {
       await onSave(values)
-      commit(values)
+      adopt(values)
     } catch (error) {
       setSaveError(messageOf(error))
     } finally {
       setSaving(false)
     }
-  }, [canSave, saving, draft, onSave, commit])
+  }, [canSave, saving, draft, onSave, adopt])
 
   const handleCancel = React.useCallback(() => {
-    reset()
+    // Discarding the draft settles the pane on "what the server holds" — which is
+    // the baseline, UNLESS a refetch arrived mid-edit and was declined. That row is
+    // newer than the baseline and there is nothing left to protect from it now.
+    const declined = declinedRef.current
+    if (declined) adopt(declined)
+    else reset()
     setSaveError(null)
+    // Re-arm the repair pass: whatever is on screen now is the stored row, and if it
+    // still fails its own rules the pane must say so rather than go quietly grey.
+    inspectedRef.current = null
+    setInspectionEpoch((epoch) => epoch + 1)
     onCancel?.()
-  }, [reset, onCancel])
+  }, [adopt, reset, onCancel])
 
   const alert = repairAlert(repair, applyRepair, () => setRepair(null))
 
@@ -336,6 +401,13 @@ function repairAlert<TRecord>(
         tone: "info",
         title: "Repair required",
         description: "This data needs some repair and will be saved.",
+        // The ONE alert here whose button performs something. A single-button
+        // alert routes Escape, the backdrop and ✕ to its confirm — dismissing an
+        // acknowledgement is acknowledging it — so left dismissible this would
+        // write to the server on a keystroke that means "go away". The button is
+        // the only way through; the two acknowledgements below do nothing and
+        // stay dismissible.
+        dismissible: false,
         onConfirm: onApply,
       }
     case "applying":

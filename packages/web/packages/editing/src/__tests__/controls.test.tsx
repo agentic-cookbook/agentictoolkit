@@ -180,6 +180,72 @@ describe("the select control", () => {
     // toHaveBeenCalledWith is type-aware here: 3 and "3" are not interchangeable.
     await waitFor(() => expect(onSave).toHaveBeenCalledWith({ retries: 3 }))
   })
+
+  it("shows a stored value the options do not contain, instead of the first option", () => {
+    // The silent overwrite. A bare <select> whose value matches no <option>
+    // displays the FIRST one, so a row holding a retired choice would read as
+    // "Private" — a value the row does not hold — and the next Save would write
+    // it without the user ever choosing it. The value gets an option of its own
+    // so the pane states the truth, and validation names it (validation.ts).
+    render(
+      <EditingHostProvider host={{ UnsavedChangesGuard: () => null, Alert: () => null }}>
+        <EditingContainer
+          // The type says the union; the ROW says otherwise. That is the whole
+          // case — a value written before a choice was retired arrives at a pane
+          // whose types have long since forgotten it existed. (Declaring the
+          // wider union here would be a compile error instead: a select whose
+          // options are narrower than its field is one of the twelve rejected
+          // mistakes.)
+          record={{ visibility: "retired" as "private" | "team" }}
+          fields={{
+            visibility: select({
+              label: "Visibility",
+              options: [
+                { value: "private", label: "Private" },
+                { value: "team", label: "Team" },
+              ],
+            }),
+          }}
+          sections={[section("Note", ["visibility"])]}
+          onSave={vi.fn()}
+        />
+      </EditingHostProvider>,
+    )
+    const box = control("visibility") as HTMLSelectElement
+    expect(box.value).toBe("retired")
+    expect(Array.from(box.options).map((option) => option.value)).toEqual([
+      "retired",
+      "private",
+      "team",
+    ])
+    // And it says so, rather than leaving the odd entry to be read as a choice.
+    expect(screen.getByText('"retired" is not one of the available choices.')).toBeInTheDocument()
+  })
+
+  it("adds no such option when the stored value IS on the list", () => {
+    // The control case for the one above: an extra option on every select would
+    // duplicate the current choice on every pane in the fleet.
+    render(
+      <EditingHostProvider host={{ UnsavedChangesGuard: () => null, Alert: () => null }}>
+        <EditingContainer
+          record={{ visibility: "team" as "private" | "team" }}
+          fields={{
+            visibility: select({
+              label: "Visibility",
+              options: [
+                { value: "private", label: "Private" },
+                { value: "team", label: "Team" },
+              ],
+            }),
+          }}
+          sections={[section("Note", ["visibility"])]}
+          onSave={vi.fn()}
+        />
+      </EditingHostProvider>,
+    )
+    const box = control("visibility") as HTMLSelectElement
+    expect(Array.from(box.options).map((option) => option.value)).toEqual(["private", "team"])
+  })
 })
 
 describe("the checkbox control", () => {
