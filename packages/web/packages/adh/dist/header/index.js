@@ -2087,6 +2087,7 @@ function SiteHeader({
   const conceptSite = isConceptSite(siteId);
   const site = getSite3(siteId);
   const siteName = site ? siteHeaderTitle2(site) : siteId;
+  const siteShortName = site?.label ?? siteId;
   const resolveHubHref = (path) => hostname ? siteUrl2("hub", path, hostname) : siteProdUrl2("hub", path);
   const selfReturn = hostname ? siteUrl2(siteId, siteHomePath(siteId), hostname) : siteProdUrl2(siteId, siteHomePath(siteId));
   const hubAuthHref = (path) => `${resolveHubHref(path)}?return_to=${encodeURIComponent(selfReturn)}`;
@@ -2121,7 +2122,7 @@ function SiteHeader({
           userIsAdmin
         }
       ),
-      pageTitle,
+      pageTitle: pageTitle ?? siteShortName,
       center,
       badges,
       leadingActions,

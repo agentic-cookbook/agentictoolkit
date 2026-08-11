@@ -78,8 +78,12 @@ vi.mock('../header/AvatarMenu', () => ({
 }))
 
 import { SiteHeader } from '../header/SiteHeader'
-import { getSite, siteHeaderTitle } from '@agentic-toolkit/adh-registry'
+import { getSite, siteHeaderTitle, SITES } from '@agentic-toolkit/adh-registry'
 import type { HeaderAuthSourceOptions, HeaderAuthState } from '@agentic-toolkit/adh/header-auth'
+
+/** The centred label as it reaches the DOM. */
+const centreTitle = (): string | null =>
+  screen.getByRole('banner').querySelector('.adh-header__page-title')?.textContent ?? null
 
 describe('SiteHeader', () => {
   it('resolves the brand from the registry rather than taking it as a prop', () => {
@@ -88,6 +92,49 @@ describe('SiteHeader', () => {
     // to call. adh always fills the switcher slot, so this value reaches no rendered
     // node today — which is exactly why it needs pinning at the boundary instead.
     expect(headerProps.current?.siteName).toBe(siteHeaderTitle(getSite('products')!))
+  })
+
+  // The bar says WHICH SITE you are on, centred — and it is the only thing that does:
+  // the switcher trigger reads the hub brand on every site in the family.
+  it("centres this site's short name — the one the site menu lists it under", () => {
+    render(<SiteHeader siteId="cookbook" />)
+    const site = getSite('cookbook')!
+    expect(centreTitle()).toBe(site.label)
+    // Non-vacuous, and the whole point of naming `label` rather than reusing the brand
+    // already resolved beside it: for this site the two genuinely differ, so a header
+    // that centred `siteName` would print "Agentic Developer Cookbook" and pass a bare
+    // "is something centred?" check.
+    expect(site.label).not.toBe(siteHeaderTitle(site))
+    expect(centreTitle()).not.toBe(siteHeaderTitle(site))
+  })
+
+  // Every site, not "the ones that opted in": the name is the DEFAULT of a prop each
+  // site already passes through, so the fleet-wide claim is testable in one place. This
+  // also pins that no site falls through to the raw id — `site?.label ?? siteId` prints
+  // an id for anything the registry has lost, which reads as a bug in the header rather
+  // than as the missing entry it is.
+  it('centres a registry name on every site in the fleet, never a bare id', () => {
+    for (const site of SITES) {
+      const { unmount } = render(<SiteHeader siteId={site.id} />)
+      expect(headerProps.current?.pageTitle).toBe(site.label)
+      expect(headerProps.current?.pageTitle).not.toBe(site.id)
+      unmount()
+    }
+  })
+
+  // The centre is ONE absolutely-positioned box, so a page that names itself takes it
+  // over rather than stacking on top of the site name.
+  it('lets a page title replace the site name in the centre', () => {
+    render(<SiteHeader siteId="cookbook" pageTitle="Recipes" />)
+    expect(centreTitle()).toBe('Recipes')
+    expect(screen.queryByText(getSite('cookbook')!.label)).toBeNull()
+  })
+
+  // Same slot, same rule, for the interactive form of it.
+  it('lets centre content replace the site name too', () => {
+    render(<SiteHeader siteId="cookbook" center={<span>live</span>} />)
+    expect(screen.getByRole('banner').querySelector('.adh-header__page-title')).toBeNull()
+    expect(screen.getByText('live')).toBeTruthy()
   })
 
   it("fills the toolkit header's switcher slot with adh's own registry-bound menu", () => {

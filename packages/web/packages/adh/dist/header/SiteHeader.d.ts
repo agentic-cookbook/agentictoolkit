@@ -15,11 +15,17 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
     /** Which site this header belongs to. The display name + the site-switcher's
      *  contents come from the shared sites registry. */
     siteId: SiteId;
-    /** Optional page/section title, shown centered in the bar. */
+    /** Optional page/section title, shown centered in the bar.
+     *
+     *  Defaults to THIS site's short name — `SiteDef.label`, the name the site menu
+     *  lists it under ("Cookbook", "Projects") — so the centre of the bar always says
+     *  which site the visitor is on. A page that passes its own title REPLACES that: the
+     *  centre is a single absolutely-positioned box, so the two cannot both occupy it. */
     pageTitle?: string;
     /** Optional interactive content centered in the bar (e.g. the status site's live
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
-     *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
+     *  clickable. When set it occupies the centre slot in place of `pageTitle` — and so
+     *  in place of the site name that otherwise fills it. */
     center?: ReactNode;
     /** Badges shown under the site name. None by default — the family's preview
      *  notice is the strip the toolkit header draws above the bar, not a badge. */

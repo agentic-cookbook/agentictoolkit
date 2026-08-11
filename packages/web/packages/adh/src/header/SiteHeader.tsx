@@ -40,11 +40,17 @@ export type SiteHeaderProps = Omit<
   /** Which site this header belongs to. The display name + the site-switcher's
    *  contents come from the shared sites registry. */
   siteId: SiteId
-  /** Optional page/section title, shown centered in the bar. */
+  /** Optional page/section title, shown centered in the bar.
+   *
+   *  Defaults to THIS site's short name — `SiteDef.label`, the name the site menu
+   *  lists it under ("Cookbook", "Projects") — so the centre of the bar always says
+   *  which site the visitor is on. A page that passes its own title REPLACES that: the
+   *  centre is a single absolutely-positioned box, so the two cannot both occupy it. */
   pageTitle?: string
   /** Optional interactive content centered in the bar (e.g. the status site's live
    *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
-   *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
+   *  clickable. When set it occupies the centre slot in place of `pageTitle` — and so
+   *  in place of the site name that otherwise fills it. */
   center?: ReactNode
   /** Badges shown under the site name. None by default — the family's preview
    *  notice is the strip the toolkit header draws above the bar, not a badge. */
@@ -178,6 +184,19 @@ export function SiteHeader({
   // nominally partial, so fall back to the id rather than widening its return.
   const site = getSite(siteId)
   const siteName = site ? siteHeaderTitle(site) : siteId
+  // The centre of the bar names the CURRENT site, on every site in the family. Nothing
+  // else in the bar does: the site-menu trigger always reads the hub brand (a site's own
+  // `currentSiteId` only marks its row inside the menu), and `siteName` above reaches no
+  // rendered node while adh fills the switcher slot — so without this every header in the
+  // fleet is byte-identical chrome that never says where you are.
+  //
+  // `label`, not `fullLabel` or `shortLabel`: it is the registry's SHORT name — the one
+  // the site menu lists the site under — which is what a "you are here" marker wants, and
+  // it is defined for every site (the other two are optional refinements of it).
+  //
+  // A DEFAULT of a prop every site already passes through, not a new slot, so the whole
+  // fleet gets it without a per-site opt-in and a page keeps the last word.
+  const siteShortName = site?.label ?? siteId
   const resolveHubHref = (path: string): string =>
     hostname ? siteUrl('hub', path, hostname) : siteProdUrl('hub', path)
   // Default Login / Sign up carry a `?return_to=` back to THIS site's post-login
@@ -252,7 +271,8 @@ export function SiteHeader({
           userIsAdmin={userIsAdmin}
         />
       }
-      pageTitle={pageTitle}
+      // The site's short name unless the page named itself — see `siteShortName`.
+      pageTitle={pageTitle ?? siteShortName}
       center={center}
       badges={badges}
       leadingActions={leadingActions}
