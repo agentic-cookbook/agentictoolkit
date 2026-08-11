@@ -3,7 +3,11 @@ import type * as React from 'react'
 import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { notifyManager } from '@tanstack/react-query'
-import { useResourceItemQuery, useResourceItemPrefetch } from '../use-resource-item'
+import {
+  useResourceItemQuery,
+  useResourceItemPrefetch,
+  useResourceItemWriter,
+} from '../use-resource-item'
 import { getToolkitQueryClient } from '../query'
 
 // Notify observers SYNCHRONOUSLY. react-query's default scheduler is a real `setTimeout(fn, 0)` —
@@ -162,5 +166,69 @@ describe('useResourceItemPrefetch', () => {
     await act(async () => {
       expect(() => prefetch('d8')).not.toThrow()
     })
+  })
+})
+
+describe('useResourceItemWriter', () => {
+  function Writer({ onReady }: { onReady: (w: (id: string, next: { body: string } | null) => void) => void }) {
+    onReady(useResourceItemWriter<{ body: string }>('/docs'))
+    return null
+  }
+  function renderWriter() {
+    let write!: (id: string, next: { body: string } | null) => void
+    render(<Writer onReady={(w) => (write = w)} />)
+    return write
+  }
+
+  // A mutation is holding the server's own answer. Posting it costs nothing; re-reading would spend
+  // a request to arrive back at the bytes already in hand.
+  it('records a mutation response so the next open needs no read', () => {
+    signInAs('A')
+    const write = renderWriter()
+    const load = vi.fn(() => Promise.resolve({ body: 'from the server' }))
+
+    act(() => write('d9', { body: 'just saved' }))
+    render(<Probe id="d9" load={load} />)
+
+    expect(screen.getByTestId('item')).toHaveTextContent('just saved')
+    expect(load).not.toHaveBeenCalled()
+  })
+
+  // EVICT, not a tombstone. Storing `null` would paint a deleted document on the next visit and
+  // then have to take it away again; dropping the entry sends that visit to the server, where the
+  // 404 turns into the host's "no longer there" alert.
+  it('evicts a deleted item rather than caching its corpse', async () => {
+    signInAs('A')
+    const write = renderWriter()
+    act(() => write('d10', { body: 'doomed' }))
+    expect(getToolkitQueryClient().getQueryData(['resource-item', 'A', '/docs', 'd10'])).toEqual({
+      body: 'doomed',
+    })
+
+    act(() => write('d10', null))
+    expect(
+      getToolkitQueryClient().getQueryData(['resource-item', 'A', '/docs', 'd10']),
+    ).toBeUndefined()
+
+    const load = vi.fn(() => Promise.resolve({ body: 'fresh' }))
+    render(<Probe id="d10" load={load} />)
+    await waitFor(() => expect(screen.getByTestId('item')).toHaveTextContent('fresh'))
+    expect(load).toHaveBeenCalledTimes(1)
+  })
+
+  // The tenant is a key SEGMENT (see resourceItemKey), so a write made while signed in as A must
+  // be unreachable to B — the same guarantee the list cache gives, and the reason an account
+  // switch cannot hand one identity another's document.
+  it('writes under the signed-in tenant only', () => {
+    signInAs('A')
+    const write = renderWriter()
+    act(() => write('d11', { body: "A's copy" }))
+
+    expect(getToolkitQueryClient().getQueryData(['resource-item', 'A', '/docs', 'd11'])).toEqual({
+      body: "A's copy",
+    })
+    expect(
+      getToolkitQueryClient().getQueryData(['resource-item', 'B', '/docs', 'd11']),
+    ).toBeUndefined()
   })
 })

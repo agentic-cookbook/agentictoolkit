@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useQuery, type QueryKey, type PlaceholderDataFunction } from "@tanstack/react-query";
+import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { getToolkitQueryClient } from "./query";
 import { isNotFound } from "./http";
 import { useTenantId } from "./tenant";
@@ -66,7 +67,17 @@ export function useResourceItemQuery<T>(
   const query = useQuery<T, Error>(
     {
       queryKey: resourceItemKey(cacheKey, tenantId, id ?? ""),
-      queryFn: () => load(id as string),
+      // Reported HERE, not at the call sites, for the same reason the list hook reports in its
+      // own fetcher: a pane that hand-rolled its loader used to make this call itself, and moving
+      // to the hook must not silently drop the platform's auth telemetry.
+      queryFn: async () => {
+        try {
+          return await load(id as string);
+        } catch (e) {
+          reportUnexpectedAuthError(e, { feature: "resource-item", step: "load", basePath: cacheKey });
+          throw e;
+        }
+      },
       enabled: id != null,
       // NO retry, overriding the client's default of 1: the pane SHOWS this failure, and the
       // 404 path below has to reach the user promptly rather than after a pointless second try.
@@ -109,6 +120,33 @@ export function useResourceItemQuery<T>(
     error: err == null ? null : err instanceof Error ? err.message : "Failed to load.",
     isMissing: (opts?.absent ?? false) || isNotFound(query.error),
   };
+}
+
+/**
+ * Record what a mutation just learned about one item, so the cache never serves a copy the caller
+ * already knows is out of date. Pass the fresh item a create/update/publish returned, or `null` for
+ * one a delete removed — which EVICTS it, rather than storing a tombstone, so a later visit reads
+ * the server instead of painting a document that isn't there.
+ *
+ * The id is an explicit parameter rather than "the open item", because the two writes that matter
+ * most are about an item that is not open yet or no longer will be: a create seeds the row the
+ * selection is ABOUT to move to (so its editor paints with no read at all), and a delete forgets
+ * one the selection is leaving.
+ *
+ * Writing the response beats invalidating: the caller is holding the server's own answer, so a
+ * re-read would spend a request to arrive back at the bytes already in hand.
+ */
+export function useResourceItemWriter<T>(cacheKey: string): (id: string, next: T | null) => void {
+  const tenantId = useTenantId();
+  const client = getToolkitQueryClient();
+  return useCallback(
+    (id: string, next: T | null) => {
+      const key = resourceItemKey(cacheKey, tenantId, id);
+      if (next === null) client.removeQueries({ queryKey: key, exact: true });
+      else client.setQueryData<T>(key, next);
+    },
+    [client, cacheKey, tenantId],
+  );
 }
 
 /**

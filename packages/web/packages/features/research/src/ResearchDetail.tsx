@@ -30,12 +30,17 @@ export function ResearchDetail({
   categoryOptions,
   tagOptions,
   error,
+  disabled = false,
 }: {
   draft: ResearchInput;
   onChange: (next: ResearchInput) => void;
   categoryOptions: string[];
   tagOptions: string[];
   error?: string | null;
+  /** The document on screen is a CACHED copy and the server's answer has not landed yet. Every
+   *  field goes read-only for that window: an edit made against a stale copy would be saved over
+   *  whatever the server actually has, and the user would never know which one won. */
+  disabled?: boolean;
 }) {
   return (
     <Card>
@@ -46,10 +51,12 @@ export function ResearchDetail({
           value={draft.content}
           onChange={(content) => onChange({ ...draft, content })}
           onUpload={(text) => onChange({ ...draft, content: text })}
+          disabled={disabled}
           toolbarExtras={
             <MarkdownSpellCheck
               value={draft.content}
               onApply={(content) => onChange({ ...draft, content })}
+              disabled={disabled}
             />
           }
         />
@@ -61,6 +68,7 @@ export function ResearchDetail({
           options={categoryOptions}
           value={draft.category}
           onChange={(category) => onChange({ ...draft, category })}
+          disabled={disabled}
         />
 
         <TagSetField
@@ -70,6 +78,7 @@ export function ResearchDetail({
           options={tagOptions}
           value={draft.tags}
           onChange={(tags) => onChange({ ...draft, tags })}
+          disabled={disabled}
         />
 
         <ErrorText error={error} />

@@ -45,6 +45,7 @@ vi.mock("@agentic-toolkit/data/markdown", () => ({
   },
 }));
 
+import { getToolkitQueryClient } from "@agentic-toolkit/data/query";
 import { ResearchFeature } from "./ResearchFeature";
 import { markdownApi, type ResearchDocument, type ResearchSummary } from "@agentic-toolkit/data/markdown";
 
@@ -91,13 +92,25 @@ beforeEach(() => {
 // local statement of intent; do not "fix" the config to match the claim that was here.
 afterEach(cleanup);
 
+// The toolkit's QueryClient is at MODULE scope — one per browser tab, deliberately, so a topic
+// click cannot destroy the cache. In a test file that means ONE cache for every test in it: leave
+// it standing and a document a previous test opened is still cached and still fresh, so the next
+// test's `get` is never called and its assertion fails describing the feature working correctly.
+afterEach(() => getToolkitQueryClient().clear());
+
 /** Renders the published rail affordances (the "New document" button + the document rows) the way
- *  the hub's workspace shell would, so the test can drive the shell-owned rail slot. */
+ *  the hub's workspace shell would, so the test can drive the shell-owned rail slot.
+ *
+ *  It also stands in for the two signals the real `TopicRail` owns: the header spinner it shows
+ *  while `busy`, and the hover dwell after which it calls `onPrefetch`. The dwell's TIMING is the
+ *  rail's own business (and is tested there); what belongs here is whether this pane wires the
+ *  two at all — which is exactly the thing a typechecked optional prop cannot tell you. */
 function Rail({ levels }: { levels: TopicLevel[] }) {
   return (
     <div>
       {levels.map((l) => (
         <div key={l.id}>
+          {l.busy && <span data-testid={`busy-${l.id}`} />}
           {l.onNew && (
             <button type="button" onClick={() => l.onNew?.()}>
               {l.newLabel}
@@ -106,7 +119,11 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
           <ul>
             {l.items.map((item) => (
               <li key={item.id}>
-                <button type="button" onClick={() => l.onSelect?.(item.id)}>
+                <button
+                  type="button"
+                  onClick={() => l.onSelect?.(item.id)}
+                  onPointerEnter={() => l.onPrefetch?.(item.id)}
+                >
                   {item.label}
                 </button>
               </li>
@@ -272,5 +289,121 @@ describe("ResearchFeature", () => {
       retry.click();
     });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  // ── The cache ────────────────────────────────────────────────────────────────
+  // The complaint these exist for: "each time I click a topic we fetch the contents from the
+  // database, this makes the site feel super slow." Each test below asserts a read that does NOT
+  // happen — which is the only way to state the fix, since a document painted from the cache and
+  // one painted from a fresh GET look identical on screen.
+
+  it("paints a re-opened document from the cache instead of reading it again", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const first = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(first.value).toBe("# Federated learning\n\nSome notes."));
+    expect(get).toHaveBeenCalledTimes(1);
+    cleanup();
+
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    // Synchronous `get…`, not `findBy…`: there is nothing to wait for. The body is on the FIRST
+    // paint, and awaiting here would hide the difference between that and a fast refetch.
+    const again = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
+    expect(again.value).toBe("# Federated learning\n\nSome notes.");
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  it("warms a hovered row's body, so the click that follows reads nothing", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    const row = await screen.findByRole("button", { name: "Federated learning notes" });
+    await act(async () => {
+      fireEvent.pointerEnter(row);
+    });
+    expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined });
+    cleanup();
+
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Federated learning\n\nSome notes.");
+    // The warm, and nothing since — the click spent no request of its own.
+    expect(get).toHaveBeenCalledTimes(1);
+  });
+
+  // The instant paint is only safe because of this: a cached copy may be out of date, so the form
+  // is READ-ONLY until the server's answer lands. Editing a stale copy and saving it would put
+  // fields back that the server has since changed, and nothing on screen would say so.
+  it("paints the cached body immediately but keeps it read-only until the server answers", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const settled = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(settled.value).toBe("# Federated learning\n\nSome notes."));
+    expect(settled.disabled).toBe(false);
+    cleanup();
+
+    // Hold the next read open, then mark the entry stale so the remount revalidates. That window —
+    // cached copy on screen, server's answer still in flight — is what the assertions below are.
+    get.mockReturnValue(new Promise<ResearchDocument>(() => {}));
+    await act(async () => {
+      await getToolkitQueryClient().invalidateQueries();
+    });
+
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Federated learning\n\nSome notes.");
+    expect(body.disabled).toBe(true);
+    // And the one thing that tells the user why: the spinner in front of the list's title.
+    expect(screen.getByTestId("busy-research-documents")).not.toBeNull();
+  });
+
+  it("opens a created document from the create response, with no read at all", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "New document" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    fireEvent.change(dialog.getByLabelText(/^Body/), {
+      target: { value: "# Hello research\n\nFirst pass." },
+    });
+    await act(async () => {
+      fireEvent.click(dialog.getByRole("button", { name: "Save" }));
+    });
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    cleanup();
+
+    // The create response IS the server's copy, so opening what was just created costs nothing.
+    // (The mocked router can't advance the URL in this harness, so the open is a fresh mount at
+    // the created id — which is also what a reload or a shared link does.)
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
+    expect(body.value).toBe("# Federated learning\n\nSome notes.");
+    expect(get).not.toHaveBeenCalled();
   });
 });

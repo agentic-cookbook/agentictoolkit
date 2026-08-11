@@ -37,6 +37,7 @@ export function PublishSection({
   userSlug,
   workspaceSlug,
   onChanged,
+  disabled = false,
 }: {
   doc: ResearchDocument;
   userSlug: string;
@@ -44,6 +45,11 @@ export function PublishSection({
    *  so org-owned docs other members created resolve. */
   workspaceSlug?: string;
   onChanged: (updated: ResearchDocument) => void | Promise<void>;
+  /** `doc` is a CACHED copy the server has not yet confirmed. Publishing is a write like any
+   *  other, so it waits: the visibility on screen may already be stale, and acting on it could
+   *  unpublish a paper the user is looking at as published. Copy stays enabled — reading a URL
+   *  changes nothing. */
+  disabled?: boolean;
 }) {
   const [route, setRoute] = useState(doc.publicRoute ?? "");
   const { busy, error, run } = useAction();
@@ -103,7 +109,7 @@ export function PublishSection({
         </div>
         <ErrorText error={error} />
         <div className="flex justify-end">
-          <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={unpublish}>
+          <Button type="button" variant="ghost" size="sm" disabled={busy || disabled} onClick={unpublish}>
             {busy ? "Unpublishing…" : "Unpublish"}
           </Button>
         </div>
@@ -127,9 +133,10 @@ export function PublishSection({
             spellCheck={false}
             aria-invalid={route !== "" && !routeValid}
             onChange={(e) => setRoute(e.target.value.toLowerCase())}
+            disabled={disabled}
             className="font-mono text-[0.8rem]"
           />
-          <Button type="button" size="sm" disabled={!routeValid || busy} onClick={publish}>
+          <Button type="button" size="sm" disabled={!routeValid || busy || disabled} onClick={publish}>
             {busy ? "Publishing…" : "Publish"}
           </Button>
         </div>

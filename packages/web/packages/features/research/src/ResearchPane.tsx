@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Globe } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
@@ -17,8 +17,10 @@ import {
   MasterDetailLeaf,
   useRecordAffordance,
   CreateResourceDialog,
+  useResourceItem,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
+import { useResourceItemPrefetch, useResourceItemWriter } from "@agentic-toolkit/data";
 import {
   markdownApi,
   type ResearchDocument,
@@ -175,102 +177,89 @@ export function ResearchPane({
   // `must-create-in-modal`): the `+` opens it, and on save the created doc is selected so its
   // full editor (body, publish) opens.
   const [newOpen, setNewOpen] = useState(false);
-  const [selectedDoc, setSelectedDoc] = useState<ResearchDocument | null>(null);
-  const [draft, setDraft] = useState<ResearchInput | null>(null);
-  const [loadingDoc, setLoadingDoc] = useState(false);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  // Guards against an out-of-order body fetch clobbering a newer selection.
-  const selectToken = useRef(0);
-  // The doc id currently hydrated into the form. The URL-sync effect skips re-fetching
-  // when it already matches — e.g. right after create seeds the returned doc — so a
-  // just-opened doc doesn't flash to "Loading…" + issue a redundant GET.
-  const loadedIdRef = useRef<string | null>(null);
   // Re-entrancy latch for `onSave`. The `saving` STATE can't do this job: it is a render value,
   // so two activations inside a single commit (a double-click on Save before React paints the
   // disabled button) both read the pre-save `false` and both PUT. A ref flips synchronously on
   // the way in and clears in `finally`.
   const savingRef = useRef(false);
 
-  const baseline: ResearchInput | null = selectedDoc ? researchToInput(selectedDoc) : null;
-  const dirty = Boolean(draft && baseline && researchDiffers(draft, baseline));
-  const validationError = draft ? researchValidate(draft) : null;
-  // Dirty AND valid — `!loadingDoc` stays because it is a DATA-AVAILABILITY term (there is no
-  // baseline to diverge from until the body has landed), not a busy term. The busy/saving term is
-  // applied at the button: `SaveCancelButtons` already renders `disabled={!canSave || saving}`, so
-  // folding `!saving` in here would express the same rule twice — and that duplicate is what
-  // previously stood in for the missing re-entrancy latch in `onSave`.
-  const canSave = Boolean(draft && baseline) && dirty && validationError === null && !loadingDoc;
-  const canDelete = selectedId !== null && !saving && !deleting;
-
-  // Load a document's body into the form (or clear it when id is null). Token-guarded so an
-  // out-of-order fetch can't clobber a newer selection. Shared by the embedded `select` (which
-  // loads synchronously on click) and the URL-driven effect (deep-link / reload / Back).
-  const loadBody = useCallback(
-    async (id: string | null) => {
-      const token = ++selectToken.current;
-      loadedIdRef.current = id; // the form is now bound to `id` (see the URL-sync effect guard)
-      setSelectedDoc(null);
-      setDraft(null);
-      setFormError(null);
-      if (id == null) {
-        setLoadingDoc(false);
-        return;
-      }
-      setLoadingDoc(true);
-      try {
-        const full = await markdownApi.get(id, { workspace: workspaceSlug });
-        if (selectToken.current !== token) return; // a newer selection won
-        setSelectedDoc(full);
-        setDraft(researchToInput(full));
-      } catch (err) {
-        if (selectToken.current !== token) return;
-        reportUnexpectedAuthError(err, { feature: "research-pane", step: "open" });
-        setFormError(errorText(err, "Failed to open the document."));
-      } finally {
-        if (selectToken.current === token) setLoadingDoc(false);
-      }
-    },
+  // ── The open document ─────────────────────────────────────────────────────
+  // Cached per WORKSPACE, because `?workspace=` decides which principal's copy a read returns —
+  // one key for a document id would let an org workspace paint the caller's own copy of it.
+  const docCacheKey = `research:${workspaceSlug ?? ""}`;
+  const loadDoc = useCallback(
+    (id: string) => markdownApi.get(id, { workspace: workspaceSlug }),
     [workspaceSlug],
   );
+  // Replaces the loader this pane used to hand-roll: a `loadBody` + an out-of-order token + a
+  // "which id is the form bound to" ref + a URL-sync effect that had to remember to skip itself.
+  // All four existed to answer "is what's on screen the right document"; the cache answers it, and
+  // a document opened a second time now paints from memory instead of from a GET.
+  //
+  // No `seedFrom`: a list row is a ResearchSummary, which carries no body, so there is no partial
+  // ResearchDocument to paint. And no `absent`: this list is FILTERED, so a document missing from
+  // it has merely been narrowed away — announcing that as a deletion would be a lie the user
+  // cannot argue with. The 404 is the honest signal, and it is the one that fires on a real one.
+  const {
+    item: selectedDoc,
+    isSettled,
+    isFetching: fetchingDoc,
+    error: docError,
+  } = useResourceItem<ResearchDocument>(docCacheKey, selectedId, loadDoc);
+  const prefetchDoc = useResourceItemPrefetch(docCacheKey, loadDoc);
+  const writeDoc = useResourceItemWriter<ResearchDocument>(docCacheKey);
+
+  // The server's copy, as the form would hold it.
+  const baseline = useMemo(
+    () => (selectedDoc ? researchToInput(selectedDoc) : null),
+    [selectedDoc],
+  );
+  // The user's in-progress edits, or null when the form is simply showing what the server has.
+  //
+  // It carries the id it belongs to, and the draft is DERIVED from it rather than copied into
+  // state — which is what makes the whole "instant paint, revalidate behind it" flow safe with no
+  // effect at all. A revalidation landing under a user who is not typing is adopted immediately;
+  // one landing under a user who IS typing loses to the override; and a selection change discards
+  // it, because an override for another document is not this document's draft.
+  const [override, setOverride] = useState<{ id: string; value: ResearchInput } | null>(null);
+  const draft = override && override.id === selectedId ? override.value : baseline;
+
+  const dirty = Boolean(draft && baseline && researchDiffers(draft, baseline));
+  const validationError = draft ? researchValidate(draft) : null;
+  // Dirty AND valid AND settled. `isSettled` is the successor to the old `!loadingDoc` term and
+  // carries one more rule with it: a save composed against a CACHED copy would PUT fields the
+  // server has since changed. The busy/saving term is applied at the button — `SaveCancelButtons`
+  // already renders `disabled={!canSave || saving}` — so folding `!saving` in here would express
+  // the same rule twice.
+  const canSave = Boolean(draft && baseline) && dirty && validationError === null && isSettled;
+  // Delete waits on the same signal for the same reason: it is a write against a copy that may
+  // already be out of date.
+  const canDelete = selectedId !== null && isSettled && !saving && !deleting;
 
   const select = useCallback(
-    async (id: string) => {
-      // URL-driven: `openDoc` navigates and the effect below loads the body for the new URL id.
-      // Embedded: `openDoc` set the local selection — load the body synchronously now (legacy).
+    (id: string) => {
+      // URL-driven: navigate, and the hook re-reads for the new URL id. Embedded: local selection,
+      // same hook, same re-read. Deep-link, reload and Back all arrive the same way — there is no
+      // longer a second path that loads the body, so there is nothing for the two to disagree on.
       openDoc(id);
-      if (!urlSelection) await loadBody(id);
     },
-    [urlSelection, loadBody, openDoc],
+    [openDoc],
   );
 
-  // URL-driven mode only: load (or clear) the document body when the open id in the URL changes — a
-  // deep-link landing, reload, browser back/forward, or an in-app navigation. Inert when embedded,
-  // where `select` loads synchronously instead.
-  useEffect(() => {
-    if (!urlSelection) return;
-    const docId = urlSelection.docId ?? null;
-    // Skip when the form is already bound to this id (e.g. create just seeded the returned doc, or
-    // loadBody already ran for it) — avoids a redundant GET + a "Loading…" flash.
-    if (loadedIdRef.current === docId) return;
-    void loadBody(docId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [urlSelection ? urlSelection.docId : null, loadBody]);
-
   function onChange(next: ResearchInput): void {
-    setDraft(next);
+    if (!selectedId) return;
+    setOverride({ id: selectedId, value: next });
     if (formError) setFormError(null);
   }
 
   function onCancel(): void {
-    selectToken.current++;
     openDoc(null);
-    setSelectedDoc(null);
-    setDraft(null);
+    setOverride(null);
     setFormError(null);
-    setLoadingDoc(false);
   }
 
   // Returns true once the draft is persisted (false on a validation/save failure) so the merged
@@ -297,8 +286,11 @@ export function ResearchPane({
           workspace: workspaceSlug,
         });
         await refresh();
-        setSelectedDoc(updated);
-        setDraft(researchToInput(updated));
+        // The response IS the server's copy, so record it rather than invalidating — a re-read
+        // would spend a request to arrive back at these exact bytes. Dropping the override then
+        // hands the form straight back to `baseline`, which is now what we just saved.
+        writeDoc(updated.id, updated);
+        setOverride(null);
       }
       return true;
     } catch (err) {
@@ -325,9 +317,11 @@ export function ResearchPane({
     try {
       await markdownApi.remove(selectedId, { workspace: workspaceSlug });
       setPendingDelete(false);
+      // Forget the body BEFORE leaving. Keeping it would paint a document we know is gone if the
+      // user navigated back to its URL, and only the GET behind that paint would take it away.
+      writeDoc(selectedId, null);
       openDoc(null);
-      setSelectedDoc(null);
-      setDraft(null);
+      setOverride(null);
       await refresh();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "research-pane", step: "delete" });
@@ -338,9 +332,9 @@ export function ResearchPane({
     }
   }
 
-  // Publish/unpublish returns the updated document; keep the selection + list in sync.
+  // Publish/unpublish returns the updated document; keep the cached copy + list in sync.
   async function onPublishChanged(updated: ResearchDocument): Promise<void> {
-    setSelectedDoc(updated);
+    writeDoc(updated.id, updated);
     await refresh();
   }
 
@@ -367,7 +361,13 @@ export function ResearchPane({
     title: "Documents",
     items,
     selectedId,
-    onSelect: (id) => void select(id),
+    onSelect: (id) => select(id),
+    // Hovering (or tabbing to) a row for a moment warms its body, so the click that follows has
+    // nothing left to wait for.
+    onPrefetch: prefetchDoc,
+    // The spinner in front of "Documents" — the one signal that a read is happening, now that the
+    // editor paints the cached copy instead of blanking to "Loading…".
+    busy: fetchingDoc,
     onClear: onCancel,
     onNew: () => setNewOpen(true),
     newLabel: "New document",
@@ -416,35 +416,35 @@ export function ResearchPane({
           pathValues: { id: selectedId },
           title: "Research document API",
         })}
-        error={listError ?? formError}
+        error={listError ?? formError ?? docError}
         emptyTitle={
-          loadingDoc || docs === null
+          // Reached only with nothing cached for this id — otherwise `draft` is already the cached
+          // document and the editor below renders instead.
+          fetchingDoc || docs === null
             ? "Loading…"
             : "Select a document to edit, or create a new one."
         }
         renderDetail={(d) => (
           <div className="flex flex-col gap-4">
-            {loadingDoc ? (
-              <p className="text-sm text-apt-text-muted">Loading…</p>
-            ) : (
-              <>
-                <ResearchDetail
-                  draft={d}
-                  onChange={onChange}
-                  categoryOptions={accountCategories}
-                  tagOptions={accountTags}
-                  error={validationHint}
-                />
-                {selectedDoc && (
-                  <PublishSection
-                    key={selectedDoc.id}
-                    doc={selectedDoc}
-                    userSlug={userSlug}
-                    workspaceSlug={workspaceSlug}
-                    onChanged={onPublishChanged}
-                  />
-                )}
-              </>
+            {/* No "Loading…" branch: whatever is cached is on screen from the first frame, and the
+                read settles behind it. `disabled` is what makes that safe — see `isSettled`. */}
+            <ResearchDetail
+              draft={d}
+              onChange={onChange}
+              categoryOptions={accountCategories}
+              tagOptions={accountTags}
+              error={validationHint}
+              disabled={!isSettled}
+            />
+            {selectedDoc && (
+              <PublishSection
+                key={selectedDoc.id}
+                doc={selectedDoc}
+                userSlug={userSlug}
+                workspaceSlug={workspaceSlug}
+                onChanged={onPublishChanged}
+                disabled={!isSettled}
+              />
             )}
           </div>
         )}
@@ -475,12 +475,12 @@ export function ResearchPane({
           onCreated={(created) => {
             setNewOpen(false);
             void refresh();
-            // Open the created doc: URL-driven navigates to /research/<id>, embedded sets local
-            // state. Seed doc/draft + mark it loaded so the URL-sync effect skips re-fetching it.
-            loadedIdRef.current = created.id;
+            // Record the created document BEFORE selecting it, so the editor it opens into paints
+            // from the cache with no read at all — the create response already is the server's
+            // copy. (This is what the old `loadedIdRef` dance was for.)
+            writeDoc(created.id, created);
             openDoc(created.id);
-            setSelectedDoc(created);
-            setDraft(researchToInput(created));
+            setOverride(null);
             setFormError(null);
           }}
           renderForm={(draft, onChange, error) => (

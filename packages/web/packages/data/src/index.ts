@@ -50,10 +50,12 @@ export {
   type ResourceList,
 } from "./use-resource-list";
 
-// One cached item — instant paint from a seed, revalidated behind it, plus the hover prefetcher.
+// One cached item — instant paint from a seed, revalidated behind it, plus the hover prefetcher
+// and the writer a mutation posts its response through.
 export {
   useResourceItemQuery,
   useResourceItemPrefetch,
+  useResourceItemWriter,
   type ResourceItem,
   type ResourceItemQuery,
 } from "./use-resource-item";
