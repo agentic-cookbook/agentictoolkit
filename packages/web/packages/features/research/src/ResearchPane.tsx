@@ -20,7 +20,11 @@ import {
   useResourceItem,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
-import { useResourceItemPrefetch, useResourceItemWriter } from "@agentic-toolkit/data";
+import {
+  useResourceItemPrefetch,
+  useResourceItemWriter,
+  useResourceList,
+} from "@agentic-toolkit/data";
 import {
   markdownApi,
   type ResearchDocument,
@@ -56,6 +60,13 @@ interface ResearchPlacement {
 
 function errorText(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
+}
+
+/** Value equality for the filter triple. A filter typed and then retyped back to what it already
+ *  was must keep the SAME applied object: a new fetcher identity is `useResourceList`'s refetch
+ *  signal, and that one would spend a request to arrive back at rows already on screen. */
+function sameFilters(a: FilterState, b: FilterState): boolean {
+  return a.q === b.q && a.category === b.category && a.tag === b.tag;
 }
 
 /**
@@ -98,73 +109,111 @@ export function ResearchPane({
   const userSlug = userSlugProp ?? user?.slug ?? slugify(user?.name ?? "");
 
   // ── Data ────────────────────────────────────────────────────────────────
+  // Two filter values, not one. `filters` is what the inputs show and changes on every keystroke;
+  // `applied` is what the list READS, and lags it by the debounce. The debounce used to sit on the
+  // request; it now sits on the query key, which is the same 200ms of typing without a request —
+  // and the key is what lets a filter set returned to paint from cache instead of re-reading.
   const [filters, setFilters] = useState<FilterState>(EMPTY_FILTERS);
-  const [docs, setDocs] = useState<ResearchSummary[] | null>(null);
-  // The unfiltered universe, only for the filter dropdown options — so narrowing
-  // the list (which refetches `docs`) never empties its own category/tag menus.
-  const [universe, setUniverse] = useState<ResearchSummary[]>([]);
-  const [listError, setListError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<FilterState>(EMPTY_FILTERS);
+  useEffect(() => {
+    const id = setTimeout(
+      () => setApplied((prev) => (sameFilters(prev, filters) ? prev : filters)),
+      200,
+    );
+    return () => clearTimeout(id);
+  }, [filters]);
 
-  const loadList = useCallback(
-    async (f: FilterState) => {
-      try {
-        setDocs(await markdownApi.list(f, { workspace: workspaceSlug }));
-        setListError(null);
-      } catch (err) {
-        reportUnexpectedAuthError(err, { feature: "research-pane", step: "list" });
-        setListError(errorText(err, "Failed to load documents."));
-      }
-    },
-    [workspaceSlug],
+  // Every read here reports under THIS pane's step and rethrows, which is why each call site
+  // passes `reportErrors: false` — one failure reported twice, under two contexts, is worse than
+  // one.
+  const loadDocs = useCallback(async () => {
+    try {
+      return await markdownApi.list(applied, { workspace: workspaceSlug });
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "research-pane", step: "list" });
+      throw err instanceof Error ? err : new Error("Failed to load documents.");
+    }
+  }, [applied, workspaceSlug]);
+
+  // Keyed by the FILTERS as well as the workspace: each filter set is its own list, so clearing a
+  // search and going back to it is a repaint rather than a round trip.
+  const {
+    items: docs,
+    error: listError,
+    reload: reloadDocs,
+  } = useResourceList<ResearchSummary>(
+    `research:${workspaceSlug ?? ""}:list:${applied.q}|${applied.category}|${applied.tag}`,
+    loadDocs,
+    { reportErrors: false },
   );
 
   const loadUniverse = useCallback(async () => {
     try {
-      setUniverse(await markdownApi.list({}, { workspace: workspaceSlug }));
+      return await markdownApi.list({}, { workspace: workspaceSlug });
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "research-pane", step: "universe" });
+      throw err;
     }
   }, [workspaceSlug]);
+
+  // The unfiltered universe, only for the filter dropdown options — so narrowing
+  // the list (which refetches `docs`) never empties its own category/tag menus.
+  const { items: universeDocs, reload: reloadUniverse } = useResourceList<ResearchSummary>(
+    `research:${workspaceSlug ?? ""}:universe`,
+    loadUniverse,
+    { reportErrors: false },
+  );
+  const universe = universeDocs ?? [];
 
   // The account's existing categories + tags — the editor's autocomplete/browse source
   // (distinct from the filter rail, which lists only what's present on the loaded docs).
   // Refetched on save so a freshly-coined category/tag appears as a suggestion next time.
-  const [accountCategories, setAccountCategories] = useState<string[]>([]);
-  const [accountTags, setAccountTags] = useState<string[]>([]);
-  const loadTaxonomy = useCallback(async () => {
+  //
+  // Workspace-scoped like the documents themselves: the backend scopes the category/tag
+  // vocabulary to the same owner it scopes the docs to, so omitting the workspace here
+  // suggested the CALLER's own labels while the list showed the ORG's documents.
+  //
+  // Two lists rather than the one `Promise.all` this replaced: they are two routes, they cache
+  // separately, and the pair fetches in parallel either way.
+  const loadCategories = useCallback(async () => {
     try {
-      // Workspace-scoped like the documents themselves: the backend scopes the category/tag
-      // vocabulary to the same owner it scopes the docs to, so omitting the workspace here
-      // suggested the CALLER's own labels while the list showed the ORG's documents.
-      const [categories, tags] = await Promise.all([
-        markdownApi.categories({ workspace: workspaceSlug }),
-        markdownApi.tags({ workspace: workspaceSlug }),
-      ]);
-      setAccountCategories(categories);
-      setAccountTags(tags);
+      return await markdownApi.categories({ workspace: workspaceSlug });
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "research-pane", step: "taxonomy" });
+      throw err;
+    }
+  }, [workspaceSlug]);
+  const loadTags = useCallback(async () => {
+    try {
+      return await markdownApi.tags({ workspace: workspaceSlug });
+    } catch (err) {
+      reportUnexpectedAuthError(err, { feature: "research-pane", step: "taxonomy" });
+      throw err;
     }
   }, [workspaceSlug]);
 
-  useEffect(() => {
-    void loadTaxonomy();
-  }, [loadTaxonomy]);
+  const { items: categoryOptions, reload: reloadCategories } = useResourceList<string>(
+    `research:${workspaceSlug ?? ""}:categories`,
+    loadCategories,
+    { reportErrors: false },
+  );
+  const { items: tagOptions, reload: reloadTags } = useResourceList<string>(
+    `research:${workspaceSlug ?? ""}:tags`,
+    loadTags,
+    { reportErrors: false },
+  );
+  const accountCategories = categoryOptions ?? [];
+  const accountTags = tagOptions ?? [];
 
-  // Refetch the list when filters change (debounced so typing search doesn't
-  // fire a request per keystroke).
-  useEffect(() => {
-    const id = setTimeout(() => void loadList(filters), 200);
-    return () => clearTimeout(id);
-  }, [filters, loadList]);
-
-  useEffect(() => {
-    void loadUniverse();
-  }, [loadUniverse]);
-
+  // Swallowing, and it has to: every caller re-reads AFTER its own write succeeded, and their
+  // catch blocks say "Failed to save." / "Failed to delete.". A failed re-read is neither. The
+  // list's failure still reaches the screen, as `listError`.
   const refresh = useCallback(
-    () => Promise.all([loadList(filters), loadUniverse(), loadTaxonomy()]).then(() => undefined),
-    [filters, loadList, loadUniverse, loadTaxonomy],
+    () =>
+      Promise.all([reloadDocs(), reloadUniverse(), reloadCategories(), reloadTags()])
+        .then(() => undefined)
+        .catch(() => {}),
+    [reloadDocs, reloadUniverse, reloadCategories, reloadTags],
   );
 
   // ── Selection + draft ─────────────────────────────────────────────────────

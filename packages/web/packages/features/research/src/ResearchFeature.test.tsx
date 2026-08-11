@@ -110,6 +110,9 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
       {levels.map((l) => (
         <div key={l.id}>
           {l.busy && <span data-testid={`busy-${l.id}`} />}
+          {/* The real TopicRail renders this beside the level's title; here it is what makes the
+              pane's search/category/tag filters drivable. */}
+          {l.railSlot}
           {l.onNew && (
             <button type="button" onClick={() => l.onNew?.()}>
               {l.newLabel}
@@ -412,6 +415,60 @@ describe("ResearchFeature", () => {
       ),
     );
     expect(screen.queryByText("Backend exploded.")).toBeNull();
+  });
+
+  it("paints the document list from cache on a remount, reading it once", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    expect(await screen.findByText("Federated learning notes")).not.toBeNull();
+    // Two reads, not one: the filtered list, and the unfiltered universe behind the filter
+    // dropdowns. They are separate keys because they answer separate questions.
+    expect(list).toHaveBeenCalledTimes(2);
+    cleanup();
+
+    // Synchronous, like the document assertions above: the rows are on the FIRST paint.
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    expect(screen.getByText("Federated learning notes")).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(2);
+  });
+
+  // The debounce moved: it used to delay the REQUEST, and now delays the query KEY. Same 200ms of
+  // typing without a read — and, unlike a debounced request, the value typed away from and back to
+  // is a repaint rather than a round trip.
+  it("spends one read on a settled search, and none on going back to it", async () => {
+    // A search answers with nothing, so the rows themselves say which key is on screen.
+    list.mockImplementation(async (f) => (f?.q ? [] : [structuredClone(SUMMARY)]));
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    expect(await screen.findByText("Federated learning notes")).not.toBeNull();
+    expect(list).toHaveBeenCalledTimes(2);
+
+    const search = screen.getByLabelText("Search research documents");
+    fireEvent.change(search, { target: { value: "f" } });
+    fireEvent.change(search, { target: { value: "fe" } });
+    fireEvent.change(search, { target: { value: "fed" } });
+    await waitFor(() => expect(screen.queryByText("Federated learning notes")).toBeNull());
+    // ONE read for three keystrokes, and it is the value the user stopped at.
+    expect(list).toHaveBeenCalledTimes(3);
+    expect(list).toHaveBeenLastCalledWith(
+      { q: "fed", category: "", tag: "" },
+      { workspace: undefined },
+    );
+
+    fireEvent.change(search, { target: { value: "" } });
+    await waitFor(() => expect(screen.getByText("Federated learning notes")).not.toBeNull());
+    // The unfiltered rows came back from the cache: the key returned to one already read.
+    expect(list).toHaveBeenCalledTimes(3);
   });
 
   it("opens a created document from the create response, with no read at all", async () => {
