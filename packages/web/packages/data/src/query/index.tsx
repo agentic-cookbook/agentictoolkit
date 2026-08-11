@@ -38,33 +38,42 @@ import {
   useQueryClient,
   type QueryClient as QueryClientType,
 } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 
-export function ToolkitQueryProvider({ children }: { children: ReactNode }) {
-  const [client] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } },
-      }),
-  );
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+// ONE client per browser tab, at MODULE scope — not in component state.
+//
+// The App Router folds a dynamic segment's VALUE into its React state key, so a topic click
+// (`/[workspace]/[[...path]]`) recreates the page subtree and destroys anything held in
+// `useState`. Ten sites mount this provider inside that subtree, which is why the `staleTime`
+// below has never once applied there: every click started with an empty cache and refetched
+// everything. A module-scope client outlives the remount, which is the entire fix.
+let browserClient: QueryClientType | undefined;
+
+function makeQueryClient(): QueryClientType {
+  return new QueryClient({
+    defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } },
+  });
 }
 
 /**
- * The QueryClient backing every `@agentic-toolkit/*` hook — reachable from HOST code.
- *
- * This is `useQueryClient` bound to the toolkit's physical react-query copy. A host cannot get
- * here on its own: importing `useQueryClient` from "@tanstack/react-query" in host code resolves
- * to the HOST's copy and reads the HOST's context, so it returns the host's client (or throws)
- * no matter how the provider tree is nested. Re-exporting the hook from inside this package is
- * the only way across, for the same module-identity reason the provider ships from here.
- *
- * Use it when a host write invalidates data a TOOLKIT panel renders — ownership transfer is the
- * archetype: the mutation is the host's, the persona list it invalidates is the toolkit's.
- * Invalidate both clients; neither one alone refreshes the whole screen.
- *
- * Must be called under <ToolkitQueryProvider>, like any react-query hook under its provider.
+ * The toolkit's query client. Callers may pass this to `useQuery`/`useMutation` explicitly rather
+ * than relying on {@link ToolkitQueryProvider} being above them — which is what lets a hook used
+ * at dozens of call sites cache without every one of those call sites growing a provider.
  */
+export function getToolkitQueryClient(): QueryClientType {
+  // Server: a FRESH client per call. A shared one would leak one request's data into another
+  // request's render — the one case where module scope is exactly wrong.
+  if (typeof window === "undefined") return makeQueryClient();
+  return (browserClient ??= makeQueryClient());
+}
+
+export function ToolkitQueryProvider({ children }: { children: ReactNode }) {
+  return <QueryClientProvider client={getToolkitQueryClient()}>{children}</QueryClientProvider>;
+}
+
+/** The client toolkit panels fetch through. Passing the singleton explicitly means this resolves
+ *  to the same client whether or not a {@link ToolkitQueryProvider} is mounted above the caller —
+ *  no "No QueryClient set" throw for a panel rendered outside one. */
 export function useToolkitQueryClient(): QueryClientType {
-  return useQueryClient();
+  return useQueryClient(getToolkitQueryClient());
 }
