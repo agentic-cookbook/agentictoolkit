@@ -39,6 +39,12 @@ const EXISTING_TYPE: RealmEventType = {
   statKey: "adventures",
 } as RealmEventType;
 
+const OTHER_REALM_TYPE: RealmEventType = {
+  id: "type-2",
+  name: "boss_defeated",
+  statKey: "victories",
+} as RealmEventType;
+
 function saveOrAddButton(name: RegExp) {
   return screen.getByRole("button", { name }) as HTMLButtonElement;
 }
@@ -273,6 +279,34 @@ function readRegistry() {
 
 // The dialog gates its OWN exits (Escape / backdrop / × / Cancel). A reload, a link click or a
 // rail row switch is none of those, so the open draft has to reach the settings registry too.
+// What the conversion is FOR: a realm's event types come back from cache, so returning to a realm
+// already opened paints its rows on the first frame with no second read. The hand-rolled effect
+// this replaced re-fetched on every mount and blanked the list to "Loading…" while it did.
+//
+// Each realm keeps its OWN entry — the cache key carries the realm — so switching realms shows the
+// realm you switched to, never the one you left.
+describe("EventTypesSection caches each realm's event types", () => {
+  it("paints a realm's rows from cache on the way back, without re-reading", async () => {
+    listEventTypes.mockClear();
+    listEventTypes.mockImplementation((id: string) =>
+      Promise.resolve(id === "eco-1" ? [EXISTING_TYPE] : [OTHER_REALM_TYPE]),
+    );
+
+    const { rerender } = render(<EventTypesSection ecosystemId="eco-1" />);
+    await screen.findByText("quest_completed");
+
+    rerender(<EventTypesSection ecosystemId="eco-2" />);
+    await screen.findByText("boss_defeated");
+    expect(listEventTypes).toHaveBeenCalledTimes(2);
+
+    // Back to the first realm: its rows are on screen with nothing awaited, and no third read.
+    rerender(<EventTypesSection ecosystemId="eco-1" />);
+    expect(screen.getByText("quest_completed")).toBeTruthy();
+    expect(screen.queryByText("Loading…")).toBeNull();
+    expect(listEventTypes).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("EventTypesSection reports its unsaved dialog draft to the settings registry", () => {
   async function renderInRegistry(types: RealmEventType[] = []) {
     listEventTypes.mockResolvedValue(types);

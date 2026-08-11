@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { isForbidden } from "@agentic-toolkit/data";
+import { isForbidden, useResourceList } from "@agentic-toolkit/data";
 import {
   gamificationApi,
   type RealmEventType,
@@ -68,8 +68,34 @@ const REQUIRED_FIELDS_MESSAGE = "Name and stat key are required.";
 const errText = forbiddenAware("You don't have access to change this realm's event types.");
 
 export function EventTypesSection({ ecosystemId }: { ecosystemId?: string }) {
-  const [types, setTypes] = useState<RealmEventType[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  // Cached per realm, so coming back to a realm's event types paints them on the first frame and
+  // re-reads behind that paint instead of blanking the list on every visit.
+  const loadTypes = useCallback(async () => {
+    if (!ecosystemId) return [] as RealmEventType[];
+    try {
+      return await gamificationApi.listEventTypes(ecosystemId);
+    } catch (err) {
+      // A 403 is EXPECTED on a realm the caller cannot author, so it is not an incident. Reported
+      // here and rethrown with this section's own wording, which is why the call site passes
+      // `reportErrors: false` — one failure reported twice under two contexts is worse than one.
+      if (!isForbidden(err)) {
+        reportUnexpectedAuthError(err, { feature: "gamification-event-types", step: "load" });
+      }
+      throw new Error(errText(err, "Failed to load event types."));
+    }
+  }, [ecosystemId]);
+  const {
+    items: types,
+    error: loadError,
+    reload,
+  } = useResourceList<RealmEventType>(`realm:${ecosystemId ?? ""}:event-types`, loadTypes, {
+    reportErrors: false,
+  });
+
+  // Swallowing: `submit`/`confirmDelete` below re-read AFTER their own write succeeded, so a failed
+  // re-read must not be reported as a failed save or delete. It still reaches the screen — as
+  // `loadError`.
+  const refresh = useCallback(() => reload().catch(() => {}), [reload]);
 
   // ── Add/edit dialog ────────────────────────────────────────────────────────
   const [dialog, setDialog] = useState<DialogState>({ mode: "closed" });
@@ -87,23 +113,6 @@ export function EventTypesSection({ ecosystemId }: { ecosystemId?: string }) {
   const [deleteTarget, setDeleteTarget] = useState<RealmEventType | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!ecosystemId) return;
-    setLoadError(null);
-    try {
-      setTypes(await gamificationApi.listEventTypes(ecosystemId));
-    } catch (err) {
-      if (!isForbidden(err)) {
-        reportUnexpectedAuthError(err, { feature: "gamification-event-types", step: "load" });
-      }
-      setLoadError(errText(err, "Failed to load event types."));
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   const dirty = useMemo(() => !sameEventTypeDraft(draft, baselineDraft), [draft, baselineDraft]);
   const blockedReason =

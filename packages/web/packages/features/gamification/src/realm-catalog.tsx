@@ -1,17 +1,9 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-  type ReactNode,
-} from "react";
+import { createContext, useCallback, useContext, useMemo, type ReactNode } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { isForbidden } from "@agentic-toolkit/data";
+import { isForbidden, useResourceItemQuery } from "@agentic-toolkit/data";
 import { gamificationApi, type RealmCatalog } from "@agentic-toolkit/data/gamification";
 
 /**
@@ -26,6 +18,11 @@ import { gamificationApi, type RealmCatalog } from "@agentic-toolkit/data/gamifi
  * levels.
  *
  * One provider, one `refresh`, so a write in either section re-reads for both.
+ *
+ * The catalog is CACHED per realm, so returning to a realm shows its badges and ladder on the
+ * first frame and re-reads behind them. The provider still exists for the reason above — the
+ * cache would keep two sections' reads down to one request, but not the "a ladder write restages
+ * the badge rows" coupling, which is a fact about this response, not about caching.
  */
 interface RealmCatalogValue {
   catalog: RealmCatalog | null;
@@ -44,6 +41,29 @@ export function useRealmCatalog(): RealmCatalogValue {
   return ctx;
 }
 
+/**
+ * Read one realm's catalog, classifying the failure itself.
+ *
+ * A 403 is EXPECTED here — it is what a realm the caller cannot see returns — so it is turned into
+ * a sentence about permissions and deliberately NOT reported as an incident. That is also why the
+ * call site passes `reportErrors: false`: this function reports the failures that are worth
+ * reporting, and one failure reported twice under two contexts would be worse than none.
+ *
+ * Module scope, so one identity serves every mount. The realm is the query key's id, not something
+ * closed over.
+ */
+async function loadRealmCatalog(ecosystemId: string): Promise<RealmCatalog> {
+  try {
+    return await gamificationApi.getCatalog(ecosystemId);
+  } catch (err) {
+    if (isForbidden(err)) throw new Error("You don't have access to this realm's catalog.");
+    reportUnexpectedAuthError(err, { feature: "gamification-catalog", step: "load" });
+    // A non-Error rejection would otherwise reach the user as the hook's generic wording; keep the
+    // sentence this provider has always shown for it.
+    throw err instanceof Error ? err : new Error("Failed to load the catalog.");
+  }
+}
+
 export function RealmCatalogProvider({
   ecosystemId,
   children,
@@ -51,31 +71,16 @@ export function RealmCatalogProvider({
   ecosystemId?: string;
   children: ReactNode;
 }) {
-  const [catalog, setCatalog] = useState<RealmCatalog | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { item: catalog, error: loadError, reload } = useResourceItemQuery<RealmCatalog>(
+    "realm-catalog",
+    ecosystemId ?? null,
+    loadRealmCatalog,
+    { reportErrors: false },
+  );
 
-  const refresh = useCallback(async () => {
-    if (!ecosystemId) return;
-    setLoadError(null);
-    try {
-      setCatalog(await gamificationApi.getCatalog(ecosystemId));
-    } catch (err) {
-      if (!isForbidden(err)) {
-        reportUnexpectedAuthError(err, { feature: "gamification-catalog", step: "load" });
-      }
-      setLoadError(
-        isForbidden(err)
-          ? "You don't have access to this realm's catalog."
-          : err instanceof Error
-            ? err.message
-            : "Failed to load the catalog.",
-      );
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // Swallowing, because every caller re-reads AFTER its own write succeeded: a failed re-read must
+  // not be reported as a failed save. It still reaches the screen — as `loadError`.
+  const refresh = useCallback(() => reload().catch(() => {}), [reload]);
 
   const value = useMemo<RealmCatalogValue>(
     () => ({ catalog, loadError, refresh }),

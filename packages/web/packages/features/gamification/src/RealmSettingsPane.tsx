@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { isForbidden } from "@agentic-toolkit/data";
+import { isForbidden, useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
 import {
   gamificationApi,
   type RealmConfig,
@@ -125,6 +125,31 @@ function toDraft(cfg: RealmConfig): Draft {
   };
 }
 
+/**
+ * Read one realm's gamification config, classifying the failure itself.
+ *
+ * A 403 is EXPECTED here — it is what a realm the caller cannot administer returns — so it becomes
+ * a sentence about permissions and is deliberately NOT reported as an incident. That is why the
+ * call site passes `reportErrors: false`: this function reports the failures worth reporting, and
+ * one failure reported twice under two contexts would be worse than none.
+ *
+ * Module scope, so one identity serves every mount. The realm is the query key's id, not something
+ * closed over.
+ */
+async function loadRealmConfig(ecosystemId: string): Promise<RealmConfig> {
+  try {
+    return await gamificationApi.getRealmConfig(ecosystemId);
+  } catch (err) {
+    if (isForbidden(err)) {
+      throw new Error("You don't have access to this realm's gamification settings.");
+    }
+    reportUnexpectedAuthError(err, { feature: "gamification-realm", step: "load" });
+    // A non-Error rejection would otherwise reach the user as the hook's generic wording; keep the
+    // sentence this pane has always shown for it.
+    throw err instanceof Error ? err : new Error("Failed to load gamification settings.");
+  }
+}
+
 export function RealmSettingsPane({
   ecosystemId,
   help,
@@ -137,37 +162,20 @@ export function RealmSettingsPane({
   /** Rendered at the END of this pane's scroller, under its save bar — see the file doc. */
   children?: ReactNode;
 }) {
-  const [config, setConfig] = useState<RealmConfig | null>(null);
+  // Cached per realm, so coming back to this topic paints the saved settings on the first frame
+  // and revalidates behind them, instead of blanking to "Loading…" on every visit.
+  const { item: config, error: loadError } = useResourceItemQuery<RealmConfig>(
+    "realm-config",
+    ecosystemId ?? null,
+    loadRealmConfig,
+    { reportErrors: false },
+  );
+  const writeConfig = useResourceItemWriter<RealmConfig>("realm-config");
+
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
-
-  const refresh = useCallback(async () => {
-    if (!ecosystemId) return;
-    setLoadError(null);
-    try {
-      const cfg = await gamificationApi.getRealmConfig(ecosystemId);
-      setConfig(cfg);
-      setDraft(toDraft(cfg));
-    } catch (err) {
-      if (!isForbidden(err)) {
-        reportUnexpectedAuthError(err, { feature: "gamification-realm", step: "load" });
-      }
-      setLoadError(
-        isForbidden(err)
-          ? "You don't have access to this realm's gamification settings."
-          : err instanceof Error
-            ? err.message
-            : "Failed to load gamification settings.",
-      );
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   // The saved baseline the draft is diffed against, so `dirty` is a real edit — not just a
   // second render with structurally-equal values.
@@ -176,6 +184,18 @@ export function RealmSettingsPane({
     () => !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline),
     [draft, baseline],
   );
+
+  // Seed the draft from the server's copy — but NEVER over an unsaved edit. Caching is what makes
+  // that distinction necessary: a re-read can now land mid-edit, because it revalidates behind the
+  // instant paint, where the pre-cache code read once per realm and could not. Losing typing to a
+  // background refetch is the one thing this pane must not do; while the draft is dirty the save
+  // bar is up and Save or Cancel is the user's own call. `baseline` follows `config` either way, so
+  // a kept draft is diffed against what the server NOW has.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  useEffect(() => {
+    if (config) setDraft((prev) => (prev && dirtyRef.current ? prev : toDraft(config)));
+  }, [config]);
 
   // Validated only while seasons are ON, so a save with seasons untouched (or turned off) is
   // never blocked by a stale anchor/lengthDays left over from a prior edit.
@@ -227,7 +247,9 @@ export function RealmSettingsPane({
 
     try {
       const res = await gamificationApi.updateRealmConfig(ecosystemId, body);
-      setConfig(res.config);
+      // The server's own answer, written straight into the cache rather than invalidated: it is
+      // already in hand, so a re-read would spend a request to arrive back at these bytes.
+      writeConfig(ecosystemId, res.config);
       setDraft(toDraft(res.config));
       setSavedNote(
         res.replayed
@@ -248,7 +270,7 @@ export function RealmSettingsPane({
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, draft, baseline, canSave]);
+  }, [ecosystemId, draft, baseline, canSave, writeConfig]);
 
   const cancel = useCallback(() => {
     if (config) setDraft(toDraft(config));

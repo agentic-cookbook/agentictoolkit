@@ -58,16 +58,24 @@ export interface ResourceItemQuery<T> extends ResourceItem<T> {
  * @param opts.absent A SETTLED list says this id is not in it. The list-absence half of "gone";
  *   the 404 half is detected here. Pass `false`/omit while the list is still loading, or a pane
  *   would announce a deletion it has no evidence for.
+ * @param opts.reportErrors Report a failed read to the auth reporter. Default true. Pass FALSE when
+ *   `load` already reports its own — the same rule, and the same reason, as
+ *   {@link ResourceListOptions.reportErrors}: a fetcher that reports and then rethrows would
+ *   otherwise be reported TWICE for one failure, under two contexts the dedupe cannot collapse.
+ *   The fetcher wins that tie whenever it knows something this hook does not — which step failed,
+ *   or that a particular status is EXPECTED and must not be reported at all (a 403 on a realm the
+ *   caller simply cannot see is a fact about permissions, not an incident).
  */
 export function useResourceItemQuery<T>(
   cacheKey: string,
   id: string | null,
   load: (id: string) => Promise<T>,
-  opts?: { seedFrom?: () => T | undefined; absent?: boolean },
+  opts?: { seedFrom?: () => T | undefined; absent?: boolean; reportErrors?: boolean },
 ): ResourceItemQuery<T> {
   const tenantId = useTenantId();
   const client = getToolkitQueryClient();
   const seedFrom = opts?.seedFrom;
+  const reportErrors = opts?.reportErrors ?? true;
 
   const query = useQuery<T, Error>(
     {
@@ -79,7 +87,13 @@ export function useResourceItemQuery<T>(
         try {
           return await load(id as string);
         } catch (e) {
-          reportUnexpectedAuthError(e, { feature: "resource-item", step: "load", basePath: cacheKey });
+          if (reportErrors) {
+            reportUnexpectedAuthError(e, {
+              feature: "resource-item",
+              step: "load",
+              basePath: cacheKey,
+            });
+          }
           throw e;
         }
       },
