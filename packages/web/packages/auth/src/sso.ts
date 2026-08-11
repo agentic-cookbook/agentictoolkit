@@ -25,8 +25,10 @@ export interface BeginLoginOptions {
    * SSO cookie is host-only on the AS host — only a top-level navigation to that
    * host sends it, which is what makes the silent short-circuit possible. When
    * neither the option nor the env var is set, falls back to the same-origin BFF
-   * proxy (local dev): login still works, but silent SSO can't (the host-only
-   * cookie isn't visible through the proxy), so it always shows central login.
+   * proxy: a clicked Login still works (it ends at the central login form either
+   * way), while the SILENT path refuses outright rather than spend a navigation the
+   * proxy cannot answer — see {@link asBaseConfigured}. That unset case is a
+   * misconfigured deploy, not a local convenience: the dev suite sets the var too.
    */
   authApiBase?: string
   /** In-site path to return to after login (default: the callback's own
@@ -40,6 +42,45 @@ export interface BeginLoginOptions {
 function authApiBaseOrEnv(explicit?: string): string | undefined {
   const base = explicit ?? process.env.NEXT_PUBLIC_AUTH_API_URL
   return base ? base.replace(/\/+$/, '') : undefined
+}
+
+let warnedNoAsBase = false
+
+/**
+ * Whether an AS host is configured at all — the precondition for SILENT restore,
+ * as opposed to an explicit Login (which works through the same-origin proxy).
+ *
+ * The proxy fallback in {@link asEndpoint} is right for a clicked Login and
+ * structurally incapable of a silent one: the central session cookie is host-only
+ * on the AS host, so the browser sends it on a top-level navigation THERE and
+ * never to this site's own `/api`. A silent probe without the base therefore
+ * spends a full-page navigation to learn nothing and comes back
+ * `#error=login_required` — visibly a flash, and indistinguishable from "you are
+ * not signed in" to the visitor.
+ *
+ * That is the ONLY way this returns false in practice, which is why it says so out
+ * loud instead of degrading quietly: every hosted project gets the var from
+ * `frontend/tools/set-backend-env.py`, and the local dev suite sets it too
+ * (`suite.toml` — `NEXT_PUBLIC_AUTH_API_URL = "https://{ADH_BACKEND_HOST}"`). An
+ * unset var means a MISCONFIGURED DEPLOY, and it had gone unnoticed on all three
+ * tiers of one site — a build guard now fails such a build
+ * (`frontend/src/next-config-base.mjs`), and this is the runtime half: one console
+ * error naming the variable, at the moment a restore is declined because of it.
+ */
+function asBaseConfigured(explicit?: string): boolean {
+  if (authApiBaseOrEnv(explicit)) return true
+  if (!warnedNoAsBase) {
+    warnedNoAsBase = true
+    console.error(
+      '[adh-auth] NEXT_PUBLIC_AUTH_API_URL was not set when this site was built, so it ' +
+        'cannot restore an existing central session: the silent check is a top-level ' +
+        "navigation to the authorization server, and without its host it would go to this " +
+        "origin's own /api proxy, which never sees the host-only central cookie. Clicking " +
+        'Login still works. Set the variable on the deploy (frontend/tools/set-backend-env.py) ' +
+        'and rebuild.',
+    )
+  }
+  return false
 }
 
 /** Resolve an AS endpoint path against the configured AS base, falling back to
@@ -213,9 +254,9 @@ const PREFLIGHT_PATH = '/oauth/signin/preflight'
  * taken on a guess into a fact checked in advance.
  *
  * Asked of the SAME host the probe would navigate to — {@link asEndpoint}, so the
- * AS host directly when one is configured, and only the same-origin `/api` proxy
- * in the no-AS-base local case where `/authorize` would go through that proxy too.
- * That pairing is the whole correctness argument: the allow-list lives in the
+ * AS host directly when one is configured, and the same-origin `/api` proxy only for
+ * a direct caller, since {@link beginSilentLogin} no longer reaches here without a
+ * base at all. That pairing is the whole correctness argument: the allow-list lives in the
  * answering server's own client row, and the two URLs are not always the same
  * server. In the dev.local suite `API_BACKEND_URL` is this worktree's backend
  * while `NEXT_PUBLIC_AUTH_API_URL` is the shared authorization service with its
@@ -277,6 +318,13 @@ export async function preflightSsoReturn(opts: {
  *   - no hint on a CROSS-APEX site proves nothing — it cannot read the cookie at
  *     all — so it has to ask, on every route including the landing deck.
  *
+ *  It DOES refuse when no AS host is configured, whatever the hint says — see
+ *  {@link asBaseConfigured}. The hint proves a central session exists; it does not
+ *  give this build anywhere to go and ask for it. That combination is exactly what
+ *  a same-apex site with an unset `NEXT_PUBLIC_AUTH_API_URL` used to hit: hint
+ *  present ⇒ probe ⇒ a top-level navigation to its own proxy ⇒ `login_required` ⇒
+ *  a logged-out header, once per tab, with a flash on the way.
+ *
  *  This deliberately no longer refuses on a landing route or a local hostname.
  *  Both were client-side guesses at the same question — "will the AS bring the
  *  browser back, or strand it?" — and the answer is not the client's to guess:
@@ -288,10 +336,10 @@ export async function preflightSsoReturn(opts: {
 export function shouldSilentRestore(initialHash: string): boolean {
   if (typeof window === 'undefined') return false
   if (isMidAuthFlow(initialHash) || ssoCheckedThisTab()) return false
+  // Checked BEFORE the hint: without an AS host there is nowhere to probe, so no
+  // evidence a session exists can change the answer.
+  if (!asBaseConfigured()) return false
   if (ssoHintPresent()) return true
-  // Also false when no AS base is configured: isCrossApex() cannot compare against
-  // a host it doesn't have, and a probe without one would navigate to this site's
-  // own /api proxy, which never sees the host-only central cookie.
   return isCrossApex()
 }
 
@@ -330,6 +378,11 @@ export async function beginSilentLogin(
 ): Promise<boolean> {
   if (typeof window === 'undefined') return false
   markSsoChecked()
+  // Independently of shouldSilentRestore, which is not every caller's route here: a
+  // silent probe through the same-origin proxy cannot succeed, so refusing costs
+  // nothing and saves the navigation ({@link asBaseConfigured}). The tab's one check
+  // is still spent — the answer is a build fact and will not change while it is open.
+  if (!asBaseConfigured(opts.authApiBase)) return false
   const { clientId = 'adh' } = opts
   const ret = `${window.location.origin}${window.location.pathname}${window.location.search}`
   // Same authApiBase the navigation below uses, so the server that answers the

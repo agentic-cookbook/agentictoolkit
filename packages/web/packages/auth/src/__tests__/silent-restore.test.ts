@@ -62,10 +62,17 @@ function preflightCall(fetchImpl: typeof fetch): [string, RequestInit] {
   return [first[0] as string, (first[1] ?? {}) as RequestInit]
 }
 
+/** The AS host every hosted deploy and the dev suite both set. Configured is the
+ *  NORMAL state — `frontend/tools/set-backend-env.py` puts it on every Vercel project
+ *  and `suite.toml` sets it locally — so it is the fixture default, and the two tests
+ *  about its ABSENCE delete it and say why. It reads as cross-apex from `cookbook.com`
+ *  and same-apex from `*.example.com`, which is what `isCrossApex` turns on. */
+const AS = 'https://api.example.com'
+
 beforeEach(() => {
   window.sessionStorage.clear()
   setHint(false)
-  delete process.env.NEXT_PUBLIC_AUTH_API_URL
+  process.env.NEXT_PUBLIC_AUTH_API_URL = AS
 })
 
 afterEach(() => {
@@ -93,7 +100,6 @@ describe('shouldSilentRestore', () => {
     // the central session is. So no hint means there is no session to restore, and
     // a probe would spend a top-level redirect to learn nothing.
     stubLocation('https://api.example.com')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(false)
   })
 
@@ -101,16 +107,50 @@ describe('shouldSilentRestore', () => {
     // A cross-apex site cannot read the hint at all, so its absence proves nothing
     // and asking is the only way to find an existing session.
     stubLocation('https://cookbook.com')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(true)
   })
 
-  it('false with no AS base configured — a probe could not carry the cookie', () => {
+  it('false with no AS base configured, even WITH a hint saying a session exists', () => {
     // The central cookie is host-only on the AS host. With no base, buildAuthorizeUrl
     // falls back to this site's own /api proxy, where that cookie is invisible: the
     // probe could only ever come back empty, so it is not worth a redirect.
+    //
+    // Asserted with the hint PRESENT because that is the ordering claim: the base is
+    // checked before any evidence, so the strongest possible evidence of a session
+    // cannot talk the probe into a navigation that structurally cannot carry it.
+    setHint(true)
     stubLocation('https://cookbook.com')
+    delete process.env.NEXT_PUBLIC_AUTH_API_URL
     expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('says out loud that the variable is missing, once', async () => {
+    // An unset var is a misconfigured DEPLOY, not a local convenience — one site had
+    // it missing on all three tiers and the only symptom was a logged-out header, which
+    // looks exactly like not being signed in. The build guard fails such a build now
+    // (`frontend/src/next-config-base.mjs`); this is the runtime half, and it names the
+    // variable so the console says what to fix rather than that something declined.
+    //
+    // A FRESH module instance, because "once" is module state: any earlier test that
+    // exercised the unset path has already spent the warning, and asserting on the
+    // shared instance would pass or fail on test ORDER rather than on the behaviour.
+    vi.resetModules()
+    const fresh = await import('../sso')
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      setHint(true)
+      stubLocation('https://cookbook.com')
+      delete process.env.NEXT_PUBLIC_AUTH_API_URL
+      expect(fresh.shouldSilentRestore('')).toBe(false)
+      expect(spy.mock.calls.length).toBe(1)
+      expect(String(spy.mock.calls[0]?.[0])).toContain('NEXT_PUBLIC_AUTH_API_URL')
+      // Once per page load, not once per decision: the header re-renders on every route
+      // change, and a repeated console error would bury the rest of the page's output.
+      fresh.shouldSilentRestore('')
+      expect(spy.mock.calls.length).toBe(1)
+    } finally {
+      spy.mockRestore()
+    }
   })
 
   it('false mid-flow on the callback (#code / #error present)', () => {
@@ -123,7 +163,6 @@ describe('shouldSilentRestore', () => {
   it('false once the tab has already checked (loop guard)', async () => {
     setHint(true)
     stubLocation('https://status.example.com')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(true) })
     expect(shouldSilentRestore('')).toBe(false)
     clearSsoChecked()
@@ -143,14 +182,12 @@ describe('shouldSilentRestore', () => {
 describe('shouldSilentRestore on a landing page', () => {
   it('true on the site root for a cross-apex site — the header must reflect the login', () => {
     stubLocation('https://cookbook.com', '/')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(true)
   })
 
   it('true on the site root when the hint cookie says a session exists', () => {
     setHint(true)
     stubLocation('https://cookbook.com', '/')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(true)
   })
 
@@ -187,7 +224,6 @@ describe('preflightSsoReturn', () => {
     // shared auth service with its own database. Asking the proxy would have one server
     // speak for another's allow-list, and a wrong `false` here is indistinguishable
     // from the bug the preflight exists to fix.
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     const fetchImpl = preflightFetch(true)
     await preflightSsoReturn({ ...args, fetchImpl })
     const [url, init] = preflightCall(fetchImpl)
@@ -258,7 +294,6 @@ describe('beginSilentLogin', () => {
     // The silent result bounces back to the page the user is on (not the dedicated
     // callback), so its own AuthProvider exchanges the #code in place.
     const loc = stubLocation('https://status.example.com', '/incidents', '?team=core')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
 
     expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(true) })).toBe(true)
 
@@ -290,7 +325,6 @@ describe('beginSilentLogin', () => {
     // browser to the central login page. Staying put leaves the page anonymous,
     // exactly where it would have been had it never asked.
     const loc = stubLocation('https://newly-registered.com', '/')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
 
     expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(false) })).toBe(false)
 
@@ -302,7 +336,6 @@ describe('beginSilentLogin', () => {
     // will not change while the tab is open, so re-asking on every route change
     // would be pure cost.
     stubLocation('https://newly-registered.com', '/')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
 
     await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(false) })
 
