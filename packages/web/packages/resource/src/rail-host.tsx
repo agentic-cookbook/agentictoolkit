@@ -110,10 +110,12 @@ function levelsKey(levels: TopicLevel[]): string {
       // to empty/error would keep re-showing the stale "Loading…" (the level never re-registers).
       // `overview` too: it flips (false) while a master/detail inline editor is open —
       // same re-registration need as emptyLabel, or the frontier keeps the stale card grid.
+      // `busy` too, and for the same reason: a read starting or finishing changes NOTHING else
+      // about the level, so without it the spinner would never reach the screen.
       (l) =>
         `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.defaultSelectedId ?? ""}:${
           l.overview === false ? "!o" : ""
-        }:${l.items
+        }:${l.busy ? "!b" : ""}:${l.items
           .map((it) => `${it.id}=${it.label}=${it.sublabel ?? ""}`)
           .join(",")}`,
     )

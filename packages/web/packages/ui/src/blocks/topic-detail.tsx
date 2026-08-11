@@ -11,7 +11,7 @@ import {
   type ReactNode,
 } from "react"
 
-import { ChevronRight, Circle, Plus, Trash2, X } from "lucide-react"
+import { ChevronRight, Circle, Loader2, Plus, Trash2, X } from "lucide-react"
 
 import { AlertModal } from "../components/alert-modal"
 import { CollapseToggle } from "../components/collapse-toggle"
@@ -479,6 +479,7 @@ export function TopicRail({
   coveredShadow = false,
   showToggle = true,
   title,
+  busy = false,
   covered = false,
   isRoot = false,
   selectionStyle = "bar",
@@ -542,6 +543,10 @@ export function TopicRail({
    *  start, so every titled list reserves the same header height and rows align vertically across
    *  lists. Omit (standalone TopicDetail) to keep the bare control strip with no header/divider. */
   title?: string
+  /** A read is in flight for this list — its rows, or the item currently selected in it. Shows a
+   *  small spinner immediately before the title. One spinner covers BOTH reads: from the user's
+   *  side there is one list and one wait, and two spinners in one header would be noise. */
+  busy?: boolean
   /** This list is covered (peeking) in the "covered" style: rows render as a left-aligned icon
    *  strip. The covered stack reveals the whole list on hover by re-layering the real rail
    *  full-width above its neighbours (there is no per-row/header popover). */
@@ -657,6 +662,19 @@ export function TopicRail({
       {title !== undefined && (
         <span className="pointer-events-none absolute left-1/2 flex max-w-[calc(100%-6rem)] -translate-x-1/2 items-center font-mono text-[0.8rem] tracking-[0.02em] text-apt-text-muted">
           <span className="relative flex min-w-0 items-center">
+            {/* Hangs OFF the title's left edge, out of flow — the mirror of the `+` on the right.
+                In flow it would shift the title sideways every time a read started, and the title
+                is CENTRED on the header (see the note above), so the shift would be visible on
+                every click. It must also live outside the `truncate` box, which would clip it. */}
+            {busy && (
+              <span className="absolute top-1/2 right-full mr-1.5 -translate-y-1/2">
+                <Loader2
+                  className="size-3 animate-spin text-apt-text-muted"
+                  role="status"
+                  aria-label="Loading"
+                />
+              </span>
+            )}
             <span className="truncate">{title}</span>
             {newButton && (
               <span className="pointer-events-auto absolute top-1/2 left-full ml-1 -translate-y-1/2">
