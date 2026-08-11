@@ -3057,6 +3057,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/oauth/signin/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Will /authorize RETURN the browser to this origin, or send it to central login? */
+        get: {
+            parameters: {
+                query: {
+                    clientId: string;
+                    return: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description whether a prompt=none check for this return would be bounced back */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            allowed: boolean;
+                            /** @description null when allowed; else invalid_return, client_unknown or origin_not_allowed */
+                            reason?: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/oauth/signin/authorize": {
         parameters: {
             query?: never;
