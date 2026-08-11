@@ -417,7 +417,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/tour',
     '/user/[slug]',
     '/user/[slug]/[persona]',
-    '/user/[slug]/settings',
   ],
   personas: [
     '/',
