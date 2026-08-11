@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Bot, Trash2, UserRound, UsersRound } from "lucide-react";
 
+import { useResourceItemQuery, useResourceList } from "@agentic-toolkit/data";
 import {
   accessApi,
   type AccessAssignmentRow,
@@ -58,6 +59,17 @@ function isNoAccess(e: unknown): boolean {
   return status === 403 || status === 404;
 }
 
+/** One read's worth of the M-gated assignment list. The three fields arrive from ONE response and
+ *  are cached as one value for that reason: split across three entries they could disagree, and a
+ *  pane showing "Restricted" beside the inherited assignment list is a lie about who can see the
+ *  item. `noAccess` is in here rather than beside it because it is the same answer — the 403 that
+ *  says this caller manages nothing here IS the read's result, not its failure. */
+interface ItemAccessSnapshot {
+  assignments: AccessAssignmentRow[];
+  restricted: boolean;
+  noAccess: boolean;
+}
+
 type Provenance = EffectiveAccessRow["decidedBy"][string];
 
 /** One "because…" line for a verb, matching the doc's phrasing: owner/admin
@@ -94,14 +106,6 @@ export function ItemAccessPanel({
   title,
   subjectsDirectory,
 }: ItemAccessPanelProps) {
-  const [assignments, setAssignments] = useState<AccessAssignmentRow[] | null>(null);
-  const [restricted, setRestricted] = useState(false);
-  const [roles, setRoles] = useState<AccessRoleRow[] | null>(null);
-  const [subjects, setSubjects] = useState<AccessSubject[] | null>(null);
-  // The M-gate outcome: a 403/404 on the initial list flips this and stops the pane
-  // rendering any management chrome.
-  const [noAccess, setNoAccess] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // The add-row draft (subject key `<kind>:<id>` + role) and a busy guard so a
@@ -111,75 +115,102 @@ export function ItemAccessPanel({
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
 
-  // The open explainer (a subject key) + its lazily-loaded effective verbs.
+  // The open explainer, as a subject key (`<kind>:<id>`) — also the cache id its verbs are read
+  // under, so re-opening a row someone already expanded costs no read at all.
   const [explainKey, setExplainKey] = useState<string | null>(null);
-  const [effective, setEffective] = useState<EffectiveAccessRow | null>(null);
-  const [effectiveError, setEffectiveError] = useState<string | null>(null);
 
-  // Latest-wins guards: every loader stamps a generation so an overlapped older
-  // response (a stale itemId, or one that resolves after a mutation's reload) is a
-  // no-op instead of racing its result into state (mirrors AccessPane's refreshGen).
-  const refreshGen = useRef(0);
-  const rolesGen = useRef(0);
-  const subjectsGen = useRef(0);
-  const effGen = useRef(0);
-
-  const refresh = useCallback(async () => {
-    const gen = ++refreshGen.current;
-    setLoadError(null);
+  // The assignment list, cached per (workspace, feature, item). Re-opening Access on an item you
+  // have already looked at paints its rows on the first frame and re-reads behind that paint. The
+  // whole scope is in the key, so switching items reads a DIFFERENT entry rather than racing one
+  // item's response into another item's pane — which is what the hand-rolled generation counters
+  // existed to prevent.
+  //
+  // The M-gate is resolved INSIDE the fetcher: a 403/404 is this surface's quiet "you don't manage
+  // access here", a defined answer worth caching, not a failure. Anything else rejects and reaches
+  // the banner through the hook's own `error`.
+  const loadSnapshot = useCallback(async (): Promise<ItemAccessSnapshot> => {
     try {
       const res = await accessApi.listAssignments(workspaceSlug, { feature, itemId });
-      if (gen !== refreshGen.current) return;
-      setAssignments(res.assignments);
-      setRestricted(Boolean(res.restricted));
-      setNoAccess(false);
+      return { assignments: res.assignments, restricted: Boolean(res.restricted), noAccess: false };
     } catch (e) {
-      if (gen !== refreshGen.current) return;
-      if (isNoAccess(e)) {
-        setNoAccess(true);
-        setAssignments([]);
-        return;
-      }
-      setAssignments([]);
-      setLoadError(e instanceof Error ? e.message : "Failed to load access.");
+      if (isNoAccess(e)) return { assignments: [], restricted: false, noAccess: true };
+      throw e;
     }
   }, [workspaceSlug, feature, itemId]);
+  const {
+    item: snapshot,
+    error: loadError,
+    reload: reloadSnapshot,
+  } = useResourceItemQuery<ItemAccessSnapshot>(
+    `workspace:${workspaceSlug}:item-access:${feature}`,
+    itemId,
+    loadSnapshot,
+  );
+  // Null rows until the first answer, exactly as before — but `restricted` and `noAccess` read
+  // their SAFE side out of an absent snapshot: inherited, and managed. A pane that assumed
+  // "restricted" or "no access" while its read was in flight would flash a claim about who can see
+  // the item, and then contradict it a moment later.
+  const assignments = snapshot?.assignments ?? null;
+  const restricted = snapshot?.restricted ?? false;
+  const noAccess = snapshot?.noAccess ?? false;
 
-  const loadRoles = useCallback(async () => {
-    const gen = ++rolesGen.current;
-    try {
-      const rs = await accessApi.listRoles(workspaceSlug);
-      if (gen === rolesGen.current) setRoles(rs);
-    } catch {
-      // Non-fatal: a role select falls back to the raw role name; the M-gated
-      // assignment list is the real gate, not this list.
-      if (gen === rolesGen.current) setRoles([]);
-    }
-  }, [workspaceSlug]);
+  // Both workspace-scoped and shared with every item's panel in that workspace: opening Access on a
+  // second project reads neither of these again.
+  //
+  // Both fetchers SWALLOW and answer empty, which is the behaviour the hand-rolled loaders had and
+  // is deliberate: neither list is a gate. A role select falls back to the raw role name, and an
+  // empty directory only means the picker has no one to offer — the M-gated assignment list above
+  // is the real gate. Swallowing inside the fetcher (rather than ignoring the hook's `error`) also
+  // keeps a non-fatal miss out of the platform's auth telemetry.
+  const loadRoles = useCallback(
+    () => accessApi.listRoles(workspaceSlug).catch(() => [] as AccessRoleRow[]),
+    [workspaceSlug],
+  );
+  const { items: roles } = useResourceList<AccessRoleRow>(
+    `workspace:${workspaceSlug}:access-roles`,
+    loadRoles,
+  );
 
-  const loadSubjects = useCallback(async () => {
-    const gen = ++subjectsGen.current;
-    try {
-      const dir = await subjectsDirectory(workspaceSlug);
-      if (gen === subjectsGen.current) setSubjects(dir);
-    } catch {
-      // Non-fatal: existing rows still render by raw id; the picker just has no one to add.
-      if (gen === subjectsGen.current) setSubjects([]);
-    }
-  }, [workspaceSlug, subjectsDirectory]);
+  const loadSubjects = useCallback(
+    () => subjectsDirectory(workspaceSlug).catch(() => [] as AccessSubject[]),
+    [workspaceSlug, subjectsDirectory],
+  );
+  const { items: subjects } = useResourceList<AccessSubject>(
+    `workspace:${workspaceSlug}:access-subjects`,
+    loadSubjects,
+  );
 
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-  useEffect(() => {
-    void loadRoles();
-  }, [loadRoles]);
-  useEffect(() => {
-    void loadSubjects();
-  }, [loadSubjects]);
+  // The per-subject "why" explainer, read only while a row is expanded (`explainKey` null reads
+  // nothing) and cached per subject, so collapsing and re-expanding a row is instant. The subject
+  // is the cache ID and the item is in the key, so one row's answer can never be shown under
+  // another's — the last thing the generation counter guarded.
+  const loadEffective = useCallback(
+    (key: string) => {
+      // The key is `<kind>:<id>` and the id may itself contain colons, so split on the FIRST one
+      // only. The kind is narrowed to the two the route accepts, which `onExplain` guarantees —
+      // it refuses a team row outright, so no team key ever becomes an id here.
+      const sep = key.indexOf(":");
+      return accessApi.effective(workspaceSlug, {
+        feature,
+        subjectKind: key.slice(0, sep) as "customer" | "persona",
+        subjectId: key.slice(sep + 1),
+        itemId,
+      });
+    },
+    [workspaceSlug, feature, itemId],
+  );
+  const { item: effective, error: effectiveError } = useResourceItemQuery<EffectiveAccessRow>(
+    `workspace:${workspaceSlug}:effective-access:${feature}:${itemId}`,
+    explainKey,
+    loadEffective,
+  );
 
   // Every mutation funnels through here: a single in-flight guard, a cleared error,
   // and — on success — a reload of the assignment list (the doc's "reload afterward").
+  //
+  // The re-read SWALLOWS, as the hand-rolled `refresh` did by construction: the mutation has
+  // already succeeded by the time it runs, and reporting "Something went wrong." over a failed
+  // re-read would name the wrong operation. The failure still shows — in `loadError` above.
   const runMutation = useCallback(
     async (fn: () => Promise<void>) => {
       if (busyRef.current) return;
@@ -188,7 +219,7 @@ export function ItemAccessPanel({
       setError(null);
       try {
         await fn();
-        await refresh();
+        await reloadSnapshot().catch(() => {});
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       } finally {
@@ -196,7 +227,7 @@ export function ItemAccessPanel({
         setBusy(false);
       }
     },
-    [refresh],
+    [reloadSnapshot],
   );
 
   const keyOfAssignment = (a: AccessAssignmentRow) => `${a.subjectKind}:${a.subjectId}`;
@@ -282,34 +313,15 @@ export function ItemAccessPanel({
     });
   };
 
-  // Load (or toggle closed) the effective-permission explainer for a row. Teams have
+  // Open (or toggle closed) the effective-permission explainer for a row. Teams have
   // no single effective set to explain, so they aren't explainable.
+  //
+  // Naming the row is the whole action now: the read hangs off `explainKey`, so opening one is a
+  // single state change, and a row opened before re-opens from the cache with nothing in flight.
   const onExplain = (a: AccessAssignmentRow) => {
     if (a.subjectKind === "team") return;
     const key = keyOfAssignment(a);
-    if (explainKey === key) {
-      setExplainKey(null);
-      return;
-    }
-    setExplainKey(key);
-    setEffective(null);
-    setEffectiveError(null);
-    const gen = ++effGen.current;
-    accessApi
-      .effective(workspaceSlug, {
-        feature,
-        subjectKind: a.subjectKind,
-        subjectId: a.subjectId,
-        itemId,
-      })
-      .then((res) => {
-        if (gen === effGen.current) setEffective(res);
-      })
-      .catch((e) => {
-        if (gen === effGen.current) {
-          setEffectiveError(e instanceof Error ? e.message : "Failed to load why.");
-        }
-      });
+    setExplainKey(explainKey === key ? null : key);
   };
 
   const heading = title ?? (itemLabel ? `Access · ${itemLabel}` : "Access");

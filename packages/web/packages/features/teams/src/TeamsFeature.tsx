@@ -1,11 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { Settings, Users, Shield, UsersRound } from "lucide-react";
 import { teamsApi, teamMembersApi, type Team } from "@agentic-toolkit/data/teams";
 import { ecosystemsApi } from "@agentic-toolkit/data/ecosystems";
-import { useResourceList, makeEntityDeleteHandler } from "@agentic-toolkit/data";
+import {
+  useResourceItemQuery,
+  useResourceList,
+  makeEntityDeleteHandler,
+} from "@agentic-toolkit/data";
 import {
   ResourceExplorer,
   CreateResourceDialog,
@@ -15,6 +19,10 @@ import { TeamSettingsPane } from "./TeamSettingsPane";
 import { TeamMembersPane } from "./TeamMembersPane";
 import { TeamPermissionsPane } from "./TeamPermissionsPane";
 import { TeamDetail, teamBlank, teamValidate } from "./TeamDetail";
+
+/** The stand-in while the counts read is outstanding or has given up. Module scope so it keeps one
+ *  identity: a fresh `new Map()` per render would make every consumer of it re-derive. */
+const EMPTY_COUNTS: ReadonlyMap<string, number> = new Map<string, number>();
 
 /**
  * The Teams feature workspace (FTD model): a team selector popup + the "All"
@@ -60,34 +68,34 @@ export function TeamsFeature({
   // participant team and of any team created here. `workspaceSlug` is used ONLY for this
   // data-scoping lookup (never for basePath/URL derivation, which the host supplies
   // directly) — resolve slug -> ecosystem id the same way the sibling Ecosystem feature
-  // does. NOTE: the pre-move TeamsTab shared this lookup's result via a react-query
-  // queryKey with the (still hub-side, unmigrated) Ecosystem tab's warm cache; this
-  // package doesn't depend on @tanstack/react-query (not a declared dependency here), so
-  // it's a plain per-mount fetch instead — a small, easily-reversible loss of that one
-  // cross-tab cache hit, not a behavior change to the Teams feature itself.
-  const [ecosystemId, setEcosystemId] = useState<string | undefined>(undefined);
+  // does. It is CACHED per slug: this lookup used to be a plain per-mount fetch, so every visit to
+  // Teams paid a round trip before the list could even start — and the round trip's answer never
+  // changes for the life of a workspace. The pre-move TeamsTab shared it with the Ecosystem tab's
+  // warm cache; this restores the caching without restoring that sharing, which is deliberate —
+  // the Ecosystem feature's own `["ecosystem-id-for-slug", slug]` entry documents a phantom-row bug
+  // that a second reader of ITS key reopened, and this hook's key space is separate by construction.
+  const {
+    item: resolvedEcosystemId,
+    isSettled: lookupSettled,
+    error: lookupError,
+  } = useResourceItemQuery<string | null>(
+    "workspace:default-ecosystem-id",
+    slug ?? null,
+    ecosystemsApi.ecosystemIdForSlug,
+  );
+  const ecosystemId = resolvedEcosystemId ?? undefined;
   // The lookup's terminal non-success states get DEFINED surfaces (never an eternal
   // unlabeled spinner, which reads as an outage): "failed" = the fetch errored (no retry,
   // matching the pre-move `retry: false`); "none" = the slug resolved to a workspace with
-  // no primary ecosystem (a first-run tenant).
-  const [lookup, setLookup] = useState<"pending" | "resolved" | "failed" | "none">("pending");
-  useEffect(() => {
-    if (slug == null) return;
-    let alive = true;
-    ecosystemsApi
-      .ecosystemIdForSlug(slug)
-      .then((id) => {
-        if (!alive) return;
-        setEcosystemId(id ?? undefined);
-        setLookup(id != null ? "resolved" : "none");
-      })
-      .catch(() => {
-        if (alive) setLookup("failed");
-      });
-    return () => {
-      alive = false;
-    };
-  }, [slug]);
+  // no primary ecosystem (a first-run tenant). No slug is "pending" and not "none": nothing has
+  // been asked, so nothing has been answered, and the branches below already gate on the slug.
+  const lookup: "pending" | "resolved" | "failed" | "none" = lookupError
+    ? "failed"
+    : slug == null || !lookupSettled
+      ? "pending"
+      : resolvedEcosystemId != null
+        ? "resolved"
+        : "none";
 
   // Hold the master list in its Loading state until the ecosystem resolves, so it never
   // fetches (and briefly flashes) the un-scoped set. Once resolved, `load` changes identity
@@ -109,27 +117,26 @@ export function TeamsFeature({
   // so the affordance is unreachable anyway.)
   const canCreate = slug != null && lookup !== "failed" && lookup !== "none";
 
-  // Member counts for the "All" landing cards (one request, grouped per team). Decorative
-  // — failures are ignored — and refetched whenever the team list reloads (create/delete).
-  const [memberCounts, setMemberCounts] = useState<Map<string, number>>(new Map());
-  useEffect(() => {
-    // Only when there are cards to decorate: an unscoped host (list withheld pending §2)
-    // or an empty tenant must not issue the cross-team counts read — the list's scoping
-    // posture and this sibling fetch should agree.
-    if (teams == null || teams.length === 0) return;
-    let live = true;
-    teamMembersApi
-      .counts()
-      .then((m) => {
-        if (live) setMemberCounts(m);
-      })
-      .catch(() => {
-        /* counts are decorative; ignore load errors */
-      });
-    return () => {
-      live = false;
-    };
-  }, [teams]);
+  // Member counts for the "All" landing cards (one request, grouped per team). Decorative —
+  // failures are swallowed in the fetcher, which answers an empty map, so a counts outage costs
+  // the cards their badges and nothing else (and stays out of the auth telemetry a real read
+  // failure belongs in).
+  //
+  // The TEAM IDS are the cache id, which is how it keeps refetching on exactly the change it used
+  // to: a create or a delete produces a different set and so a different entry, while returning to
+  // the landing with the same teams costs no request. A null id (no teams, or a list withheld
+  // pending §2) reads nothing at all — the list's scoping posture and this sibling read agree.
+  const countsId = teams && teams.length > 0 ? teams.map((t) => t.id).join(",") : null;
+  const loadCounts = useCallback(
+    () => teamMembersApi.counts().catch(() => new Map<string, number>()),
+    [],
+  );
+  const { item: counts } = useResourceItemQuery<Map<string, number>>(
+    "team-member-counts",
+    countsId,
+    loadCounts,
+  );
+  const memberCounts = counts ?? EMPTY_COUNTS;
 
   // Entity-first topics (FTD spec §4): the team itself, then Members, Permissions.
   const topics: ResourceTopic[] = [

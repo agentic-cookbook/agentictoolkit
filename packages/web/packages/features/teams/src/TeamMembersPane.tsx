@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Bot, Trash2, UserRound } from "lucide-react";
 
+import { useResourceList } from "@agentic-toolkit/data";
 import { teamMembersApi, type TeamMember } from "@agentic-toolkit/data/teams";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api as personaApi, type Persona } from "@agentic-toolkit/data/personas";
@@ -53,75 +54,43 @@ export function TeamMembersPane({
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.
   const renderRecordAffordance = useRecordAffordance();
-  const [members, setMembers] = useState<TeamMember[] | null>(null);
   // Creating a member is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new member is selected.
   const [newOpen, setNewOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  // The caller's own personas, for the add-persona picker in the create modal. The backend enforces
-  // which of them may act for a team (403 on add if not granted), so we list them all.
-  const [personas, setPersonas] = useState<Persona[] | null>(null);
-  const [personasError, setPersonasError] = useState<string | null>(null);
   // In-flight guard for the member delete, so a rapid double-click can't fire two DELETEs.
   const [removingMember, setRemovingMember] = useState(false);
 
-  // A monotonic request seq + a mounted flag guard the async list fetch: a stale in-flight response
-  // (from a previous team, or one that resolves after unmount) can never overwrite the current team.
-  const reqSeq = useRef(0);
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-
-  const load = useCallback(
-    async (showLoading: boolean) => {
-      if (!teamId) {
-        setMembers([]);
-        return;
-      }
-      const seq = ++reqSeq.current;
-      if (showLoading) {
-        setMembers(null);
-        setError(null);
-      }
-      setLoadError(null);
-      try {
-        const rows = await teamMembersApi.list(teamId);
-        if (mounted.current && seq === reqSeq.current) setMembers(rows);
-      } catch (e) {
-        if (mounted.current && seq === reqSeq.current) {
-          setMembers([]);
-          setLoadError(e instanceof Error ? e.message : "Failed to load members.");
-        }
-      }
-    },
+  // The members, cached per TEAM: coming back to a team you have already opened paints its members
+  // on the first frame and re-reads behind that paint. The team is in the cache key AND in the
+  // fetcher, so switching teams reads a different entry rather than showing one team's members
+  // under another team's name — the stale-response race the hand-rolled seq counter used to guard.
+  //
+  // No team means an empty list, not a read: this pane renders under the "All" landing too, where
+  // there is nothing to list.
+  const loadMembers = useCallback(
+    () => (teamId ? teamMembersApi.list(teamId) : Promise.resolve([] as TeamMember[])),
     [teamId],
   );
+  const {
+    items: members,
+    reload: reloadMembers,
+    error: loadError,
+    isFetching: membersFetching,
+  } = useResourceList<TeamMember>(`team:${teamId ?? ""}:members`, loadMembers);
 
-  // Load on mount and whenever the active team changes (load(true) handles the reset).
-  useEffect(() => {
-    void load(true);
-  }, [load]);
+  // The caller's own personas, for the add-persona picker in the create modal. The backend enforces
+  // which of them may act for a team (403 on add if not granted), so we list them all. Caller-scoped
+  // rather than team-scoped, so its cache key names no team and one read serves every team's modal.
+  const { items: personas, error: personasError } = useResourceList<Persona>(
+    "personas:mine",
+    personaApi.personas.list,
+  );
 
-  // Load the caller's personas once for the add-persona picker (caller-scoped, not team-scoped).
-  useEffect(() => {
-    let live = true;
-    personaApi.personas
-      .list()
-      .then((res) => {
-        if (live) setPersonas(res);
-      })
-      .catch((e) => {
-        if (live) setPersonasError(e instanceof Error ? e.message : "Failed to load personas.");
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
+  // Swallowing: both callers below re-read AFTER their own write has already succeeded, so a failed
+  // re-read must not be reported as a failed add or remove. The failure still reaches the screen —
+  // it lands in the hook's `error`, which the banner renders.
+  const refreshMembers = useCallback(() => reloadMembers().catch(() => {}), [reloadMembers]);
 
   const selectedId = leaf?.leafId ?? null;
   const selected = selectedId
@@ -152,7 +121,7 @@ export function TeamMembersPane({
       setRemovingMember(false);
     }
     leaf?.onSelect(null);
-    await load(false);
+    refreshMembers();
   }
 
   // PUBLISH the members as a stack level. The New member affordance is the header `+`.
@@ -170,6 +139,9 @@ export function TeamMembersPane({
     onSelect: (id) => leaf?.onSelect(id),
     onClear: () => leaf?.onSelect(null),
     emptyLabel: members === null ? "Loading…" : "No members yet.",
+    // The spinner in this list's title while a read is in flight — including the re-read behind a
+    // cached paint, which is the only signal that rows already on screen are being checked.
+    busy: membersFetching,
     // "New member" is a right-justified `+` in the list header; it opens the create modal. Gated on
     // a team being active — there's nothing to add a member to otherwise.
     onNew: teamId ? () => setNewOpen(true) : undefined,
@@ -255,7 +227,7 @@ export function TeamMembersPane({
           onClose={() => setNewOpen(false)}
           onCreated={(member) => {
             setNewOpen(false);
-            void load(false);
+            refreshMembers();
             leaf?.onSelect(member.id);
           }}
           renderForm={(draft, onChange, formError) => (
@@ -275,10 +247,13 @@ export function TeamMembersPane({
                 />
               </Field>
               <div className="border-t border-apt-border pt-6">
-                {personas === null ? (
-                  <p className="text-sm text-apt-text-muted">Loading personas…</p>
-                ) : personasError ? (
+                {/* The FAILURE is read first. A failed read leaves the rows null, so testing for
+                    null first would leave the picker saying "Loading personas…" forever over a read
+                    that has already given up. */}
+                {personasError ? (
                   <ErrorText error={personasError} />
+                ) : personas === null ? (
+                  <p className="text-sm text-apt-text-muted">Loading personas…</p>
                 ) : personas.length === 0 ? (
                   <p className="text-sm text-apt-text-muted">You have no personas to add.</p>
                 ) : (
