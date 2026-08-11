@@ -24,15 +24,20 @@ export type MarketingRootHtmlProps = {
     siteId: SiteId;
     /**
      * Whether the AuthProvider runs the cross-site cold-load silent-SSO probe (default `true`,
-     * the feature-site behaviour) on the site's NON-LANDING routes. The landing page (`/`) never
-     * probes whatever this says — `shouldSilentRestore` refuses there — so this prop is about the
-     * routes behind it. Set `false` for a FULLY PUBLIC site that must never redirect a
-     * visitor on page load. The probe is a top-level `/authorize?prompt=none` navigation (the central
-     * session cookie is host-only + SameSite=Lax, so it CANNOT be done silently in the background) —
-     * and when the site's origin can't complete the silent bounce it strands the visitor on the
-     * central login page. Turning it off keeps every route unauthenticated while the header stays
-     * session-aware from local tokens (explicit Login via /auth/callback still restores the avatar);
-     * the header buttons become the only auth affordance. See docs/platform/login-and-return.md.
+     * the feature-site behaviour) — on EVERY route, the landing page included.
+     *
+     * `false` means one thing now: this site does not recognize a signed-in visitor. It used to
+     * mean something else as well, which is why it exists at all — the probe is a top-level
+     * `/authorize?prompt=none` navigation (the central session cookie is host-only + SameSite=Lax,
+     * so it CANNOT be done in the background), and it used to make that navigation on a guess, so
+     * an origin the AS return-origin allow-list was missing stranded the visitor on the central
+     * login page. A fully public site turned the probe off to be sure that never happened.
+     * `beginSilentLogin` now asks the AS first (`preflightSsoReturn`) and navigates only on a yes,
+     * so a public site keeps that guarantee with the probe ON, and no site in the family passes
+     * `false` (frontend/tools/verify-site-uniformity.py fails one that starts).
+     *
+     * Set it only for a surface that must not navigate on load for a reason the preflight does not
+     * cover, and say what that reason is. See docs/platform/cross-site-auth.md.
      */
     silentSso?: boolean;
     /**
@@ -84,12 +89,15 @@ export type MarketingRootHtmlProps = {
  *    per-site `<head>` content is `metadata` in the site's own layout.
  *  • an `<AuthProvider clientId="adh" silentSso={silentSso}>` — a feature site
  *    (docs/platform/feature-sites-redesign.md) leaves the probe ON (default): the header is
- *    session-aware and `/home` is the signed-in feature surface. The probe is landing-page-exempt,
- *    hint-cookie-gated + once-per-tab (`shouldSilentRestore`) and every deployed marketing origin
- *    is in the `adh` client's `ssoReturnOrigins` allow-list — but a hint cookie makes it fire on
- *    every non-landing route the cookie is readable from, local dev included, and any origin the
- *    allow-list is missing gets stranded on the central login page. `silentSso={false}` opts the
- *    rest of a site's routes out too — no site in the family does today, and
+ *    session-aware and `/home` is the signed-in feature surface. It fires once per tab, on
+ *    EVERY route including the landing deck, gated by `shouldSilentRestore` (a readable hint
+ *    cookie, or cross-apex where the cookie cannot be read) — and it is safe to fire there
+ *    because `beginSilentLogin` asks the AS whether it will return the browser before it
+ *    navigates, so an origin the allow-list is missing costs the avatar rather than stranding
+ *    the visitor on the central login page. That guarantee is what retired the two client-side
+ *    guesses this comment used to describe (a landing-route exemption and a local-hostname
+ *    veto); see docs/platform/cross-site-auth.md. `silentSso={false}` opts a site out of
+ *    recognition entirely — no site in the family does, and
  *    frontend/tools/verify-site-uniformity.py fails one that starts, so the escape hatch cannot
  *    be taken quietly. See the prop doc above.
  *  • `<AppShell header={header ?? <MarketingSiteHeader siteId/>} footer={…}>` — the shared

@@ -1,19 +1,31 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { shouldSilentRestore, ssoHintPresent, beginSilentLogin, clearSsoChecked } from '../sso'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import {
+  shouldSilentRestore,
+  ssoHintPresent,
+  beginSilentLogin,
+  clearSsoChecked,
+  preflightSsoReturn,
+} from '../sso'
 
-// Guards for the cold-load silent SSO restore. The gating is safety-critical:
-// the AuthProvider runs on every brand site, so a wrong "yes" would redirect
-// anonymous/public visitors. It must say "yes" ONLY when the hint cookie is
-// present, we're not mid-flow on the callback, and we haven't checked this tab.
+// Guards for the cold-load silent SSO restore. The gating is safety-critical: the
+// AuthProvider runs on every brand site, so the rules here decide what a visitor
+// sees on a page they asked for by name.
+//
+// The division of labour is the thing to keep straight, because it used to be one
+// job done twice with guesses:
+//
+//   shouldSilentRestore  — is a probe WORTH it? (do we have positive evidence of a
+//                          central session, or no way to read one?)
+//   preflightSsoReturn   — is a probe SAFE? (will the AS bounce the browser back to
+//                          this origin, or strand it on the central login page?)
+//
+// Only the AS can answer the second, so it is asked rather than guessed. That is
+// what allows a probe on a public landing route, which a guess never could.
 
 let savedLocation: PropertyDescriptor | undefined
-function stubLocation(
-  origin: string,
-  pathname = '/dashboard',
-  search = '',
-): { href: string } {
+function stubLocation(origin: string, pathname = '/dashboard', search = ''): { href: string } {
   // hostname is derived from the origin, not passed separately, so a test can't
-  // stub a host that contradicts its own origin — the locality rule below reads it.
+  // stub a host that contradicts its own origin.
   const loc = { origin, hostname: new URL(origin).hostname, pathname, search, href: '' }
   savedLocation = Object.getOwnPropertyDescriptor(window, 'location')
   Object.defineProperty(window, 'location', { configurable: true, value: loc })
@@ -24,6 +36,30 @@ function setHint(present: boolean): void {
   document.cookie = present
     ? 'adh_sso_hint=1'
     : 'adh_sso_hint=; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+}
+
+/** A fetch stub answering the preflight with `allowed`. */
+function preflightFetch(allowed: boolean): typeof fetch {
+  return vi.fn(async () =>
+    new Response(JSON.stringify({ allowed }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    }),
+  ) as unknown as typeof fetch
+}
+
+/** The arguments a {@link preflightFetch} stub was called with, first call.
+ *
+ * Throws when it was never called, rather than destructuring `undefined`: a test that
+ * asserts on the URL of a request that never happened would otherwise fail on the
+ * shape of the answer instead of on the missing request. `mock.calls[0]` is
+ * `any[] | undefined` under `noUncheckedIndexedAccess`, so the check is required
+ * anyway — this makes it say something. */
+function preflightCall(fetchImpl: typeof fetch): [string, RequestInit] {
+  const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls
+  const first = calls[0]
+  if (!first) throw new Error('the preflight fetch was never called')
+  return [first[0] as string, (first[1] ?? {}) as RequestInit]
 }
 
 beforeEach(() => {
@@ -46,54 +82,35 @@ describe('ssoHintPresent', () => {
 })
 
 describe('shouldSilentRestore', () => {
-  it('true only with a hint, no mid-flow fragment, and not yet checked', () => {
+  it('true with a hint, no mid-flow fragment, and not yet checked', () => {
     setHint(true)
-    // An ordinary in-app route: every case below is about the hint / apex / tab
-    // rules, so none of them may sit on the landing page, where the answer is
-    // always no (see the landing-page block).
     stubLocation('https://status.example.com')
     expect(shouldSilentRestore('')).toBe(true)
   })
 
-  it('false without the hint on a same-apex site (anonymous — never redirect)', () => {
-    // No AS host configured ⇒ not cross-apex ⇒ hint-gated ⇒ no probe.
-    stubLocation('https://status.example.com')
+  it('false without the hint on a same-apex site — absence is CONCLUSIVE there', () => {
+    // Same apex as the AS ⇒ the hint cookie is readable, and it is written whenever
+    // the central session is. So no hint means there is no session to restore, and
+    // a probe would spend a top-level redirect to learn nothing.
+    stubLocation('https://api.example.com')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(false)
   })
 
-  it('true for a DEPLOYED cross-apex site even without a readable hint (probe once)', () => {
-    // A deployed brand site on its own apex; the AS is on another ⇒ cross-apex, so the
-    // hint is unreadable and the one-per-tab blind probe is the only way to find the
-    // session. Stubbed explicitly rather than relying on jsdom's `localhost`, which is
-    // a LOCAL host and so takes the hint-gated branch below.
-    const loc = stubLocation('https://cookbook.com')
-    expect(loc).toBeTruthy()
+  it('true for a cross-apex site even without a readable hint', () => {
+    // A cross-apex site cannot read the hint at all, so its absence proves nothing
+    // and asking is the only way to find an existing session.
+    stubLocation('https://cookbook.com')
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
     expect(shouldSilentRestore('')).toBe(true)
   })
 
-  // The blind cross-apex probe is a top-level redirect to the AS made on nothing more
-  // than a guess. It pays off only where every origin is on the AS's return-origin
-  // allow-list (the deployed envs). A local host that ISN'T (a bare `next dev` on
-  // localhost:3000) would be bounced to the central login page instead of back — the
-  // historical "stranded on the hub login page" bug. So locally: hint or nothing.
-  it('false on a LOCAL host with no readable hint (never blind-probe from local dev)', () => {
-    const loc = stubLocation('http://localhost:3000')
-    expect(loc).toBeTruthy()
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
+  it('false with no AS base configured — a probe could not carry the cookie', () => {
+    // The central cookie is host-only on the AS host. With no base, buildAuthorizeUrl
+    // falls back to this site's own /api proxy, where that cookie is invisible: the
+    // probe could only ever come back empty, so it is not worth a redirect.
+    stubLocation('https://cookbook.com')
     expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('true on a LOCAL dev.local suite host when the hint IS readable', () => {
-    // The dev.local suite shares one registrable domain (`dev.local`) with its AS, so
-    // the hint cookie IS readable here — a positive signal that a central session
-    // exists. Restoring it is exactly as safe as in prod, and skipping it is why a
-    // suite satellite used to show a logged-out header to a signed-in developer.
-    setHint(true)
-    const loc = stubLocation('https://projects.hub-mybranch.dev.local')
-    expect(loc).toBeTruthy()
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
-    expect(shouldSilentRestore('')).toBe(true)
   })
 
   it('false mid-flow on the callback (#code / #error present)', () => {
@@ -103,105 +120,213 @@ describe('shouldSilentRestore', () => {
     expect(shouldSilentRestore('#error=login_required')).toBe(false)
   })
 
-  it('false once the tab has already checked (loop guard)', () => {
+  it('false once the tab has already checked (loop guard)', async () => {
     setHint(true)
-    // beginSilentLogin marks the tab checked.
     stubLocation('https://status.example.com')
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
-    beginSilentLogin({ clientId: 'adh' })
+    await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(true) })
     expect(shouldSilentRestore('')).toBe(false)
     clearSsoChecked()
     expect(shouldSilentRestore('')).toBe(true)
   })
 })
 
-// The landing routes are the ones where the probe is never worth it, whatever
-// the hint and apex rules say. It is a PUBLIC marketing deck the visitor asked
-// for by name, and the probe is a top-level navigation OFF it: when the bounce
-// can't complete — an origin the AS doesn't allow-list, an AS that isn't up yet —
-// they are left looking at a login page (or an error page) having asked for a
-// marketing page. An avatar in the header does not buy that risk. Nothing is
-// lost: the probe still runs on the app routes behind the landing page, which is
-// where a session actually changes what the visitor sees.
+// The landing routes are the whole reason this rule was rewritten. `/` and `/tour`
+// used to refuse the probe outright, because a probe that cannot complete leaves a
+// visitor who asked for a marketing page looking at a login form. That refusal was
+// unconditional, so it also fired in the overwhelmingly common case where the probe
+// WOULD have completed — and a signed-in visitor saw a logged-out header on the
+// front page of every cross-apex site, which is the bug this replaces.
+//
+// The risk is now removed at its source (beginSilentLogin pre-flights) rather than
+// by declining to look, so the landing deck restores a session like any other route.
 describe('shouldSilentRestore on a landing page', () => {
-  it('false on the site root even when the hint cookie says a session exists', () => {
-    setHint(true)
+  it('true on the site root for a cross-apex site — the header must reflect the login', () => {
     stubLocation('https://cookbook.com', '/')
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
-    expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('false on the site root for a deployed cross-apex blind probe', () => {
-    // The other half of the rule: cross-apex sites probe without a hint at all,
-    // and that guess must not be made from the landing page either.
-    stubLocation('https://cookbook.com', '/')
-    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
-    expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('false on a root path written with a trailing slash', () => {
-    // Static hosts serve the deck as `/` or `` depending on the export; the rule
-    // is about the ROUTE, so it can't turn on which spelling arrived.
-    setHint(true)
-    stubLocation('https://cookbook.com', '')
-    expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('false on /tour — the same generated deck, one URL along', () => {
-    // `/` and `/tour` are both written by `landing sites generate`, from the same
-    // manifest, and the deck's own "Take the tour" link is how a visitor gets from
-    // one to the other. Exempting only `/` moves the redirect one click along
-    // rather than removing it.
-    setHint(true)
-    stubLocation('https://cookbook.com', '/tour')
-    expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('false on /tour/ — the trailing slash is not a different route', () => {
-    setHint(true)
-    stubLocation('https://cookbook.com', '/tour/')
-    expect(shouldSilentRestore('')).toBe(false)
-  })
-
-  it('true on a route that merely STARTS with a landing path', () => {
-    // The exemption is a route set, not a prefix: `/tourists` and `/tour/x` are
-    // ordinary routes, and a prefix match would quietly widen the rule every time
-    // a site adds a segment under one of the deck's names.
-    setHint(true)
-    stubLocation('https://cookbook.com', '/tourists')
     expect(shouldSilentRestore('')).toBe(true)
   })
 
-  it('true on the public legal pages — they are not generated decks', () => {
-    // The deliberate edge of the rule. `/privacy` and `/terms` are public too, but
-    // they are not where a cold visit lands and not what the generator writes; a
-    // visitor there is one already inside the site.
+  it('true on the site root when the hint cookie says a session exists', () => {
+    setHint(true)
+    stubLocation('https://cookbook.com', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+
+  it('true on a root path written with a trailing slash, and on the empty pathname', () => {
+    // Static exports serve the deck as `/` or ``. The rule no longer turns on the
+    // route at all, so neither spelling can produce a different answer.
+    setHint(true)
+    stubLocation('https://cookbook.com', '')
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+
+  it('true on /tour — the second half of the generated deck', () => {
+    setHint(true)
+    stubLocation('https://cookbook.com', '/tour')
+    expect(shouldSilentRestore('')).toBe(true)
+  })
+
+  it('true on the public legal pages and on app routes alike', () => {
     setHint(true)
     stubLocation('https://cookbook.com', '/privacy')
     expect(shouldSilentRestore('')).toBe(true)
-  })
-
-  it('true one route in — the probe moves to the app surfaces, it is not lost', () => {
-    setHint(true)
     stubLocation('https://cookbook.com', '/home')
     expect(shouldSilentRestore('')).toBe(true)
   })
 })
 
+describe('preflightSsoReturn', () => {
+  const args = { clientId: 'adh', returnUrl: 'https://cookbook.com/' }
+
+  it('asks the AS ITSELF — the same host the probe would navigate to', async () => {
+    // The allow-list being asked about lives in the ANSWERING server's client row, and
+    // the AS host and this site's /api backend are not always the same server: in the
+    // dev.local suite the proxy reaches this worktree's backend while the AS is the
+    // shared auth service with its own database. Asking the proxy would have one server
+    // speak for another's allow-list, and a wrong `false` here is indistinguishable
+    // from the bug the preflight exists to fix.
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    const fetchImpl = preflightFetch(true)
+    await preflightSsoReturn({ ...args, fetchImpl })
+    const [url, init] = preflightCall(fetchImpl)
+    const parsed = new URL(url, 'https://cookbook.com')
+    expect(parsed.origin).toBe('https://api.example.com')
+    expect(parsed.pathname).toBe('/oauth/signin/preflight')
+    expect(parsed.searchParams.get('clientId')).toBe('adh')
+    expect(parsed.searchParams.get('return')).toBe('https://cookbook.com/')
+    // Cross-origin, so `omit` is not tidiness: the backend answers this route with
+    // `Access-Control-Allow-Origin: *`, which browsers refuse to honour for a
+    // credentialed request. It is also what makes `*` safe to send.
+    expect(init.credentials).toBe('omit')
+  })
+
+  // The one case that still goes through the proxy, and it is the case where
+  // /authorize goes through it too (asEndpoint makes both choices in one place), so
+  // the same-server property holds here as well.
+  it('falls back to the same-origin /api proxy when no AS base is configured', async () => {
+    delete process.env.NEXT_PUBLIC_AUTH_API_URL
+    const fetchImpl = preflightFetch(true)
+    await preflightSsoReturn({ ...args, fetchImpl })
+    const [url] = preflightCall(fetchImpl)
+    const parsed = new URL(url, 'https://cookbook.com')
+    expect(parsed.origin).toBe('https://cookbook.com')
+    expect(parsed.pathname).toBe('/api/oauth/signin/preflight')
+  })
+
+  it('asks the base it was PASSED, not only the env one', async () => {
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://env.example.com'
+    const fetchImpl = preflightFetch(true)
+    await preflightSsoReturn({ ...args, authApiBase: 'https://explicit.example.com', fetchImpl })
+    const [url] = preflightCall(fetchImpl)
+    expect(new URL(url).origin).toBe('https://explicit.example.com')
+  })
+
+  it('true only on an explicit allowed:true', async () => {
+    expect(await preflightSsoReturn({ ...args, fetchImpl: preflightFetch(true) })).toBe(true)
+    expect(await preflightSsoReturn({ ...args, fetchImpl: preflightFetch(false) })).toBe(false)
+  })
+
+  // Every one of these means "don't navigate". Failing closed costs an avatar;
+  // failing open costs the visitor the page they asked for.
+  it('false on a non-200', async () => {
+    const fetchImpl = vi.fn(async () => new Response('nope', { status: 404 })) as unknown as typeof fetch
+    expect(await preflightSsoReturn({ ...args, fetchImpl })).toBe(false)
+  })
+
+  it('false when the request throws (AS down, proxy dead-end, offline)', async () => {
+    const fetchImpl = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    }) as unknown as typeof fetch
+    expect(await preflightSsoReturn({ ...args, fetchImpl })).toBe(false)
+  })
+
+  it('false on a body of the wrong shape', async () => {
+    // A misrouted proxy that answers 200 with someone else's JSON (or HTML) must not
+    // read as permission.
+    const bodies = ['{"allowed":"yes"}', '{}', 'not json at all']
+    for (const body of bodies) {
+      const fetchImpl = vi.fn(async () => new Response(body, { status: 200 })) as unknown as typeof fetch
+      expect(await preflightSsoReturn({ ...args, fetchImpl })).toBe(false)
+    }
+  })
+})
+
 describe('beginSilentLogin', () => {
-  it('navigates to the AS /authorize with prompt=none, returning to the CURRENT page', () => {
-    setHint(true)
-    // The silent result bounces back to the page the user is on (not the
-    // dedicated callback), so its own AuthProvider exchanges the #code in place.
+  it('navigates to the AS /authorize with prompt=none, returning to the CURRENT page', async () => {
+    // The silent result bounces back to the page the user is on (not the dedicated
+    // callback), so its own AuthProvider exchanges the #code in place.
     const loc = stubLocation('https://status.example.com', '/incidents', '?team=core')
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
 
-    beginSilentLogin({ clientId: 'adh' })
+    expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(true) })).toBe(true)
 
     const url = new URL(loc.href)
     expect(url.origin + url.pathname).toBe('https://api.example.com/oauth/signin/authorize')
     expect(url.searchParams.get('clientId')).toBe('adh')
     expect(url.searchParams.get('prompt')).toBe('none')
     expect(url.searchParams.get('return')).toBe('https://status.example.com/incidents?team=core')
+  })
+
+  it('asks the SAME host it then navigates to', async () => {
+    // The pairing that makes the answer usable. The allow-list lives in the answering
+    // server's client row, so a preflight aimed anywhere other than the host about to
+    // receive the probe is one server speaking for another's configuration.
+    const loc = stubLocation('https://status.example.com', '/')
+    const fetchImpl = preflightFetch(true)
+
+    await beginSilentLogin({ clientId: 'adh', authApiBase: 'https://as.example.com', fetchImpl })
+
+    const [asked] = preflightCall(fetchImpl)
+    expect(new URL(asked as string).origin).toBe(new URL(loc.href).origin)
+    expect(new URL(loc.href).origin).toBe('https://as.example.com')
+  })
+
+  it('navigates NOWHERE when the preflight refuses', async () => {
+    // The stranding case, and the only reason landing routes ever had to refuse:
+    // this origin is not on the client's return-origin allow-list yet (a site
+    // registered since the last backend deploy), so /authorize would send the
+    // browser to the central login page. Staying put leaves the page anonymous,
+    // exactly where it would have been had it never asked.
+    const loc = stubLocation('https://newly-registered.com', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+
+    expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(false) })).toBe(false)
+
+    expect(loc.href).toBe('')
+  })
+
+  it('spends the tab check even when the preflight refuses', async () => {
+    // A "no" is a fact about this origin's configuration, not a transient one: it
+    // will not change while the tab is open, so re-asking on every route change
+    // would be pure cost.
+    stubLocation('https://newly-registered.com', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+
+    await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(false) })
+
+    expect(shouldSilentRestore('')).toBe(false)
+  })
+
+  it('probes from a LOCAL host when the preflight allows it', async () => {
+    // Locality used to veto the probe outright, as a stand-in for "this origin
+    // probably isn't allow-listed". The preflight answers that exactly, so a
+    // dev.local suite origin — which IS allow-listed off production — now restores
+    // a session like a deployed site, and a bare `next dev` on localhost:3000,
+    // which is not, is refused by the next test rather than by a guess.
+    const loc = stubLocation('https://orgs.hub-mybranch.dev.local', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.example.com'
+
+    expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(true) })).toBe(true)
+    expect(loc.href).toContain('/oauth/signin/authorize')
+  })
+
+  it('does not navigate from a local host the AS will not return to', async () => {
+    const loc = stubLocation('http://localhost:3000', '/')
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.example.com'
+
+    expect(await beginSilentLogin({ clientId: 'adh', fetchImpl: preflightFetch(false) })).toBe(false)
+    expect(loc.href).toBe('')
   })
 })

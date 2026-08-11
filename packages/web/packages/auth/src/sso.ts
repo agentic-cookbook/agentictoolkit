@@ -1,7 +1,6 @@
 'use client'
 
 import { AuthHttpError, extractErrorMessage, extractErrorCode } from './client'
-import { isLocalHostname } from './hostname'
 
 // Client-side entry point for cross-site single sign-on. The browser-facing
 // half of the engine in websites/backend/src/routes/oauthRedirect.ts: a top-level
@@ -198,90 +197,157 @@ function isCrossApex(): boolean {
   }
 }
 
-/** The routes `landing sites generate` writes: the deck at `/` and the tour ring
- *  at `/tour`, which every site in the family renders from the same manifest and
- *  the same template. They are one surface with two URLs — the deck's own "Take
- *  the tour" link is how a visitor reaches the second — so the rule below cannot
- *  cover one and not the other without the redirect simply moving one click along.
- *
- *  This is the whole list. `/privacy`, `/terms` and the hub's `/explore` are public
- *  too, but they are not generated decks and not where a cold visit lands. */
-const LANDING_PATHS = new Set(['', '/tour'])
+/** The AS endpoint that answers "will you bounce a `prompt=none` check back to
+ *  this origin, or strand the browser on the central login page?" — see
+ *  {@link preflightSsoReturn}. */
+const PREFLIGHT_PATH = '/oauth/signin/preflight'
 
-/** True on a site's LANDING page — the public marketing deck it generates.
- *  A trailing slash is stripped first, and the empty pathname some static exports
- *  produce counts as the root: the rule is about the route, not how the path was
- *  written. */
-function onLandingPage(pathname: string): boolean {
-  return LANDING_PATHS.has(pathname.replace(/\/+$/, ''))
+/**
+ * Ask the AS whether a `prompt=none` check for `returnUrl` will be RETURNED to
+ * this origin. This is the guard that makes the silent probe safe to run
+ * anywhere, including on a public landing page: the probe is a top-level
+ * navigation, and its one bad outcome is the AS having nowhere to send the
+ * browser back to (this origin missing from the client's return-origin
+ * allow-list, or an AS that isn't up), which leaves a visitor who asked for a
+ * marketing page looking at a login form. Asking first turns that from a risk
+ * taken on a guess into a fact checked in advance.
+ *
+ * Asked of the SAME host the probe would navigate to — {@link asEndpoint}, so the
+ * AS host directly when one is configured, and only the same-origin `/api` proxy
+ * in the no-AS-base local case where `/authorize` would go through that proxy too.
+ * That pairing is the whole correctness argument: the allow-list lives in the
+ * answering server's own client row, and the two URLs are not always the same
+ * server. In the dev.local suite `API_BACKEND_URL` is this worktree's backend
+ * while `NEXT_PUBLIC_AUTH_API_URL` is the shared authorization service with its
+ * own database — routing the question through the proxy would ask one server to
+ * speak for another's allow-list, and a wrong `false` is indistinguishable from
+ * the bug this exists to fix.
+ *
+ * A cross-origin GET needs CORS, and no site in the fleet gets per-site origin
+ * config. It does not need any: the endpoint reads no cookie and no
+ * `Authorization` header, so it answers `Access-Control-Allow-Origin: *` for
+ * everyone (the `/public/signup-lists/*` precedent in the backend's app.ts).
+ * `credentials: 'omit'` is what makes that legal, so it is load-bearing rather
+ * than tidiness — `*` with credentials is refused by browsers outright.
+ *
+ * Anything other than an explicit `allowed: true` — a network error, a non-200, a
+ * body of the wrong shape, a CORS refusal — means NO. The probe is then skipped
+ * and the page stays anonymous, which is exactly where it would have been had it
+ * never asked. Failing closed here costs an avatar; failing open costs the visitor
+ * the page they asked for.
+ */
+export async function preflightSsoReturn(opts: {
+  clientId: string
+  returnUrl: string
+  /** AS base; defaults to `NEXT_PUBLIC_AUTH_API_URL` (see {@link BeginLoginOptions}). */
+  authApiBase?: string
+  /** Injectable for tests; defaults to the global fetch. */
+  fetchImpl?: typeof fetch
+}): Promise<boolean> {
+  const doFetch = opts.fetchImpl ?? globalThis.fetch
+  if (typeof doFetch !== 'function') return false
+  const params = new URLSearchParams({ clientId: opts.clientId, return: opts.returnUrl })
+  try {
+    const res = await doFetch(`${asEndpoint(PREFLIGHT_PATH, opts.authApiBase)}?${params.toString()}`, {
+      // No cookies are needed or wanted: the question is purely about
+      // configuration, and sending credentials would make a public config lookup
+      // look like an authenticated call to every proxy and log in between.
+      credentials: 'omit',
+      headers: { Accept: 'application/json' },
+    })
+    if (!res.ok) return false
+    const body = (await res.json()) as { allowed?: unknown }
+    return body?.allowed === true
+  } catch {
+    return false
+  }
 }
 
 /** Whether the AuthProvider should run a silent cold-load SSO check now. Never
- *  when we're mid-flow on the callback (`initialHash` captured at render), have
- *  already checked this tab (which also breaks the login_required → home → re-check
- *  loop), or are on one of the site's LANDING routes (`/` and `/tour` — see
- *  {@link LANDING_PATHS}) — the probe is a top-level navigation away from a public
- *  page the visitor asked for by name, and when the bounce can't complete (an origin
- *  missing from the AS allow-list, an AS that is down or still booting) it leaves
- *  them looking at the central login page instead. An avatar in the header is not
- *  worth that: the probe still runs on every app route behind the landing pages,
- *  which is where a session changes what is rendered.
- *  Otherwise:
+ *  when we're mid-flow on the callback (`initialHash` captured at render) or we've
+ *  already checked this tab (which also breaks the login_required → home →
+ *  re-check loop). Otherwise:
  *   - a readable HINT cookie is positive evidence a central session exists (the site
  *     shares the AS's apex) ⇒ restore, wherever we're served. The dev.local suite is
  *     same-apex with its AS, so a suite satellite restores exactly like prod — without
  *     this, a signed-in developer lands on every satellite with a logged-out header.
- *   - no hint ⇒ the only option is a BLIND once-per-tab probe, a top-level redirect to
- *     the AS made on a guess. Worth it for a DEPLOYED cross-apex site (it can't read
- *     the hint, and every deployed origin is on the AS's return-origin allow-list, so
- *     the worst case is a silent `#error=login_required` bounce). NOT worth it from a
- *     local host: an origin that isn't allow-listed (a bare `next dev` on
- *     localhost:3000) is bounced to the central login page instead of back — the
- *     "stranded on the hub login page" bug. So locally: hint, or nothing.
+ *   - no hint on a SAME-APEX site is conclusive the other way: the hint is written
+ *     whenever the central session is, so its absence means there is nothing to
+ *     restore and a probe would spend a redirect to learn nothing.
+ *   - no hint on a CROSS-APEX site proves nothing — it cannot read the cookie at
+ *     all — so it has to ask, on every route including the landing deck.
  *
- *  Locality is read from the live hostname rather than a build-time NEXT_PUBLIC_*
- *  literal: this package is built once and consumed by every site, so the env is a
- *  property of where it's served, not of how it was compiled. */
+ *  This deliberately no longer refuses on a landing route or a local hostname.
+ *  Both were client-side guesses at the same question — "will the AS bring the
+ *  browser back, or strand it?" — and the answer is not the client's to guess:
+ *  {@link beginSilentLogin} now gets it from the AS before it navigates. A guess
+ *  that is wrong in the safe direction is what made a signed-in visitor look
+ *  logged out on the front page of every cross-apex site. Locality in particular
+ *  was a proxy for "this origin probably isn't allow-listed", which the preflight
+ *  answers exactly, for localhost and dev.local alike. */
 export function shouldSilentRestore(initialHash: string): boolean {
   if (typeof window === 'undefined') return false
   if (isMidAuthFlow(initialHash) || ssoCheckedThisTab()) return false
-  // Deliberately BEFORE the hint/apex rules, and deliberately without
-  // markSsoChecked(): a landing route suppresses this probe, it does not spend the
-  // tab's one check. The visitor who clicks through to an app route still gets
-  // their session restored there — including after a lap of `/` → `/tour` → `/home`.
-  if (onLandingPage(window.location.pathname)) return false
   if (ssoHintPresent()) return true
-  return !isLocalHostname(window.location.hostname) && isCrossApex()
+  // Also false when no AS base is configured: isCrossApex() cannot compare against
+  // a host it doesn't have, and a probe without one would navigate to this site's
+  // own /api proxy, which never sees the host-only central cookie.
+  return isCrossApex()
 }
 
 /**
  * Silent, NON-forcing cold-load SSO: a top-level navigation to
  * `/authorize?prompt=none`. If a central session exists the AS bounces a code
  * back (→ logged in); otherwise it returns `#error=login_required` and the page
- * quietly stays anonymous — the user is never dropped on the login form. Marks
- * the tab as checked first so a stale hint can't loop.
+ * quietly stays anonymous — the user is never dropped on the login form.
+ *
+ * PRE-FLIGHTED: the "never dropped on the login form" promise above is only true
+ * for a return origin the AS actually allow-lists, and a site cannot know that
+ * about itself — the list lives in the AS's client row and converges on each
+ * backend deploy, so a newly registered site is missing from it for a while. So
+ * ask ({@link preflightSsoReturn}) and navigate only on a yes. On a no this
+ * returns `false` having navigated NOWHERE, and the caller leaves the page
+ * anonymous. That is what lets the probe run on public landing routes: the
+ * failure mode it used to risk there no longer exists.
+ *
+ * The tab's one check is spent either way — a "no" is a fact about this origin's
+ * configuration, which will not change while the tab is open, so re-asking on
+ * every route change would be pure cost.
  *
  * The result returns to the CURRENT page (not the dedicated `/auth/callback`):
  * the page's own AuthProvider exchanges the `#code` IN PLACE, so only the header
  * re-renders — no callback bounce, no full-page reload. The current fragment is
  * dropped from the return so a stale `#code`/`#error` can't round-trip back in.
+ *
+ * @returns `true` when the browser is navigating to the AS (the caller must stop
+ * and keep its loading state), `false` when nothing happened.
  */
-export function beginSilentLogin(
+export async function beginSilentLogin(
   // Narrower than BeginLoginOptions: the silent flow ALWAYS returns to the current
   // page, so returnTo/callbackPath don't apply — excluding them stops a caller
   // from passing one and expecting it to take effect.
-  opts: { clientId?: string; authApiBase?: string } = {},
-): void {
-  if (typeof window === 'undefined') return
+  opts: { clientId?: string; authApiBase?: string; fetchImpl?: typeof fetch } = {},
+): Promise<boolean> {
+  if (typeof window === 'undefined') return false
   markSsoChecked()
   const { clientId = 'adh' } = opts
   const ret = `${window.location.origin}${window.location.pathname}${window.location.search}`
+  // Same authApiBase the navigation below uses, so the server that answers the
+  // question is the server that acts on it.
+  const allowed = await preflightSsoReturn({
+    clientId,
+    returnUrl: ret,
+    authApiBase: opts.authApiBase,
+    fetchImpl: opts.fetchImpl,
+  })
+  if (!allowed) return false
   window.location.href = buildAuthorizeUrl({
     clientId,
     returnUrl: ret,
     prompt: 'none',
     authApiBase: opts.authApiBase,
   })
+  return true
 }
 
 /**

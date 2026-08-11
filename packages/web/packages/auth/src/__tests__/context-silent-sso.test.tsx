@@ -4,17 +4,17 @@ import { render, waitFor } from '@testing-library/react'
 import { AuthProvider, useAuth } from '../context'
 
 // The AuthProvider's cold-load silent SSO runs on EVERY brand site, so its gating
-// is safety-critical: it must redirect to the AS ONLY when the hint cookie says a
-// central session likely exists — never for anonymous / public visitors.
+// is safety-critical. Two independent things have to hold before it navigates: the
+// probe must be WORTH it (a hint cookie, or a cross-apex site that cannot read one)
+// and it must be SAFE (the AS confirms it will bounce the browser back to this
+// origin rather than strand it on the central login page). The second is asked over
+// the same-origin /api proxy, which is why the fetch stub below is path-aware.
 
 let savedLocation: PropertyDescriptor | undefined
 function stubLocation(
   // status.example.com shares the registrable domain (example.com) with the AS host
   // api.example.com below, so these are SAME-apex (hint-gated, no anonymous probe).
   origin = 'https://status.example.com',
-  // An in-app route by default. The probe never fires from a landing page, so a
-  // test about the hint/apex rules stated on `/` would be testing the landing
-  // rule instead — see the landing-page case at the bottom of this file.
   pathname = '/dashboard',
 ): { origin: string; href: string; hash: string; pathname: string } {
   const loc = {
@@ -41,15 +41,32 @@ function Probe(): ReactElement {
   return <div>{isLoading ? 'loading' : isAuthenticated ? 'user' : 'anon'}</div>
 }
 
+/** Whether the stubbed AS says it will return the browser to this origin. Set per
+ *  test; the default is the ordinary case of a correctly registered site. */
+let preflightAllowed = true
+
 beforeEach(() => {
   window.localStorage.clear()
   window.sessionStorage.clear()
   setHint(false)
+  preflightAllowed = true
   process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
-  // No per-site session: the bootstrap refresh fails.
+  // Path-aware: the preflight is a real request the provider makes before it can
+  // navigate, so it needs its own answer. Everything else 401s — no per-site
+  // session, so the bootstrap refresh fails and the silent path is reached.
   vi.stubGlobal(
     'fetch',
-    vi.fn(async () => ({ ok: false, status: 401, json: async () => ({}) }) as Response),
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString()
+      if (url.includes('/oauth/signin/preflight')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ allowed: preflightAllowed }),
+        } as Response
+      }
+      return { ok: false, status: 401, json: async () => ({}) } as Response
+    }),
   )
 })
 
@@ -77,7 +94,10 @@ describe('AuthProvider cold-load silent SSO', () => {
     expect(url.searchParams.get('prompt')).toBe('none')
   })
 
-  it('does NOT redirect when there is no hint (anonymous / cross-apex visitor)', async () => {
+  // Same apex as the AS, so the hint cookie is readable and its absence is
+  // conclusive: there is no central session to restore, and asking would spend a
+  // redirect to learn nothing.
+  it('does NOT redirect when there is no hint on a SAME-APEX site', async () => {
     const loc = stubLocation()
 
     const { getByText } = render(
@@ -112,9 +132,14 @@ describe('AuthProvider cold-load silent SSO', () => {
     expect(url.searchParams.get('prompt')).toBe('none')
   })
 
-  it('does NOT redirect from a LOCAL host with no hint (a bare localhost dev server)', async () => {
-    // No hint ⇒ no evidence of a session, and a localhost origin may not be on the AS
-    // allow-list — a blind probe would strand it on the central login page.
+  // The stranding case, and the reason the probe used to be refused on landing
+  // routes and local hosts. A bare `next dev` on localhost:3000 is not on the AS
+  // return-origin allow-list, so /authorize would send the browser to the central
+  // login page rather than back. The preflight says so, and the provider stays put.
+  // Locality is no longer the test — being un-allow-listed is, which is the thing
+  // that actually mattered and is true of a newly registered PROD site too.
+  it('does NOT redirect when the AS will not return the browser to this origin', async () => {
+    preflightAllowed = false
     process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://adh-backend.dev.local'
     const loc = stubLocation('http://localhost:3000')
 
@@ -142,11 +167,30 @@ describe('AuthProvider cold-load silent SSO', () => {
     expect(loc.href).toBe('')
   })
 
-  // The bug this guards: a cold load of a site's landing page yanked the visitor
-  // to the AS, and when the bounce couldn't complete it left them on the central
-  // login page — or, with the AS still booting, on a dev-server error page. A
-  // landing page is what the visitor asked for; it never navigates on its own.
-  it('does NOT redirect from the landing page, hint or no hint', async () => {
+  // The landing page is the route this whole mechanism exists for. It is where a
+  // typed URL or a bookmark lands, so it is where a signed-in visitor most often
+  // arrives with no per-site session — and it used to be the one route that refused
+  // to look, which is why the front page of every cross-apex site showed a
+  // logged-out header to a signed-in user. It restores like any other route now.
+  it('DOES restore from the landing page — that is where a cold visit lands', async () => {
+    setHint(true)
+    const loc = stubLocation('https://status.example.com', '/')
+
+    render(
+      <AuthProvider clientId="adh">
+        <Probe />
+      </AuthProvider>,
+    )
+
+    await waitFor(() => expect(loc.href).not.toBe(''))
+    expect(new URL(loc.href).searchParams.get('prompt')).toBe('none')
+  })
+
+  // …but the risk that justified the old refusal is what is actually gone, so the
+  // landing page must still be the safe case when the bounce genuinely cannot
+  // complete. This is the pairing that makes the change sound rather than a trade.
+  it('does NOT redirect from the landing page when the AS will not return', async () => {
+    preflightAllowed = false
     setHint(true)
     const loc = stubLocation('https://status.example.com', '/')
 

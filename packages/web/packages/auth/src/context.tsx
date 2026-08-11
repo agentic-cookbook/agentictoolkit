@@ -283,8 +283,15 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
           // cookie is host-only + SameSite=Lax, so a background fetch/iframe can't
           // read it), so it briefly yanks the whole page.
           if (silentSso && shouldSilentRestore(initialHash)) {
-            beginSilentLogin({ clientId })
-            return // navigating away; keep isLoading true across the redirect
+            // beginSilentLogin pre-flights before it navigates, and returns false
+            // having gone nowhere when the AS would not bounce the browser back to
+            // this origin. So an unreachable or not-yet-converged AS leaves the page
+            // anonymous instead of stranding the visitor on a central login form —
+            // which is what makes this safe to reach on a public landing route.
+            if (await beginSilentLogin({ clientId })) {
+              return // navigating away; keep isLoading true across the redirect
+            }
+            if (cancelled) return
           }
           setIsLoading(false)
           return
