@@ -37,6 +37,7 @@ function groupNormalize(d: GroupDraft): GroupDraft {
  */
 export function GroupsSection({
   groups,
+  busy = false,
   onChanged,
   leaf,
   reservedSlugs,
@@ -44,6 +45,10 @@ export function GroupsSection({
   renderTransferOwnership,
 }: {
   groups: SiteGroupView[] | null;
+  /** A read of the groups is in flight — drives the spinner in this level's title. Note the
+   *  rows stay LIVE while it spins: the list on screen is the previous answer, not a lie, and
+   *  disabling it would make every revalidation feel like a load. */
+  busy?: boolean;
   onChanged: () => Promise<void>;
   /** Deep-linkable group selection (`…/dashboards/groups/<groupId>`); omit for internal. */
   leaf?: TopicLeaf;
@@ -116,6 +121,7 @@ export function GroupsSection({
     itemIcon: <Layers size={16} aria-hidden />,
     newLabel: "New group",
     leaf,
+    busy,
     emptyLabel: groups === null ? "Loading…" : "No groups yet.",
     onNew: () => setNewOpen(true),
   });

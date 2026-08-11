@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { Layers, Globe } from "lucide-react";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 
+import { useResourceList } from "@agentic-toolkit/data";
 import type { SiteGroupView, SiteView } from "@agentic-toolkit/data/monitored-sites";
 import { listGroups, listSites } from "@agentic-toolkit/data/monitored-sites";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -69,38 +69,41 @@ export function DashboardsFeature({
     () => (reservedSlugs ? new Set(reservedSlugs) : undefined),
     [reservedSlugs],
   );
-  const [groups, setGroups] = useState<SiteGroupView[] | null>(null);
-  const [sites, setSites] = useState<SiteView[] | null>(null);
-  // One error slot PER loader: the two loads run concurrently, so a shared slot let one
-  // loader's success wipe the other's failure — leaving that section's list on a permanent
-  // unexplained "Loading…" (its items stay null) with no message.
-  const [groupsError, setGroupsError] = useState<string | null>(null);
-  const [sitesError, setSitesError] = useState<string | null>(null);
+  // TWO cached reads, one per list. Coming back to Dashboards paints both instantly from the
+  // cache and revalidates behind that paint; each section's own topic list drives its spinner
+  // from its own `isFetching`, so a slow sites re-read never spins the Groups header.
+  //
+  // Still one cache entry PER LIST rather than a shared one: a group rename must be visible in
+  // the sites' group column, and the two `onChanged` handlers below re-read the pair that a
+  // given write can move. The error slots stay separate for the reason the hand-rolled loaders
+  // kept them separate — the two reads run concurrently, and a shared slot let one's success
+  // wipe the other's failure, leaving that section on a permanent unexplained "Loading…".
+  const loadGroups = useCallback(() => listGroups({ workspace: workspaceSlug }), [workspaceSlug]);
+  const {
+    items: groups,
+    reload: reloadGroups,
+    error: groupsError,
+    isFetching: groupsFetching,
+  } = useResourceList<SiteGroupView>(
+    `workspace:${workspaceSlug ?? ""}:monitored-site-groups`,
+    loadGroups,
+  );
 
-  const refreshGroups = useCallback(async () => {
-    try {
-      setGroups(await listGroups({ workspace: workspaceSlug }));
-      setGroupsError(null);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
-      setGroupsError(err instanceof Error ? err.message : "Failed to load groups.");
-    }
-  }, [workspaceSlug]);
+  const loadSites = useCallback(() => listSites({ workspace: workspaceSlug }), [workspaceSlug]);
+  const {
+    items: sites,
+    reload: reloadSites,
+    error: sitesError,
+    isFetching: sitesFetching,
+  } = useResourceList<SiteView>(`workspace:${workspaceSlug ?? ""}:monitored-sites`, loadSites);
 
-  const refreshSites = useCallback(async () => {
-    try {
-      setSites(await listSites({ workspace: workspaceSlug }));
-      setSitesError(null);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "site-monitoring", step: "load" });
-      setSitesError(err instanceof Error ? err.message : "Failed to load sites.");
-    }
-  }, [workspaceSlug]);
-
-  useEffect(() => {
-    void refreshGroups();
-    void refreshSites();
-  }, [refreshGroups, refreshSites]);
+  // Both re-reads SWALLOW, which the hand-rolled loaders did by construction and the hook's
+  // `reload` does not: these run as `useMasterDetailForm`'s `refresh`, inside its save/delete
+  // try block, so a rejection would be reported as a failed SAVE — and would skip the
+  // re-selection that follows a create. The failure is still on screen: it lands in the hook's
+  // `error`, which the banner below renders.
+  const refreshGroups = useCallback(() => reloadGroups().catch(() => {}), [reloadGroups]);
+  const refreshSites = useCallback(() => reloadSites().catch(() => {}), [reloadSites]);
 
   // The deep-linkable row leaf (the specific group/site), scoped to the active section. Only the
   // active member renders, so a single leaf serves whichever of Groups/Sites is showing. The row is
@@ -134,6 +137,7 @@ export function DashboardsFeature({
             render: () => (
               <GroupsSection
                 groups={groups}
+                busy={groupsFetching}
                 leaf={leaf}
                 reservedSlugs={reserved}
                 workspaceSlug={workspaceSlug}
@@ -155,6 +159,7 @@ export function DashboardsFeature({
               <SitesSection
                 sites={sites}
                 groups={groups ?? []}
+                busy={sitesFetching}
                 leaf={leaf}
                 reservedSlugs={reserved}
                 workspaceSlug={workspaceSlug}

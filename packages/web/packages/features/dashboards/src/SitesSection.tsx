@@ -42,6 +42,7 @@ function siteNormalize(d: SiteDraft): SiteDraft {
 export function SitesSection({
   sites,
   groups,
+  busy = false,
   onChanged,
   leaf,
   reservedSlugs,
@@ -49,6 +50,10 @@ export function SitesSection({
 }: {
   sites: SiteView[] | null;
   groups: SiteGroupView[];
+  /** A read of the sites is in flight — drives the spinner in this level's title. Note the rows
+   *  stay LIVE while it spins: the list on screen is the previous answer, not a lie, and
+   *  disabling it would make every revalidation feel like a load. */
+  busy?: boolean;
   onChanged: () => Promise<void>;
   /** Deep-linkable site selection (`…/dashboards/sites/<siteId>`); omit for internal. */
   leaf?: TopicLeaf;
@@ -108,6 +113,7 @@ export function SitesSection({
     itemIcon: <Globe size={16} aria-hidden />,
     newLabel: "New site",
     leaf,
+    busy,
     emptyLabel: sites === null ? "Loading…" : "No sites yet.",
     onNew: () => setNewOpen(true),
   });
