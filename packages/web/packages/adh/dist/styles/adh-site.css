@@ -29,6 +29,18 @@
  * stood: @import is only honored before the first style rule. */
 @import "@agentic-toolkit/auth/styles.css";
 
+/* The notification bell's utilities. SiteHeader mounts the bell for every signed-in
+ * visitor of every site (see its `accountActions`), so the classes it and the inbox
+ * carry have to be generated for every site — and Tailwind v4 does not scan
+ * node_modules, so a package's classes exist only where something registers its
+ * @source globs. Messaging's cannot arrive on their own: unlike the packages above it
+ * exports no stylesheet of its own for a consumer to already be importing, so without
+ * this line every one of the 45 sites that mount the header would need its own — and
+ * the one that missed it would render the bell UNSTYLED, with no error anywhere to say
+ * so. One line here is what makes the bell a property of the header rather than of
+ * whoever remembered. */
+@import "@agentic-toolkit/messaging/sources.css";
+
 /* NOTE: bitbag's CSS — the chat package's base.css + inline.css, and the bitbag
  * package's own chat + dock sheets — is NOT imported here. It all rides with the
  * lazily-loaded chat chunk (see FooterChatInner.tsx) so pages that never open the

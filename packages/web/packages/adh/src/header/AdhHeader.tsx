@@ -110,6 +110,18 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  the link says, is the consumer's own vocabulary and stays with the caller;
    *  the header only knows there is a slot here. */
   preAuthLinks?: ReactNode
+  /** Account-scoped controls rendered immediately BEFORE the auth cluster — the
+   *  notification bell, and anything else that belongs to the signed-in PERSON
+   *  rather than to the site.
+   *
+   *  Its own slot rather than something the caller folds into `leadingActions`,
+   *  and the position is the reason: `leadingActions` opens the right-hand
+   *  cluster, ahead of the nav links, and is the site's own (a cookbook's search
+   *  and theme switches). This sits at the other end, against the avatar it
+   *  belongs with, so a site can fill both without the two fighting over one
+   *  slot's order. The header knows only that there is a slot here — who may see
+   *  it, and what it fetches, is the caller's. */
+  accountActions?: ReactNode
   /** Where the avatar menu's "Home" points — the site's own post-login landing.
    *  This header resolves no site ids, so whoever knows the registry hands it in;
    *  defaults to the site root. */
@@ -149,6 +161,7 @@ export function AdhHeader({
   navLinks = [],
   trailingNavLinks = [],
   preAuthLinks,
+  accountActions,
   homeHref,
   previewNotice,
   previewDetail,
@@ -261,6 +274,10 @@ export function AdhHeader({
           )}
           {/* Caller-supplied prominent links, before the auth cluster. */}
           {preAuthLinks}
+          {/* Account chrome, against the avatar. Outside `.adh-header__links`, so it
+              survives the phone breakpoint that collapses the primary nav — the point
+              of it is that it is the same control in the same place on every route. */}
+          {accountActions}
           {authLoading && !user ? (
             <span
               className="adh-header__auth-spinner"

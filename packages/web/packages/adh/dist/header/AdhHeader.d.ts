@@ -97,6 +97,18 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  the link says, is the consumer's own vocabulary and stays with the caller;
      *  the header only knows there is a slot here. */
     preAuthLinks?: ReactNode;
+    /** Account-scoped controls rendered immediately BEFORE the auth cluster — the
+     *  notification bell, and anything else that belongs to the signed-in PERSON
+     *  rather than to the site.
+     *
+     *  Its own slot rather than something the caller folds into `leadingActions`,
+     *  and the position is the reason: `leadingActions` opens the right-hand
+     *  cluster, ahead of the nav links, and is the site's own (a cookbook's search
+     *  and theme switches). This sits at the other end, against the avatar it
+     *  belongs with, so a site can fill both without the two fighting over one
+     *  slot's order. The header knows only that there is a slot here — who may see
+     *  it, and what it fetches, is the caller's. */
+    accountActions?: ReactNode;
     /** Where the avatar menu's "Home" points — the site's own post-login landing.
      *  This header resolves no site ids, so whoever knows the registry hands it in;
      *  defaults to the site root. */
@@ -121,5 +133,5 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, accountActions, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

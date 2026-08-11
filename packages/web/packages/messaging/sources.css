@@ -8,8 +8,12 @@
  *   @import "@agentic-toolkit/messaging/sources.css";
  *
  * Mirrors @agentic-toolkit/{adh,crud,resource,api-explorer}/sources.css. Unlike those,
- * this package exports no stylesheet of its own to hang the import off, so the host
- * @import is the only entry point — it is not reachable transitively.
+ * this package exports no stylesheet of its own to hang the import off, so it cannot
+ * carry itself into a host the way they do. @agentic-toolkit/adh's own `adh-site.css`
+ * imports it on their behalf, because SiteHeader mounts the notification bell for every
+ * signed-in visitor of every site in the family — so any host of that stylesheet gets
+ * these globs transitively. A host that mounts a DM surface (or any other component here)
+ * without that stylesheet still has to add the line itself.
  *
  * PACKAGE-WIDE, not per subtree: the DM surfaces (`components/dm-{list,thread,panel}`),
  * the notification surfaces (`components/notification-{bell,inbox}`) and `presence-dot`

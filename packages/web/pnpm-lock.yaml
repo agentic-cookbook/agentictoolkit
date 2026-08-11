@@ -53,6 +53,9 @@ importers:
       '@agentic-toolkit/markdown':
         specifier: workspace:*
         version: link:../markdown
+      '@agentic-toolkit/messaging':
+        specifier: workspace:*
+        version: link:../messaging
       '@agentic-toolkit/themes':
         specifier: workspace:*
         version: link:../themes

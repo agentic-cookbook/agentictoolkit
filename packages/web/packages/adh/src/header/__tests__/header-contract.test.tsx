@@ -198,6 +198,51 @@ describe('AdhHeader (registry-free)', () => {
     expect(order(slotLink)).toBeLessThan(order(login))
   })
 
+  it('renders accountActions last of the slots, immediately before the auth cluster', () => {
+    render(
+      <AdhHeader
+        siteName="Hub"
+        navLinks={[{ label: 'Docs', href: '/docs' }]}
+        preAuthLinks={<a href="/slot-target">Slot link</a>}
+        // Generic for the same reason `preAuthLinks` above is: adh puts the
+        // notification bell here, but naming it would drag adh vocabulary into the
+        // registry-free header's tests. The position is the whole contract.
+        accountActions={<button type="button">Account thing</button>}
+        onLogin={() => {}}
+        onSignup={() => {}}
+      />,
+    )
+    const nav = screen.getByRole('navigation', { name: 'Primary' })
+    const order = (el: Element): number => Array.prototype.indexOf.call(nav.children, el)
+    const links = nav.querySelector('.adh-header__links')!
+    const account = screen.getByText('Account thing')
+    // Outside `.adh-header__links` — that box is display:none under 768px, and this
+    // slot holds account chrome that has to survive a phone.
+    expect(links.contains(account)).toBe(false)
+    expect(order(screen.getByText('Slot link'))).toBeLessThan(order(account))
+    expect(order(account)).toBeLessThan(order(screen.getByText('login')))
+  })
+
+  // Nothing renders in the slot's place when a caller passes nothing — an empty slot
+  // must not add a wrapper that lands between the links and the auth cluster and
+  // spaces them apart on every site in the fleet that passes no account chrome.
+  it('renders nothing for an absent accountActions', () => {
+    const { container, rerender } = render(
+      <AdhHeader siteName="Hub" onLogin={() => {}} onSignup={() => {}} />,
+    )
+    const nav = (): Element => container.querySelector('.adh-header__nav')!
+    const before = nav().children.length
+    rerender(
+      <AdhHeader
+        siteName="Hub"
+        accountActions={<button type="button">Account thing</button>}
+        onLogin={() => {}}
+        onSignup={() => {}}
+      />,
+    )
+    expect(nav().children.length).toBe(before + 1)
+  })
+
   // The site title IS a link to `siteNameHref`, so a navLink pointing at the same place
   // would put one destination in the bar twice. Every family site passes a nav list that
   // starts with its own home entry, so this fires on essentially every page — which is

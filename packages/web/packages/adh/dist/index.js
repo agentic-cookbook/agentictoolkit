@@ -853,6 +853,7 @@ function AdhHeader({
   navLinks = [],
   trailingNavLinks = [],
   preAuthLinks,
+  accountActions,
   homeHref,
   previewNotice,
   previewDetail,
@@ -902,6 +903,7 @@ function AdhHeader({
         leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
         barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
         preAuthLinks,
+        accountActions,
         authLoading && !user ? /* @__PURE__ */ jsx9(
           "span",
           {

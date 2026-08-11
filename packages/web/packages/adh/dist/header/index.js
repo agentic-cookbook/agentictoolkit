@@ -853,6 +853,7 @@ function AdhHeader({
   navLinks = [],
   trailingNavLinks = [],
   preAuthLinks,
+  accountActions,
   homeHref,
   previewNotice,
   previewDetail,
@@ -902,6 +903,7 @@ function AdhHeader({
         leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
         barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
         preAuthLinks,
+        accountActions,
         authLoading && !user ? /* @__PURE__ */ jsx9(
           "span",
           {
@@ -1009,6 +1011,7 @@ function useWorkspacesMenu() {
 
 // src/header/SiteHeader.tsx
 import "react";
+import dynamic2 from "next/dynamic";
 import {
   AdhHeader as AdhHeader2,
   useClientHost as useClientHost4
@@ -2051,6 +2054,9 @@ function DevToolsMenuPopover({
 
 // src/header/SiteHeader.tsx
 import { jsx as jsx18 } from "react/jsx-runtime";
+var NotificationBell = dynamic2(
+  () => import("@agentic-toolkit/messaging/components/notification-bell").then((m) => m.NotificationBell)
+);
 function SiteHeader({
   siteId,
   pageTitle,
@@ -2132,6 +2138,7 @@ function SiteHeader({
       previewDetail,
       homeHref: siteHomePath(siteId),
       preAuthLinks: conceptSite ? /* @__PURE__ */ jsx18("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      accountActions: user != null ? /* @__PURE__ */ jsx18(NotificationBell, {}) : void 0,
       user,
       authLoading,
       loginHref: resolvedLoginHref,

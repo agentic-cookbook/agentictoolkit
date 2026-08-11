@@ -77,6 +77,16 @@ vi.mock('../header/AvatarMenu', () => ({
   ),
 }))
 
+// The notification bell, stubbed for the third reason above and one of its own: the real
+// one opens a live SSE wake channel and fetches an unread count the moment it mounts, and
+// what this file owns is not the inbox's behaviour but WHO gets one — signed in, on every
+// site, from one definition. Stubbing it makes the gate observable in the DOM without a
+// single request. It is reached through a `next/dynamic` specifier, so every assertion on
+// it has to await the lazy resolve (`findBy…`).
+vi.mock('@agentic-toolkit/messaging/components/notification-bell', () => ({
+  NotificationBell: () => <div data-testid="adh-notification-bell" />,
+}))
+
 import { SiteHeader } from '../header/SiteHeader'
 import { getSite, siteHeaderTitle, SITES } from '@agentic-toolkit/adh-registry'
 import type { HeaderAuthSourceOptions, HeaderAuthState } from '@agentic-toolkit/adh/header-auth'
@@ -270,5 +280,44 @@ describe('SiteHeader auth source injection', () => {
     // The status board renders the family bar with NO adh AuthProvider above it, so a
     // default source that called `useAuth()` would crash the whole site.
     expect(() => render(<SiteHeader siteId="status" />)).not.toThrow()
+  })
+})
+
+// The notification inbox reaches every site through THIS component, and that is the
+// whole design: it is the only surface for account and announcement notifications, so it
+// follows the SESSION rather than the site. A visitor signed in on `projects` has the
+// same unread mail as on the hub. Mounting it per-site instead would mean 45 opt-ins and
+// a bell that appears only after someone navigates to whichever site remembered to pass
+// it — which is exactly the state this replaced (hub passed one; nothing else did).
+describe('SiteHeader notification bell', () => {
+  const signedIn = (): HeaderAuthState => ({ user: { name: 'Ada' } })
+
+  it('mounts the bell for a signed-in visitor of a site that asks for nothing', async () => {
+    // `projects` is the point: it passes no bell, knows nothing about messaging, and
+    // gets one anyway. A test that used `hub` would pass on the old per-site wiring too.
+    render(<SiteHeader siteId="projects" useAuthSource={signedIn} />)
+    expect(await screen.findByTestId('adh-notification-bell')).toBeTruthy()
+  })
+
+  it('mounts no bell for an anonymous visitor', async () => {
+    render(<SiteHeader siteId="projects" useAuthSource={(): HeaderAuthState => ({ user: null })} />)
+    // Absence needs the lazy boundary to have SETTLED to be worth anything — a cold
+    // query passes while the chunk is still resolving, so it would pass even if the bell
+    // were mounted unconditionally. Wait on something the same render produces, then
+    // assert. The header ships on every PUBLIC page in the family, so this is what keeps
+    // an anonymous visitor from opening an SSE channel and fetching an inbox.
+    expect(await screen.findByRole('banner')).toBeTruthy()
+    expect(screen.queryByTestId('adh-notification-bell')).toBeNull()
+    // Non-vacuous: the same query DOES find it once someone is signed in (above).
+  })
+
+  it('mounts no bell on the site whose auth source never reads a session', async () => {
+    // `status` is the one site with no `/api` BFF rewrite, so a bell there would fetch a
+    // notifications endpoint that does not exist. It never reaches that: its source is
+    // the anonymous one, `user` is always null, and the gate is the same `user` the
+    // avatar cluster reads — the two cannot disagree about who is signed in.
+    render(<SiteHeader siteId="status" />)
+    expect(await screen.findByRole('banner')).toBeTruthy()
+    expect(screen.queryByTestId('adh-notification-bell')).toBeNull()
   })
 })

@@ -75,7 +75,10 @@ export default defineConfig({
     // that imports `@agentic-toolkit/adh/home` pulls it — and with it this package's new
     // @agentic-toolkit/data dependency. That edge is legal (data depends on auth + ui only, so
     // no cycle) and it is confined to this entry: the header, which ships on every public page,
-    // still depends on neither data nor any workspace vocabulary.
+    // has no STATIC edge to data or to any workspace vocabulary. Its one reach across is the
+    // notification bell (SiteHeader's `accountActions`), and it is a `next/dynamic` specifier
+    // precisely so that stays true of what a public page loads — messaging, and the data it
+    // pulls in behind it, arrive in their own chunk and only once someone is signed in.
     'home/index': 'src/home/index.ts',
     // The ADH docs shell (server component: sidebar + article). No context/state, so it needs no
     // external self-entry like help — a plain entry the consumer resolves to dist/ in prod.

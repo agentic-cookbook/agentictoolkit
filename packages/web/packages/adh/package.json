@@ -270,6 +270,7 @@
     "@agentic-toolkit/ecosystem-config": "workspace:*",
     "@agentic-toolkit/landing": "workspace:*",
     "@agentic-toolkit/markdown": "workspace:*",
+    "@agentic-toolkit/messaging": "workspace:*",
     "@agentic-toolkit/themes": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "@monaco-editor/react": "^4.7.0",

@@ -1,6 +1,7 @@
 'use client'
 
 import { type ReactElement } from 'react'
+import dynamic from 'next/dynamic'
 import {
   AdhHeader,
   useClientHost,
@@ -24,6 +25,18 @@ import { SiteMenuSwitcher } from './SiteMenuSwitcher'
 import { DevToolsMenu } from './DevToolsMenu'
 
 import type { ReactNode } from 'react'
+
+// The notification inbox, mounted for every signed-in visitor of every site in the
+// family (see `accountActions` below). Code-split for the same reason DevToolsMenu
+// splits the debug console, and here it is load-bearing rather than a nicety: this
+// header ships on every PUBLIC page, and `@agentic-toolkit/messaging` reaches
+// `@agentic-toolkit/data` for its SSE wake channel — the one dependency the header
+// entry has always kept out of its static graph (see the `home/index` note in
+// tsup.config.ts). A dynamic specifier keeps that true where it counts: an anonymous
+// visitor never fetches the chunk, because nothing renders it until `user != null`.
+const NotificationBell = dynamic(() =>
+  import('@agentic-toolkit/messaging/components/notification-bell').then((m) => m.NotificationBell),
+)
 
 /**
  * Everything the auth SOURCE owns is Omitted from the public props, so a caller can
@@ -300,6 +313,19 @@ export function SiteHeader({
           </a>
         ) : undefined
       }
+      // The notification inbox, on every site in the family rather than on the one
+      // that happened to mount it. It is the ONLY surface for account and
+      // announcement notifications, so it follows the SESSION, not the site: a
+      // visitor signed in on `projects` has the same unread mail as on the hub, and a
+      // bell that appears only after they navigate home is a bell they will not find.
+      //
+      // Gated on `user`, the same value the avatar cluster below reads — so the bell
+      // and the avatar can never disagree about whether anyone is signed in, and a
+      // site whose auth source never reads a session (the status board's
+      // `useAnonymousHeaderAuth`) mounts nothing and issues no request. `authLoading`
+      // is deliberately NOT part of the gate: the spinner branch below already owns
+      // that window, and `user` is null throughout it.
+      accountActions={user != null ? <NotificationBell /> : undefined}
       user={user}
       authLoading={authLoading}
       loginHref={resolvedLoginHref}
