@@ -47,8 +47,8 @@ describe('reserved slugs', () => {
       for (const segment of onDisk) {
         expect(
           isReservedSlug(siteId, segment),
-          `app/${segment}/ exists on ${siteId} but is not reserved — a registrant could ` +
-            `claim it and get a route that silently resolves to the static page instead`,
+          `app/${segment}/ exists on ${siteId} but is not reserved — the name is spoken ` +
+            `for by a page of this site's own, so a registrant must not be handed it`,
         ).toBe(true)
       }
     })

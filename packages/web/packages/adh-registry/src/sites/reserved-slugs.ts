@@ -3,15 +3,22 @@ import type { SiteId } from './registry'
 /**
  * Slugs a registrant cannot claim, per site.
  *
- * Next resolves a static segment ahead of a dynamic one and does NOT fall through. So a
- * registry or entry named `tour` on a site that has `app/tour/` is not a conflict the
- * router reports — the static page simply wins, and the registrant sees their profile
- * 404 with nothing in any log to explain it. Reserving the name up front turns that into
- * a validation error at claim time.
+ * Next resolves a static segment ahead of a dynamic one and does NOT fall through, so a
+ * name that matches a top-level page is not a conflict the router reports — the static
+ * page simply wins, and the registrant sees their profile 404 with nothing in any log to
+ * explain it. That is what this list was built to prevent.
+ *
+ * Public profiles have since moved behind a static prefix of their own —
+ * `/registry/<registry>/<entry>` on registries, `/consultant/<entry>` on consultants — so
+ * a claimed name is no longer a *sibling* of `app/tour/` and can no longer be shadowed by
+ * one. The list is still enforced, and every route that serves a claimed name calls
+ * {@link isReservedSlug} and 404s: which names are claimable is a product decision, and
+ * relaxing it would hand out names support conversations rely on staying unambiguous. So
+ * the reason changed and the requirement did not.
  *
  * The paired test asserts this list covers every static directory each site's app/ tree
- * actually has, so adding a page without adding its name here fails the test rather than
- * shadowing someone's profile.
+ * actually has — including each site's own entry prefix, which is why `registry` and
+ * `consultant` appear below. Adding a page without adding its name here fails the test.
  */
 
 /** Reserved on every site this module knows about. */
@@ -24,6 +31,11 @@ const UNIVERSAL = [
   'terms',
   'tour',
   'search',
+  // The static prefixes the public profile routes live under. `registry` is registries'
+  // and `consultant` is consultants', but both are reserved on both: the lists are
+  // universal, and either site could grow the other's shape.
+  'registry',
+  'consultant',
   // Framework-owned; no app/ dir will ever vouch for these.
   'api',
   '_next',
