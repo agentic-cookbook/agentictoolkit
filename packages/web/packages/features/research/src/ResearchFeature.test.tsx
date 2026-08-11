@@ -92,11 +92,10 @@ beforeEach(() => {
 // local statement of intent; do not "fix" the config to match the claim that was here.
 afterEach(cleanup);
 
-// The toolkit's QueryClient is at MODULE scope — one per browser tab, deliberately, so a topic
-// click cannot destroy the cache. In a test file that means ONE cache for every test in it: leave
-// it standing and a document a previous test opened is still cached and still fresh, so the next
-// test's `get` is never called and its assertion fails describing the feature working correctly.
-afterEach(() => getToolkitQueryClient().clear());
+// The cache a document is re-opened FROM is emptied between tests by the package's `vitest-setup`
+// teardown — without it a document a previous test opened is still cached and still fresh, so the
+// next test's `get` is never called and its assertion fails describing the feature working
+// correctly. The tests below therefore each start from an empty cache.
 
 /** Renders the published rail affordances (the "New document" button + the document rows) the way
  *  the hub's workspace shell would, so the test can drive the shell-owned rail slot.

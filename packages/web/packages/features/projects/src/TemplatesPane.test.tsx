@@ -249,7 +249,11 @@ describe("TemplatesPane", () => {
   it("says what deleting a template does NOT touch", async () => {
     render(<Harness workspaceSlug={slug} selected={CARD.id} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    // Wait for the TEMPLATE, not for the button: the bar is on screen from the first paint with
+    // Delete disabled, so a click issued before the list lands is dropped on a disabled control
+    // and the confirm never opens. What makes Delete live is having a row to delete.
+    await screen.findByDisplayValue("Ship a release");
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     // The sentence that makes this delete safe. What a template made is ordinary rows that stopped
     // being related to it the moment they were written; without saying so, retiring a shape reads

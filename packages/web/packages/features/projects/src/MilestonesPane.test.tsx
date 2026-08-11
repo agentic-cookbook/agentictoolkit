@@ -295,7 +295,11 @@ describe("MilestonesPane", () => {
   it("says what deleting a point does to its cards", async () => {
     render(<Harness projectId={pid()} selected="ms1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    // Wait for the POINT, not for the button: the bar is on screen from the first paint with
+    // Delete disabled, so a click issued before the list lands is dropped on a disabled control
+    // and the confirm never opens. What makes Delete live is having a row to delete.
+    await screen.findByDisplayValue("Public beta");
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     // The sentence that makes this delete safe, and the reason it never refuses the way deleting a
     // board COLUMN must: "counts toward no milestone" is an ordinary state for a card.

@@ -318,7 +318,11 @@ describe("ProgramsPane", () => {
   it("says what deleting a program does to its boards", async () => {
     render(<Harness workspaceSlug={slug} selected={PLATFORM.id} />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    // Wait for the PROGRAM, not for the button: the bar is on screen from the first paint with
+    // Delete disabled, so a click issued before the list lands is dropped on a disabled control
+    // and the confirm never opens. What makes Delete live is having a row to delete.
+    await screen.findByDisplayValue("Platform");
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     // The sentence that makes this delete safe, and the reason it never refuses: "in no program"
     // is an ordinary state for a board, so the sweep always has a defined outcome.

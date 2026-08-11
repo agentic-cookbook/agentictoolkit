@@ -17,10 +17,11 @@
 //   3. The rollover's button says how many cards it will move, and that number is the same one
 //      the server reports back — the count under the button and the sweep cannot disagree.
 //
-// The module-scope useResourceList cache is keyed by workspace and by iteration id and OUTLIVES
-// cleanup(), so each test below takes its own workspace slug (`ws()`); the hook always refetches
-// on mount, so a shared key would only ever affect a first paint, but the tests that assert on
-// an empty or different list would be the ones to suffer it.
+// Each test takes its own workspace slug (`ws()`), which separates the per-workspace list keys.
+// The CARDS list is keyed by iteration id alone and cannot be separated that way; what isolates it
+// is the package's `vitest-setup` teardown, which empties the module-scope query cache between
+// tests — without it a list seeded here is painted unchanged in the next test, since cached rows
+// inside `staleTime` are served without a re-read.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { useState } from "react";
 import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
@@ -391,7 +392,11 @@ describe("IterationsPane", () => {
   it("says what deleting a box does to its cards", async () => {
     render(<Harness workspaceSlug={ws()} selected="it1" />);
 
-    fireEvent.click(await screen.findByRole("button", { name: "Delete" }));
+    // Wait for the BOX, not for the button: the bar is on screen from the first paint with Delete
+    // disabled, so a click issued before the list lands is dropped on a disabled control and the
+    // confirm never opens. What makes Delete live is having a row to delete.
+    await screen.findByDisplayValue("Sprint 7");
+    fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
     // The sentence that makes this delete safe — and the reason it never refuses the way deleting
     // a board COLUMN must: "no iteration" is the backlog, an ordinary place for a card to be.

@@ -124,11 +124,10 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-// The toolkit's QueryClient is at MODULE scope — one per browser tab, deliberately, so a topic
-// click cannot destroy the cache. In a test file that means ONE cache for every test in it: leave
-// it standing and a note a previous test opened is still cached and still fresh, so the next
+// The cache a note is re-opened FROM is emptied between tests by the package's `vitest-setup`
+// teardown — without it a note a previous test opened is still cached and still fresh, so the next
 // test's `get` is never called and its assertion fails describing the feature working correctly.
-afterEach(() => getToolkitQueryClient().clear());
+// The tests below therefore each start from an empty cache.
 
 /** The merged stack, captured per render so a test can assert on a level's SHAPE. */
 let levels: TopicLevel[] = [];

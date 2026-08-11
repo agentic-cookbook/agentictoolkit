@@ -10,8 +10,9 @@
 //
 // @agentic-toolkit/data is deliberately NOT mocked: the list runs through the REAL
 // useResourceList, whose module-scope cache is keyed `work-item:<id>:relations` and OUTLIVES
-// cleanup(). Each test therefore uses its own item id, or it would seed the next one's first
-// paint with rows that test never stubbed.
+// cleanup() — what empties it between tests is the package's `vitest-setup` teardown. Each test
+// also takes its own item id, so a row seeded here cannot reach a test that never stubbed it
+// even when the two run in one file with a warm cache.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 
@@ -132,8 +133,14 @@ describe("WorkItemRelations", () => {
     const item = { ...SUBJECT, id: "phrasing" };
     renderFor(item);
 
-    expect(await screen.findByText("Blocked by")).not.toBeNull();
-    expect(screen.getByText("Blocks")).not.toBeNull();
+    // Scoped to the rows, and awaited through them: "Blocked by" is also one of the kind
+    // chooser's options, so awaiting that TEXT resolves against the chooser while the list is
+    // still outstanding — and once the rows do land it matches twice.
+    const rows = await screen.findAllByRole("listitem");
+    expect(rows.map((li) => (li.textContent ?? "").split(/ADH-/)[0]?.trim())).toEqual([
+      "Blocked by",
+      "Blocks",
+    ]);
     await waitFor(() => expect(list).toHaveBeenCalledWith("phrasing"));
   });
 
@@ -166,11 +173,14 @@ describe("WorkItemRelations", () => {
     ]);
     renderFor({ ...SUBJECT, id: "naming" });
 
-    expect(await screen.findByText("Duplicates")).not.toBeNull();
-    expect(screen.getByText("ADH-2")).not.toBeNull();
-    expect(screen.getByText("Rotate the signing key")).not.toBeNull();
+    // The row, not the screen: "Duplicates" is also one of the kind chooser's options, so a bare
+    // text query answers from the chooser before the row exists — and from both afterwards.
+    const [row] = await screen.findAllByRole("listitem");
+    expect(within(row!).getByText("Duplicates")).not.toBeNull();
+    expect(within(row!).getByText("ADH-2")).not.toBeNull();
+    expect(within(row!).getByText("Rotate the signing key")).not.toBeNull();
     // The far card's status, not the subject's — the row describes the other end throughout.
-    expect(screen.getByText("Done")).not.toBeNull();
+    expect(within(row!).getByText("Done")).not.toBeNull();
   });
 
   it("groups by relationship rather than by when each link was made", async () => {
@@ -183,9 +193,9 @@ describe("WorkItemRelations", () => {
     ]);
     renderFor({ ...SUBJECT, id: "ordering" });
 
-    await screen.findByText("Blocked by");
-    const labels = screen
-      .getAllByRole("listitem")
+    // Awaited through the rows: "Blocked by" is also a chooser option, so awaiting that text
+    // resolves while the list is still outstanding and leaves nothing to read the order from.
+    const labels = (await screen.findAllByRole("listitem"))
       .map((li) => li.textContent ?? "")
       .map((t) => t.split(/ADH-/)[0]?.trim());
     expect(labels).toEqual(["Blocked by", "Related to", "Duplicates"]);
@@ -214,7 +224,9 @@ describe("WorkItemRelations", () => {
       relation({ id: "r1", kind: "depends_on", direction: "outgoing", relatedId: "w2" }),
     ]);
     renderFor({ ...SUBJECT, id: "candidates" });
-    await screen.findByText("Blocked by");
+    // Wait for the ROW: what removes w2 from the candidates is the loaded link, and "Blocked by"
+    // is a chooser option that is on screen from the first paint whether or not it has landed.
+    await screen.findAllByRole("listitem");
 
     fireEvent.click(screen.getByRole("button", { name: "Work item" }));
     // The chooser's own listbox, not every option on screen — the kind <select> has three of
