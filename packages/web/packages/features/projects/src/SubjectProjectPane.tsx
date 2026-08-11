@@ -50,7 +50,7 @@ export function SubjectProjectPane({
   // Keyed on the PAIR: a persona and a product can carry the same identifier, and they resolve to
   // two different projects. Reading through the cache is what makes re-entering a subject's
   // Project topic paint the rail instead of blanking to "Loading…" — the read settles behind it.
-  const { item, error } = useResourceItemQuery<{ project: Project | null }>(
+  const { item, error, isFetching } = useResourceItemQuery<{ project: Project | null }>(
     "subject-project",
     `${subjectKind}:${subjectId}`,
     loadSubjectProject,
@@ -117,6 +117,11 @@ export function SubjectProjectPane({
       levelId={`subject-project-${project.id}`}
       title={project.name}
       items={members}
+      // The spinner in front of the project's name, and the ONLY signal in the cached case: a
+      // re-entry paints the copy it already has — the early "Loading…" above never shows — while
+      // the re-read runs behind it. Without this the second visit is silent about the fact that
+      // what is on screen has not been confirmed yet.
+      busy={isFetching}
       urlSelection={memberSelection}
     />
   );

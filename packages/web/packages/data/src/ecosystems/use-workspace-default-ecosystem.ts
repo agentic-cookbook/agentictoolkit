@@ -41,6 +41,12 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
    *  rather than the no-parent shape, which is a different, wrong answer. This is only ever
    *  TRANSIENT — the query is never disabled, so it always settles. */
   isPending: boolean;
+  /** A read is in flight, whether or not there is already an answer on screen. Wider than
+   *  {@link isPending} on purpose: after the first visit the resolution is cached, so `isPending`
+   *  is false on every subsequent mount while a re-read runs behind the copy being shown. A host
+   *  that reports progress — a topic list's spinner — wants this one, or the only visit it ever
+   *  admits to reading is the first. */
+  isFetching: boolean;
 } {
   const query = useQuery({
     queryKey: ["workspace-default-ecosystem", workspaceSlug ?? null],
@@ -52,5 +58,6 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
     canManage: query.data?.canManage ?? true,
     isError: query.isError,
     isPending: query.isPending,
+    isFetching: query.isFetching,
   };
 }
