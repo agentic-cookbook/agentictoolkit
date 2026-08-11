@@ -327,6 +327,7 @@ export function IterationsPane({
     items: iterations,
     reload,
     error: loadError,
+    isFetching,
   } = useResourceList<Iteration>(`workspace:${workspaceSlug ?? ""}:iterations`, load);
 
   const ws = { workspace: workspaceSlug };
@@ -367,6 +368,9 @@ export function IterationsPane({
     newLabel: "New iteration",
     leaf,
     emptyLabel: iterations === null ? "Loading…" : "No iterations yet.",
+    // The spinner before "Iterations" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
     overviewHelp:
       "A time-box the whole workspace shares — one sprint holds work from every board its owner runs.",

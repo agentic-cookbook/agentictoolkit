@@ -161,6 +161,7 @@ export function ProgramsPane({
     items: programs,
     reload,
     error: loadError,
+    isFetching,
   } = useResourceList<Program>(`workspace:${workspaceSlug ?? ""}:programs`, load);
 
   const ws = { workspace: workspaceSlug };
@@ -198,6 +199,9 @@ export function ProgramsPane({
     newLabel: "New program",
     leaf,
     emptyLabel: programs === null ? "Loading…" : "No programs yet.",
+    // The spinner before "Programs" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
     overviewHelp:
       "A roll-up over several boards — one initiative the whole workspace can see at once.",

@@ -89,6 +89,7 @@ export function TemplatesPane({
     items: templates,
     reload,
     error: loadError,
+    isFetching,
   } = useResourceList<Template>(`workspace:${workspaceSlug ?? ""}:templates`, load);
 
   const ws = { workspace: workspaceSlug };
@@ -133,6 +134,10 @@ export function TemplatesPane({
     newLabel: "New template",
     leaf,
     emptyLabel: templates === null ? "Loading…" : "No templates yet.",
+    // The spinner before "Templates". `emptyLabel` covers only the FIRST read — once the list is
+    // cached the rows are on screen from the first frame, and this is the only thing that says a
+    // revalidation is happening behind them.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
     overviewHelp:
       "A shape this workspace stamps out repeatedly — a card and its checklist, or a whole board.",

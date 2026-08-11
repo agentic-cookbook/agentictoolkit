@@ -210,6 +210,7 @@ export function MilestonesPane({
     items: milestones,
     reload,
     error: loadError,
+    isFetching,
   } = useResourceList<Milestone>(`project:${projectId}:milestones`, load);
 
   // The two lists the detail reads, on the SAME cache keys the Work Items topic uses — so arriving
@@ -266,6 +267,9 @@ export function MilestonesPane({
     newLabel: "New milestone",
     leaf,
     emptyLabel: milestones === null ? "Loading…" : "No milestones yet.",
+    // The spinner before "Milestones" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
     overviewHelp: `A point in this project's plan — what has to be true, and when. ${words.manyCap} count toward it.`,
   });
