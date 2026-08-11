@@ -126,6 +126,11 @@ export function DashboardsFeature({
         levelId="dashboards-sections"
         title="Dashboards"
         emptyHint="Select Groups or Sites."
+        // The spinner in front of "Dashboards". Both reads, not just the selected section's: they
+        // are started here, together, before either row is picked, and Sites needs the groups list
+        // too (it renders each site's group membership). So either one still in flight means this
+        // list is reading — which is what the spinner says.
+        busy={groupsFetching || sitesFetching}
         urlSelection={
           basePath ? { selectedId: section ?? null, onSelect: pushSegment } : undefined
         }

@@ -140,8 +140,9 @@ export function OrgSettingsGroup({
       title="Settings"
       items={items}
       // The spinner in front of "Settings". The group's four rows are static, so what it reports is
-      // the body behind the one that is selected — and only Profile has a body this group fetches.
-      // The other three panes page their own contents and say so themselves.
+      // the body behind the one that is selected — and Profile is the only body this group fetches.
+      // Social links, Addresses and Usage each read inside their own pane and draw their own
+      // loading state there, one component below the level published here and out of its reach.
       busy={org.isFetching}
       urlSelection={leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined}
     />

@@ -17,6 +17,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  RailHostBoundary,
   RailHostContext,
   type RailHostRegistry,
   type RegisteredLevels,
@@ -266,6 +267,64 @@ describe("DashboardsFeature", () => {
         { workspace: undefined },
       ),
     );
+  });
+});
+
+// The `Rail` harness above renders each level's ROWS, which is what the tests above drive. It
+// cannot answer this question: a harness that painted its own marker off `level.busy` would prove
+// the flag was set and nothing about what the user sees. So these mount the real host, and assert
+// the real spinner — the one that hangs off the left of the title without moving it.
+describe("the Dashboards list says when it is reading", () => {
+  // The stack renders ONE topic list per level, and each carries the same accessible name — so the
+  // query has to say which one. This is the top level, the one titled "Dashboards"; a deeper
+  // section's list publishes its own `busy` and is not what these tests are about.
+  const spinner = () => {
+    const lists = screen.getAllByRole("complementary", { name: "Topic list" });
+    const top = lists.find((el) => within(el).queryByText("Dashboards"));
+    if (!top) throw new Error("no topic list titled Dashboards");
+    return within(top).queryByRole("status", { name: "Loading" });
+  };
+
+  it("spins in front of the title while the lists are read, and stops when they land", async () => {
+    // Held open by hand so the in-flight moment is a state to stand in rather than a frame to race.
+    let landGroups: (rows: SiteGroupView[]) => void = () => {
+      throw new Error("listGroups was never called");
+    };
+    listGroupsMock.mockImplementation(
+      () => new Promise<SiteGroupView[]>((r) => (landGroups = r)),
+    );
+    render(
+      <RailHostBoundary>
+        <DashboardsFeature basePath="/w1/dashboards" />
+      </RailHostBoundary>,
+    );
+
+    await waitFor(() => expect(spinner()).not.toBeNull());
+    landGroups([structuredClone(GROUP)]);
+    await waitFor(() => expect(spinner()).toBeNull());
+  });
+
+  // Both reads start together, before either row is picked, and Sites renders each site's group
+  // membership — so the list is still reading while EITHER is in flight. A `busy` wired to only
+  // the selected section's read would stop the spinner here with a list still outstanding.
+  it("keeps spinning while only the sites read is outstanding", async () => {
+    let landSites: (rows: SiteView[]) => void = () => {
+      throw new Error("listSites was never called");
+    };
+    listSitesMock.mockImplementation(() => new Promise<SiteView[]>((r) => (landSites = r)));
+    render(
+      <RailHostBoundary>
+        <DashboardsFeature basePath="/w1/dashboards" section="groups" />
+      </RailHostBoundary>,
+    );
+
+    // The groups read resolves immediately; the section it fills is on screen and the spinner is
+    // still up, because the other list has not landed.
+    expect(await screen.findByText("Select a group to edit, or create a new one.")).not.toBeNull();
+    expect(spinner()).not.toBeNull();
+
+    landSites([structuredClone(SITE)]);
+    await waitFor(() => expect(spinner()).toBeNull());
   });
 });
 
