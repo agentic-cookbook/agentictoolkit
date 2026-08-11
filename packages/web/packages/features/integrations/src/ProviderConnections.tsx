@@ -18,7 +18,7 @@ import {
   type ProviderCatalogEntry,
   type SafeConnection,
 } from "@agentic-toolkit/data/integrations";
-import { isServiceUnavailable, errMsg } from "@agentic-toolkit/data";
+import { isServiceUnavailable, errMsg, useResourceList } from "@agentic-toolkit/data";
 import { DetailSection } from "@agentic-toolkit/resource";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
 import { ConnectAccountDialog } from "./ConnectAccountDialog";
@@ -357,12 +357,17 @@ const SYNC_SETTINGS_BY_PROVIDER: Record<
  * accounts for THIS provider, each with a status badge, last-sync / last-error,
  * Sync now (503 "no worker" shown inline), Disconnect (confirmed via AlertModal),
  * and — for gmail and reddit — a small sync-settings form. Hosts the "Connect account" dialog.
+ *
+ * The ecosystem's connections are read through the shared cache, so returning to a provider paints
+ * its accounts on the first frame and revalidates behind that paint. The section used to take the
+ * pane's already-loaded list as a `connections` prop for the same reason; nothing passed it, so
+ * every provider switch re-read the whole ecosystem. The cache is that seed, for real and for
+ * every host.
  */
 export function ProviderConnections({
   provider,
   ecosystemId,
   providerConfig,
-  connections: seedConnections,
   onConnectionsChanged,
 }: {
   provider: ProviderCatalogEntry;
@@ -371,10 +376,6 @@ export function ProviderConnections({
    *  connect flow sources its creds from it — its `id` becomes the connect's providerConfigId,
    *  and for oauth_instance its `config.instanceUrl` seeds the register call. */
   providerConfig: MaskedProviderConfig | null;
-  /** The pane's already-loaded connection list for this ecosystem (all providers), used to
-   *  SEED this section and skip a redundant per-provider-switch fetch. `null` while the pane
-   *  is still loading — then this section fetches its own slice as a fallback. */
-  connections?: SafeConnection[] | null;
   /** Notify the pane when the connection set changes (connect / disconnect), so its
    *  master-list union — which lists a provider as long as it has ≥1 connection —
    *  reflects the change and the provider doesn't vanish/linger after connecting. */
@@ -382,12 +383,11 @@ export function ProviderConnections({
 }) {
   const providerId = provider.providerId;
   const syncSettingsDef = SYNC_SETTINGS_BY_PROVIDER[providerId];
-  const [connections, setConnections] = useState<SafeConnection[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [syncNotes, setSyncNotes] = useState<Record<string, string>>({});
   const [disconnectTarget, setDisconnectTarget] = useState<SafeConnection | null>(null);
+  const [disconnectError, setDisconnectError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const alive = useRef(true);
   useEffect(() => {
@@ -397,33 +397,39 @@ export function ProviderConnections({
     };
   }, []);
 
-  const refresh = useCallback(async () => {
-    setLoadError(null);
+  // Keyed on the ECOSYSTEM, not the provider, because that is what the route returns: one read
+  // serves every provider in the detail, so switching provider paints from cache instead of
+  // re-reading the whole ecosystem — which is what a per-provider key would cost.
+  //
+  // `providerId` is deliberately absent from these deps. A new `load` identity is the hook's
+  // refetch signal, so closing over the provider would fire a network read on every switch —
+  // the exact cost this key exists to avoid.
+  const loadConnections = useCallback(async () => {
     try {
-      const all = await integrationsApi.listConnections(ecosystemId);
-      if (alive.current) setConnections(all.filter((c) => c.provider === providerId));
+      return await integrationsApi.listConnections(ecosystemId);
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "integration-connections", step: "load" });
-      if (!alive.current) return;
-      setConnections([]);
-      setLoadError(errMsg(err, "Couldn't load connected accounts."));
+      // `errMsg`'s wording, raised here so it survives the hook's own generic fallback.
+      throw err instanceof Error ? err : new Error("Couldn't load connected accounts.");
     }
-  }, [providerId, ecosystemId]);
+  }, [ecosystemId]);
 
-  useEffect(() => {
-    // Seed from the pane's already-loaded list (filtered to this provider) to avoid a
-    // redundant full-ecosystem fetch on every provider switch; fetch only as a fallback when
-    // the pane hasn't loaded them yet. Post-mutation freshness still comes from refresh().
-    if (seedConnections != null) {
-      setConnections(seedConnections.filter((c) => c.provider === providerId));
-    } else {
-      setConnections(null);
-      void refresh();
-    }
-    // Reruns per (providerId, ecosystemId) via refresh's identity; seedConnections is read
-    // only to prime the first render, so it is intentionally not a dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refresh]);
+  const {
+    items,
+    error: fetchError,
+    reload,
+  } = useResourceList<SafeConnection>(
+    `ecosystem:${ecosystemId}:integration-connections`,
+    loadConnections,
+    { reportErrors: false },
+  );
+  const connections = items ? items.filter((c) => c.provider === providerId) : null;
+  const loadError = disconnectError ?? fetchError;
+
+  // Swallowing, because every caller below re-reads AFTER its own write succeeded: a failed
+  // re-read must not be reported as a failed sync or disconnect. It still reaches the screen —
+  // as `fetchError`.
+  const refresh = useCallback(() => reload().catch(() => {}), [reload]);
 
   async function onSync(id: string) {
     setSyncingId(id);
@@ -456,6 +462,7 @@ export function ProviderConnections({
   async function onConfirmDisconnect() {
     if (!disconnectTarget) return;
     setDeleting(true);
+    setDisconnectError(null);
     try {
       await integrationsApi.disconnect(disconnectTarget.id);
       if (alive.current) setDisconnectTarget(null);
@@ -463,7 +470,7 @@ export function ProviderConnections({
       onConnectionsChanged?.();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "integration-connections", step: "disconnect" });
-      if (alive.current) setLoadError(errMsg(err, "Couldn't disconnect that account."));
+      if (alive.current) setDisconnectError(errMsg(err, "Couldn't disconnect that account."));
     } finally {
       if (alive.current) setDeleting(false);
     }
@@ -480,8 +487,10 @@ export function ProviderConnections({
     <DetailSection title="Connected accounts" action={connectAction}>
       {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
 
+      {/* A failed read leaves the rows null, where the pre-cache code substituted an empty array —
+          so the error is what suppresses "Loading…" here, or a failure would spin forever. */}
       {connections === null ? (
-        <p className="text-sm text-apt-text-muted">Loading…</p>
+        !fetchError && <p className="text-sm text-apt-text-muted">Loading…</p>
       ) : connections.length === 0 ? (
         <p className="text-sm text-apt-text-muted">No account connected.</p>
       ) : (
