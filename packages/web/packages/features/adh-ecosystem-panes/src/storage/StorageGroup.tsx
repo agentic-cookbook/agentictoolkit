@@ -45,10 +45,14 @@ export interface EcosystemScopeResolution {
  * nothing makes them agree.
  *
  * A product's Storage topic (Products ▸ <product> ▸ Storage) looks like this rail and is not it:
- * EcosystemsFeature declares its own three members, scoped to the product's ecosystem rather than
- * the workspace's, and imports neither this component nor STORAGE_MEMBER_IDS. So a member added
- * here reaches the two hosts above and does NOT reach a product — which is why Tokens, whose
- * question is "what may reach this workspace's storage", stops at the workspace surfaces.
+ * EcosystemsFeature hand-declares its own three members (EcosystemsFeature.tsx:207-215), scoped to
+ * the product's ecosystem rather than the workspace's, and imports neither this component nor
+ * STORAGE_MEMBER_IDS. So a member added here reaches the two hosts above and does NOT reach a
+ * product's Storage topic.
+ *
+ * That is not the same as saying a product has no Tokens. It has one, as its OWN top-level rail
+ * member (ProductsFeature.tsx:194), mounting this same panel scoped to the product's ecosystem.
+ * The two placements answer differently-scoped questions and neither follows the other.
  *
  * The group opens UNSELECTED — selecting an item never auto-selects a topic (StackGroupDetail's
  * own rule).
@@ -130,9 +134,10 @@ export function StorageGroup({
       render: () => renderAllData?.() ?? <AllDataPane />,
     },
     // The `adh_…` storage-access principals, each of which owns its own isolated bucket — which
-    // is what earns this row a place in THIS rail rather than only in Configuration, where the
-    // same panel has always been mounted (ConfigurationGroup). It is storage the tokens reach and
-    // storage they are made of, so the surface that manages buckets is where you look for them.
+    // is what earns this row a place in THIS rail rather than only under Orgs ▸ Configuration,
+    // where the same panel is mounted (OrganizationsFeature.tsx:134). It is storage the tokens
+    // reach and storage they are made of, so the surface that manages buckets is where you look
+    // for them. This is an ADDITION: that mount stays exactly where it was.
     //
     // Not the `tmp_…` personal API tokens user settings mints — a different principal that
     // happens to share the noun; see StorageTokensPanel's own header for the distinction.
