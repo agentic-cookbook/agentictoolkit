@@ -11,6 +11,7 @@
 
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useId,
@@ -49,6 +50,11 @@ export interface RailHostRegistry {
   unregisterLevels: (id: string) => void;
   /** Register/replace (guard) or withdraw (null) one publisher's guard, keyed by a stable id. */
   registerExitGuard: (id: string, guard: PaneExitGuard | null) => void;
+  /** Pop the stack's LEAF: clear the deepest level that currently has a selection, backing the
+   *  user out to that list with nothing chosen. Ancestors are kept. A no-op when nothing is
+   *  selected anywhere. Required, not optional — a host that could not pop would leave a pane
+   *  that has discovered its item is gone with no way off the screen. */
+  popStack: () => void;
   /** The DOM node of the shell's full-width button-bar slot; feature editors portal their action
    *  bar here so it spans the top instead of sitting inside the detail. Null with no host. */
   toolbarSlot: HTMLElement | null;
@@ -191,6 +197,23 @@ export function useRailExitGuard(guard: PaneExitGuard | null): void {
     );
     return () => registerExitGuard(id, null);
   }, [registerExitGuard, id, present]);
+}
+
+/**
+ * The leaf's own way off the stack. Returns a stable function that pops the deepest SELECTED level
+ * — the same move Back makes — so a pane that discovers its item no longer exists can remove
+ * itself without knowing where in the stack it sits.
+ *
+ * It takes NO argument on purpose. Levels do not share an identity vocabulary (some are keyed by
+ * uuid, some by slug), so a pop that named an id would silently do nothing for whichever caller
+ * guessed the other one, leaving the user stuck on a dead pane. Position is unambiguous.
+ *
+ * Outside a host it is a no-op, like every other publisher here.
+ */
+export function useStackPop(): () => void {
+  const ctx = useContext(RailHostContext);
+  const pop = ctx?.popStack;
+  return useCallback(() => pop?.(), [pop]);
 }
 
 /** The DOM node a feature editor should portal its action bar into, or null when there is no

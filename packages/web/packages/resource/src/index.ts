@@ -36,6 +36,7 @@ export {
   useRailHost,
   StackLevels,
   useStackLevel,
+  useStackPop,
   useRailExitGuard,
   ToolbarPortal,
   useToolbarPortal,

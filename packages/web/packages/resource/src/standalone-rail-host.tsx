@@ -9,7 +9,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView, deepestSelectedLevel } from "@agentic-toolkit/ui/blocks";
 import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import {
   RailHostContext,
@@ -131,6 +131,19 @@ export function StandaloneRailHost({
     [registry],
   );
 
+  // Pop the leaf: clear the deepest level that has a selection — the same move the view's Back
+  // makes, reading the SAME frontier math, so a pop and a Back can never disagree about which
+  // list is the leaf.
+  //
+  // Deliberately UNGUARDED: it does not consult `exitGuard`. Its callers are the host's own
+  // "that item is gone" acknowledgement (which is already gated on nothing being dirty) and a
+  // pane popping itself, both of which have decided to leave. Routing it through the guard would
+  // put a Discard/Stay prompt in front of a pane whose target no longer exists.
+  const popStack = useCallback(() => {
+    const at = deepestSelectedLevel(mergedLevels);
+    if (at >= 0) mergedLevels[at]?.onClear();
+  }, [mergedLevels]);
+
   // `toolbarSlot` stays null: an editor's action bar keeps rendering inside its own pane here, as
   // it always has. Only the FEATURE bar is hoisted, and only when a feature asks for one.
   const host = useMemo<RailHostRegistry>(
@@ -138,11 +151,12 @@ export function StandaloneRailHost({
       registerLevels,
       unregisterLevels,
       registerExitGuard,
+      popStack,
       toolbarSlot: null,
       claimFeatureBar,
       featureBarSlot,
     }),
-    [registerLevels, unregisterLevels, registerExitGuard, claimFeatureBar, featureBarSlot],
+    [registerLevels, unregisterLevels, registerExitGuard, popStack, claimFeatureBar, featureBarSlot],
   );
 
   return (

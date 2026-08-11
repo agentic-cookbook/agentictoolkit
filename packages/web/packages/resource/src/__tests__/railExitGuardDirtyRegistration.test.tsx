@@ -15,6 +15,7 @@ function makeHost() {
       registerLevels: vi.fn(),
       unregisterLevels: vi.fn(),
       registerExitGuard,
+      popStack: vi.fn(),
       toolbarSlot: null,
     },
   };

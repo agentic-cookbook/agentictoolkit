@@ -127,6 +127,7 @@ describe("ResourceExplorer standalone exit guard", () => {
       registerLevels,
       unregisterLevels: vi.fn(),
       registerExitGuard: vi.fn(),
+      popStack: vi.fn(),
       toolbarSlot: null,
     };
     const topics: ResourceTopic[] = [
