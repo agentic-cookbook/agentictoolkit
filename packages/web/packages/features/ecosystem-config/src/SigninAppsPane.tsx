@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { LogIn } from "lucide-react";
 
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useResourceList } from "@agentic-toolkit/data";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -58,8 +58,6 @@ export function SigninAppsPane({
   /** Deep-linkable client selection (`…/signin-apps/<clientId>`). */
   leaf?: TopicLeaf;
 }) {
-  const [apps, setApps] = useState<SigninApp[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating a sign-in app is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new app is selected so
   // its REAL detail (GitHub toggle, return origins, connect snippet) opens.
@@ -71,22 +69,24 @@ export function SigninAppsPane({
     ? ecosystemId.slice("ecosystem.".length)
     : "";
 
-  const refresh = useCallback(async () => {
-    if (!ecosystemId) return;
-    try {
-      setLoadError(null);
-      setApps(await signinAppsApi.list(ecosystemId));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "signin-apps-pane", step: "load" });
-      // A failed load must not sit on "Loading…" forever: flip out of the loading state.
-      setApps([]);
-      setLoadError(err instanceof Error ? err.message : "Failed to load sign-in apps.");
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // Cached by ecosystem, so coming back to Sign-in apps paints the rows it already had and
+  // revalidates behind them. `useCallback` is load-bearing: the hook treats a NEW fetcher identity
+  // as "re-read", so an inline closure here would re-fetch on every render.
+  //
+  // With no ecosystem there is nothing to ask for, and a promise that never settles is how this
+  // hook is held in Loading — the alternative, resolving `[]`, would state "no sign-in apps yet"
+  // about an ecosystem nobody has named yet. A failed read leaves `apps` null, and what keeps that
+  // off "Loading…" forever is the labels below reading `loadError` FIRST.
+  const load = useCallback(
+    () => (ecosystemId ? signinAppsApi.list(ecosystemId) : new Promise<SigninApp[]>(() => {})),
+    [ecosystemId],
+  );
+  const {
+    items: apps,
+    reload: refresh,
+    error: loadError,
+    isFetching,
+  } = useResourceList<SigninApp>(`ecosystem:${ecosystemId ?? ""}:signin-apps`, load);
 
   const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
 
@@ -128,6 +128,9 @@ export function SigninAppsPane({
       : apps === null
         ? "Loading…"
         : "No sign-in apps yet.",
+    // The spinner before "Sign-in apps" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
   });
 

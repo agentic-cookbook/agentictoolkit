@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -9,7 +9,7 @@ import {
   type EcosystemUserInput,
 } from "../api/customers";
 import { Users } from "lucide-react";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useResourceList } from "@agentic-toolkit/data";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -51,26 +51,21 @@ export function UsersPane({
   /** Deep-linkable user selection (`…/users/<userId>`); omit for internal. */
   leaf?: TopicLeaf;
 }) {
-  const [users, setUsers] = useState<EcosystemUser[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating a user is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new user is selected
   // so its REAL detail (external id, handle, avatar) opens.
   const [newOpen, setNewOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoadError(null);
-      setUsers(await ecosystemUsersApi.list(ecosystemId));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "users-pane", step: "load" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load users.");
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // Cached by ecosystem, so coming back to Users paints the rows it already had and revalidates
+  // behind them. `useCallback` is load-bearing: the hook treats a NEW fetcher identity as "re-read",
+  // so an inline closure here would re-fetch on every render.
+  const load = useCallback(() => ecosystemUsersApi.list(ecosystemId), [ecosystemId]);
+  const {
+    items: users,
+    reload: refresh,
+    error: loadError,
+    isFetching,
+  } = useResourceList<EcosystemUser>(`ecosystem:${ecosystemId ?? ""}:users`, load);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
@@ -107,6 +102,9 @@ export function UsersPane({
     newLabel: "New user",
     leaf,
     emptyLabel: users === null ? "Loading…" : "No users yet.",
+    // The spinner before "Users" — the only thing that says a revalidation is running behind rows
+    // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
   });
 

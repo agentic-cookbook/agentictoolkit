@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Code, UserCog, UsersRound } from "lucide-react";
 
@@ -10,7 +10,7 @@ import {
   type ApplicationKind,
   type PrototypeApplication,
 } from "../api/applications-prototype";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useResourceList } from "@agentic-toolkit/data";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { ButtonBar } from "@agentic-toolkit/resource";
@@ -61,8 +61,6 @@ export function ApplicationsPane({
    *  {@link RenderTransferSection}. Omitted ⇒ no transfer is offered. */
   renderTransfer?: RenderTransferSection;
 }) {
-  const [apps, setApps] = useState<PrototypeApplication[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating an application is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the new app is selected so its
   // REAL detail (schema grants, access tokens) opens.
@@ -75,23 +73,20 @@ export function ApplicationsPane({
     ? `app.${ecosystemId.slice("ecosystem.".length)}.`
     : "";
 
-  const refresh = useCallback(async () => {
-    try {
-      setLoadError(null);
-      setApps(await applicationsPrototypeApi.list(ecosystemId));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "applications-pane", step: "load" });
-      // Surface a real error state: a failed load must NOT sit on "Loading…" forever
-      // (apps stays null on error), which hides the actual failure. `[]` flips the list
-      // and pane out of the loading state; the red banner + error-aware labels below name it.
-      setApps([]);
-      setLoadError(err instanceof Error ? err.message : "Failed to load applications.");
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // Cached by ecosystem, so coming back to Applications paints the rows it already had and
+  // revalidates behind them. `useCallback` is load-bearing: the hook treats a NEW fetcher identity
+  // as "re-read", so an inline closure here would re-fetch on every render.
+  //
+  // A failed read leaves `apps` null, which on its own would sit on "Loading…" forever and hide the
+  // failure. What prevents that is the labels below reading `loadError` FIRST — the old empty-array
+  // substitution is no longer what flips the pane out of the loading state.
+  const load = useCallback(() => applicationsPrototypeApi.list(ecosystemId), [ecosystemId]);
+  const {
+    items: apps,
+    reload: refresh,
+    error: loadError,
+    isFetching,
+  } = useResourceList<PrototypeApplication>(`ecosystem:${ecosystemId ?? ""}:applications`, load);
 
   // URL-driven selection (the apps list is now a published stack LEVEL; the row id lives in the
   // URL leaf segment). The hook routes selection changes through `leaf.onSelect`.
@@ -141,6 +136,9 @@ export function ApplicationsPane({
       : apps === null
         ? "Loading…"
         : "No applications yet.",
+    // The spinner before "Applications" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
   });
 

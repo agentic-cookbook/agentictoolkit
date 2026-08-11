@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import {
@@ -17,7 +17,6 @@ import {
   StickyNote,
   UserRound,
 } from "lucide-react";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { Button } from "@agentic-toolkit/ui/components/button";
@@ -27,7 +26,7 @@ import {
   type MaskedProviderConfig,
   type ProviderCatalogEntry,
 } from "@agentic-toolkit/data/integrations";
-import { isForbidden } from "@agentic-toolkit/data";
+import { isForbidden, useResourceItemQuery, useResourceList } from "@agentic-toolkit/data";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { useMasterDetailForm } from "@agentic-toolkit/resource";
 import { useMasterDetailLevel } from "@agentic-toolkit/resource";
@@ -43,6 +42,12 @@ import {
 } from "./IntegrationDetail";
 import { IntegrationDetailView } from "./IntegrationDetailView";
 import { AddIntegrationModal } from "./AddIntegrationModal";
+
+// The stand-ins for a list whose read FAILED. Module scope so each is one identity for the whole
+// process: the derived `rows` memo compares on them, and a fresh `[]` per render would re-run the
+// master/detail item effects on every pass.
+const NO_CONFIGS: MaskedProviderConfig[] = [];
+const NO_PROVIDERS: ProviderCatalogEntry[] = [];
 
 // A leading icon per row keyed off the provider's FIRST service type (the icon-only rail strip
 // needs every row to carry a glyph). Falls back to a generic plug for a service type not mapped
@@ -111,99 +116,87 @@ export function IntegrationsPane({
   /** Deep-linkable instance selection (`…/integrations/<rdid-or-uuid>`). */
   leaf?: TopicLeaf;
 }) {
-  const [configs, setConfigs] = useState<MaskedProviderConfig[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [providers, setProviders] = useState<ProviderCatalogEntry[] | null>(null);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
   // Creating is a MODAL over the stack (HTD `must-create-in-modal`): the `+` opens it, and on
   // add the new instance is selected so its REAL detail opens once the modal is dismissed.
   const [modalOpen, setModalOpen] = useState(false);
 
-  const providerById = useMemo(
-    () => new Map((providers ?? []).map((p) => [p.providerId, p])),
-    [providers],
-  );
-
-  const refreshConfigs = useCallback(async () => {
-    if (!ecosystemId) {
-      setConfigs([]);
-      return;
-    }
-    setLoadError(null);
+  // Cached by ecosystem, so coming back to Integrations paints the rows it already had and
+  // revalidates behind them. `useCallback` is load-bearing: the hook treats a NEW fetcher identity
+  // as "re-read", so an inline closure here would re-fetch on every render.
+  //
+  // The forbidden case is rewritten HERE, in the fetcher, because that is the only place still
+  // holding the error object — the hook hands back a message, not a throwable. The rewrite keeps
+  // `status` on the replacement: `reportUnexpectedAuthError` gates on it (anything under 500 is
+  // dropped), so a bare `new Error` would start reporting the 403 this pane has always swallowed.
+  const loadConfigs = useCallback(async () => {
+    if (!ecosystemId) return [];
     try {
-      setConfigs(await integrationsApi.listProviderConfigs(ecosystemId));
+      return await integrationsApi.listProviderConfigs(ecosystemId);
     } catch (err) {
-      if (!isForbidden(err)) {
-        reportUnexpectedAuthError(err, { feature: "integrations-pane", step: "load" });
-      }
-      setConfigs([]);
-      setLoadError(
-        isForbidden(err)
-          ? "You don't have access to this ecosystem's integrations."
-          : err instanceof Error
-            ? err.message
-            : "Failed to load integrations.",
-      );
+      if (!isForbidden(err)) throw err;
+      throw Object.assign(new Error("You don't have access to this ecosystem's integrations."), {
+        status: 403,
+      });
     }
   }, [ecosystemId]);
+  const {
+    items: configs,
+    reload: refreshConfigs,
+    error: loadError,
+    isFetching: configsFetching,
+  } = useResourceList<MaskedProviderConfig>(
+    `ecosystem:${ecosystemId ?? ""}:integrations`,
+    loadConfigs,
+  );
 
-  useEffect(() => {
-    void refreshConfigs();
-  }, [refreshConfigs]);
+  // The provider catalog is ecosystem-independent, so it is cached WITHOUT a scope segment: every
+  // ecosystem's pane reads the same rows, and after the first visit nobody fetches it again.
+  const {
+    items: providers,
+    error: catalogError,
+    isFetching: catalogFetching,
+  } = useResourceList<ProviderCatalogEntry>("integrations:providers", integrationsApi.listProviders);
 
-  // The provider catalog is ecosystem-independent, so load it once.
-  useEffect(() => {
-    let alive = true;
-    integrationsApi
-      .listProviders()
-      .then((p) => {
-        if (alive) setProviders(p);
-      })
-      .catch((err) => {
-        reportUnexpectedAuthError(err, { feature: "integrations-pane", step: "load-catalog" });
-        if (!alive) return;
-        setProviders([]); // don't hang the UI on "Loading…"
-        setCatalogError(err instanceof Error ? err.message : "Failed to load providers.");
-      });
-    return () => {
-      alive = false;
-    };
-  }, []);
+  // A failed read used to be substituted with `[]` so the pane didn't hang on "Loading…" forever;
+  // the hook leaves `items` null instead, so make that substitution here — once, for both lists.
+  // It matters most for the CATALOG: `rows` withholds every instance until the catalog has landed
+  // (see the gate below), so a null-forever catalog would mean a pane that never shows a row.
+  // The banners name both failures. Module-scope constants, because `rows` memoizes on these.
+  const configRows = configs ?? (loadError ? NO_CONFIGS : null);
+  const providerRows = providers ?? (catalogError ? NO_PROVIDERS : null);
+
+  const providerById = useMemo(
+    () => new Map((providerRows ?? []).map((p) => [p.providerId, p])),
+    [providerRows],
+  );
 
   // Selection lives in the URL leaf segment (an address — see `addressOf`). Hoisted to a stable
   // primitive so the derived values below memoize on it cleanly.
   const leafId = leaf?.leafId ?? null;
 
   // The selected instance, resolved from the loaded list by its address.
-  const selectedInList = (configs ?? []).find((c) => addressOf(c) === leafId) ?? null;
+  const selectedInList = (configRows ?? []).find((c) => addressOf(c) === leafId) ?? null;
 
   // Fallback for a deep link the list hasn't surfaced yet (or an instance addressable by id but
-  // not in the list): fetch the masked config by id/rdid so its detail still resolves. State is
-  // set only in the async callbacks; staleness (a fetch for a since-changed address) is filtered
-  // out when deriving `fetchedCfg` below, so no synchronous reset is needed here.
-  const [fetchedById, setFetchedById] = useState<MaskedProviderConfig | null>(null);
-  useEffect(() => {
-    if (!leafId || !ecosystemId || selectedInList) return;
-    let alive = true;
-    integrationsApi
-      .getProviderConfigById(ecosystemId, leafId)
-      .then((c) => {
-        if (alive) setFetchedById(c);
-      })
-      .catch((err) => {
-        reportUnexpectedAuthError(err, { feature: "integrations-pane", step: "load-instance" });
-        if (alive) setFetchedById(null);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [leafId, ecosystemId, selectedInList]);
+  // not in the list): read the masked config by id/rdid so its detail still resolves.
+  //
+  // Keyed by the address asked for, which is what retires the old staleness filter: a reply for a
+  // previous address is a DIFFERENT cache entry now, so it can no longer be mistaken for this one.
+  // `useResourceItemQuery`, not `useResourceItem`: a config missing from the list is the ordinary
+  // case here (that is the whole reason this read exists), and the composed hook would announce it
+  // as deleted-on-the-server.
+  const loadById = useCallback(
+    (id: string) => integrationsApi.getProviderConfigById(ecosystemId ?? "", id),
+    [ecosystemId],
+  );
+  // The item type carries the null: this endpoint answers "no such config" with a null body rather
+  // than a 404, so it is a legitimate cached ANSWER and not an absence to re-ask for.
+  const { item: fetchedCfg } = useResourceItemQuery<MaskedProviderConfig | null>(
+    `ecosystem:${ecosystemId ?? ""}:integrations`,
+    leafId && ecosystemId && !selectedInList ? leafId : null,
+    loadById,
+  );
 
-  // Trust the by-id fallback only when it matches the current selection (it may be stale from a
-  // previous address, or absent while a fetch is in flight). Compared on `addressOf`, not the raw
-  // rdid: the fetch is issued WITH `leafId`, so for a row this pane addressed by uuid the reply
-  // carries a null rdid and only the derived address can recognize it as the row asked for.
-  const fetchedCfg = leafId && fetchedById && addressOf(fetchedById) === leafId ? fetchedById : null;
   const cfg = selectedInList ?? fetchedCfg;
   const provider = cfg ? providerById.get(cfg.providerId) : undefined;
 
@@ -222,11 +215,11 @@ export function IntegrationsPane({
   // Memoized: `rows` is the `items` identity `useMasterDetailForm`/`useMasterDetailLevel` compare
   // against, so a fresh array on every render would re-run their item effects each pass.
   const rows = useMemo<MaskedProviderConfig[] | null>(() => {
-    if (configs === null || providers === null) return null;
+    if (configRows === null || providerRows === null) return null;
     // On `addressOf` again — `c.rdid === fetchedCfg.rdid` would read `null === null` as a match
     // and swallow the deep-linked row whenever any OTHER unmapped config is in the list.
-    return mergeFetchedRow(configs, fetchedCfg);
-  }, [configs, providers, fetchedCfg]);
+    return mergeFetchedRow(configRows, fetchedCfg);
+  }, [configRows, providerRows, fetchedCfg]);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
@@ -288,15 +281,18 @@ export function IntegrationsPane({
     getItemIcon: iconForRow,
     newLabel: "Add integration",
     leaf,
-    // A failed load resolves to `[]` (see refreshConfigs), so name the error rather than hiding
-    // it behind "No integrations yet.". Also checks `providers` (see the `rows` gate above) so
+    // A failed load resolves to `[]` (see `configRows`), so name the error rather than hiding
+    // it behind "No integrations yet.". Also checks the catalog (see the `rows` gate above) so
     // this doesn't misreport "No integrations yet." during the brief window where configs have
     // resolved but the catalog hasn't.
     emptyLabel: loadError
       ? "Couldn't load integrations."
-      : configs === null || providers === null
+      : configRows === null || providerRows === null
         ? "Loading…"
         : "No integrations yet.",
+    // The spinner before "Integrations" — the only thing that says a revalidation is running behind
+    // rows the cache already put on screen. Either read repaints these rows, so either one counts.
+    busy: configsFetching || catalogFetching,
     onNew: () => setModalOpen(true),
   });
 
@@ -354,11 +350,11 @@ export function IntegrationsPane({
               </p>
             </div>
           </div>
-        ) : leaf?.leafId && (configs === null || providers === null) ? (
+        ) : leaf?.leafId && (configRows === null || providerRows === null) ? (
           <EmptyState title="Loading…" />
         ) : loadError ? (
           <EmptyState title="Couldn't load integrations." />
-        ) : configs === null ? (
+        ) : configRows === null ? (
           <EmptyState title="Loading…" />
         ) : (
           // Nothing selected and the list loaded: the almost-empty centered select-nudge, not a
@@ -372,7 +368,7 @@ export function IntegrationsPane({
         open={modalOpen}
         onOpenChange={setModalOpen}
         ecosystemId={ecosystemId ?? ""}
-        providers={providers}
+        providers={providerRows}
         // Do NOT close the modal here — it stays open so the user can add another; it closes via
         // its own ✕/Escape. Selecting the new address means the created instance's detail is
         // showing once they DO close it.

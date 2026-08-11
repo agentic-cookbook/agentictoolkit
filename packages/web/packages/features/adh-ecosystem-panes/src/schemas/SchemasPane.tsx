@@ -1,16 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import { Table2 } from "lucide-react";
+import { useResourceList } from "@agentic-toolkit/data";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
-import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import type { SchemaDefinition, SchemaDefinitionInput } from "./schema-model";
 import { ButtonBar } from "@agentic-toolkit/resource";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
@@ -55,25 +55,21 @@ export function SchemasPane({
    *  {@link RenderTransferSection}. Omitted ⇒ no transfer is offered. */
   renderTransfer?: RenderTransferSection;
 }) {
-  const [schemas, setSchemas] = useState<SchemaDefinition[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   // Creating a bucket is a MODAL over the stack, never a blank leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens this, and on save the new bucket is
   // selected so its REAL detail (with the tables editor) opens.
   const [newOpen, setNewOpen] = useState(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      setSchemas(await schemasApi.list(ecosystemId));
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "schemas-pane", step: "load" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load buckets.");
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  // Cached by ecosystem, so coming back to Buckets paints the rows it already had and revalidates
+  // behind them. `useCallback` is load-bearing: the hook treats a NEW fetcher identity as "re-read",
+  // so an inline closure here would re-fetch on every render.
+  const load = useCallback(() => schemasApi.list(ecosystemId), [ecosystemId]);
+  const {
+    items: schemas,
+    reload: refresh,
+    error: loadError,
+    isFetching,
+  } = useResourceList<SchemaDefinition>(`ecosystem:${ecosystemId ?? ""}:buckets`, load);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
@@ -116,6 +112,9 @@ export function SchemasPane({
     newLabel: "New bucket",
     leaf,
     emptyLabel: schemas === null ? "Loading…" : "No buckets yet.",
+    // The spinner before "Buckets" — the only thing that says a revalidation is running behind rows
+    // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
+    busy: isFetching,
     onNew: () => setNewOpen(true),
   });
 
