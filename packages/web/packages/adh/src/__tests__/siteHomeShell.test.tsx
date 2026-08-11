@@ -121,14 +121,21 @@ let prefsPutResult: () => Promise<void> = () => Promise.resolve();
 // settles behind it". Reset in `beforeEach`.
 let seedRows: unknown[] | null = null;
 
-// The whole data boundary is mocked, `useResourceList` INCLUDED. The real hook caches at MODULE
-// scope keyed by cacheKey, and every mount in the family now uses the same literal key — so the
-// second test would seed from the first one's rows and the "holds children" case could never
-// observe a null list. The stub is the hook's contract with that cache made EXPLICIT instead of
-// implicit: `seedRows` above stands in for it, so a test says which state it is starting from
-// rather than inheriting one from whichever test ran before it. (Async factory because vi.mock is
-// hoisted above the imports, so React has to be pulled in here rather than referenced from module
-// scope.)
+// Records the shell's write-through of a chosen workspace into the shared item cache. Module
+// scope so `useResourceItemWriter`'s stub can hand back ONE stable identity — the real hook's is
+// a `useCallback`, and the persistence effect holds it in a dependency array.
+const itemWrite = vi.fn();
+
+// The whole data boundary is mocked, `useResourceList` and `useResourceItemQuery` INCLUDED. The
+// real hooks cache at MODULE scope keyed by cacheKey, and every mount in the family now uses the
+// same literal key — so the second test would seed from the first one's rows and the "holds
+// children" case could never observe a null list, and every per-mount `prefsGet` count below would
+// stop meaning anything the moment one test's answer outlived it. The stubs are the hooks'
+// contract with that cache made EXPLICIT instead of implicit: `seedRows` above stands in for it,
+// so a test says which state it is starting from rather than inheriting one from whichever test
+// ran before it. What the cache BUYS is asserted next door, in workspacePrefsCache.test.tsx,
+// against the real hook. (Async factory because vi.mock is hoisted above the imports, so React has
+// to be pulled in here rather than referenced from module scope.)
 vi.mock("@agentic-toolkit/data", async () => {
   const { useEffect, useState } = await import("react");
   return {
@@ -173,6 +180,45 @@ vi.mock("@agentic-toolkit/data", async () => {
       }, [load, _cacheKey]);
       return { items, reload: vi.fn(), error, isFetching, setItems };
     },
+    // The item hook, mirrored on the same terms as the list hook above — one read per mount, no
+    // cache between them, so a case that mounts twice still gets the two `prefsGet` calls its
+    // `mockReturnValueOnce` pair is written for. `item` stays null until the read lands (the real
+    // hook's `query.data ?? null`) and a failure leaves it null while setting `error`, which is
+    // exactly the pair `useWorkspaceRoute` derives "the read has answered" from.
+    useResourceItemQuery: (
+      _cacheKey: string,
+      id: string | null,
+      load: (id: string) => Promise<unknown>,
+    ) => {
+      const [item, setItem] = useState<unknown>(null);
+      const [error, setError] = useState<string | null>(null);
+      useEffect(() => {
+        if (id == null) return;
+        let alive = true;
+        void load(id)
+          .then((value) => {
+            if (alive) {
+              setError(null);
+              setItem(value);
+            }
+          })
+          .catch((e: unknown) => {
+            if (alive) setError(e instanceof Error ? e.message : "Failed to load.");
+          });
+        return () => {
+          alive = false;
+        };
+      }, [load, id, _cacheKey]);
+      return {
+        item,
+        isSettled: id == null || item !== null || error !== null,
+        isFetching: id != null && item === null && error === null,
+        error,
+        reload: vi.fn(),
+        isMissing: false,
+      };
+    },
+    useResourceItemWriter: () => itemWrite,
     workspacesApi: { list: () => list() },
     workspacePrefsApi: {
       get: () => prefsGet(),

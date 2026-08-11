@@ -2,8 +2,28 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from '@agentic-toolkit/data'
+import {
+  useResourceItemQuery,
+  useResourceItemWriter,
+  workspacePrefsApi,
+  readCachedWorkspace,
+  writeCachedWorkspace,
+  type WorkspacePrefs,
+} from '@agentic-toolkit/data'
 import type { WorkspaceOption } from './WorkspaceOption'
+
+/**
+ * The preference row's identity in the shared cache. A collection of exactly one member — the
+ * signed-in caller's own row — so the id is a constant rather than anything derived: there is no
+ * second row to tell it apart from, and `useTenantId` inside the hook already separates one
+ * signed-in caller from the next.
+ *
+ * The fetcher is module scope because the item hook holds `load` in a dependency array; a fresh
+ * closure per render would re-read on every render.
+ */
+const PREFS_CACHE_KEY = 'workspace-prefs'
+const PREFS_ID = 'me'
+const loadPrefs = (): Promise<WorkspacePrefs> => workspacePrefsApi.get()
 
 /**
  * The slug this hook last wrote into the URL itself, i.e. a SEED rather than anyone's instruction.
@@ -152,23 +172,66 @@ export function useWorkspaceRoute({
   // this hook is inside an auth gate that renders a skeleton until auth resolves on the client —
   // so it is never in the server HTML at all.
   const [stored, setStored] = useState<string | null>(() => readCachedWorkspace())
+
+  // The server's row, read through the shared cache rather than by hand — and the hand-rolled read
+  // this replaces is the reason the whole route felt slow. This hook is remounted constantly: a
+  // site's `/home` and its `/<workspace>` are two Next routes, so the seeding replace below tears
+  // it down and builds a fresh one, and the App Router folds a dynamic segment's VALUE into the
+  // page subtree's React key, so every topic click under `/[workspace]/[[...path]]` does the same.
+  // Each of those mounts spent a round trip on a preference that cannot have changed in between.
+  // Now the first one pays and the rest read the answer already in hand.
+  const { item: prefs, error: prefsError } = useResourceItemQuery<WorkspacePrefs>(
+    PREFS_CACHE_KEY,
+    PREFS_ID,
+    loadPrefs,
+  )
+  // Record a PUT into the same entry. Without it the cache would hand the NEXT mount the row we
+  // read BEFORE writing, and the mirror below — whose `wroteLocally` guard is per-mount — would
+  // roll `stored` and localStorage back to it. That is the exact rollback the guard exists to
+  // prevent, arrived at one mount later. Writing the row beats invalidating it: the PUT sends a
+  // full representation (workspace-prefs.ts), so what we sent IS the row, and a re-read would
+  // spend a request to arrive back at it.
+  const writePrefs = useResourceItemWriter<WorkspacePrefs>(PREFS_CACHE_KEY)
+
+  // The read has answered — with a row, with `{}`, or with a failure. (`prefs` is non-null for the
+  // empty answer: `get()` resolves `{}` for a caller who has never chosen, never a 404.)
+  const settledByRead = prefs !== null || prefsError !== null
+  // A hung request must not hold the route hostage. Five seconds is far longer than this call ever
+  // legitimately takes, and timing out only costs the seed its preference — nothing is persisted
+  // from a seed (see `pendingWrite` below), so a late answer can never be overwritten by a guess.
+  // Still needed under the cache, and only under a COLD one: the item hook does not retry, so a
+  // first read that never settles never settles. The effect is keyed on `settledByRead` so a mount
+  // that paints from the cache never arms the timer at all.
+  const [bailed, setBailed] = useState(false)
+  useEffect(() => {
+    if (settledByRead) return
+    const bail = setTimeout(() => setBailed(true), 5000)
+    return () => clearTimeout(bail)
+  }, [settledByRead])
   // Whether the preference request has come back — succeeded, failed, or answered "nothing".
-  const [prefsSettled, setPrefsSettled] = useState(false)
+  //
+  // DERIVED, not state, and that is what the cache buys: a mount holding the cached row must not
+  // spend a frame pretending it does not know, because this gates the seed and the seed is the
+  // whole of `/home`. Monotonic in practice, so nothing here can un-decide: the item hook keeps
+  // its last data across a revalidation and keeps its last error until that revalidation resolves,
+  // and `bailed` only ever goes one way.
+  const prefsSettled = settledByRead || bailed
   // The slug to persist, set only by an EXPLICIT act: the workspace the user arrived on, or the
   // one they picked. A slug that was SEEDED is a guess, and a guess is never written back —
   // writing one over a preference we failed to read is how a dropped request destroys a real
-  // choice. Cleared once written, so a late `stored` update cannot re-fire it. One case never
+  // choice. Cleared once written, so a late `preference` update cannot re-fire it. One case never
   // clears it: when the cache, the URL and the server all already agree, the persistence effect
   // below has nothing to write and returns before reaching the clear — so this lingers for the
   // life of the mount, and it can still fire LATER. The effect's first two guards require it to
   // equal both `resolved` and `workspaceSlug`, so it can only ever write the workspace it already
-  // names — but `stored` moves underneath it, so that write is NOT always a no-op. Deep link
-  // `/acme` with the cache agreeing, navigate to `beta`, a late GET answers `mine`, navigate back
+  // names — but `preference` moves underneath it, so that write is NOT always a no-op. Deep link
+  // `/acme` with the cache agreeing, navigate to `beta`, a late read answers `mine`, navigate back
   // to `acme`: one PUT `{acme}` fires on the return. That is correct, not a leak. Arriving on
   // `/acme` is an explicit act, this field is the record of it, and the deferred write is allowed
   // to land later than the arrival that earned it — the round-3 fix (clear AFTER the
-  // `resolved === stored` skip, see the persistence effect) exists precisely so a late `stored`
-  // can still act on that record. Round 2's shorthand "history navigations do not persist" was
+  // `resolved === preference` skip, see the persistence effect) exists precisely so a late
+  // `preference` can still act on that record. Round 2's shorthand "history navigations do not
+  // persist" was
   // only ever "never persist a slug we GUESSED"; navigating back onto a slug the user themselves
   // arrived on still carries that record. Leave it — clearing it here too would need its own
   // guard against the exact race this field exists to prevent.
@@ -202,64 +265,58 @@ export function useWorkspaceRoute({
     seededByUs = null
   }, [])
   // Whether this mount has already recorded a choice locally. A read must never overwrite a
-  // write: the GET below was issued before that choice existed, so its answer is older than what
-  // is on disk, and rolling it back is only ever discovered later — when the cache is consulted
-  // because a LATER request failed, which is the one moment nothing can correct it. A ref rather
-  // than state because the GET's `.then` closes over a mount-once effect: a state value read
-  // there would be the one captured at mount, i.e. always `false`.
-  const wroteLocally = useRef(false)
+  // write: the read was issued before that choice existed, so its answer is older than what is on
+  // disk, and rolling it back is only ever discovered later — when the browser cache is consulted
+  // because a LATER request failed, which is the one moment nothing can correct it.
+  //
+  // STATE, not the ref this used to be. The ref existed because the answer arrived inside a
+  // mount-once effect's `.then`, which closes over the `false` captured at mount; the item hook
+  // hands the answer back through render instead, so every reader below is re-created with the
+  // current value and there is nothing left to close over. State is also what `preference` needs:
+  // a ref read during render would not re-render when it flipped.
+  const [wroteLocally, setWroteLocally] = useState(false)
 
+  // The preference this mount resolves against — newest source wins: a choice this mount made and
+  // wrote, then the server's row, then the browser cache `stored` was seeded from.
+  //
+  // Derived during RENDER rather than mirrored into `stored` by an effect, and that is load-bearing
+  // rather than tidiness. `prefsSettled` and the row itself become true on the SAME render, and
+  // `prefsSettled` is what unlocks the seed — so a resolution that lagged the row by one commit
+  // would seed the personal-workspace FALLBACK and replace the URL with it, one render before the
+  // answer it already held could be applied. That is precisely the destruction the whole
+  // seed-after-settle rule exists to prevent, re-introduced by the plumbing rather than by the
+  // policy.
+  const preference = wroteLocally ? stored : (prefs?.slug ?? stored)
+
+  // Mirror the row we just READ into localStorage, unless this mount has since recorded a choice
+  // of its own. That browser cache's only remaining job is to answer when the server cannot (a
+  // rejection, or the bail above), and it can only do that if a successful read warms it —
+  // otherwise a user who never switches workspace on this browser keeps a cold cache forever, and
+  // the one time the request fails they land on a workspace they did not choose. But this answer
+  // predates any local write, so it must never overwrite one: rolling the cache back to a pre-PUT
+  // row is invisible until it is next CONSULTED, and it is only consulted when a later read fails
+  // — the one moment no successful read can correct it. `preference` above is gated on the same
+  // flag for the same reason, so what this mount RESOLVES and what it leaves on disk can never
+  // disagree about which of the two is fresher.
+  //
+  // Only the write remains here. Applying the row to the resolution is `preference`'s job now, and
+  // has to be: see its comment for what a one-commit lag costs.
+  //
+  // Deliberately UNVALIDATED, unlike every other writer here: a row naming a workspace the user
+  // can no longer reach caches a dead slug, which `known()` rejects at resolution, so it is inert
+  // until the next switch replaces it. Validating here instead would be worse — this runs when the
+  // read settles, which may be before the workspace list has landed, so a `known()` check would
+  // silently drop a legitimate preference whenever the parallel request was slower. One validation
+  // point, at resolution, is the property worth keeping.
+  //
+  // A read FAILURE needs no branch: it leaves `prefs` null and this effect does nothing, which is
+  // the same silence the old `.catch` kept. The user-visible answer is unchanged — localStorage
+  // still carries a choice, and the next switch re-writes the row. What is new is that the item
+  // hook reports the failure to the platform's auth reporter, which is status-gated (nothing under
+  // 500) and deduped, so an offline blip stays as quiet as it was and a 5xx stops being invisible.
   useEffect(() => {
-    let alive = true
-    // A hung request must not hold the route hostage. Five seconds is far longer than this call
-    // ever legitimately takes, and timing out only costs the seed its preference — nothing is
-    // persisted from a seed (see `pendingWrite` above), so a late answer can never be overwritten
-    // by a guess.
-    const bail = setTimeout(() => {
-      if (alive) setPrefsSettled(true)
-    }, 5000)
-    workspacePrefsApi
-      .get()
-      .then((prefs) => {
-        if (!alive) return
-        clearTimeout(bail)
-        // Mirror the row we just READ, unless this mount has since recorded a choice of its own.
-        // The cache's only remaining job is to answer when the server cannot (a rejection, or the
-        // bail above), and it can only do that if a successful read warms it — otherwise a user
-        // who never switches workspace on this browser keeps a cold cache forever, and the one
-        // time the request fails they land on a workspace they did not choose. But this answer
-        // predates any local write, so it must never overwrite one: rolling the cache back to a
-        // pre-PUT row is invisible until the cache is next CONSULTED, and it is only consulted
-        // when a later read fails — the one moment no successful read can correct it. `stored` is
-        // gated for the same reason and is safe to gate: a local write requires the URL to name a
-        // workspace already (the persistence effect below demands `resolved === workspaceSlug`),
-        // so no local write can precede the seed path, and after one `stored` already holds the
-        // fresher slug the write itself put there.
-        //
-        // Deliberately UNVALIDATED, unlike every other writer here: a row naming a workspace the
-        // user can no longer reach caches a dead slug, which `known()` rejects at resolution, so
-        // it is inert until the next switch replaces it. Validating here instead would be worse —
-        // this runs when the GET settles, which may be before the workspace list has landed, so a
-        // `known()` check would silently drop a legitimate preference whenever the parallel
-        // request was slower. One validation point, at resolution, is the property worth keeping.
-        if (prefs.slug && !wroteLocally.current) {
-          setStored(prefs.slug)
-          writeCachedWorkspace(prefs.slug)
-        }
-        setPrefsSettled(true)
-      })
-      .catch(() => {
-        // Silent: the cache still carries a choice, and the next switch re-writes the row.
-        if (alive) {
-          clearTimeout(bail)
-          setPrefsSettled(true)
-        }
-      })
-    return () => {
-      alive = false
-      clearTimeout(bail)
-    }
-  }, [])
+    if (prefs?.slug && !wroteLocally) writeCachedWorkspace(prefs.slug)
+  }, [prefs, wroteLocally])
 
   const resolved: string | null | undefined = useMemo(() => {
     if (workspaces === null) return undefined
@@ -299,8 +356,8 @@ export function useWorkspaceRoute({
     // not shorten this wait — a cache written on another device is exactly what the server row
     // exists to correct.
     if (!prefsSettled) return undefined
-    return known(stored) ?? workspaces[0]?.slug ?? null
-  }, [workspaces, workspaceSlug, stored, prefsSettled])
+    return known(preference) ?? workspaces[0]?.slug ?? null
+  }, [workspaces, workspaceSlug, preference, prefsSettled])
 
   // The URL is live truth for the slug it is MISSING: an absent one lands somewhere real rather
   // than nowhere. An unreachable one never reaches here — `resolved` stays `undefined` for it, so
@@ -326,33 +383,40 @@ export function useWorkspaceRoute({
   // is what keeps one pick to one write: mid-push `resolved` still reads the old slug, and an
   // effect that fired then would write the old choice back over the new one.
   //
-  // Clear `pendingWrite` AFTER the `resolved === stored` skip, not before. Clearing it first loses
-  // an explicit deep link whenever the cache already agrees but the server does not: cache "acme",
-  // URL "/acme", server row "mine". If the list settles before the prefs GET, `resolved ===
-  // stored ("acme")` short-circuits on this first pass — but a too-early clear has already thrown
-  // `pendingWrite` away, so when the GET later answers "mine" and `stored` changes, there is
-  // nothing left for the guard above to match and the PUT the user's own deep link asked for never
-  // happens. Clearing after the skip leaves `pendingWrite` intact for exactly that later pass. A
-  // pass that DOES write still clears it on the same tick as the write, so a late `setStored`
-  // finds it already gone — the double-write `pendingWrite` exists to prevent is unaffected.
+  // Clear `pendingWrite` AFTER the `resolved === preference` skip, not before. Clearing it first
+  // loses an explicit deep link whenever the browser cache already agrees but the server does not:
+  // cache "acme", URL "/acme", server row "mine". If the list settles before the prefs read,
+  // `resolved === preference ("acme")` short-circuits on this first pass — but a too-early clear
+  // has already thrown `pendingWrite` away, so when the read later answers "mine" and `preference`
+  // changes, there is nothing left for the guard above to match and the PUT the user's own deep
+  // link asked for never happens. Clearing after the skip leaves `pendingWrite` intact for exactly
+  // that later pass. A pass that DOES write still clears it on the same tick as the write, so a
+  // late row finds it already gone — the double-write `pendingWrite` exists to prevent is
+  // unaffected.
   useEffect(() => {
     if (!resolved || resolved !== workspaceSlug || pendingWrite !== resolved) return
-    if (resolved === stored) return
+    if (resolved === preference) return
     setPendingWrite(null)
     // A slug the host says is not cross-site preference material (the hub's teams) navigates like
     // any other and is simply not remembered: the record of the explicit act is consumed above, so
     // this cannot re-fire, and the preference already on disk — a workspace every site CAN scope
     // to — is left exactly as it was.
     if (canPersist && !canPersist(resolved)) return
-    // Before the writes, so the prefs GET's `.then` — which may run at any point after this —
-    // knows its answer is now older than what is on disk and declines to mirror over it.
-    wroteLocally.current = true
+    // Before the writes, so a row landing at any point after this — the read is still in flight as
+    // often as not — is known to be older than what is on disk, and neither `preference` nor the
+    // mirror applies it over the top.
+    setWroteLocally(true)
     writeCachedWorkspace(resolved)
     setStored(resolved)
+    // The shared item cache too, and BEFORE the request rather than after it, for the same reason
+    // the two lines above precede it: all three carry the caller's own choice, which is the
+    // freshest thing anyone here knows. A PUT that fails leaves that choice standing in all three,
+    // which is the behaviour the `.catch` below already chose.
+    writePrefs(PREFS_ID, { slug: resolved })
     workspacePrefsApi.put({ slug: resolved }).catch(() => {
-      // Silent, deliberately: the URL and the cache already carry the choice.
+      // Silent, deliberately: the URL and the caches already carry the choice.
     })
-  }, [resolved, workspaceSlug, stored, pendingWrite, canPersist])
+  }, [resolved, workspaceSlug, preference, pendingWrite, canPersist, writePrefs])
 
   const onSelect = useCallback(
     (slug: string) => {

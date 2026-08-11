@@ -28,7 +28,13 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
-    setupFiles: ['../../vitest.setup.ts'],
+    // Two setups. The root one for its deterministic localStorage shim (above); the data
+    // package's for the toolkit query cache, which lives at MODULE scope — one per browser tab
+    // by design — and therefore outlives `cleanup()`. Any test here that exercises a real
+    // resource hook would otherwise read the PREVIOUS test's rows and fail as "my fixture never
+    // appeared". Added by path because that file sits inside `packages/`, where the root setup
+    // cannot reach it.
+    setupFiles: ['../../vitest.setup.ts', '../data/vitest-setup.ts'],
     dir: 'src',
     server: {
       deps: {
