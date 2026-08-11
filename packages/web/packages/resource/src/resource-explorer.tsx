@@ -156,6 +156,22 @@ export function ResourceExplorer<T>({
     },
     [router],
   );
+  // Warm the ROUTE a row would open, once the pointer or keyboard focus has rested on it. Every
+  // select in this explorer is a navigation, and Next fetches the destination segment's payload on
+  // every one — so caching the DATA alone would leave half the delay in place. This is the one
+  // place in the package that can do it: `TopicRail` supplies the intent signal but owns no router,
+  // and here `router` is already in hand for `select` above.
+  //
+  // Strictly write-only, and it must stay that way: it reads the row id, warms a route, returns
+  // nothing. It reads no geometry and touches nothing the cascade's placement logic reads.
+  const prefetch = useCallback(
+    (href: string) => {
+      // `prefetch` is absent from some router shims (test doubles, non-App-Router hosts). Warming is
+      // an optimisation with no correct fallback, so a missing one is simply skipped.
+      router.prefetch?.(href);
+    },
+    [router],
+  );
   const [newOpen, setNewOpen] = useState(false);
 
   const validTopics = new Set(topics.map((t) => t.id));
@@ -226,6 +242,9 @@ export function ResourceExplorer<T>({
     selectedId: isAll ? null : (scopedId ?? null),
     // No default topic appended — selecting an entity shows its topics list with nothing focused.
     onSelect: (id, opts) => select(`${basePath}/${id}`, opts),
+    // The exact href `onSelect` would push — the two must never drift, which is why both build it
+    // from the same pieces on adjacent lines.
+    onPrefetch: (id) => prefetch(`${basePath}/${id}`),
     onClear: () => router.push(basePath, { scroll: false }),
     emptyLabel: landing?.emptyLabel ?? "",
     // "New …" is a right-justified `+` in the resource list header — absent entirely
@@ -245,6 +264,9 @@ export function ResourceExplorer<T>({
     selectedId: topic,
     onSelect: (id, opts) => {
       if (scopedId) select(`${basePath}/${scopedId}/${id}`, opts);
+    },
+    onPrefetch: (id) => {
+      if (scopedId) prefetch(`${basePath}/${scopedId}/${id}`);
     },
     onClear: () => {
       if (scopedId) router.push(`${basePath}/${scopedId}`, { scroll: false });
