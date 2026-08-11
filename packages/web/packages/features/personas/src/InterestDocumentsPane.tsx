@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { errMsg, useTenantId } from "@agentic-toolkit/data";
+import { errMsg, useResourceList, useTenantId } from "@agentic-toolkit/data";
 import {
   interestDocumentsApi,
   specialInterestsApi,
@@ -15,6 +15,7 @@ import {
   type SpecialInterestRow,
   type Persona,
 } from "@agentic-toolkit/data/personas";
+import { specialInterestsCacheKey } from "./interests-cache";
 
 // The research corpus behind one special interest: the documents the persona searches mid-
 // conversation (`searchPersonaKnowledge`) when the user wants to nerd out about the topic.
@@ -26,6 +27,10 @@ import {
 //  2. The pane scopes to `corpusEcosystemId` — the OWNER's realm — not the persona's
 //     `ownedEcosystemId` that the knowledge-bases pane beside it uses. They are different
 //     ecosystems and only the former is the one a chat turn runs in.
+
+/** The stand-in while the interests read is outstanding or has given up. Module scope so it keeps
+ *  one identity: a fresh `[]` per render would re-run every memo derived from it. */
+const EMPTY_INTERESTS: SpecialInterestRow[] = [];
 
 /** `General › Topical › Specific`, skipping blanks — the same shape the prompt renders. */
 function interestLabel(i: SpecialInterestRow): string {
@@ -78,26 +83,44 @@ export function InterestDocumentsPane({
   // error, say what is true: this corpus is filled from elsewhere.
   const reachable = !!bucketId && !!typeId && !!corpusEcosystemId && corpusEcosystemId === tenantId;
 
-  const [docs, setDocs] = useState<InterestDocumentRow[]>([]);
+  // The mutation error only — a failed read has its own, from the hook below. They are separate
+  // because they are cleared by different things: this one by the next save or remove, that one by
+  // the next successful read.
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const reload = useCallback(async () => {
-    if (!reachable || !bucketId || !typeId) return;
+  // The corpus, cached per INTEREST (its bucket + type) under the persona reading it. Tabbing back
+  // to an interest you already opened paints its documents on the first frame and re-reads behind
+  // that paint — which is what the tab strip above makes cheap to do repeatedly.
+  //
+  // An unreachable corpus reads nothing rather than erroring: the pane returns a Notice below
+  // instead of rendering the list at all, so a request would be answered into an empty room. The
+  // hook is still called there — it is a hook, and the early returns come after it.
+  const loadDocs = useCallback(async () => {
+    if (!reachable || !bucketId || !typeId) return [] as InterestDocumentRow[];
     try {
-      setDocs(await interestDocumentsApi.list(bucketId, typeId, personaId));
-      setError(null);
+      return await interestDocumentsApi.list(bucketId, typeId, personaId);
     } catch (err) {
-      setError(errMsg(err, "Could not load this interest's documents."));
+      // Rethrown with the pane's own wording so the banner says what failed, not what the transport
+      // called it — the same message the hand-rolled loader used to set.
+      throw new Error(errMsg(err, "Could not load this interest's documents."));
     }
   }, [reachable, bucketId, typeId, personaId]);
+  const {
+    items: docs,
+    reload: reloadDocs,
+    error: loadError,
+  } = useResourceList<InterestDocumentRow>(
+    `persona:${personaId}:interest:${bucketId ?? ""}:${typeId ?? ""}:documents`,
+    loadDocs,
+  );
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  // Swallowing: both callers below re-read AFTER their own write succeeded, so a failed re-read
+  // must not be reported as a failed save or remove. It still reaches the screen — as `loadError`.
+  const refreshDocs = useCallback(() => reloadDocs().catch(() => {}), [reloadDocs]);
 
   if (!bucketId || !typeId) {
     // "is not" spelled out, not "isn't" — kept as one contiguous, un-contracted phrase so a caller
@@ -133,7 +156,7 @@ export function InterestDocumentsPane({
       setTitle("");
       setContent("");
       setAdding(false);
-      await reload();
+      await refreshDocs();
     } catch (err) {
       setError(errMsg(err, "Could not save this document."));
     } finally {
@@ -146,7 +169,7 @@ export function InterestDocumentsPane({
     setError(null);
     try {
       await interestDocumentsApi.delete(bucketId, typeId, personaId, rowId);
-      await reload();
+      await refreshDocs();
     } catch (err) {
       setError(errMsg(err, "Could not remove this document."));
     } finally {
@@ -161,13 +184,18 @@ export function InterestDocumentsPane({
         documents while it talks — the more you put here, the more it actually knows.
       </p>
 
-      <ErrorText error={error} />
+      {/* The mutation's message leads: it answers something the user just did, and it is the one
+          the load banner would otherwise hide the moment a re-read follows a failed save. */}
+      <ErrorText error={error ?? loadError} />
 
-      {docs.length === 0 && !adding && (
-        <p className="text-sm text-apt-text-muted">Nothing here yet.</p>
-      )}
+      {docs === null
+        ? // A failed read leaves the rows null too, and the banner above already says why — so
+          // this must neither go on claiming the list is on its way nor call the corpus empty.
+          loadError === null && <p className="text-sm text-apt-text-muted">Loading…</p>
+        : docs.length === 0 &&
+          !adding && <p className="text-sm text-apt-text-muted">Nothing here yet.</p>}
 
-      {docs.map((d) => (
+      {(docs ?? []).map((d) => (
         <div key={d.id} className="flex items-start justify-between gap-3 rounded-md border border-apt-border p-3">
           <div className="min-w-0">
             <p className="truncate text-sm font-medium">{d.title}</p>
@@ -235,55 +263,55 @@ export function KnowledgeFacet({
   persona: Persona;
   renderKnowledgeBases?: (scopeEcosystemId: string) => ReactNode;
 }) {
-  const [interests, setInterests] = useState<SpecialInterestRow[]>([]);
-  const [selected, setSelected] = useState<string | null>(null);
+  // The interests, from the one entry `InterestsEditor` writes its saves and deletes through — so
+  // declaring an interest over there puts a tab here without a read, and reopening this facet
+  // paints the tabs on the first frame.
+  //
+  // The rows can no longer arrive under the wrong persona, which is what the old effect's
+  // clear-before-fetch guarded: an entry is named by the persona it was read for, so a response
+  // can only ever land on that one. A host that renders this facet unkeyed (both it and
+  // `PersonaEditor` are exported, so one can) reads the new persona's entry the moment its prop
+  // changes — null while it is still on its way, never the previous persona's tabs.
+  //
+  // A failure must not take out the knowledge-bases pane beside it, so the error is not read here:
+  // no interests simply means no extra tabs. (The editor renders the same failure, which is where
+  // an author acting on it already is.)
+  const loadInterests = useCallback(() => specialInterestsApi.list(persona.id), [persona.id]);
+  const { items } = useResourceList<SpecialInterestRow>(
+    specialInterestsCacheKey(persona.id),
+    loadInterests,
+  );
+  const interests = items ?? EMPTY_INTERESTS;
 
-  useEffect(() => {
-    let live = true;
-    // Clear BEFORE the fetch, not just after it lands — DEFENSIVE, and unobservable in this app
-    // as it stands. The rail does remount this facet: `PersonasSection.tsx` is the only in-repo
-    // site that renders `PersonaEditor`, and it renders `<PersonaEditor key={openPersona.id}>`, so
-    // switching persona changes the key and React rebuilds the whole editor subtree with
-    // `interests: []` already. (The HTD stack keying the topic by TOPIC id — `group-topic-detail`'s
-    // `<Fragment key={active.id}>` — is true but not what decides it.)
-    //
-    // Worth keeping anyway: `PersonaEditor` AND `KnowledgeFacet` are both exported from this
-    // package's index, so an external host can render either one unkeyed, changing only the
-    // `persona` prop. In that host a refetch alone would leave the previous persona's tabs on
-    // screen for the whole round trip, and clicking one would open that persona's corpus under
-    // this one's editor. Clearing first costs one render and removes the hazard for every host.
-    setInterests([]);
+  // The picked tab is the one thing the cache key can't reset for us — it names an interest of
+  // whichever persona was on screen when it was clicked. Reset it on the switch WITHOUT an effect:
+  // a render-phase set re-renders before the commit, so the interim never paints.
+  const [selected, setSelected] = useState<string | null>(null);
+  const [tabPersonaId, setTabPersonaId] = useState(persona.id);
+  const personaChanged = tabPersonaId !== persona.id;
+  if (personaChanged) {
+    setTabPersonaId(persona.id);
     setSelected(null);
-    specialInterestsApi
-      .list(persona.id)
-      .then((rows) => {
-        if (live) setInterests(rows);
-      })
-      // A failure here must not take out the knowledge-bases pane beside it: no interests
-      // simply means no extra tabs.
-      .catch(() => {
-        if (live) setInterests([]);
-      });
-    return () => {
-      live = false;
-    };
-  }, [persona.id]);
+  }
+  // This render body still runs to completion after that set, so the tab derivations gate on the
+  // switch themselves rather than trusting `selected` to have been cleared already.
+  const selectedId = personaChanged ? null : selected;
 
   const current = useMemo(
-    () => interests.find((i) => i.id === selected) ?? null,
-    [interests, selected],
+    () => interests.find((i) => i.id === selectedId) ?? null,
+    [interests, selectedId],
   );
 
   const tabs = (
     <div className="flex flex-wrap gap-2 border-b border-apt-border px-6 py-2">
-      <Button type="button" variant={selected === null ? "secondary" : "ghost"} onClick={() => setSelected(null)}>
+      <Button type="button" variant={selectedId === null ? "secondary" : "ghost"} onClick={() => setSelected(null)}>
         Knowledge bases
       </Button>
       {interests.map((i) => (
         <Button
           key={i.id}
           type="button"
-          variant={selected === i.id ? "secondary" : "ghost"}
+          variant={selectedId === i.id ? "secondary" : "ghost"}
           onClick={() => setSelected(i.id)}
         >
           {interestLabel(i)}
@@ -298,9 +326,11 @@ export function KnowledgeFacet({
       {current ? (
         <InterestDocumentsPane
           // Keyed by the interest's id: without a key, switching interests REUSES this component
-          // instance and its `docs` state carries over — the previous interest's documents stay on
-          // screen under the new heading until the new fetch lands (or forever, if it fails). A key
-          // forces React to unmount/remount on switch, so state resets immediately.
+          // instance, and its draft state (the half-typed new document, the open form) would carry
+          // over to an interest it was never meant for. A key forces an unmount/remount, so that
+          // state resets immediately. The documents themselves no longer need it — they are read
+          // from a per-interest cache entry — and the remount now costs no round trip for an
+          // interest already seen.
           key={current.id}
           // The act-as principal is the persona being edited. `current.personaId` is the identical
           // string (`RDID_REFS` swaps that FK back to an rdid on the way out — crud/factory.ts),

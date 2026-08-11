@@ -168,9 +168,11 @@ describe("KnowledgeFacet", () => {
   // deliberately not what the app does: `PersonasSection.tsx` renders `<PersonaEditor
   // key={openPersona.id}>`, so a rail switch remounts the facet and clears it for free. Both
   // `PersonaEditor` and `KnowledgeFacet` are exported from this package though, so an external
-  // host can render either unkeyed — and there, refetching alone would leave the previous
-  // persona's interests on screen until the new list settles, with a click opening persona A's
-  // corpus under persona B's editor. This pins the clear-before-fetch that makes that safe.
+  // host can render either unkeyed — and there, refetching into shared state would leave the
+  // previous persona's interests on screen until the new list settles, with a click opening
+  // persona A's corpus under persona B's editor. What makes that safe is that the interests are
+  // read from a cache entry NAMED by the persona, so B's unsettled read shows nothing rather than
+  // A's tabs; the picked tab is cleared alongside it.
   it("drops the previous persona's interest tabs the moment the persona changes", async () => {
     const personaA = persona;
     const personaB = { ...persona, id: "persona.acme.other" } as unknown as Persona;
@@ -190,11 +192,12 @@ describe("KnowledgeFacet", () => {
     expect(screen.queryByText(/nothing here yet/i)).not.toBeInTheDocument();
   });
 
-  // RULING 2 regression pin — KnowledgeFacet renders InterestDocumentsPane with no key, so
-  // switching interests REUSES the component instance and its `docs` state carries over: the
-  // previous interest's documents stay on screen under the new heading until the new fetch lands
-  // (or forever, if it fails). `key={current.id}` forces a remount on switch, which resets `docs`
-  // to `[]` immediately instead of showing stale content.
+  // RULING 2 regression pin — the documents on screen must belong to the interest named above
+  // them, including during the window where the newly picked interest's read is still in flight.
+  // Two things hold that now: the pane is keyed by the interest's id (so a switch remounts it
+  // rather than reusing the instance and its draft state), and its documents are read from a cache
+  // entry named by that interest's bucket (so the read can only ever land under the interest it
+  // was made for).
   it("does not leak the previous interest's documents while a switch is in flight", async () => {
     const interestA = { ...interest, id: "iA", bucketId: "bA", bucketTypeId: "tA" };
     const interestB = {

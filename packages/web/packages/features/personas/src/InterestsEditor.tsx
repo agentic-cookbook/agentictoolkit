@@ -1,13 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { errMsg, httpStatus } from "@agentic-toolkit/data";
+import { errMsg, httpStatus, useResourceList } from "@agentic-toolkit/data";
+import { specialInterestsCacheKey } from "./interests-cache";
 import {
   specialInterestsApi,
   type SpecialInterestRow,
@@ -185,7 +186,7 @@ function saveError(err: unknown): string {
 
 export function InterestsEditor({ personaId }: { personaId: string | null }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
-  const [loading, setLoading] = useState(false);
+  // The MUTATION error only — a failed read has its own, from the hook below.
   const [error, setError] = useState<string | null>(null);
   // A SET, not a single value: concurrent operations on DIFFERENT cards (delete B, then delete A
   // while B is still in flight) are a legitimate flow, not a same-card double-click, and each
@@ -206,25 +207,68 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       return next;
     });
 
-  const reload = useCallback(async () => {
-    if (!personaId) return;
-    setLoading(true);
-    try {
-      const rows = await specialInterestsApi.list(personaId);
-      const newDrafts = rows.map((row) => toDraft(row, newKey()));
-      setDrafts(newDrafts);
-      setBaselines(Object.fromEntries(newDrafts.map((d) => [d.key, fieldsOf(d)])));
-      setError(null);
-    } catch (err) {
-      setError(errMsg(err, "Could not load this persona's interests."));
-    } finally {
-      setLoading(false);
+  /** Has this card diverged from what was persisted? A brand-new card is dirty the moment it holds
+   *  anything at all. */
+  const cardDirty = (d: Draft): boolean => {
+    const baseline = baselines[d.key];
+    if (d.id === null || !baseline) {
+      return Boolean(d.general || d.topical || d.specific || d.stances);
     }
-  }, [personaId]);
+    return (
+      d.general !== baseline.general ||
+      d.topical !== baseline.topical ||
+      d.specific !== baseline.specific ||
+      d.stances !== baseline.stances
+    );
+  };
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  // The stored rows, from the one entry the Knowledge facet reads too. Reopening this persona
+  // paints its cards on the first frame and re-reads behind them, instead of showing an empty
+  // editor for the length of a round trip. No persona reads nothing: the pane says so below.
+  const loadInterests = useCallback(
+    () =>
+      personaId ? specialInterestsApi.list(personaId) : Promise.resolve([] as SpecialInterestRow[]),
+    [personaId],
+  );
+  const {
+    items: rows,
+    error: loadError,
+    isFetching,
+    setItems: setRows,
+  } = useResourceList<SpecialInterestRow>(specialInterestsCacheKey(personaId), loadInterests);
+
+  // What the cards on screen were built from. The cards are DRAFTS — the author's copy — so the
+  // server's rows SEED them rather than being them, and this records which seeding already
+  // happened, so a read is applied exactly once, at arrival.
+  const [seed, setSeed] = useState<{ personaId: string | null; rows: SpecialInterestRow[] | null }>(
+    { personaId, rows: null },
+  );
+  // Both branches below are render-phase state sets: React re-renders before the commit, so the
+  // interim never paints. The render body still runs to completion though, which is why the cards
+  // are read from `cards` below rather than straight from `drafts`.
+  const scopeChanged = seed.personaId !== personaId;
+  if (scopeChanged) {
+    // A different persona: drop the cards wholesale rather than leave one persona's interests
+    // sitting under another's editor while its own rows are on their way.
+    setSeed({ personaId, rows: null });
+    setDrafts([]);
+    setBaselines({});
+  } else if (rows !== null && rows !== seed.rows) {
+    // New rows — a read that landed, or this editor's own write published below. Consume them
+    // either way: an offer declined is still an offer answered, and one left unconsumed would
+    // apply later instead, at whatever moment the editor next happened to be clean.
+    setSeed({ personaId, rows });
+    // …but never OVER unsaved work. A revalidation is invisible to an author mid-edit, and
+    // replacing their cards with the server's would be the worst kind of data loss — including
+    // the brand-new empty card that a sibling card's save must not sweep away. When nothing is
+    // dirty the rows and the cards already say the same thing, so re-seeding costs nothing.
+    if (!drafts.some(cardDirty)) {
+      const seeded = rows.map((row) => toDraft(row, newKey()));
+      setDrafts(seeded);
+      setBaselines(Object.fromEntries(seeded.map((d) => [d.key, fieldsOf(d)])));
+    }
+  }
+  const cards = scopeChanged ? [] : drafts;
 
   if (!personaId) {
     return (
@@ -248,21 +292,6 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   const cardBlockedReason = (d: Draft): string | null =>
     d.general.trim() ? null : BLANK_GENERAL_MESSAGE;
 
-  /** Has this card diverged from what was persisted? A brand-new card is dirty the moment it holds
-   *  anything at all. */
-  const cardDirty = (d: Draft): boolean => {
-    const baseline = baselines[d.key];
-    if (d.id === null || !baseline) {
-      return Boolean(d.general || d.topical || d.specific || d.stances);
-    }
-    return (
-      d.general !== baseline.general ||
-      d.topical !== baseline.topical ||
-      d.specific !== baseline.specific ||
-      d.stances !== baseline.stances
-    );
-  };
-
   const canSaveCard = (d: Draft): boolean => {
     if (cardBlockedReason(d) !== null) return false;
     // A brand-new card (`id === null`) has no persisted baseline to diff against — a filled-in
@@ -277,13 +306,23 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       { key: newKey(), id: null, slug: "", general: "", topical: "", specific: "", stances: "" },
     ]);
 
+  // Publish a save or a delete to the shared entry, so the Knowledge facet's tab strip follows this
+  // editor without waiting for a read of its own.
+  //
+  // Always through the UPDATER form, never a value computed from this render's `rows`: these
+  // handlers are async and two can be in flight at once, so a value would carry whatever the list
+  // was when the button was clicked and the slower one would republish rows its sibling has
+  // already removed — the same class of bug `save`/`remove` address by key rather than by index.
+  const publishRows = (next: (prev: SpecialInterestRow[]) => SpecialInterestRow[]) =>
+    setRows((prev) => next(prev ?? []));
+
   // `save`/`remove` take the card's KEY, never its array index or position at call time. Both are
   // async: the array can reorder while one is in flight (a sibling's delete resolving first, a
   // synchronous remove of an earlier card), and an index captured at dispatch would then apply the
   // eventual `map`/`filter` to whatever card has slid into that slot — not the card the author
   // actually clicked. Keying by `key` makes the write land on the right row regardless of order.
   const save = async (key: string) => {
-    const d = drafts.find((row) => row.key === key);
+    const d = cards.find((row) => row.key === key);
     if (!d) return;
     setBusy(key, true);
     setError(null);
@@ -316,6 +355,13 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       // card now sits at that position if the array reordered while this save was in flight.
       setDrafts((prev) => prev.map((row) => (row.key === key ? toDraft(saved, key) : row)));
       setBaselines((prev) => ({ ...prev, [key]: fieldsOf(toDraft(saved, key)) }));
+      // The stored rows the same way: replace the row this card names if it is already there (an
+      // update, which must keep its position), append it if it isn't (a create).
+      publishRows((stored) =>
+        stored.some((row) => row.id === saved.id)
+          ? stored.map((row) => (row.id === saved.id ? saved : row))
+          : [...stored, saved],
+      );
     } catch (err) {
       setError(saveError(err));
     } finally {
@@ -331,7 +377,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
     });
 
   const remove = async (key: string) => {
-    const d = drafts.find((row) => row.key === key);
+    const d = cards.find((row) => row.key === key);
     if (!d) return;
     if (!d.id) {
       setDrafts((prev) => prev.filter((row) => row.key !== key));
@@ -346,6 +392,7 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
       // index-addressed filter is wrong once a concurrent operation can reorder the array.
       setDrafts((prev) => prev.filter((row) => row.key !== key));
       dropBaseline(key);
+      publishRows((stored) => stored.filter((row) => row.id !== d.id));
     } catch (err) {
       setError(errMsg(err, "Could not remove this interest."));
     } finally {
@@ -366,9 +413,10 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
         </p>
       </div>
 
-      <ErrorText error={error} />
+      {/* The mutation's message leads: it answers something the author just did. */}
+      <ErrorText error={error ?? loadError} />
 
-      {drafts.map((d, i) => (
+      {cards.map((d, i) => (
         <FieldGroup key={d.key} title={cardTitle(d)}>
           {/* `Field` wraps caption + hint in the SAME <label> as the input, so a hint alone would
               fold into the field's accessible name and defeat an anchored `getByLabelText`
@@ -470,11 +518,13 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
           type="button"
           variant="secondary"
           onClick={add}
-          disabled={loading || drafts.length >= MAX_INTERESTS}
+          // Only the FIRST read holds Add down — a cached editor has its cards already, and a
+          // revalidation behind them is not a reason to take the affordance away.
+          disabled={(rows === null && isFetching) || cards.length >= MAX_INTERESTS}
         >
           Add an interest
         </Button>
-        {drafts.length >= MAX_INTERESTS && (
+        {cards.length >= MAX_INTERESTS && (
           <span className="text-xs text-apt-text-muted">
             A persona can hold at most two interests — deep beats broad.
           </span>

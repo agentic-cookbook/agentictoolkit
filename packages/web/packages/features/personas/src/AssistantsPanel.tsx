@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 import { useAction } from "@agentic-toolkit/crud";
+import { useResourceList } from "@agentic-toolkit/data";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -28,83 +29,58 @@ function allowedNames(tools: UserTool[]): string[] {
  *
  * Every change replaces the caller's whole allowed set (`PUT user-tools`) OPTIMISTICALLY —
  * the checklist flips instantly and reverts if the request rejects, reconciling from the
- * server's returned view on success. A monotonic `loadToken` ref guards the async writes so
- * switching assistants mid-request can never cross one persona's response into another's
- * selection (mirrors AbilitiesPanel). Backend enforces the actual permission (403/400); the
+ * server's returned view on success. Backend enforces the actual permission (403/400); the
  * panel just surfaces the error.
+ *
+ * Both reads are CACHED, and each assistant's tool list under its own key — so flipping back to
+ * an assistant you looked at a moment ago shows its checklist immediately rather than a spinner.
  */
 export function AssistantsPanel() {
   const rowIdPrefix = useId();
-  const [personas, setPersonas] = useState<UserActablePersona[] | null>(null);
-  const [personasError, setPersonasError] = useState<string | null>(null);
   const [personaId, setPersonaId] = useState("");
-  const [tools, setTools] = useState<UserTool[] | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const { busy, error, run } = useAction();
-  // Monotonic load token: every persona switch bumps it so an older in-flight listTools() — or
-  // a mutation's optimistic revert/reconcile — that resolves LATER is recognised as stale
-  // and dropped rather than written into whichever persona is now selected.
-  const loadToken = useRef(0);
 
-  // Load the actable personas once on mount.
-  useEffect(() => {
-    let live = true;
-    personaUserToolsApi
-      .listActable()
-      .then((rows) => {
-        if (live) setPersonas(rows);
-      })
-      .catch((e) => {
-        if (live) setPersonasError(e instanceof Error ? e.message : String(e));
-      });
-    return () => {
-      live = false;
-    };
-  }, []);
+  // The assistants that may act for the caller. Caller-scoped, so one entry serves every mount.
+  const { items: personas, error: personasError } = useResourceList<UserActablePersona>(
+    "personas:actable-for-me",
+    personaUserToolsApi.listActable,
+  );
 
-  const reload = useCallback(async (id: string) => {
-    const token = ++loadToken.current;
-    if (!id) {
-      setTools(null);
-      return;
-    }
-    setTools(null);
-    setLoadError(null);
-    try {
-      const next = await personaUserToolsApi.listTools(id);
-      if (loadToken.current !== token) return; // a newer persona was picked — drop this list
-      setTools(next);
-    } catch (e) {
-      if (loadToken.current !== token) return;
-      setLoadError(e instanceof Error ? e.message : String(e));
-      setTools([]);
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload(personaId);
-  }, [personaId, reload]);
+  // The selected assistant's tools, keyed BY assistant. That key is what replaces the monotonic
+  // load token this panel used to carry: a response can only ever land on the entry it was read
+  // for, so an older in-flight `listTools()` cannot write into whichever assistant is now picked.
+  // No selection reads nothing.
+  const loadTools = useCallback(
+    () => (personaId ? personaUserToolsApi.listTools(personaId) : Promise.resolve([] as UserTool[])),
+    [personaId],
+  );
+  const {
+    items: tools,
+    error: loadError,
+    setItems: setTools,
+  } = useResourceList<UserTool>(`persona:${personaId}:user-tools`, loadTools);
 
   // Replace the whole tool view optimistically, PUT the derived allowed set, reconcile from
-  // the server's returned view on success, and restore the prior view on failure. Both the
-  // reconcile and the revert are gated by the load token captured at fire time, so a write
-  // that resolves AFTER a persona switch never writes into a different persona's selection.
+  // the server's returned view on success, and restore the prior view on failure.
+  //
+  // The token guard is gone for the same reason: `setTools` is bound to the cache key of the
+  // render that produced it, so a reconcile or a revert that resolves after a switch writes into
+  // the assistant it was ABOUT — which is both correct for that assistant and invisible to the
+  // one now on screen.
   const applyAllowed = useCallback(
     (prev: UserTool[], optimistic: UserTool[]) => {
-      const token = loadToken.current;
       const id = personaId;
       setTools(optimistic);
       void run(async () => {
         try {
-          const reconciled = await personaUserToolsApi.setAllowed(id, allowedNames(optimistic));
-          if (loadToken.current === token) setTools(reconciled);
+          setTools(await personaUserToolsApi.setAllowed(id, allowedNames(optimistic)));
         } catch (e) {
-          if (loadToken.current === token) setTools(prev);
+          setTools(prev);
           throw e;
         }
       });
     },
-    [personaId, run],
+    [personaId, run, setTools],
   );
 
   function toggleTool(tool: UserTool, allowed: boolean) {
@@ -131,10 +107,12 @@ export function AssistantsPanel() {
           it here.
         </p>
 
-        {personas === null ? (
-          <p className="text-sm text-apt-text-muted">Loading…</p>
-        ) : personasError !== null ? (
+        {/* The FAILURE is read first: a failed read leaves the rows null, so testing for null
+            first would leave the panel saying "Loading…" over a read that has already given up. */}
+        {personasError !== null ? (
           <ErrorText error={personasError} />
+        ) : personas === null ? (
+          <p className="text-sm text-apt-text-muted">Loading…</p>
         ) : personas.length === 0 ? (
           <p className="text-sm text-apt-text-muted">
             No assistants can act for you yet. When an assistant is granted leave to act on your
@@ -160,7 +138,11 @@ export function AssistantsPanel() {
                 Pick an assistant to review what it may do for you.
               </p>
             ) : tools === null ? (
-              <p className="text-sm text-apt-text-muted">Loading…</p>
+              // A failed read leaves the rows null too, and the banner above already says why —
+              // so this must not go on claiming the list is still on its way.
+              loadError ? null : (
+                <p className="text-sm text-apt-text-muted">Loading…</p>
+              )
             ) : tools.length === 0 ? (
               <p className="text-sm text-apt-text-muted">
                 This assistant has no tools you can allow.

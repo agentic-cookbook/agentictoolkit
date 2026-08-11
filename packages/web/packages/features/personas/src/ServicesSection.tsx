@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Boxes } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
@@ -26,6 +26,7 @@ import {
   CreateResourceDialog,
 } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { useResourceList } from "@agentic-toolkit/data";
 import { fmtDate } from "./format";
 import {
   api,
@@ -39,6 +40,33 @@ import {
 } from "@agentic-toolkit/data/personas";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
+
+/** The stand-in while the template catalog is outstanding. Module scope so it keeps one identity. */
+const EMPTY_TEMPLATES: Template[] = [];
+
+/* Both reads below are MODULE-SCOPE functions, which is what `useResourceList` requires of a
+ * fetcher: a new identity means "the scope changed, read again", so an inline closure would read on
+ * every render. Both are caller-scoped — neither closes over anything — so one cache entry serves
+ * every mount. */
+
+/** The service templates. A failure is REPORTED and then answered with an empty catalog: the
+ *  picker is an accelerator, and losing it must not stop anyone typing a service in by hand. */
+function loadServiceTemplates(): Promise<Template[]> {
+  return api.templates().catch((err) => {
+    reportUnexpectedAuthError(err, { feature: "services", step: "templates" });
+    return EMPTY_TEMPLATES;
+  });
+}
+
+/** The caller's services. Reported here and RETHROWN, because unlike the catalog above this list
+ *  IS the surface — the pane shows the failure. `reportErrors: false` at the call site is what
+ *  keeps one failure from being reported twice under two different contexts. */
+function loadUserServices(): Promise<UserService[]> {
+  return api.services.list().catch((err) => {
+    reportUnexpectedAuthError(err, { feature: "services", step: "list" });
+    throw err;
+  });
+}
 
 /** Replace `{name}` tokens in a base-URL pattern with the user's url-var values.
  *  Unfilled vars stay as `{name}` so the resolved URL visibly prompts for them. */
@@ -469,15 +497,11 @@ function NewServiceForm({
   onChange: (next: ServiceDraft) => void;
   error: string | null;
 }) {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  useEffect(() => {
-    api
-      .templates()
-      .then(setTemplates)
-      .catch((err) => {
-        reportUnexpectedAuthError(err, { feature: "services", step: "templates" });
-      });
-  }, []);
+  // Read once per browser tab and served from cache after that: this catalog is the same for every
+  // caller and changes about as often as the product ships, so reopening the dialog shows its
+  // picker already populated instead of re-reading it every time.
+  const { items } = useResourceList<Template>("persona-service-templates", loadServiceTemplates);
+  const templates = items ?? EMPTY_TEMPLATES;
 
   // Apply a template: prefill name, providerKind, baseUrl — and, when the
   // template parameterizes its URL, the url-var prompts + auth hint.
@@ -799,8 +823,6 @@ export function ServicesSection({
     onSelectService: (id: string | null) => void;
   };
 } = {}) {
-  const [services, setServices] = useState<UserService[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
   // Creating a service is a MODAL over the stack, never a blank editor leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the created service is selected so its
   // editor (Connection, Models) opens.
@@ -818,19 +840,19 @@ export function ServicesSection({
     select(id);
   };
 
-  const reload = useCallback(async () => {
-    try {
-      const ss = await api.services.list();
-      setServices(ss);
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "services", step: "list" });
-      setError(err instanceof Error ? err.message : "Failed to load services.");
-      setServices([]);
-    }
-  }, []);
+  // The services, cached: coming back to this pane paints the list on the first frame and re-reads
+  // behind that paint, instead of showing "Loading…" for the length of a round trip every time.
+  const {
+    items: services,
+    reload,
+    error,
+    isFetching,
+  } = useResourceList<UserService>("persona-services", loadUserServices, { reportErrors: false });
 
-  useEffect(() => {
-    void reload();
+  // Swallowing: every caller below re-reads AFTER its own write succeeded, so a failed re-read must
+  // not surface as an unhandled rejection. It still reaches the screen — as `error`.
+  const refresh = useCallback(() => {
+    void reload().catch(() => {});
   }, [reload]);
 
   const rows = services ?? [];
@@ -853,6 +875,9 @@ export function ServicesSection({
       onSelect: (id) => selectService(id),
       onClear: () => selectService(null),
       emptyLabel: "No services yet.",
+      // The spinner in this list's title while a read is in flight — including the re-read behind a
+      // cached paint, which is the only sign that rows already on screen are being checked.
+      busy: isFetching,
       // "New Service" is a right-justified `+` in the list header; it opens the create modal.
       onNew: () => setNewOpen(true),
       newLabel: "New Service",
@@ -867,7 +892,9 @@ export function ServicesSection({
   const railHost = useRailHost();
 
   const content =
-    services === null ? (
+    // A failed read leaves the rows null too, so "nothing yet" must not go on claiming the list is
+    // still on its way: fall through to the table, which renders the failure above an empty one.
+    services === null && error === null ? (
       <p className="p-6 text-sm text-apt-text-muted">Loading…</p>
     ) : openService ? (
       <ServiceEditor
@@ -875,11 +902,11 @@ export function ServicesSection({
         service={openService}
         onSaved={(saved) => {
           selectService(saved.id);
-          void reload();
+          refresh();
         }}
         onDeleted={() => {
           selectService(null);
-          void reload();
+          refresh();
         }}
         onCancel={() => selectService(null)}
       />
@@ -914,7 +941,7 @@ export function ServicesSection({
       onCreated={(saved) => {
         setNewOpen(false);
         selectService(saved.id);
-        void reload();
+        refresh();
       }}
       renderForm={(draft, onChange, error) => (
         <NewServiceForm draft={draft} onChange={onChange} error={error} />
