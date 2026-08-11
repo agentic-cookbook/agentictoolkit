@@ -9,7 +9,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
-import { HierarchicalDetailView, deepestSelectedLevel } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
 import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
 import {
   RailHostContext,
@@ -18,6 +18,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "./rail-host";
+import { useHostMissingAlert, useHostPopStack } from "./host-stack";
 
 /**
  * The standalone rail host: when a feature renders OUTSIDE a host (a feature site's /home),
@@ -131,18 +132,10 @@ export function StandaloneRailHost({
     [registry],
   );
 
-  // Pop the leaf: clear the deepest level that has a selection — the same move the view's Back
-  // makes, reading the SAME frontier math, so a pop and a Back can never disagree about which
-  // list is the leaf.
-  //
-  // Deliberately UNGUARDED: it does not consult `exitGuard`. Its callers are the host's own
-  // "that item is gone" acknowledgement (which is already gated on nothing being dirty) and a
-  // pane popping itself, both of which have decided to leave. Routing it through the guard would
-  // put a Discard/Stay prompt in front of a pane whose target no longer exists.
-  const popStack = useCallback(() => {
-    const at = deepestSelectedLevel(mergedLevels);
-    if (at >= 0) mergedLevels[at]?.onClear();
-  }, [mergedLevels]);
+  // The two host-side stack duties, shared with the hub's WorkspaceChromeProvider so a feature
+  // site's /home and the same feature inside the hub shell cannot drift. See `host-stack.tsx`.
+  const popStack = useHostPopStack(mergedLevels);
+  const { reportMissing, missingAlert } = useHostMissingAlert(popStack, guards.size > 0);
 
   // `toolbarSlot` stays null: an editor's action bar keeps rendering inside its own pane here, as
   // it always has. Only the FEATURE bar is hoisted, and only when a feature asks for one.
@@ -152,15 +145,25 @@ export function StandaloneRailHost({
       unregisterLevels,
       registerExitGuard,
       popStack,
+      reportMissing,
       toolbarSlot: null,
       claimFeatureBar,
       featureBarSlot,
     }),
-    [registerLevels, unregisterLevels, registerExitGuard, popStack, claimFeatureBar, featureBarSlot],
+    [
+      registerLevels,
+      unregisterLevels,
+      registerExitGuard,
+      popStack,
+      reportMissing,
+      claimFeatureBar,
+      featureBarSlot,
+    ],
   );
 
   return (
     <RailHostContext.Provider value={host}>
+      {missingAlert}
       {/* Browser-level exits (reload, tab close, in-app link click, Back/Forward, and any chrome
           that awaits confirmNavigation) for every pane this host carries, from ONE mount — the same
           line the hub's WorkspaceChromeProvider carries, so a feature site's /home is guarded

@@ -55,6 +55,11 @@ export interface RailHostRegistry {
    *  selected anywhere. Required, not optional — a host that could not pop would leave a pane
    *  that has discovered its item is gone with no way off the screen. */
   popStack: () => void;
+  /** Report (true) or withdraw (false) that the item a pane is showing no longer exists on the
+   *  server, keyed by that item's id so two panes reporting different items cannot cancel each
+   *  other. The HOST owns the alert and the pop that follows it — one mount, so no feature can
+   *  forget it and leave the user staring at a pane whose subject is gone. Required. */
+  reportMissing: (id: string, missing: boolean) => void;
   /** The DOM node of the shell's full-width button-bar slot; feature editors portal their action
    *  bar here so it spans the top instead of sitting inside the detail. Null with no host. */
   toolbarSlot: HTMLElement | null;
@@ -214,6 +219,25 @@ export function useStackPop(): () => void {
   const ctx = useContext(RailHostContext);
   const pop = ctx?.popStack;
   return useCallback(() => pop?.(), [pop]);
+}
+
+/**
+ * Report that the item this pane is showing is gone from the server, so the host can tell the user
+ * and back them out. `id` names the item; `missing` reports (true) or withdraws (false). The
+ * report is withdrawn automatically when `missing` goes false and on unmount, so a pane that
+ * navigates away never leaves a stale alert armed behind it.
+ *
+ * The pane does NOT show the alert itself and does NOT pop — the host does both, in that order,
+ * when the user acknowledges. Outside a host this is a no-op.
+ */
+export function useReportMissing(id: string | null, missing: boolean): void {
+  const ctx = useContext(RailHostContext);
+  const report = ctx?.reportMissing;
+  useEffect(() => {
+    if (!report || id == null || !missing) return;
+    report(id, true);
+    return () => report(id, false);
+  }, [report, id, missing]);
 }
 
 /** The DOM node a feature editor should portal its action bar into, or null when there is no

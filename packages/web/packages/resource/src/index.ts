@@ -37,12 +37,19 @@ export {
   StackLevels,
   useStackLevel,
   useStackPop,
+  useReportMissing,
   useRailExitGuard,
   ToolbarPortal,
   useToolbarPortal,
   FeatureBarPortal,
 } from "./rail-host";
 export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-host";
+
+// The HOST side of that contract. Only a rail host calls these — the hub's WorkspaceChromeProvider
+// is the one outside this package — and they exist so its copy and StandaloneRailHost's cannot
+// drift, alert copy included.
+export { useHostPopStack, useHostMissingAlert } from "./host-stack";
+export type { HostMissingAlert } from "./host-stack";
 
 // The record-affordance seam: a host-injected per-record renderer (null standalone).
 export { RecordAffordanceContext, useRecordAffordance } from "./record-affordance";
