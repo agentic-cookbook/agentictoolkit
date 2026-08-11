@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { configureAuth } from '../config'
 import { writeTokens } from '../tokens'
 import { invalidateRefresh } from '../refresh'
-import { authedJson, exchangeSsoCode, extractErrorMessage, AuthHttpError } from '../client'
+import { authedFetch, authedJson, exchangeSsoCode, extractErrorMessage, AuthHttpError } from '../client'
 
 beforeEach(() => {
   localStorage.clear()
@@ -86,6 +86,27 @@ describe('exchangeSsoCode', () => {
     await expect(exchangeSsoCode('code-1')).rejects.toThrow('invalid or expired exchange code')
     await expect(exchangeSsoCode('code-1')).rejects.toBeInstanceOf(AuthHttpError)
     expect(fetchMock).toHaveBeenCalledTimes(2) // once per call above — no internal retry
+  })
+})
+
+describe('authedFetch', () => {
+  it('works with no init at all — a bare GET should not require callers to pass {}', async () => {
+    // rawFetch reads `init.headers`/`init.body` unconditionally. Before `init` defaulted to
+    // `{}`, calling authedFetch(url) with no second argument was a type error for every
+    // in-repo caller, but nothing stopped a structurally-compatible fetcher type (e.g.
+    // @agentic-toolkit/registry's `Fetcher`, whose `init` is optional) from calling it with
+    // none at runtime — which would have thrown reading `.headers` off `undefined`.
+    writeTokens({ accessToken: 'TOK', refreshToken: '' })
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true, status: 200, json: async () => ({ hi: 1 }),
+    } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await authedFetch('/api/x')
+
+    expect(res.status).toBe(200)
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit
+    expect((init.headers as Record<string, string>).Authorization).toBe('Bearer TOK')
   })
 })
 

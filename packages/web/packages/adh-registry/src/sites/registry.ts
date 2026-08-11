@@ -504,6 +504,7 @@ export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
   knowledgebases: 'knowledgebases',
   narratives: 'narratives',
   research: 'research',
+  registries: 'registries',
 }
 
 /** Hub workspace feature segments with no DISTINCT registry site behind them:
@@ -639,6 +640,11 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   // research — public papers and the search page.
   'papers',
   'search',
+  // registries + consultants — the public registry and profile pages beside the workspace.
+  // `search` above is theirs too: all three sites put a finder at their root, and a Set
+  // holds the word once.
+  'consultant',
+  'registry',
   // integrations — the OAuth return the site owns at its own root.
   'integrations',
   // toolkit — the component demo.
@@ -684,6 +690,7 @@ export const HUB_ROUTE_SEGMENTS = new Set<string>([
   'auth',
   'details',
   'home',
+  'integrations',
   'privacy',
   'terms',
   'tour',

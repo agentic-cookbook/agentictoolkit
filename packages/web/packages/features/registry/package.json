@@ -1,0 +1,83 @@
+{
+  "name": "@agentic-toolkit/registry",
+  "version": "0.1.0",
+  "description": "The crossing point to @agenticdevelopertoolkit/registry-*. Re-publishes the profile renderer and the field-type catalog so adh sites never name that scope themselves — which is what keeps exactly one copy of it in a bundle — and adds the API client, the editing widgets and the contact composer sites need.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist"],
+  "exports": {
+    "./profile": {
+      "types": "./dist/profile.d.ts",
+      "development": "./src/profile.ts",
+      "import": "./dist/profile.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "development": "./src/types.ts",
+      "import": "./dist/types.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "development": "./src/client.ts",
+      "import": "./dist/client.js"
+    },
+    "./editors": {
+      "types": "./dist/editors/index.d.ts",
+      "development": "./src/editors/index.ts",
+      "import": "./dist/editors/index.js"
+    },
+    "./contact": {
+      "types": "./dist/contact/index.d.ts",
+      "development": "./src/contact/index.ts",
+      "import": "./dist/contact/index.js"
+    },
+    "./viewer": {
+      "types": "./dist/viewer/index.d.ts",
+      "development": "./src/viewer/index.ts",
+      "import": "./dist/viewer/index.js"
+    },
+    "./css/profile.css": {
+      "development": "./src/css/profile.css",
+      "default": "./dist/css/profile.css"
+    },
+    "./css/editor.css": {
+      "development": "./src/css/editor.css",
+      "default": "./dist/css/editor.css"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "mkdir -p dist/css && cp src/css/profile.css src/css/editor.css dist/css/",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "//peerDependencies": "The two @agenticdevelopertoolkit/* entries are peers for the reason persona's are: the consumer supplies the copy, so a bundle holds one instance rather than one per re-exporting package.",
+  "peerDependencies": {
+    "@agenticdevelopertoolkit/registry-profile": "*",
+    "@agenticdevelopertoolkit/registry-types": "*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "//devDependencies": "The two @agenticdevelopertoolkit/* entries are peer deps above — consumers supply them; these link:s exist only so this package can build and test itself. They target THIS repo's own nested submodule at external/agenticdevelopertoolkit, so a recursive clone builds with no sibling checkout anywhere on disk. link: rather than workspace:* because that toolkit is a SEPARATE pnpm workspace and pnpm cannot nest workspaces. @agentic-toolkit/auth is a devDependency, not a runtime one: only the ContactComposer test imports AuthHttpError from it, and the component itself reads a thrown failure structurally so the shipped code carries no auth dependency at all.",
+  "devDependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agenticdevelopertoolkit/registry-profile": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/registry-profile",
+    "@agenticdevelopertoolkit/registry-types": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/registry-types",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

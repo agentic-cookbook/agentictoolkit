@@ -27298,6 +27298,297 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/registries": {
+        parameters: {
+            query?: {
+                page?: string;
+                pageSize?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the public registries, alphabetical by name */
+        get: {
+            parameters: {
+                query?: {
+                    page?: string;
+                    pageSize?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of public registries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistryDirectory"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/registries/{registrySlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get a registry by slug, with its sections and public field defs */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Registry metadata */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistry"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/registries/{registrySlug}/entries": {
+        parameters: {
+            query?: {
+                page?: string;
+                pageSize?: string;
+            };
+            header?: never;
+            path: {
+                registrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Browse a registry’s published, public entries (newest first) */
+        get: {
+            parameters: {
+                query?: {
+                    page?: string;
+                    pageSize?: string;
+                };
+                header?: never;
+                path: {
+                    registrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of public entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistryEntryList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/registries/{registrySlug}/search": {
+        parameters: {
+            query?: {
+                q?: string;
+                category?: string;
+                deliveryMode?: string;
+                /** @description Match entries with at least one non-deleted service at this pricing model. */
+                pricingModel?: string;
+                page?: string;
+                pageSize?: string;
+            };
+            header?: never;
+            path: {
+                registrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Full-text search a registry’s published, public entries */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    category?: string;
+                    deliveryMode?: string;
+                    /** @description Match entries with at least one non-deleted service at this pricing model. */
+                    pricingModel?: string;
+                    page?: string;
+                    pageSize?: string;
+                };
+                header?: never;
+                path: {
+                    registrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of matching public entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistryEntryList"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/registries/{registrySlug}/entries/{entrySlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+                entrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get one public/unlisted entry by slug (301s a superseded slug) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                    entrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The entry, its parent registry summary, and its JSON-LD */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistryEntryResponse"];
+                    };
+                };
+                /** @description The slug was renamed; Location points at the current one */
+                301: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/registries/{registrySlug}/sitemap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** List every public entry slug in a registry, for a sitemap */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public entry slugs, alphabetical */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistrySitemap"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{slug}": {
         parameters: {
             query?: never;
@@ -27327,6 +27618,73 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["PublicUserProfile"];
                     };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registries/{registrySlug}/entries/{entrySlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+                entrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get one entry as a signed-in viewer (public + authenticated fields) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                    entrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The entry, its parent registry summary, and its JSON-LD */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistryEntryResponse"];
+                    };
+                };
+                /** @description The slug was renamed; Location points at the current one */
+                301: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
                 /** @description Error */
                 401: {
@@ -27824,6 +28182,1826 @@ export interface paths {
                         "application/json": {
                             approval: components["schemas"]["RegistryPersonaApproval"];
                         };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's (or named workspace's) registries, non-deleted, by name */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Registries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["Registry"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create a registry */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        slug: string;
+                        name: string;
+                        purpose?: string;
+                        description?: string;
+                        categoryRoot?: string;
+                        entryTerm?: string;
+                        /** @enum {string} */
+                        visibility?: "public" | "unlisted" | "private";
+                        /** @enum {string} */
+                        submissionPolicy?: "open" | "reviewed";
+                        servicesEnabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created registry */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Registry"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get a registry */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Registry */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Registry"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /** Soft-delete a registry (frees its slug) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update a registry */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        name?: string;
+                        purpose?: string;
+                        description?: string;
+                        categoryRoot?: string;
+                        entryTerm?: string;
+                        /** @enum {string} */
+                        visibility?: "public" | "unlisted" | "private";
+                        /** @enum {string} */
+                        submissionPolicy?: "open" | "reviewed";
+                        servicesEnabled?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description Registry */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Registry"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/registry/registries/{id}/sections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List a registry's sections (non-deleted, by sortOrder) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sections */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["RegistrySection"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Add a section */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        key: string;
+                        label: string;
+                        description?: string;
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created section */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistrySection"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{id}/sections/{sectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                sectionId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete a section */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    sectionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update a section */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    sectionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        label?: string;
+                        description?: string;
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Section */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistrySection"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/registry/registries/{id}/field-defs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List a registry's field defs (non-deleted, by sortOrder) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Field defs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["RegistryFieldDef"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Add a field def to a section */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        sectionId: string;
+                        key: string;
+                        /** @enum {string} */
+                        type: "text" | "textarea" | "markdown" | "select" | "multi_select" | "url" | "email" | "phone" | "boolean" | "date" | "image" | "address";
+                        label: string;
+                        help?: string;
+                        required?: boolean;
+                        sortOrder?: number;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * @description Omitted: derived from `type` by `defaultVisibilityForType` — a contact type (email, phone, address) starts 'private', everything else 'public'. The default is where the contact-privacy protection lives; publishing a phone number is a decision the owner makes, not one they inherit.
+                         * @enum {string}
+                         */
+                        visibility?: "public" | "authenticated" | "private";
+                        showIf?: {
+                            field: string;
+                            /** @enum {string} */
+                            op: "eq" | "ne" | "truthy" | "falsy" | "in" | "contains";
+                            /** @description JSON value, nested no deeper than 8 levels */
+                            value: unknown;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created field def */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryFieldDef"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{id}/field-defs/{fieldId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+                fieldId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Soft-delete a field def (its values stay in entries.values, untouched)
+         * @description Cascades to the rules that name it: every live field def in this registry whose `showIf.field` equals the deleted field's key has its `showIf` cleared, in the same transaction. A rule naming a field that no longer exists never fires, so without this the dependent fields would silently disappear from the form. Clients should NOT patch those rules themselves afterwards — the work is already done, and doing it per dependent reindexes the whole registry once per PATCH.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    fieldId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update a field def (key/type immutable — a type change is a 400, a key change a no-op) */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                    fieldId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        label?: string;
+                        help?: string;
+                        required?: boolean;
+                        sortOrder?: number;
+                        config?: {
+                            [key: string]: unknown;
+                        };
+                        /**
+                         * @description The owner's ceiling for this field across every entry
+                         * @enum {string}
+                         */
+                        visibility?: "public" | "authenticated" | "private";
+                        showIf?: {
+                            field: string;
+                            /** @enum {string} */
+                            op: "eq" | "ne" | "truthy" | "falsy" | "in" | "contains";
+                            /** @description JSON value, nested no deeper than 8 levels */
+                            value: unknown;
+                        } | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Field def */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryFieldDef"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/registry/registries/{registryId}/entries/mine": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                registryId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The caller's own entry in this registry, or 404 if they have none — a pure read that never creates one
+         * @description The creating half is POST on this same path. Splitting them is what keeps a GET from writing: this route is reachable by anyone who can read the registry, so a get-or-create GET planted a draft entry for every signed-in passer-by, and those drafts are visible to the registry's owner through GET /entries. 404 here means "you have no entry yet", which is a normal state, not an error.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entry */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntry"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * The caller's own entry in this registry, created as a draft if they have none. Idempotent — a concurrent first call returns the same row either way, never a 409
+         * @description Takes no body: everything about the new row is derived from the caller and the registry (`draft` status, the registry's default visibility, an empty `values`). Returns 200 with the existing row when one is already there, so a client may call it unconditionally when opening the editor. Idempotency is enforced by `uq_entries_registry_owner`, not by the read that precedes the insert.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entry */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntry"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{registryId}/entries": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                registryId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Every entry in a registry, for whoever administers it — the review queue behind the `reviewed` submission policy. Approving is a PATCH of {status:"published"} on an entry by the registry owner; rejecting is the same PATCH with "draft"
+         * @description Requires the `registries` sub-item R verb on this registry, because it returns other principals' unpublished entries: a registrant reads their own row through /entries/mine, and anonymous visitors see only published ones through the public routes. Newest first by createdAt — unlike the alphabetical registry list, since this list's job is "what came in while I was away". Soft-deleted entries are never returned.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                    /** @description Return only entries in this state. `pending` is the review queue. An unrecognised value is a 400, never an empty list. */
+                    status?: "draft" | "pending" | "published";
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["RegistryEntry"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create the caller's entry in a registry (one entry per principal per registry) */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        slug?: string;
+                        displayName?: string;
+                        summary?: string;
+                        photoAttachmentId?: string | null;
+                        /** @enum {string} */
+                        providerType?: "person" | "organization" | "persona";
+                        category?: string;
+                        keywords?: string[];
+                        locationText?: string;
+                        countryCode?: string;
+                        regionCode?: string;
+                        geo?: {
+                            lat: number;
+                            lon: number;
+                        } | null;
+                        areaServed?: {
+                            [key: string]: unknown;
+                        };
+                        /** @enum {string} */
+                        deliveryMode?: "in_person" | "virtual" | "hybrid";
+                        links?: {
+                            label: string;
+                            url: string;
+                        }[];
+                        /** @enum {string} */
+                        contactMode?: "dm" | "none";
+                        languages?: string[];
+                        /** @enum {string} */
+                        status?: "draft" | "pending" | "published";
+                        /** @enum {string} */
+                        visibility?: "public" | "unlisted" | "private";
+                        /** @description shape-checked against the live field defs on every write; required-ness only enforced when the resulting status is (or stays) published. On PATCH this is a JSON Merge Patch (RFC 7386) applied to the STORED values, not a full replace: a key you omit is left untouched; a key you send with a non-null value replaces that one field; a key you send as null DELETES it. Send only the section you are editing — the rest of the entry is preserved. On POST there is no prior state, so this object IS the initial values as given (null has no special meaning here). */
+                        values?: {
+                            [key: string]: unknown;
+                        };
+                        /** @description The registrant's per-field audience overrides on THIS entry, keyed by field_defs.key. Merge-patch like `values`: a key you omit keeps its stored setting, a key sent as null clears the override back to the def's setting. Each override may only TIGHTEN the owner's ceiling (RegistryFieldDef.visibility); asking for a WIDER one is a 400 naming the field, never a silent clamp — a 200 would leave the registrant believing they published a field the owner keeps private. A stored override the owner has since tightened past is clamped and written back without erroring, since it was already clamped on every read. */
+                        valueVisibility?: {
+                            [key: string]: "public" | "authenticated" | "private" | null;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Created entry */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntry"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{registryId}/entries/{entryId}": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                registryId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete an entry (frees its slug and its one-per-registry owner slot) */
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update an entry (owner or the registry owner). Publishing, or editing an already-published entry, is refused (400) while a required field is blank or hidden-by-rule */
+        patch: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        slug?: string;
+                        displayName?: string;
+                        summary?: string;
+                        photoAttachmentId?: string | null;
+                        /** @enum {string} */
+                        providerType?: "person" | "organization" | "persona";
+                        category?: string;
+                        keywords?: string[];
+                        locationText?: string;
+                        countryCode?: string;
+                        regionCode?: string;
+                        geo?: {
+                            lat: number;
+                            lon: number;
+                        } | null;
+                        areaServed?: {
+                            [key: string]: unknown;
+                        };
+                        /** @enum {string} */
+                        deliveryMode?: "in_person" | "virtual" | "hybrid";
+                        links?: {
+                            label: string;
+                            url: string;
+                        }[];
+                        /** @enum {string} */
+                        contactMode?: "dm" | "none";
+                        languages?: string[];
+                        /** @enum {string} */
+                        status?: "draft" | "pending" | "published";
+                        /** @enum {string} */
+                        visibility?: "public" | "unlisted" | "private";
+                        /** @description shape-checked against the live field defs on every write; required-ness only enforced when the resulting status is (or stays) published. On PATCH this is a JSON Merge Patch (RFC 7386) applied to the STORED values, not a full replace: a key you omit is left untouched; a key you send with a non-null value replaces that one field; a key you send as null DELETES it. Send only the section you are editing — the rest of the entry is preserved. On POST there is no prior state, so this object IS the initial values as given (null has no special meaning here). */
+                        values?: {
+                            [key: string]: unknown;
+                        };
+                        /** @description The registrant's per-field audience overrides on THIS entry, keyed by field_defs.key. Merge-patch like `values`: a key you omit keeps its stored setting, a key sent as null clears the override back to the def's setting. Each override may only TIGHTEN the owner's ceiling (RegistryFieldDef.visibility); asking for a WIDER one is a 400 naming the field, never a silent clamp — a 200 would leave the registrant believing they published a field the owner keeps private. A stored override the owner has since tightened past is clamped and written back without erroring, since it was already clamped on every read. */
+                        valueVisibility?: {
+                            [key: string]: "public" | "authenticated" | "private" | null;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description Entry */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntry"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/registry/registries/{registryId}/entries/{entryId}/services": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                registryId: string;
+                entryId: string;
+            };
+            cookie?: never;
+        };
+        /** List an entry's services (non-deleted, by sortOrder) */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Services */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["RegistryEntryService"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Add a priced service to an entry */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        title: string;
+                        description?: string;
+                        /** @enum {string} */
+                        pricingModel?: "hourly" | "per_job" | "per_deliverable" | "subscription" | "free" | "barter";
+                        priceMin?: number | null;
+                        priceMax?: number | null;
+                        currency?: string;
+                        unit?: string;
+                        /** @enum {string} */
+                        deliveryMode?: "in_person" | "virtual" | "hybrid";
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Created service */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntryService"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registry/registries/{registryId}/entries/{entryId}/services/{serviceId}": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                registryId: string;
+                entryId: string;
+                serviceId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Soft-delete a service */
+        delete: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                    serviceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /** Update a service */
+        patch: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE's owning principal (the caller's own customer slug, or an organization the caller belongs to). Omitted: the caller's own personal workspace. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    registryId: string;
+                    entryId: string;
+                    serviceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        title?: string;
+                        description?: string;
+                        /** @enum {string} */
+                        pricingModel?: "hourly" | "per_job" | "per_deliverable" | "subscription" | "free" | "barter";
+                        priceMin?: number | null;
+                        priceMax?: number | null;
+                        currency?: string;
+                        unit?: string;
+                        /** @enum {string} */
+                        deliveryMode?: "in_person" | "virtual" | "hybrid";
+                        sortOrder?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description Service */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryEntryService"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/registry/contact/{registrySlug}/{entrySlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+                entrySlug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Open a DM with a public entry's owner and send the opening message
+         * @description Resolves the entry server-side from its two slugs — the visitor never learns the owner id unless the owner answers. Only a published entry with contactMode "dm" on a public registry is contactable; an org- or persona-owned entry has no user to DM (409). Gated behind the per-ecosystem `messaging` opt-in (403 when off).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                    entrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        body: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description DM opened and the message sent */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryContactResult"];
                     };
                 };
                 /** @description Error */
@@ -59057,6 +61235,148 @@ export interface components {
             createdAt: string;
             updatedAt: string;
         };
+        PublicRegistrySummary: {
+            slug: string;
+            name: string;
+            /** @description One-line "what this registry is for". */
+            purpose: string;
+            /** @description The industry half of <industry>.<service-type>, e.g. 'software'. */
+            categoryRoot: string;
+        };
+        PublicRegistryDirectory: {
+            items: components["schemas"]["PublicRegistrySummary"][];
+            /** @description Public registries in total, not just on this page — so a caller reading only page 1 can tell a short directory from a truncated one. */
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        PublicRegistrySection: {
+            key: string;
+            label: string;
+            description: string;
+            sortOrder: number;
+        };
+        PublicRegistryFieldDef: {
+            key: string;
+            label: string;
+            type: string;
+            sortOrder: number;
+        };
+        PublicRegistry: {
+            slug: string;
+            name: string;
+            /** @description One-line "what this registry is for". */
+            purpose: string;
+            description: string;
+            /** @description The industry half of <industry>.<service-type>, e.g. 'software'. */
+            categoryRoot: string;
+            /** @description What this registry calls an entry — "consultant", "coach", "shop". */
+            entryTerm: string;
+            servicesEnabled: boolean;
+            /** @description A fleet SITE SLUG from the frontend sites registry, when this registry is bound to a dedicated site; null otherwise. */
+            boundSiteId: string | null;
+            sections: components["schemas"]["PublicRegistrySection"][];
+            fields: components["schemas"]["PublicRegistryFieldDef"][];
+        };
+        PublicRegistryEntrySummary: {
+            slug: string;
+            displayName: string;
+            summary: string;
+            category: string;
+            keywords: string[];
+            locationText: string;
+            /** @enum {string} */
+            deliveryMode: "in_person" | "virtual" | "hybrid";
+            /** @description An attachment id, not a URL — look it up in the response's `imageUrls`. Null whenever no URL could be produced for THIS entry (no photo set, or one that is missing, unready, not owned by this entry, or unpresignable — including a deployment with no object store), so an id that is present always has a URL in the map. Render the card without a picture when it is null. */
+            photoAttachmentId: string | null;
+        };
+        PublicRegistryEntryList: {
+            items: components["schemas"]["PublicRegistryEntrySummary"][];
+            total: number;
+            page: number;
+            pageSize: number;
+            /** @description Attachment id -> presigned GET URL, for the photos on THIS page. One map per page rather than a URL per item: two entries may not share a photo, but one map keyed by id matches the entry-detail shape and costs nothing to look up. Short-lived (15 min), and empty when object storage is not configured. */
+            imageUrls: {
+                [key: string]: string;
+            };
+        };
+        PublicRegistryField: {
+            key: string;
+            label: string;
+            type: string;
+            value: unknown;
+            /**
+             * @description The EFFECTIVE audience for this value — the tighter of the registry owner’s ceiling for the field and the registrant’s own override on this entry. A client renders it as the "who can see this" marker; it is not the def’s configured setting, which may be wider.
+             * @enum {string}
+             */
+            visibility: "public" | "authenticated";
+        };
+        PublicRegistryService: {
+            title: string;
+            description: string;
+            /** @enum {string} */
+            pricingModel: "hourly" | "per_job" | "per_deliverable" | "subscription" | "free" | "barter";
+            priceMin: number | null;
+            priceMax: number | null;
+            currency: string;
+            unit: string;
+            /** @enum {string} */
+            deliveryMode: "in_person" | "virtual" | "hybrid";
+        };
+        PublicRegistryEntryDetail: {
+            slug: string;
+            displayName: string;
+            summary: string;
+            photoAttachmentId: string | null;
+            /** @enum {string} */
+            providerType: "person" | "organization" | "persona";
+            category: string;
+            keywords: string[];
+            locationText: string;
+            countryCode: string;
+            regionCode: string;
+            geo: {
+                lat: number;
+                lon: number;
+            } | null;
+            areaServed: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            deliveryMode: "in_person" | "virtual" | "hybrid";
+            links: {
+                label: string;
+                url: string;
+            }[];
+            /**
+             * @description Never a raw email or phone — contact is DM-only.
+             * @enum {string}
+             */
+            contactMode: "dm" | "none";
+            languages: string[];
+            fields: components["schemas"]["PublicRegistryField"][];
+            services: components["schemas"]["PublicRegistryService"][];
+            /** @description Attachment id -> presigned GET URL, for the photo and every public image field. Short-lived (15 min); absent entirely when object storage is not configured. */
+            imageUrls: {
+                [key: string]: string;
+            };
+        };
+        PublicRegistryEntryResponse: {
+            registry: {
+                slug: string;
+                name: string;
+                boundSiteId: string | null;
+            };
+            entry: components["schemas"]["PublicRegistryEntryDetail"];
+            /** @description schema.org markup from entryJsonLd, including a resolved url — the route derives the entry's canonical origin from the backend's vendored sites registry (publicOriginFor) before building this object, so the page only needs to place it verbatim in a <script type="application/ld+json"> tag. */
+            jsonLd: {
+                [key: string]: unknown;
+            };
+        };
+        PublicRegistrySitemap: {
+            /** @description Public entry slugs, alphabetical. */
+            slugs: string[];
+        };
         RegistryIdentifier: {
             /** @description Reverse-domain identifier (e.g. com.acme.app) */
             rdid: string;
@@ -59201,6 +61521,171 @@ export interface components {
             createdBy?: string | null;
             createdAt: string;
             updatedAt: string;
+        };
+        Registry: {
+            id: string;
+            ecosystemId: string;
+            /** @enum {string} */
+            ownerKind: "customer" | "organization";
+            ownerId: string;
+            /** @description globally unique path segment on the registries site */
+            slug: string;
+            name: string;
+            /** @description the one-line "what this registry is for" */
+            purpose: string;
+            description: string;
+            /** @description the industry half of <industry>.<service-type> */
+            categoryRoot: string;
+            /** @description what this registry calls an entry, e.g. "coach" */
+            entryTerm: string;
+            /** @enum {string} */
+            visibility: "public" | "unlisted" | "private";
+            /** @enum {string} */
+            submissionPolicy: "open" | "reviewed";
+            /** @description a fleet SITE SLUG this registry is bound to; set by platform admin only, never via this API */
+            boundSiteId?: string | null;
+            servicesEnabled: boolean;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null;
+            syncVersion: number;
+        };
+        RegistrySection: {
+            id: string;
+            ecosystemId: string;
+            registryId: string;
+            /** @description unique within the registry; create-only — the update schema omits it, matching field_defs.key */
+            key: string;
+            label: string;
+            description: string;
+            sortOrder: number;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null;
+            syncVersion: number;
+        };
+        RegistryFieldDef: {
+            id: string;
+            ecosystemId: string;
+            registryId: string;
+            sectionId: string;
+            /** @description IMMUTABLE — the key under which values are stored in entries.values */
+            key: string;
+            /**
+             * @description IMMUTABLE — a member of the field-type catalog (vendor/registry-types.ts)
+             * @enum {string}
+             */
+            type: "text" | "textarea" | "markdown" | "select" | "multi_select" | "url" | "email" | "phone" | "boolean" | "date" | "image" | "address";
+            label: string;
+            help: string;
+            required: boolean;
+            sortOrder: number;
+            /** @description per-type config: select options, min/max, accepted image types */
+            config: {
+                [key: string]: unknown;
+            };
+            /**
+             * @description The owner's CEILING for this field across every entry, widest first: 'public' = anyone including a crawler; 'authenticated' = any signed-in hub member; 'private' = the entry's owner and the registry's owner only. A registrant may TIGHTEN it on their own entry (`valueVisibility` on the entry write) but never loosen it, so the value here is an upper bound on what any entry publishes — not necessarily what a given entry does.
+             * @enum {string}
+             */
+            visibility: "public" | "authenticated" | "private";
+            /** @description a declarative visibility rule, evaluated fail-open (evaluateShowIf) */
+            showIf?: {
+                /** @description the key of the field this rule reads */
+                field: string;
+                /** @enum {string} */
+                op: "eq" | "ne" | "truthy" | "falsy" | "in" | "contains";
+                /** @description JSON value compared against the referenced field (depth <= 8) */
+                value: unknown;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null;
+            syncVersion: number;
+        };
+        RegistryEntry: {
+            id: string;
+            ecosystemId: string;
+            registryId: string;
+            /** @enum {string} */
+            ownerKind: "customer" | "organization";
+            ownerId: string;
+            /** @description unique within the registry; the public profile path segment */
+            slug: string;
+            displayName: string;
+            summary: string;
+            photoAttachmentId?: string | null;
+            /** @enum {string} */
+            providerType: "person" | "organization" | "persona";
+            /** @description leaf category, e.g. software.consulting */
+            category: string;
+            keywords: string[];
+            locationText: string;
+            countryCode: string;
+            regionCode: string;
+            geo?: {
+                lat: number;
+                lon: number;
+            } | null;
+            areaServed: {
+                [key: string]: unknown;
+            };
+            /** @enum {string} */
+            deliveryMode: "in_person" | "virtual" | "hybrid";
+            links: {
+                label: string;
+                url: string;
+            }[];
+            /**
+             * @description never a raw email or phone — see the schema column comment
+             * @enum {string}
+             */
+            contactMode: "dm" | "none";
+            languages: string[];
+            /** @enum {string} */
+            status: "draft" | "pending" | "published";
+            /** @enum {string} */
+            visibility: "public" | "unlisted" | "private";
+            /** @description owner-defined tail, keyed by field_defs.key; shape-validated on every write */
+            values: {
+                [key: string]: unknown;
+            };
+            /** @description the registrant's per-field audience overrides, keyed by field_defs.key; a key is absent when the field simply follows its def. Never wider than the def allows AS STORED, but read it as the tighter of the two anyway — the owner's ceiling can move after this map is written */
+            valueVisibility: {
+                [key: string]: "public" | "authenticated" | "private";
+            };
+            schemaVersion: number;
+            /** @description derived on write from PUBLIC-visible values only */
+            searchText: string;
+            publishedAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null;
+            syncVersion: number;
+        };
+        RegistryEntryService: {
+            id: string;
+            ecosystemId: string;
+            entryId: string;
+            title: string;
+            description: string;
+            /** @enum {string} */
+            pricingModel: "hourly" | "per_job" | "per_deliverable" | "subscription" | "free" | "barter";
+            priceMin?: number | null;
+            priceMax?: number | null;
+            currency: string;
+            unit: string;
+            /** @enum {string} */
+            deliveryMode: "in_person" | "virtual" | "hybrid";
+            sortOrder: number;
+            createdAt: string;
+            updatedAt: string;
+            deletedAt?: string | null;
+            syncVersion: number;
+        };
+        RegistryContactResult: {
+            /** @description the hub DM chat the opening message was sent into */
+            chatId: string;
         };
         SearchDiscussionTopicResult: {
             id: string;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { readdirSync, statSync, existsSync } from 'node:fs'
+import { readdirSync, statSync, existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 // isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
@@ -462,6 +462,7 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     expect(getSite('hub-help')!.workspaceRoute).toBeUndefined()
     expect(getSite('status')!.workspaceRoute).toBeUndefined()
   })
+
 })
 
 describe('siteWorkspaceHref (cross-site workspace destination)', () => {

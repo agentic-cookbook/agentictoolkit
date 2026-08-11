@@ -148,6 +148,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   '/personas': UserCircle,
   '/products': Package,
   '/projects': FolderKanban,
+  '/registries': Library, // matches FEATURE_META `registries`
   '/research': FlaskConical,
   '/server-bags': Server,
   '/settings': Settings,

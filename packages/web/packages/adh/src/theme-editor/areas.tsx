@@ -76,6 +76,14 @@ const usePreviewHeaderAuth: HeaderAuthSource = () => ({
 })
 
 function HeaderPreview() {
+  // Unlike `SiteMenuPreview` below, this DOES render a path to `DevToolsMenu`: `SiteHeader`
+  // mounts it itself, so clicking its "Debug Options" row here would open a second Debug
+  // console on top of this one (R6-M9). Not a regression — the pre-rework `SiteMenu` showed
+  // that same row in a dev build too, with no suppression prop on this preview either. What
+  // actually keeps it out of production is the same gate that keeps this whole editor out of
+  // production: `DEV_TOOLS_BUILD_ENABLED` (`header/devToolsEntries.ts`) is `DEV_BUILD`
+  // directly, and the site-theme editor only ever renders when that flag is set — "no path to
+  // DevToolsMenu" is `SiteMenuPreview`'s guarantee, not this one's.
   return (
     <SiteHeader
       siteId="hub"
@@ -119,8 +127,11 @@ function SiteMenuPreview() {
           (the Site-theme editor), and a "Debug Options" row here would open a second
           console on top of this one — the same recursion the theme switcher is hidden
           for above. The menu used to need a `suppressDevTools` prop to avoid it; the
-          rows live in DevToolsMenu now, which this renders no path to, so the
-          recursion is impossible by construction rather than opted out of. */}
+          rows live in DevToolsMenu now, and THIS preview — `SiteMenuPreview`, which
+          renders only `SiteMenuSwitcher` — has no path to it, so for this preview the
+          recursion is impossible by construction rather than opted out of. That claim
+          is scoped to this component: `HeaderPreview` above renders `SiteHeader`,
+          which does mount `DevToolsMenu`, and carries its own note explaining why. */}
       <SiteMenuSwitcher currentSiteId="hub" />
       <span className="font-mono text-xs text-apt-text-dim">← click to open the menu</span>
     </div>

@@ -1,0 +1,98 @@
+/* Baseline styling for the editing widgets (`./editors`).
+ *
+ * The profile half of this package has shipped `profile.css` since it landed;
+ * the editor half shipped nine semantic class hooks and no rules at all, so
+ * every consumer rendered raw form markup and had to invent all nine itself.
+ * This is that missing baseline, written to the same conventions as
+ * `registry-profile/src/css/profile.css`: `light-dark()` tokens declared on the
+ * block root, neutrals only, and nothing a host would have to override to stop
+ * looking wrong.
+ *
+ * It names NO host colour on purpose. A package stylesheet that hardcodes one
+ * site's palette looks correct on that site forever and wrong on the second
+ * one — so an unconfigured host gets something legible and obviously unthemed,
+ * and a themed host redefines `--rf-*` rather than fighting these rules.
+ */
+
+.rf-field,
+.rf-def {
+  color-scheme: light dark;
+  --rf-fg: light-dark(#1a1a1a, #e8e8e8);
+  --rf-muted: light-dark(#5a5a5a, #a0a0a0);
+  --rf-border: light-dark(#e0e0e0, #333333);
+  --rf-danger: light-dark(#a12a1f, #f0847a);
+
+  color: var(--rf-fg);
+}
+
+/* One rendered field: label, control, then whichever of help/visibility/error
+ * apply. `gap` rather than margins so an absent optional line collapses
+ * cleanly instead of leaving a stranded margin behind. */
+.rf-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+/* Both branches of the heading carry this class — a `<label for>` for the
+ * labelable types, a `<span>` for the `multi_select`/`address` groups that a
+ * `for` could never point at. They must look identical; only the element
+ * differs. */
+.rf-field__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rf-field__help,
+.rf-field__visibility {
+  color: var(--rf-muted);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+/* The per-field audience picker. A row, not the column `.rf-field` lays its children out
+   in: the choice is a footnote to the control above it, and stacking a second full-width
+   label under every field doubles the form's height. Only the LABEL takes the muted
+   colour — a greyed `<select>` reads as disabled. */
+.rf-field__audience {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.rf-field__audience-label {
+  color: var(--rf-muted);
+  font-size: 0.8125rem;
+}
+
+.rf-field__error,
+.rf-def__rule-error {
+  color: var(--rf-danger);
+  font-size: 0.8125rem;
+  margin: 0;
+}
+
+/* One row of the field-definition builder. */
+.rf-def {
+  border: 1px solid var(--rf-border);
+  border-radius: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.rf-def__order {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rf-def__rule {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}

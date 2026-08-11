@@ -1191,6 +1191,8 @@ var MENU_ICONS = {
   "/personas": UserCircle,
   "/products": Package,
   "/projects": FolderKanban,
+  "/registries": Library,
+  // matches FEATURE_META `registries`
   "/research": FlaskConical,
   "/server-bags": Server,
   "/settings": Settings2,
