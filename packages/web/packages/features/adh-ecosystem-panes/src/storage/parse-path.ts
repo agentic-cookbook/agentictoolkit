@@ -1,7 +1,7 @@
 // The Storage group's URL grammar — the ONE authoritative parse of a storage route's path
 // segments into the group's selection, so the two hosts that mount StorageGroup under a
 // catch-all cannot drift apart: the hub's `/<slug>/storage/[[...path]]` and
-// agenticdeveloperstorage.com's `/[workspace]/[[...path]]` are the SAME three members at the
+// agenticdeveloperstorage.com's `/[workspace]/[[...path]]` are the SAME four members at the
 // same two depths. Mirrors @agentic-toolkit/ecosystems/parse.
 //
 // Directive-free, and its own tsup entry (the `./parse` subpath) for the reason the preset
@@ -15,7 +15,7 @@
  * for its rail, so the rail and the grammar are one list: a member added without a pane (or a pane
  * without a member) is a type error there, not a row that opens on nothing.
  */
-export const STORAGE_MEMBER_IDS = ["buckets", "access", "all-data"] as const;
+export const STORAGE_MEMBER_IDS = ["buckets", "access", "all-data", "tokens"] as const;
 export type StorageMemberId = (typeof STORAGE_MEMBER_IDS)[number];
 
 /** Whether a raw URL segment names one of this group's members. */

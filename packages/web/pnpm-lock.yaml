@@ -482,6 +482,9 @@ importers:
       '@agentic-toolkit/data':
         specifier: workspace:*
         version: link:../../data
+      '@agentic-toolkit/ecosystem-config':
+        specifier: workspace:*
+        version: link:../ecosystem-config
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource

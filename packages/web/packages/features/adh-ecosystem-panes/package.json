@@ -49,6 +49,7 @@
     "@agentic-toolkit/authentication": "workspace:*",
     "@agentic-toolkit/crud": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/ecosystem-config": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",

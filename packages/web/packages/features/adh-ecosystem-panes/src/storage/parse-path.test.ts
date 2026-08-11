@@ -6,6 +6,15 @@ import { parseStoragePath, STORAGE_MEMBER_IDS } from "./parse-path";
 // answering 200 to `/<base>/bogus` and to any depth at all — the failure a catch-all route
 // invites, and the one no typecheck can see.
 describe("parseStoragePath", () => {
+  // The one assertion here that is about the PRODUCT rather than the parse. Every other case walks
+  // this list, so they all stay green if a member is dropped or the order is shuffled — the rail
+  // would simply offer fewer rows, or the same rows rearranged, and say so nowhere. The rail's
+  // order IS this array's order (StorageGroup maps over it), so spelling it out is what pins the
+  // four rows, in this order, that the Storage surface is specified to show.
+  it("offers exactly Buckets, Access, All Data, Tokens, in rail order", () => {
+    expect(STORAGE_MEMBER_IDS).toEqual(["buckets", "access", "all-data", "tokens"]);
+  });
+
   it("opens the group unselected for a bare route", () => {
     expect(parseStoragePath(undefined)).toEqual({ memberId: null, entityId: null });
     expect(parseStoragePath([])).toEqual({ memberId: null, entityId: null });

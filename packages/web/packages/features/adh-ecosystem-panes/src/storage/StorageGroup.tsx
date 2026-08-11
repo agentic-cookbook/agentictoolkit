@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { Table2, KeyRound, Database } from "lucide-react";
+import { Table2, KeyRound, KeySquare, Database } from "lucide-react";
 import { AccessPane } from "@agentic-toolkit/authentication";
+import { StorageTokensPanel } from "@agentic-toolkit/ecosystem-config";
 import {
   StackGroupDetail,
   WorkspaceNotManageable,
@@ -35,24 +36,46 @@ export interface EcosystemScopeResolution {
 }
 
 /**
- * The Storage group — Buckets / Access / All Data — as a nested topic▸detail rail.
+ * The Storage group — Buckets / Access / All Data / Tokens — as a nested topic▸detail rail.
  *
- * The SAME three members appear in two places, which is why they live here rather than in either
- * host: promoted to a workspace's own rail (scoped to its default ecosystem) and inside a product
- * (scoped to that product's ecosystem, where EcosystemsFeature renders the group itself). A copy
- * per host is three copies of one rail, and nothing makes them agree.
+ * The SAME four members appear in two places, which is why they live here rather than in either
+ * host: the hub's `/<workspace>/storage` and agenticdeveloperstorage.com's workspace route, each
+ * scoped to that workspace's default ecosystem. A copy per host is two copies of one rail, and
+ * nothing makes them agree.
+ *
+ * A product's Storage topic (Products ▸ <product> ▸ Storage) looks like this rail and is not it:
+ * EcosystemsFeature declares its own three members, scoped to the product's ecosystem rather than
+ * the workspace's, and imports neither this component nor STORAGE_MEMBER_IDS. So a member added
+ * here reaches the two hosts above and does NOT reach a product — which is why Tokens, whose
+ * question is "what may reach this workspace's storage", stops at the workspace surfaces.
  *
  * The group opens UNSELECTED — selecting an item never auto-selects a topic (StackGroupDetail's
  * own rule).
  */
 export function StorageGroup({
   scope,
+  workspaceSlug,
   urlSelection,
   renderSubLeaf,
   renderTransfer,
   renderAllData,
 }: {
   scope: EcosystemScopeResolution;
+  /**
+   * The workspace whose principal owns what this rail mints — passed to the backend as
+   * `?workspace=`, so an ORG workspace lists and mints the ORG'S tokens rather than the signed-in
+   * caller's personal ones.
+   *
+   * Separate from `scope` rather than folded into it, because the two answer different questions:
+   * `scope` is how far the ecosystem RESOLUTION got (and gates the whole group on it), while this
+   * is the workspace's identity, which the caller already knows before any resolution runs.
+   *
+   * Optional, and undefined is a real state rather than a caller's oversight: the hub's embedded
+   * /home launcher mounts this group with no workspace in the URL at all. Undefined means the
+   * caller's OWN tokens — the same honest degrade `useWorkspaceDefaultEcosystemId` makes for a
+   * slug-less host, not an error.
+   */
+  workspaceSlug?: string;
   /** Omit for internal selection (an embedded launcher) — StackGroupDetail's fallback. */
   urlSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
   renderSubLeaf?: (memberId: string) => { leafId: string | null; onSelect: (id: string | null) => void };
@@ -101,6 +124,30 @@ export function StorageGroup({
       label: "All Data",
       icon: <Database size={16} aria-hidden />,
       render: () => renderAllData?.() ?? <AllDataPane />,
+    },
+    // The `adh_…` storage-access principals, each of which owns its own isolated bucket — which
+    // is what earns this row a place in THIS rail rather than only in Configuration, where the
+    // same panel has always been mounted (ConfigurationGroup). It is storage the tokens reach and
+    // storage they are made of, so the surface that manages buckets is where you look for them.
+    //
+    // Not the `tmp_…` personal API tokens user settings mints — a different principal that
+    // happens to share the noun; see StorageTokensPanel's own header for the distinction.
+    //
+    // A key, like Access above it, because a token IS a key platform-wide (Configuration's row
+    // and the hub's rail both draw one) — squared off so the two rows are still told apart at
+    // rail size.
+    //
+    // Scoped by `ecosystemId` exactly as the three members above are, so this rail means one
+    // thing throughout: the tokens whose buckets live in the ecosystem whose buckets Buckets
+    // lists. The hub's standalone /tokens route deliberately passes no ecosystem and therefore
+    // spans every one of the owner's — a wider question, asked somewhere else.
+    //
+    // Ignores the sub-leaf: the panel is a flat roster with a create form, so there is no inner
+    // entity for the segment below to name.
+    tokens: {
+      label: "Tokens",
+      icon: <KeySquare size={16} aria-hidden />,
+      render: () => <StorageTokensPanel ecosystemId={ecosystemId} workspace={workspaceSlug} />,
     },
   };
   const items: GroupTopicItem[] = STORAGE_MEMBER_IDS.map((id) => ({ id, ...panes[id] }));
