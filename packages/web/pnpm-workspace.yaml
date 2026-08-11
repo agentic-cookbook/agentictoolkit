@@ -1,5 +1,6 @@
 packages:
   - './packages/ui'
+  - './packages/editing'
   - './packages/themes'
   - './packages/markdown'
   - './packages/search'
