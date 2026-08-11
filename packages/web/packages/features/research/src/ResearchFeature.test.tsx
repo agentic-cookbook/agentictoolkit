@@ -377,6 +377,44 @@ describe("ResearchFeature", () => {
     expect(screen.getByTestId("busy-research-documents")).not.toBeNull();
   });
 
+  // The loader this pane used to own cleared the form error on every selection change. Nothing
+  // pinned that, and the cache refactor deleted the loader — so without this the message from a
+  // failed save on one document greets the user on the next one, attached to a document that
+  // never failed.
+  it("leaves a failed save's message behind when another document is opened", async () => {
+    update.mockRejectedValueOnce(new Error("Backend exploded."));
+    get.mockImplementation(async (id) => ({
+      ...structuredClone(DOCUMENT),
+      id,
+      content: `# ${id}\n\nBody.`,
+    }));
+    const { rerender } = render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# doc-1\n\nBody."));
+    fireEvent.change(body, { target: { value: "# doc-1 v2\n\nBody." } });
+    await act(async () => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+    expect(await screen.findByText("Backend exploded.")).not.toBeNull();
+
+    // Same mount, new selection — how Back, a deep link and a rail click all arrive.
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-2" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        "# doc-2\n\nBody.",
+      ),
+    );
+    expect(screen.queryByText("Backend exploded.")).toBeNull();
+  });
+
   it("opens a created document from the create response, with no read at all", async () => {
     render(
       <Harness>

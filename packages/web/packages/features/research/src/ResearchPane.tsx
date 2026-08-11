@@ -178,7 +178,11 @@ export function ResearchPane({
   // full editor (body, publish) opens.
   const [newOpen, setNewOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
+  // A failed save or delete belongs to the DOCUMENT it was raised on, so it is stored with that
+  // id and read back only while that document is still open. The loader this pane used to own
+  // cleared the message on every selection change; deriving it does the same thing for the URL
+  // path too (Back, a deep link), which never ran through a click handler that could clear it.
+  const [raisedError, setRaisedError] = useState<{ id: string | null; text: string } | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   // Re-entrancy latch for `onSave`. The `saving` STATE can't do this job: it is a render value,
@@ -227,6 +231,14 @@ export function ResearchPane({
   // it, because an override for another document is not this document's draft.
   const [override, setOverride] = useState<{ id: string; value: ResearchInput } | null>(null);
   const draft = override && override.id === selectedId ? override.value : baseline;
+
+  // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there is
+  // only ever one message, so "no error" needs no id to be about.
+  const formError = raisedError && raisedError.id === selectedId ? raisedError.text : null;
+  const setFormError = useCallback(
+    (text: string | null) => setRaisedError(text === null ? null : { id: selectedId, text }),
+    [selectedId],
+  );
 
   const dirty = Boolean(draft && baseline && researchDiffers(draft, baseline));
   const validationError = draft ? researchValidate(draft) : null;
