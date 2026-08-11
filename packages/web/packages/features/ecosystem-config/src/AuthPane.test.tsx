@@ -2,6 +2,7 @@
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { AuthPane } from './AuthPane'
+import { ecosystemsApi, type AuthSettings } from '@agentic-toolkit/data/ecosystems'
 import { SettingsDirtyProvider, useSettingsDirty } from '@agentic-toolkit/resource'
 
 // The pane's "Manage invitations in Users →" is a <button> (Button variant="link"), so its
@@ -50,6 +51,40 @@ async function renderPane() {
   )
   return await screen.findByRole('button', { name: /Manage invitations in Users/ })
 }
+
+// What the conversion is FOR: an ecosystem's policy comes back from cache, so returning to a
+// realm already opened paints it on the first frame with no second read. The hand-rolled effect
+// this replaced re-fetched on every mount and blanked the pane to "Loading…" while it did.
+//
+// Each ecosystem keeps its OWN entry — the ecosystem is the cache key's id — so switching shows
+// the ecosystem switched to, never the one left behind.
+describe('AuthPane caches each ecosystem’s policy', () => {
+  const signupMode = () => (screen.getByLabelText('Sign-up') as HTMLSelectElement).value
+
+  it('paints an ecosystem’s policy from cache on the way back, without re-reading', async () => {
+    const authSettings = vi.mocked(ecosystemsApi.authSettings)
+    authSettings.mockImplementation(
+      async (id: string): Promise<AuthSettings> => ({
+        signupMode: id === 'eco1' ? 'invite_only' : 'closed',
+        loginEnabled: true,
+        allowedProviders: null,
+      }),
+    )
+
+    const { rerender } = render(<AuthPane ecosystemId="eco1" />)
+    await waitFor(() => expect(signupMode()).toBe('invite_only'))
+
+    rerender(<AuthPane ecosystemId="eco2" />)
+    await waitFor(() => expect(signupMode()).toBe('closed'))
+    expect(authSettings).toHaveBeenCalledTimes(2)
+
+    // Back to the first: its policy is on screen with nothing awaited, and no third read.
+    rerender(<AuthPane ecosystemId="eco1" />)
+    expect(signupMode()).toBe('invite_only')
+    expect(screen.queryByText('Loading…')).toBeNull()
+    expect(authSettings).toHaveBeenCalledTimes(2)
+  })
+})
 
 describe('AuthPane’s cross-link to Users consults the navigation guard', () => {
   it('jumps straight to Users while nothing is dirty', async () => {

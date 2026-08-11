@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -28,6 +29,23 @@ const SIGNUP_MODES: { value: SignupMode; label: string; help: string }[] = [
   { value: "closed", label: "Closed", help: "No new accounts can be created." },
 ];
 
+/**
+ * Read one ecosystem's auth policy, reporting the failure under THIS pane's telemetry context
+ * rather than the hook's generic one — which is why the call site passes `reportErrors: false`.
+ *
+ * Module scope, so one identity serves every mount; the ecosystem is the query key's id.
+ */
+async function loadAuthSettings(ecosystemId: string): Promise<AuthSettings> {
+  try {
+    return await ecosystemsApi.authSettings(ecosystemId);
+  } catch (err) {
+    reportUnexpectedAuthError(err, { feature: "auth-settings", step: "load" });
+    // A non-Error rejection would otherwise reach the user as the hook's generic wording; keep the
+    // sentence this pane has always shown for it.
+    throw err instanceof Error ? err : new Error("Failed to load auth settings.");
+  }
+}
+
 export function AuthPane({
   ecosystemId,
   help,
@@ -40,29 +58,24 @@ export function AuthPane({
   const router = useRouter();
   const pathname = usePathname();
 
-  const [settings, setSettings] = useState<AuthSettings | null>(null);
+  // Cached per ecosystem, so returning to this topic paints the saved policy on the first frame
+  // and revalidates behind it instead of blanking to "Loading…" on every visit.
+  //
+  // Unsaved edits survive that revalidation for free: `edits` below is a DELTA laid over whatever
+  // the server currently says, not a copy of it, so a re-read that lands mid-edit changes the
+  // values UNDER the user's changes and keeps the changes themselves.
+  const { item: settings, error: loadError } = useResourceItemQuery<AuthSettings>(
+    "ecosystem-auth-settings",
+    ecosystemId ?? null,
+    loadAuthSettings,
+    { reportErrors: false },
+  );
+  const writeSettings = useResourceItemWriter<AuthSettings>("ecosystem-auth-settings");
+
   const [edits, setEdits] = useState<Partial<AuthSettings>>({});
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-
-  const refresh = useCallback(async () => {
-    if (!ecosystemId) return;
-    setLoadError(null);
-    try {
-      const s = await ecosystemsApi.authSettings(ecosystemId);
-      setSettings(s);
-      setEdits({});
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "auth-settings", step: "load" });
-      setLoadError(err instanceof Error ? err.message : "Failed to load auth settings.");
-    }
-  }, [ecosystemId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
 
   // The values shown = the loaded policy with any unsaved edits laid over it.
   const effective: AuthSettings | null = settings ? { ...settings, ...edits } : null;
@@ -79,7 +92,9 @@ export function AuthPane({
     setSaved(false);
     try {
       const updated = await ecosystemsApi.updateAuthSettings(ecosystemId, edits);
-      setSettings(updated);
+      // The server's own answer, written straight into the cache rather than invalidated: it is
+      // already in hand, so a re-read would spend a request to arrive back at these bytes.
+      writeSettings(ecosystemId, updated);
       setEdits({});
       setSaved(true);
     } catch (err) {
@@ -88,7 +103,7 @@ export function AuthPane({
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, dirty, edits]);
+  }, [ecosystemId, dirty, edits, writeSettings]);
 
   const cancel = useCallback(() => {
     setEdits({});
