@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/organizations",
   "version": "0.1.0",
-  "description": "The Organizations feature: the caller's organizations as a rail, each with its Configuration / Members / Teams / Settings topics.",
+  "description": "The Organizations feature: the caller's organizations as a rail, each with its Server bags / Tokens / Teams / Settings topics.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",

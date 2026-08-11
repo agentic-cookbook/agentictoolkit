@@ -2,14 +2,17 @@
 
 import { useCallback, useMemo } from "react";
 import type { ReactElement } from "react";
-import { Building2, BookUser, Settings, SlidersHorizontal, UsersRound } from "lucide-react";
+import { Building2, KeyRound, Server, Settings, UsersRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResourceExplorer, type ResourceTopic } from "@agentic-toolkit/resource";
 import { workspacesApi, WORKSPACES_QUERY_KEY, type Workspace } from "@agentic-toolkit/data";
-import { ConfigurationGroup, CONFIGURATION_DESCRIPTION } from "@agentic-toolkit/ecosystem-config";
+import {
+  EcosystemConfigGate,
+  ServerBagsPane,
+  StorageTokensPanel,
+} from "@agentic-toolkit/ecosystem-config";
 import { TeamsFeature } from "@agentic-toolkit/teams";
 import { parseTeamsPath } from "@agentic-toolkit/teams/parse";
-import { MembersPanel } from "./MembersPanel";
 import {
   OrgSettingsGroup,
   ORG_SETTINGS_DESCRIPTION,
@@ -22,25 +25,33 @@ export interface OrganizationsFeatureProps extends OrganizationsPathSelection {
   /** The feature's URL base. The organizations site mounts it at the workspace root (""). */
   basePath: string;
   /**
-   * The host's help-store lookup, keyed by ROUTE — passed straight down to the Configuration
-   * group, which owns the keys. Threaded rather than imported because the sentences live in adh's
-   * vocabulary tier, which a portable package may not reach (see ConfigurationGroup's own note).
+   * The host's help-store lookup, keyed by ROUTE — the keys are spelled at the topic that reads
+   * one. Threaded rather than imported because the sentences live in adh's vocabulary tier, which
+   * a portable package may not reach (see `@agentic-toolkit/adh/help/store`).
    */
   helpFor?: (key: string) => string | undefined;
 }
 
 /**
  * The Organizations feature: the caller's organizations as the root list, and each org's
- * Configuration / Members / Teams / Settings beside it.
+ * Server bags / Tokens / Teams / Settings beside it.
  *
  * The list comes from `workspacesApi.list()` filtered to organizations, not from an organizations
  * endpoint — there ISN'T one. `/organization/organizations` resolves an org by key and creates
  * them; "which orgs am I in" is a membership question, and `/workspaces` is where the backend
  * answers it. (See `@agentic-toolkit/data/organizations`.)
  *
- * The topics deliberately match the hub's org rail rather than inventing a second vocabulary for
- * the same four things — an org is one entity with one set of knobs, and a user who learns it in
- * one place should not have to relearn it in the other.
+ * The topics deliberately reuse the hub's own words rather than inventing a second vocabulary for
+ * the same things — an org is one entity with one set of knobs, and a user who learns it in one
+ * place should not have to relearn it in the other.
+ *
+ * They are the org's OWN knobs and nothing else. Auth, Billing, Feature flags and Sign-in apps are
+ * configured per PRODUCT — they say how one product's customers sign in, what it charges and what
+ * it has switched on — so they live on the product rail (`@agentic-toolkit/adh-products`), not
+ * here; an org that showed them would be claiming to own settings that belong to each product
+ * under it. Membership is not a topic either: who is in the org is answered by its Teams, which
+ * group its people and the permissions they share. (`MembersPanel` stays exported — the hub still
+ * mounts it on its workspace rail.)
  */
 export function OrganizationsFeature({
   basePath,
@@ -83,30 +94,39 @@ export function OrganizationsFeature({
   );
 
   const topics: ResourceTopic[] = [
+    // The two ecosystem-scoped topics, lifted out of the Configuration group that used to hold
+    // them as rows. Both are FLAT — one pane, nothing below them — so once the other four rows
+    // left as product settings (see above), the group was a disclosure level over two leaves.
+    //
+    // Each goes through the gate itself rather than this component resolving the ecosystem once
+    // above the rail: only the chosen topic is ever mounted, so a resolution up here would also
+    // run for Teams and Settings, which have no ecosystem in them.
     {
-      id: "configuration",
-      label: "Configuration",
-      icon: <SlidersHorizontal size={16} aria-hidden />,
-      description: CONFIGURATION_DESCRIPTION,
-      // The group publishes its own list of rows beside this one.
-      leadsTo: "list",
-      render: (scopedId, _titleFor, leaf, subLeafFor) => (
-        <ConfigurationGroup
-          workspaceSlug={scopedId}
-          leaf={leaf}
-          subLeafFor={subLeafFor}
-          helpFor={helpFor}
-        />
+      id: "server-bags",
+      label: "Server bags",
+      icon: <Server size={16} aria-hidden />,
+      description: "Arbitrary key → JSON config values, read at runtime by what the organization runs.",
+      leadsTo: "detail",
+      render: (scopedId) => (
+        <EcosystemConfigGate workspaceSlug={scopedId} feature="Server bags">
+          {(ecosystemId) => (
+            <ServerBagsPane ecosystemId={ecosystemId} help={helpFor?.("ecosystems/server-bags")} />
+          )}
+        </EcosystemConfigGate>
       ),
     },
     {
-      id: "members",
-      label: "Members",
-      icon: <BookUser size={16} aria-hidden />,
-      description: "Everyone in this organization, across its teams.",
+      id: "tokens",
+      label: "Tokens",
+      icon: <KeyRound size={16} aria-hidden />,
+      description: "Storage-access tokens, each with its own isolated bucket. Mint, list and revoke them here.",
       leadsTo: "detail",
+      // `workspace` is what makes these the ORG'S tokens rather than the signed-in user's: it pins
+      // every list/mint/revoke to the workspace's owning principal (see StorageTokensPanel).
       render: (scopedId) => (
-        <MembersPanel workspaceSlug={scopedId} workspaceType="organization" />
+        <EcosystemConfigGate workspaceSlug={scopedId} feature="Tokens">
+          {(ecosystemId) => <StorageTokensPanel ecosystemId={ecosystemId} workspace={scopedId} />}
+        </EcosystemConfigGate>
       ),
     },
     {
@@ -118,8 +138,8 @@ export function OrganizationsFeature({
       // Teams is a whole nested FEATURE, not a pane: it owns a four-segment grammar of its own
       // below this topic. So it gets the raw `topicPath` and re-parses it, and routes off its own
       // `basePath` — which is why the org grammar hands topics their remaining segments rather
-      // than a single leaf id (see parse-path). `leaf`/`subLeafFor` are ignored here on purpose:
-      // they only reach two segments deep, and Teams needs four.
+      // than a single leaf id (see parse-path). `leaf` is ignored here on purpose: it reaches one
+      // segment deep, and Teams needs four.
       render: (scopedId) => (
         <TeamsFeature
           basePath={`${basePath}/${scopedId}/teams`}
@@ -147,11 +167,12 @@ export function OrganizationsFeature({
       all={all}
       activeId={activeOrgSlug}
       activeTopic={activeTopic}
-      // ResourceExplorer's own 4th/5th segments. Topics that route themselves (Teams) read
-      // `topicPath` instead; these keep the stack's breadcrumb and leaf selection honest for the
-      // topics that don't.
+      // ResourceExplorer's own 4th segment — Settings' open row. Topics that route themselves
+      // (Teams) read `topicPath` instead, and the two flat panes have nothing below them; this
+      // keeps the stack's breadcrumb and leaf selection honest for the one that does.
+      // `activeMemberEntityId` (the 5th) is deliberately not passed: it only fed a GROUPING
+      // topic's inner entity, and this rail no longer has one.
       activeLeafId={topicPath[0]}
-      activeMemberEntityId={topicPath[1]}
       items={organizations}
       // The SLUG is the id: it is what identifies an org everywhere on the platform, what
       // `?workspace=` takes, and what every one of these topics scopes by. There is no separate
@@ -163,7 +184,7 @@ export function OrganizationsFeature({
       topics={topics}
       landing={{
         title: "Organizations",
-        help: "The organizations you belong to. Pick one to manage its configuration, people, teams and record — or create a new one.",
+        help: "The organizations you belong to. Pick one to manage its config values, tokens, teams and record — or create a new one.",
         emptyLabel: "You aren't in any organizations yet.",
         getSublabel: (w) => w.slug,
         renderMeta: () => null,

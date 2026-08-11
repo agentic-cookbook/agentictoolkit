@@ -29,16 +29,16 @@ describe("parseOrganizationsPath", () => {
   });
 
   it("drops empty segments, so a doubled slash cannot shift the slug into the topic slot", () => {
-    // Without the filter, `//acme/members` parses as the org named "" with topic "acme": a
+    // Without the filter, `//acme/tokens` parses as the org named "" with topic "acme": a
     //404-looking blank pane rather than the org the URL plainly names.
-    expect(parseOrganizationsPath(["", "acme", "members"])).toEqual({
+    expect(parseOrganizationsPath(["", "acme", "tokens"])).toEqual({
       activeOrgSlug: "acme",
-      activeTopic: "members",
+      activeTopic: "tokens",
       topicPath: [],
     });
-    expect(parseOrganizationsPath(["acme", "", "members"])).toEqual({
+    expect(parseOrganizationsPath(["acme", "", "tokens"])).toEqual({
       activeOrgSlug: "acme",
-      activeTopic: "members",
+      activeTopic: "tokens",
       topicPath: [],
     });
     // A trailing slash is the same selection as the tidy URL, not "topic ''".

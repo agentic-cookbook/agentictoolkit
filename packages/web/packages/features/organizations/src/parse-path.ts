@@ -38,11 +38,11 @@ export interface OrganizationsPathSelection {
    * Everything BELOW the topic, handed over whole rather than parsed into a single leaf id.
    *
    * This is the one place this grammar differs from Ecosystems' and Teams', and it is deliberate:
-   * three of the four org topics own a URL tail deeper than one segment. Teams re-parses its tail
-   * with `parseTeamsPath` (it is a whole nested feature, with its own grammar); Settings takes a
-   * `path` array; Configuration addresses `<row>/<entity>`, so a sign-in app deep-links two levels
-   * down. A single `activeLeafId` would have made this grammar the ceiling on every topic's, and
-   * each new depth a change HERE — which is exactly the coupling `basePath` exists to avoid.
+   * an org topic may own a URL tail deeper than one segment. Teams re-parses its tail with
+   * `parseTeamsPath` (it is a whole nested feature, with its own four-segment grammar); Settings
+   * takes a `path` array. A single `activeLeafId` would have made this grammar the ceiling on
+   * every topic's, and each new depth a change HERE — which is exactly the coupling `basePath`
+   * exists to avoid.
    *
    * Always an array, never undefined: a topic reading `topicPath[0]` should not also have to ask
    * whether there is a path at all.
@@ -61,7 +61,7 @@ export interface OrganizationsPathSelection {
  * Empty segments are dropped so a trailing or doubled slash lands on the same selection as the
  * tidy URL — the same reading `parseNotebookPath` and `parseIntegrationsPath` give them. It
  * matters more here than there: a leading empty segment would shift the ORG slug into the topic
- * position, so `//acme/members` would parse as the org named "" with topic "acme".
+ * position, so `//acme/teams` would parse as the org named "" with topic "acme".
  */
 export function parseOrganizationsPath(path?: string[]): OrganizationsPathSelection {
   const [first, second, ...rest] = (path ?? []).filter(Boolean);

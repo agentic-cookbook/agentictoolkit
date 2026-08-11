@@ -1,13 +1,17 @@
-// @agentic-toolkit/ecosystem-config — the panes behind an ecosystem's CONFIGURATION group.
+// @agentic-toolkit/ecosystem-config — the panes that configure an ECOSYSTEM.
 //
 // The package is named for the ECOSYSTEM, not for any one owner: the hub mounts these panes for a
 // product's ecosystem and for a workspace's default ecosystem, and the organizations site mounts
 // them for an org's. Naming it after any of those three would have made the other two look like
 // exceptions.
 //
-// `ConfigurationGroup` is the whole group behind one gate; the individual panes are exported too,
-// because the hub arranges these rows on its own rail rather than through the group pane.
-export { ConfigurationGroup, CONFIGURATION_DESCRIPTION } from "./ConfigurationGroup";
+// Every export below is one pane. There is no grouping component: the hub, the products feature
+// and the organizations feature each arrange the rows they want on their own rail, so a
+// `ConfigurationGroup` here would be a fourth arrangement with no host.
+//
+// A host holding a WORKSPACE rather than an ecosystem id wraps its pane in `EcosystemConfigGate`,
+// which resolves the workspace's default ecosystem and explains itself when it can't.
+export { EcosystemConfigGate } from "./EcosystemConfigGate";
 
 export { AuthPane } from "./AuthPane";
 export { BillingPane } from "./BillingPane";
