@@ -2,6 +2,8 @@
 
 import {
   Fragment,
+  useCallback,
+  useEffect,
   useId,
   useRef,
   useState,
@@ -115,6 +117,11 @@ const PREVIEW_CLAMP: Record<number, string> = {
 export const FULL_RAIL = 240
 export const COLLAPSED_RAIL = 48
 
+// How long a pointer (or the keyboard focus) must rest on a row before it counts as intent.
+// Short enough to be invisible ahead of a click, long enough that sweeping down a list warms
+// nothing — a per-row fire would cost MORE requests than the caching saves.
+const PREFETCH_DWELL_MS = 100
+
 function TopicList({
   items,
   selectedId,
@@ -128,6 +135,7 @@ function TopicList({
   selectionStyle = "bar",
   rowDisclosure = false,
   hoverBar = true,
+  onPrefetch,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -159,6 +167,10 @@ function TopicList({
    *  to hint at what a tap pushes in. Hidden on a `disabled` row (it isn't going anywhere) and in the
    *  icon-only layouts (no room, and the covered/minimized styles already show that via layering). */
   rowDisclosure?: boolean
+  /** Warm this row before it is clicked. Called with the row's id once the pointer or the
+   *  keyboard focus has rested on it for {@link PREFETCH_DWELL_MS}. Fire-and-forget: the row
+   *  never waits on it and never shows anything for it. Omit for no prefetching at all. */
+  onPrefetch?: (id: string) => void
 }) {
   // Icon-only layouts share the no-label row: `collapsed` CENTRES the icon (minimized icon strip);
   // `covered` keeps it LEFT-aligned so the icon stays inside the peek.
@@ -169,6 +181,27 @@ function TopicList({
   // AlertModal so the prompt matches every other destructive confirm on the platform.
   const [pendingDelete, setPendingDelete] = useState<TopicDetailItem | null>(null)
   const [deleting, setDeleting] = useState(false)
+  // ONE timer for the whole list: intent moves from row to row, and a per-row timer would let a
+  // sweep leave several armed at once.
+  const dwellRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const disarmPrefetch = useCallback(() => {
+    if (dwellRef.current) {
+      clearTimeout(dwellRef.current)
+      dwellRef.current = null
+    }
+  }, [])
+  const armPrefetch = useCallback(
+    (id: string) => {
+      if (!onPrefetch) return
+      if (dwellRef.current) clearTimeout(dwellRef.current)
+      dwellRef.current = setTimeout(() => {
+        dwellRef.current = null
+        onPrefetch(id)
+      }, PREFETCH_DWELL_MS)
+    },
+    [onPrefetch],
+  )
+  useEffect(() => disarmPrefetch, [disarmPrefetch])
   // Retain the last target through the dialog's close animation so its title doesn't blank out.
   const lastDeleteRef = useRef<TopicDetailItem | null>(null)
   if (pendingDelete) lastDeleteRef.current = pendingDelete
@@ -221,6 +254,10 @@ function TopicList({
           if (covered && active) return
           onSelect(item.id)
         }}
+        onPointerEnter={onPrefetch ? () => armPrefetch(item.id) : undefined}
+        onPointerLeave={onPrefetch ? disarmPrefetch : undefined}
+        onFocus={onPrefetch ? () => armPrefetch(item.id) : undefined}
+        onBlur={onPrefetch ? disarmPrefetch : undefined}
         aria-current={active ? "true" : undefined}
         // Icon-only rows have no visible text → carry the label as the accessible name, plus the
         // blocked state the amber dot conveys visually (the sr-only span below can't do it here —
@@ -490,6 +527,7 @@ export function TopicRail({
   closeLabel,
   denseBottom = false,
   hoverBar = true,
+  onPrefetch,
 }: {
   items: TopicDetailItem[]
   selectedId: string | null
@@ -575,6 +613,10 @@ export function TopicRail({
   /** Whether hovering an unselected row previews the left bar. Default true; the cascade menus pass
    *  false (see TopicList's `hoverBar`). */
   hoverBar?: boolean
+  /** Warm a row before it is clicked — see {@link TopicList}'s `onPrefetch`. Forwarded straight
+   *  through; this component neither calls it nor knows what it warms (data, a route, or both).
+   *  It cannot: warming a ROUTE needs a router, and this package owns no router instance. */
+  onPrefetch?: (id: string) => void
 }) {
   const asideRef = useRef<HTMLElement>(null)
   const listId = useId()
@@ -790,6 +832,7 @@ export function TopicRail({
           selectionStyle={selectionStyle}
           hoverBar={hoverBar}
           rowDisclosure={rowDisclosure}
+          onPrefetch={onPrefetch}
         />
       </div>
       {footer && <div className="shrink-0 border-t border-apt-border p-2">{footer}</div>}

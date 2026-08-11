@@ -116,6 +116,11 @@ export interface TopicLevel {
   /** A read is in flight for this level — its rows, or the item selected in it. Draws a spinner
    *  immediately before the level's title, without moving it. */
   busy?: boolean
+  /** Warm a row before it is clicked. Called with the row's id once the pointer or keyboard focus
+   *  has rested on it briefly. The level decides WHAT to warm — the item's data
+   *  (`useResourceItemPrefetch`), the route it leads to (`router.prefetch`), or both;
+   *  `TopicDetailItem.leadsTo` already says which kind of row it is. Fire-and-forget. */
+  onPrefetch?: (id: string) => void
   /** Create affordance: when set, a right-justified `+` in this level's list header fires it
    *  (replaces the old leading "New…" rail row). */
   onNew?: () => void
@@ -1472,6 +1477,7 @@ function MinimizedStack({
             <TopicRail
               title={level.title}
               busy={level.busy}
+              onPrefetch={level.onPrefetch}
               isRoot={i === 0}
               // Selection is shown by the dash (root) + the connector overlay, matching the covered
               // stack — not the gold bar (which standalone TopicDetail keeps).
@@ -1973,6 +1979,7 @@ function CoveredStack({
             <TopicRail
               title={level.title}
               busy={level.busy}
+              onPrefetch={level.onPrefetch}
               // Rows are ALWAYS full (never an icon strip): the wrapper's clip makes the peek, and the
               // hover wipe reveals the labels — so there is no covered↔full content swap to jar the wipe.
               covered={false}
@@ -2226,6 +2233,7 @@ function NarrowStack({
           <TopicRail
             title={level.title}
             busy={level.busy}
+            onPrefetch={level.onPrefetch}
             isRoot={i === 0}
             // The pane IS the screen here, so the rail must FILL it. Left to itself the rail sizes to
             // its rows — right in the wide stack, where each list is a stretched grid cell, but in a

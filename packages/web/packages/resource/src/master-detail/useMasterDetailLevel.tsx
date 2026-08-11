@@ -35,6 +35,7 @@ export function useMasterDetailLevel<TItem, TInput>({
   leaf,
   emptyLabel,
   busy,
+  onPrefetch,
   onNew,
   itemNoun,
   overviewHelp,
@@ -62,6 +63,9 @@ export function useMasterDetailLevel<TItem, TInput>({
   /** A read is in flight for this list — pass the list hook's `isFetching`. Draws a spinner
    *  before the title without moving it. Omit and the header is exactly as it was. */
   busy?: boolean;
+  /** Warm a row before it is clicked — pass `useResourceItemPrefetch`'s function, a
+   *  `router.prefetch` call, or both. Omit for no prefetching. */
+  onPrefetch?: (id: string) => void;
   /** Override the header "+" action — e.g. open a "New …" POPUP instead of the default inline
    *  create (`form.actions.onCreate`). When set, the `+` never tints gold (there is no in-pane
    *  create-in-progress). Panes that create inline omit it. */
@@ -101,6 +105,7 @@ export function useMasterDetailLevel<TItem, TInput>({
     onClear: () => (leaf ? leaf.onSelect(null) : form.actions.onCancel()),
     emptyLabel: emptyLabel ?? (items === null ? "Loading…" : "Nothing here yet."),
     busy,
+    onPrefetch,
     // The New affordance is a right-justified `+`. Default: inline create (gold while creating). An
     // `onNew` override opens a popup instead — there is no in-pane create, so it never tints gold.
     onNew: onNew ?? form.actions.onCreate,
