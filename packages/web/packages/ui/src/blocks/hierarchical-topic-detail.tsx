@@ -30,6 +30,7 @@ import { useExitGate, type PaneExitGuard } from "../hooks/useExitGate"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
 import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
+import { deepestSelectedLevel } from "./stack-frontier"
 
 /** A leaf editor's unsaved-work guard. The package consults `isDirty()` before any select that
  *  clears or replaces the open detail (Back / breadcrumb-up / re-click / shallower select / a
@@ -544,7 +545,7 @@ export function HierarchicalTopicDetail({
   const rendered = levels.slice(0, frontier + 1)
   // The deepest SELECTED level (whose detail is showing): the frontier if every level is selected,
   // else one above it; -1 when nothing is selected. Back clears exactly this level.
-  const deepestSelected = firstUnselected === -1 ? frontier : frontier - 1
+  const deepestSelected = deepestSelectedLevel(levels)
 
   // The unsaved-work gate: every action that would clear a level (Back, re-click-deselect,
   // breadcrumb up-nav, selecting a shallower row) runs through here. The policy lives in the

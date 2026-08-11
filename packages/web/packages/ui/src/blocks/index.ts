@@ -25,6 +25,7 @@ export {
   type PaneExitGuard,
   type TopicSelectOptions,
 } from "./hierarchical-topic-detail"
+export { deepestSelectedLevel } from "./stack-frontier"
 // Hierarchical Menu Details View — the cascading (vertical nested-menu) experiment, isolated as its
 // own component so HTDV stays at its pre-experiment shape. Shares HTDV's TopicLevel/PaneExitGuard.
 export { HierarchicalMenuDetail } from "./hierarchical-menu-detail"
