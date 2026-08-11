@@ -23,7 +23,12 @@ import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
 import { InfoPanel } from "@agentic-toolkit/ui/blocks/info-panel";
 import { StatCard } from "@agentic-toolkit/ui/blocks/stat-card";
 import { StatList, StatListRow } from "@agentic-toolkit/ui/blocks/stat-list";
-import { isConflict, useResourceList } from "@agentic-toolkit/data";
+import {
+  isConflict,
+  useResourceItemQuery,
+  useResourceItemWriter,
+  useResourceList,
+} from "@agentic-toolkit/data";
 import {
   projectsApi,
   projectWorkItemsApi,
@@ -261,8 +266,23 @@ export function ProjectOverviewPane({
   // The host-injected per-record affordance (the hub's api-explorer button); null on
   // a standalone feature site → the trailing slot renders nothing.
   const renderRecordAffordance = useRecordAffordance();
-  const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
+
+  // THE project record, on ONE cache entry shared with the board and the triage queue — the two
+  // other panes that read it for the same board's vocabulary and scales. Opening Settings after
+  // the board costs no read at all: the record paints from the cache and the re-read settles
+  // behind that paint.
+  //
+  // `useResourceItemQuery` (the bare query) rather than `useResourceItem`: the missing-item alert
+  // it composes needs a read that can SAY the item is gone, and `projectsApi.get` returns null for
+  // a 404 and for a 500 alike. Backing the user out of a board over a transient failure is worse
+  // than the "Project not found." this has always shown, so the record keeps that empty state and
+  // does not arm the alert. Narrowing the api's null-for-missing contract is not this change.
+  const {
+    item: project,
+    isSettled,
+    reload: reloadProject,
+  } = useResourceItemQuery<Project | null>("project:projects", projectId, projectsApi.get);
+  const writeProject = useResourceItemWriter<Project | null>("project:projects");
 
   // Editable settings draft (populated from the loaded project; re-synced when the
   // project changes — on load and after a successful save adopts the returned row).
@@ -415,25 +435,35 @@ export function ProjectOverviewPane({
     setProgramId(p.programId ?? NO_PROGRAM);
   }, []);
 
-  // Load the project. ResourceExplorer keys the topic pane by the project id, so a
-  // project switch remounts this with fresh state (loading starts true) — no reset
-  // dance needed; an `alive` flag just drops a response that resolves after unmount.
-  useEffect(() => {
-    let alive = true;
-    void projectsApi.get(projectId).then((p) => {
-      if (!alive) return;
-      setProject(p);
-      if (p) seedDraft(p);
-      setLoading(false);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [projectId, seedDraft]);
+  // Seed the draft from the record ONCE per project — on the FIRST answer, whether that answer
+  // came from the cache or the wire. Not on every change of the record: the read now settles a
+  // second time behind the paint, and a health report re-reads it too, so re-seeding on identity
+  // would wipe whatever someone had typed into the settings form seconds earlier. A save adopts
+  // its own returned row explicitly (see `save`), which is the other half of the same rule.
+  //
+  // Seeded DURING RENDER, not in an effect: a render holding the record beside an unseeded draft
+  // is a render in which every field reads as changed, and an effect would let that paint. A set
+  // during a component's own render re-renders it before anything is committed, so that state
+  // never reaches the screen.
+  //
+  // The render it replaces still RUNS to completion, though — React re-invokes the component after
+  // this one returns, it does not abandon it mid-body — which is why `seeded` gates the diff below
+  // rather than the render-phase set being the whole fix.
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  const seeded = project !== null && seededFor === projectId;
+  if (project && seededFor !== projectId) {
+    setSeededFor(projectId);
+    seedDraft(project);
+  }
 
   // Only PATCH the fields that actually changed (project routes patch, not put).
+  //
+  // Empty until the draft has been SEEDED from this record, not merely until the record exists.
+  // The two are one render apart (see above), and diffing a blank draft against a real record
+  // says every field changed: the form would report itself dirty and run its validators — which
+  // reject the empty string — over a state nobody typed.
   const patch = useMemo(() => {
-    if (!project) return {};
+    if (!project || !seeded) return {};
     const next: {
       name?: string;
       description?: string;
@@ -492,6 +522,7 @@ export function ProjectOverviewPane({
     return next;
   }, [
     project,
+    seeded,
     name,
     description,
     status,
@@ -560,10 +591,12 @@ export function ProjectOverviewPane({
     setSaveError(null);
     try {
       const updated = await projectsApi.update(projectId, patch);
-      if (mounted.current) {
-        setProject(updated);
-        seedDraft(updated);
-      }
+      // The server's OWN answer, straight into the shared entry — no re-read to arrive back at
+      // bytes already in hand, and a rename is on the board's and the queue's vocabulary before
+      // either is opened again. Written whether or not this pane is still mounted: the bytes are
+      // true either way, and it is only the DRAFT below that must not be touched after unmount.
+      writeProject(projectId, updated);
+      if (mounted.current) seedDraft(updated);
     } catch (e) {
       if (mounted.current) {
         setSaveError(
@@ -651,10 +684,15 @@ export function ProjectOverviewPane({
         })}
       />
       <section className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
-        {loading ? (
-          <p className="text-sm text-apt-text-muted">Loading…</p>
-        ) : !project ? (
-          <EmptyState title="Project not found." />
+        {/* Not-found is a SETTLED answer of nothing. Before the read settles there is either a
+            cached record to paint or nothing yet, and "Project not found." about a project whose
+            read is still in flight is a lie the cache made easy to tell. */}
+        {!project ? (
+          isSettled ? (
+            <EmptyState title="Project not found." />
+          ) : (
+            <p className="text-sm text-apt-text-muted">Loading…</p>
+          )
         ) : (
           <>
             {/* ── What this project is ─────────────────────────────────── */}
@@ -795,11 +833,11 @@ export function ProjectOverviewPane({
                 projectId={projectId}
                 participants={participants ?? []}
                 onChanged={() => {
-                  void projectsApi.get(projectId).then((p) => {
-                    // Only the row, never the draft: re-seeding here would throw away whatever
-                    // someone had typed into the settings form while reporting a status.
-                    if (p && mounted.current) setProject(p);
-                  });
+                  // Only the row, never the draft: the seed above fires once per project, so this
+                  // re-read moves the header badge without throwing away whatever someone had
+                  // typed into the settings form while reporting a status. Swallowed — a failed
+                  // re-read must not be reported as a failed check-in, which succeeded.
+                  void reloadProject().catch(() => {});
                 }}
               />
             </InfoPanel>

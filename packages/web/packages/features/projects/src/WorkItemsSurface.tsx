@@ -39,7 +39,7 @@ import {
   type ProjectParticipant,
   type Template,
 } from "@agentic-toolkit/data/projects";
-import { useResourceList } from "@agentic-toolkit/data";
+import { useResourceItemQuery, useResourceList } from "@agentic-toolkit/data";
 import { FeatureTitle, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 import { WorkItemEditor } from "./WorkItemEditor";
 import { NewWorkItemDialog } from "./NewWorkItemDialog";
@@ -260,23 +260,19 @@ export function WorkItemsSurface({
   // The project's OWN settings — what an estimate's digits mean here, whether this board ranks at
   // all, and what it calls its items. Read from the record rather than passed in by the host,
   // because both hosts would otherwise have to carry them and the one that forgot would silently
-  // render an unestimatable board. It is a single record, so it is the plain get-with-an-alive-flag
-  // the Overview pane uses, not the list cache.
+  // render an unestimatable board. It reads the SAME cache entry the Overview and the triage queue
+  // read — one record, one fetch, whichever of the three is opened first — so a board opened after
+  // Settings has its scales on the first frame instead of after a round trip.
   //
   // Null until the record answers, and the two scales below read their SAFE side out of that: the
   // estimate pickers appear once the board is known to estimate rather than flashing on a board
   // that does not, and ranking — which every board had before it could be turned off — stays
   // visible rather than blinking out and back on the common board that still ranks.
-  const [project, setProject] = useState<Project | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void projectsApi.get(projectId).then((p) => {
-      if (alive && p) setProject(p);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
+  const { item: project } = useResourceItemQuery<Project | null>(
+    "project:projects",
+    projectId,
+    projectsApi.get,
+  );
   const estimateScale: EstimateScale = project?.estimateScale ?? "none";
   const priorityScale: PriorityScale = project?.priorityScale ?? "standard";
   // What this board calls its items. Identity-stable per word pair (see vocabulary.ts), so it is

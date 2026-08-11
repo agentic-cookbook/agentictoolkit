@@ -12,9 +12,10 @@ import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import {
   projectTemplatesApi,
   projectsApi,
+  type Project,
   type Template,
 } from "@agentic-toolkit/data/projects";
-import { useResourceList } from "@agentic-toolkit/data";
+import { useResourceItemPrefetch, useResourceList } from "@agentic-toolkit/data";
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
 import { ProjectsCommandPalette } from "./ProjectsCommandPalette";
@@ -189,6 +190,15 @@ export function ProjectsFeature({
   );
   const { items: projects, reload } = useResourceList(basePath, loadProjects);
 
+  // Warm the RECORD as the pointer rests on a project row, onto the same entry the Overview, the
+  // board and the triage queue read. The explorer already warms the route; without this the click
+  // still waits on a round trip for the pane inside that route, so warming one half only makes the
+  // click as fast as its slower half.
+  const prefetchProject = useResourceItemPrefetch<Project | null>(
+    "project:projects",
+    projectsApi.get,
+  );
+
   // The open board is LIVE: someone else's edit — a teammate, an agent through the MCP tools, the
   // due-date sweep — repaints the panes without a reload. Mounted once here, at the feature root,
   // because the connection is the BOARD's and not any pane's: eight panes on one board share one
@@ -258,6 +268,7 @@ export function ProjectsFeature({
         basePath={basePath}
         items={projects}
         reload={reload}
+        prefetchItem={prefetchProject}
         getId={(p) => p.id}
         getLabel={(p) => p.name}
         nameSuffix="Project"

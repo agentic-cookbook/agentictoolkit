@@ -9,7 +9,7 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { useResourceList } from "@agentic-toolkit/data";
+import { useResourceItemQuery, useResourceList } from "@agentic-toolkit/data";
 import {
   projectIterationsApi,
   projectMilestonesApi,
@@ -335,16 +335,15 @@ export function TriagePane({
   // `none` so the estimate picker appears when the board is KNOWN to estimate rather than flashing
   // on one that does not, and the default noun because the rail is titled before the read lands
   // and a title that changes under the reader is worse than one that was never renamed.
-  const [project, setProject] = useState<Project | null>(null);
-  useEffect(() => {
-    let alive = true;
-    void projectsApi.get(projectId).then((p) => {
-      if (alive) setProject(p);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
+  //
+  // Read from the SAME cache entry the Overview and the board read, so the queue's vocabulary is
+  // right on the first frame whenever either has been open — and a rename saved in Settings is
+  // already in this entry before the queue is opened, because that save writes its answer here.
+  const { item: project } = useResourceItemQuery<Project | null>(
+    "project:projects",
+    projectId,
+    projectsApi.get,
+  );
   const estimateScale: EstimateScale = project?.estimateScale ?? "none";
   const words = itemWordsOf(project);
 

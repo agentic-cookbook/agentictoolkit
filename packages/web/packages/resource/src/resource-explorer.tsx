@@ -99,6 +99,7 @@ export function ResourceExplorer<T>({
   newLabel,
   renderDialog,
   reload,
+  prefetchItem,
 }: {
   all?: boolean;
   /** Promote the TOPICS to the first (and only) rail: no resource list, no "All" landing. The
@@ -143,6 +144,16 @@ export function ResourceExplorer<T>({
    *  the fallback below would land the user on the "All" landing — the resource they just created
    *  would look like it had vanished. */
   reload?: () => Promise<void>;
+  /** Warm the ROW'S OWN RECORD as the pointer rests on it, beside the route this already warms.
+   *  The two halves of one click: the route prefetch fetches the segment, and this fetches what
+   *  the pane inside it will read. Only the host knows which read that is — the explorer sees a
+   *  list of `T` and never touches an item endpoint — so it hands one in, typically
+   *  `useResourceItemPrefetch`'s function. Omit it and the route alone is warmed, which is right
+   *  for an entity whose pane reads nothing per item.
+   *
+   *  Write-only, like the route half: it must return nothing and never throw, or resting on a
+   *  row becomes a user-visible event. */
+  prefetchItem?: (id: string) => void;
 }): ReactElement {
   const router = useRouter();
   // Every SELECT in this explorer routes through here, so `{ replace: true }` — which the stack
@@ -243,8 +254,13 @@ export function ResourceExplorer<T>({
     // No default topic appended — selecting an entity shows its topics list with nothing focused.
     onSelect: (id, opts) => select(`${basePath}/${id}`, opts),
     // The exact href `onSelect` would push — the two must never drift, which is why both build it
-    // from the same pieces on adjacent lines.
-    onPrefetch: (id) => prefetch(`${basePath}/${id}`),
+    // from the same pieces on adjacent lines. The host's record warm rides along: the route and
+    // the record are the two halves of the same click, and warming one without the other leaves
+    // the click as slow as its slower half.
+    onPrefetch: (id) => {
+      prefetch(`${basePath}/${id}`);
+      prefetchItem?.(id);
+    },
     onClear: () => router.push(basePath, { scroll: false }),
     emptyLabel: landing?.emptyLabel ?? "",
     // "New …" is a right-justified `+` in the resource list header — absent entirely
