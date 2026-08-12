@@ -98,8 +98,17 @@ export type PrivacyLevel = "only-me" | "hub" | "public";
 
 // ── Metered usage ─────────────────────────────────────────────────────────────────────────
 
-/** Which counter a usage row came from. */
-export type UsageScope = "user" | "persona" | "token" | "visitor" | "ecosystem" | "visitor_global";
+/** Which counter a usage row came from. Mirrors the backend's `UsageScope`; `application` is the
+ *  key an APPLICATION token meters under (no page enumerates those rows yet, so a client will not
+ *  see one today — but the union is the vocabulary, not the currently-reachable subset). */
+export type UsageScope =
+  | "user"
+  | "persona"
+  | "token"
+  | "application"
+  | "visitor"
+  | "ecosystem"
+  | "visitor_global";
 
 /** Why a row is on the page. */
 export type UsageRowKind = "self" | "member" | "token" | "persona" | "ecosystem";
