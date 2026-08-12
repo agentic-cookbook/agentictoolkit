@@ -99,8 +99,7 @@ export type PrivacyLevel = "only-me" | "hub" | "public";
 // ── Metered usage ─────────────────────────────────────────────────────────────────────────
 
 /** Which counter a usage row came from. Mirrors the backend's `UsageScope`; `application` is the
- *  key an APPLICATION token meters under (no page enumerates those rows yet, so a client will not
- *  see one today — but the union is the vocabulary, not the currently-reachable subset). */
+ *  key an APPLICATION token meters under, returned to platform admins beside the ecosystem row. */
 export type UsageScope =
   | "user"
   | "persona"
@@ -110,8 +109,15 @@ export type UsageScope =
   | "ecosystem"
   | "visitor_global";
 
-/** Why a row is on the page. */
-export type UsageRowKind = "self" | "member" | "token" | "persona" | "ecosystem";
+/** Why a row is on the page. `application` rows are platform-admin-only: an application belongs to
+ *  its ecosystem and to no workspace, so no personal or workspace view can derive one. */
+export type UsageRowKind =
+  | "self"
+  | "member"
+  | "token"
+  | "persona"
+  | "application"
+  | "ecosystem";
 
 /**
  * The caps governing a key, with `enforced` already ANDed against the global kill switch.

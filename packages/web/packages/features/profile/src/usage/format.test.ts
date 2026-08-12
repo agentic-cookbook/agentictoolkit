@@ -136,6 +136,33 @@ describe("groupUsage", () => {
     expect(view.ecosystem?.principalId).toBe("eco");
   });
 
+  // An application row is an acting key that overlaps nothing, so the reason it stays out of the
+  // total is not double-counting: the API returns it to platform admins only, covering the whole
+  // ecosystem, and a workspace total that absorbed it would report other tenants' traffic as this
+  // workspace's. It must still REACH a section — a kind matching no filter is dropped silently,
+  // which is exactly how these rows stayed invisible.
+  it("gives applications their own section and keeps them out of the total", () => {
+    const app = row({
+      kind: "application",
+      scope: "application",
+      principalId: "app1",
+      label: "Billing sync",
+      requests: 500,
+      bytes: 4_000,
+      tokens: 60,
+      costMicros: 11,
+    });
+    const view = groupUsage([...rows, app]);
+    expect(view.sections.map((s) => s.id)).toEqual([
+      "people",
+      "tokens",
+      "personas",
+      "applications",
+    ]);
+    expect(view.sections.find((s) => s.id === "applications")?.rows).toEqual([app]);
+    expect(view.totals).toEqual({ requests: 20, bytes: 900, tokens: 130, costMicros: 7 });
+  });
+
   it("names the section 'You' for a lone self row and 'People' for a roster", () => {
     expect(groupUsage([rows[0]!]).sections[0]?.title).toBe("You");
     expect(groupUsage([rows[0]!, rows[1]!]).sections[0]?.title).toBe("People");

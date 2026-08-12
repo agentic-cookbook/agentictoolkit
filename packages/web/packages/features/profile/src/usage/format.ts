@@ -141,11 +141,22 @@ const ZERO: UsageTotals = { requests: 0, bytes: 0, tokens: 0, costMicros: 0 };
  * of every chat turn run on that persona — including turns already counted under the person
  * who ran them. Personas are therefore their own section and stay out of the total, and the
  * ecosystem row (a different axis entirely — the tenant realm's bill) is pulled out too.
+ *
+ * APPLICATION rows are an acting key like the others and overlap nothing, but they are still
+ * excluded from the total for a different reason: the backend returns them to PLATFORM ADMINS
+ * only, alongside the ecosystem row, because an application is owned by the ecosystem and by no
+ * workspace. Folding realm-wide traffic into what reads as a personal or workspace total would
+ * make the same category error the ecosystem row is pulled out to avoid.
+ *
+ * Every kind therefore lands in a section or the `ecosystem` slot. A kind that matched neither
+ * would be dropped without a trace — which is how application rows stayed invisible before this
+ * section existed, even once the API returned them.
  */
 export function groupUsage(rows: UsageRow[]): UsageView {
   const people = rows.filter((r) => r.kind === "self" || r.kind === "member");
   const tokens = rows.filter((r) => r.kind === "token");
   const personas = rows.filter((r) => r.kind === "persona");
+  const applications = rows.filter((r) => r.kind === "application");
   const ecosystem = rows.find((r) => r.kind === "ecosystem");
 
   const totals = [...people, ...tokens].reduce<UsageTotals>(
@@ -180,6 +191,14 @@ export function groupUsage(rows: UsageRow[]): UsageView {
       title: "Personas",
       description: "Counted separately: a persona also collects the turns other people ran on it, so these overlap the rows above and are not part of the total.",
       rows: personas,
+    });
+  }
+  if (applications.length > 0) {
+    sections.push({
+      id: "applications",
+      title: "Applications",
+      description: "Traffic made with an application's own token, across the whole ecosystem. Not part of the total above, which covers this workspace only.",
+      rows: applications,
     });
   }
 

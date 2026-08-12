@@ -62445,9 +62445,9 @@ export interface components {
         };
         UsageSummaryRow: {
             /** @enum {string} */
-            kind: "self" | "member" | "token" | "persona" | "ecosystem";
+            kind: "self" | "member" | "token" | "persona" | "application" | "ecosystem";
             /** @enum {string} */
-            scope: "user" | "persona" | "token" | "visitor" | "ecosystem" | "visitor_global";
+            scope: "user" | "persona" | "token" | "application" | "visitor" | "ecosystem" | "visitor_global";
             principalId: string;
             /** @description Display name (user, token or persona name) */
             label: string;
