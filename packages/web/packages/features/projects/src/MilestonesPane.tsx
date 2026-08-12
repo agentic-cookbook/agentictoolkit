@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { Flag } from "lucide-react";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Progress } from "@agentic-toolkit/ui/components/progress";
 import { useResourceList } from "@agentic-toolkit/data";
@@ -79,12 +80,17 @@ import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";
 function MilestoneCards({
   milestone,
   items,
+  itemsError,
   statuses,
   words,
 }: {
   milestone: Milestone;
   /** the project's cards, already loaded by the shared list cache. */
   items: WorkItem[] | null;
+  /** why there are no cards to show, when the shared read FAILED. Null is not enough on its own:
+   *  a failed read leaves `items` null forever, and "Loading…" would then be a spinner that never
+   *  resolves. */
+  itemsError: string | null;
   statuses: ProjectStatus[];
   /** what this board calls those cards. */
   words: ItemWords;
@@ -108,7 +114,7 @@ function MilestoneCards({
         )
       }
     >
-      {items === null ? (
+      {items === null && itemsError === null ? (
         <p className="text-sm text-apt-text-muted">Loading…</p>
       ) : (
         <div className="flex flex-col gap-3">
@@ -137,7 +143,12 @@ function MilestoneCards({
               aria-label={`${pct}% of the ${words.many} counting toward ${milestone.name} are done`}
             />
           </div>
-          {cards.length === 0 ? (
+          {itemsError !== null ? (
+            // The BAR above still stands — it is the server's own tally and did not fail — so this
+            // says only what is actually missing: the rows. Claiming "nothing counts toward this
+            // milestone" here would be a fact the pane does not have.
+            <ErrorText error={itemsError} />
+          ) : cards.length === 0 ? (
             <EmptyState
               title="Nothing counts toward this milestone yet."
               description={`Point work at it from a ${words.one}'s Milestone field.`}
@@ -214,17 +225,23 @@ export function MilestonesPane({
   } = useResourceList<Milestone>(`project:${projectId}:milestones`, load);
 
   // The two lists the detail reads, on the SAME cache keys the Work Items topic uses — so arriving
-  // here from that surface costs nothing, and so does going back. Both fail soft to an empty list:
-  // a plan is still worth editing when the board behind it is briefly unavailable.
+  // here from that surface costs nothing, and so does going back.
+  //
+  // Sharing an entry is also why the CARDS fetcher does not swallow its own failure the way the
+  // statuses one does: a `.catch(() => [])` writes a fabricated SUCCESS into the shared entry, and
+  // the Work Items surface — whose whole subject is those cards — would then read "this board is
+  // empty" with no error to show, and go on reading it for the five minutes the entry stays fresh.
+  // The failure is kept, and each reader decides what to do with it; this pane's is `itemsError`
+  // below. Statuses stay soft because every reader of that key treats them as decoration.
   const loadItems = useCallback(
-    () => projectWorkItemsApi.listForProject(projectId).catch(() => [] as WorkItem[]),
+    () => projectWorkItemsApi.listForProject(projectId),
     [projectId],
   );
   const loadStatuses = useCallback(
     () => projectsApi.statuses.list(projectId).catch(() => [] as ProjectStatus[]),
     [projectId],
   );
-  const { items: workItems } = useResourceList<WorkItem>(
+  const { items: workItems, error: workItemsError } = useResourceList<WorkItem>(
     `project:${projectId}:work-items`,
     loadItems,
   );
@@ -305,6 +322,7 @@ export function MilestonesPane({
                 key={selected.id}
                 milestone={selected}
                 items={workItems}
+                itemsError={workItemsError}
                 statuses={statusRows ?? []}
                 words={words}
               />

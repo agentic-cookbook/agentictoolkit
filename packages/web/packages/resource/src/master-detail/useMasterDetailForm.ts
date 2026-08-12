@@ -201,6 +201,23 @@ export function useMasterDetailForm<TItem, TInput>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [url ? selectedId : null, config.items, creating]);
 
+  // Re-read the list after a write that ALREADY SUCCEEDED, and never let the re-read's failure be
+  // mistaken for the write's. The catch blocks below say "Failed to save." / "Failed to delete." —
+  // both are false when the server has the row and only the follow-up GET fell over, and the lie
+  // is expensive: the user is told their edit was lost and does it again. The list's own failure
+  // still reaches the screen, through whatever `error` the caller's list hook renders.
+  //
+  // It lives here rather than in each pane's `refresh` because the mistake is made HERE: a pane
+  // that hands us its list hook's `reload` — the obvious thing to hand us — has written no policy
+  // at all, and most of them do exactly that.
+  async function refreshAfterWrite(): Promise<void> {
+    try {
+      await config.refresh();
+    } catch {
+      // Deliberately silent: see above.
+    }
+  }
+
   // Returns true on a successful persist (so the exit guard may proceed), false if validation
   // failed or the request threw (the editor stays open with its error shown).
   async function save(): Promise<boolean> {
@@ -223,14 +240,14 @@ export function useMasterDetailForm<TItem, TInput>(
       const createFn = config.create;
       if (creating && createFn) {
         const created = await createFn(input);
-        await config.refresh();
+        await refreshAfterWrite();
         setCreating(false);
         loadedIdRef.current = config.getId(created);
         setSelection(config.getId(created));
         setDraft(config.toInput(created));
       } else if (selected) {
         const updated = await config.update(config.getId(selected), input);
-        await config.refresh();
+        await refreshAfterWrite();
         // An update can change the id (e.g. an editable rdid that IS the id):
         // re-point the selection at the new id so `selected` still resolves against
         // the refreshed list — otherwise the form blanks to its empty state until a
@@ -273,7 +290,7 @@ export function useMasterDetailForm<TItem, TInput>(
       loadedIdRef.current = null;
       setSelection(null);
       setDraft(null);
-      await config.refresh();
+      await refreshAfterWrite();
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "master-detail-form", step: "delete" });
       setError(err instanceof Error ? err.message : "Failed to delete.");

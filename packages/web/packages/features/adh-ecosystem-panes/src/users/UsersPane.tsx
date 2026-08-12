@@ -101,7 +101,14 @@ export function UsersPane({
     itemIcon: <Users size={16} aria-hidden />,
     newLabel: "New user",
     leaf,
-    emptyLabel: users === null ? "Loading…" : "No users yet.",
+    // A failed read leaves `users` null forever, so "Loading…" alone would be a spinner that never
+    // resolves in the rail while the error sits in the pane body. Same three-way as the sibling
+    // Applications pane.
+    emptyLabel: loadError
+      ? "Couldn't load users."
+      : users === null
+        ? "Loading…"
+        : "No users yet.",
     // The spinner before "Users" — the only thing that says a revalidation is running behind rows
     // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
     busy: isFetching,

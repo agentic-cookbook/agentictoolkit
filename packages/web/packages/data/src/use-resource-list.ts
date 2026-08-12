@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useQuery, type QueryKey } from "@tanstack/react-query";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { getToolkitQueryClient } from "./query";
+import { RESOURCE_GC_TIME, getToolkitQueryClient } from "./query";
 import { useTenantId } from "./tenant";
 import { readLastId, clearLastId } from "./ftd-storage";
 
@@ -128,11 +128,10 @@ export function useResourceList<T>(
       // the pane SHOWS; a silent second attempt would double every failing request across every
       // list on the platform and delay the error the user is already waiting to see.
       retry: false,
-      // Outlives `staleTime` on purpose. These rows are what paints INSTANTLY on the next mount
-      // while the re-read settles behind them; dropping them at the five-minute staleness
-      // boundary would trade the whole point of this hook — no blank list on a click — for
-      // nothing, since a stale seed still repaints and still revalidates.
-      gcTime: 30 * 60 * 1000,
+      // Outlives `staleTime` on purpose — see {@link RESOURCE_GC_TIME}, which the client also
+      // pins as the default for every `resource-list` entry so a prefetch or a post-write
+      // `setQueryData` (neither of which passes through this hook) gets the same lifetime.
+      gcTime: RESOURCE_GC_TIME,
     },
     client,
   );

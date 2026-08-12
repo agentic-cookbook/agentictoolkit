@@ -157,19 +157,27 @@ export function ItemAccessPanel({
   // Both workspace-scoped and shared with every item's panel in that workspace: opening Access on a
   // second project reads neither of these again.
   //
-  // Both fetchers SWALLOW and answer empty, which is the behaviour the hand-rolled loaders had and
-  // is deliberate: neither list is a gate. A role select falls back to the raw role name, and an
-  // empty directory only means the picker has no one to offer — the M-gated assignment list above
-  // is the real gate. Swallowing inside the fetcher (rather than ignoring the hook's `error`) also
-  // keeps a non-fatal miss out of the platform's auth telemetry.
-  const loadRoles = useCallback(
-    () => accessApi.listRoles(workspaceSlug).catch(() => [] as AccessRoleRow[]),
-    [workspaceSlug],
-  );
+  // Neither list is a gate — a role select falls back to the raw role name, and an empty directory
+  // only means the picker has no one to offer (the M-gated assignment list above is the real gate)
+  // — and neither failure belongs in the platform's auth telemetry. So both stay quiet. HOW they
+  // stay quiet differs, and the difference is the cache key.
+  //
+  // The roles key is SHARED with `TeamPermissionsPane`, which shows its read failures. A fetcher
+  // that answers `[]` on a rejection writes a fabricated SUCCESS into that shared entry, so the
+  // other pane reads "this workspace has no roles" — no error, nothing to retry — and, with the
+  // client's 5-minute staleness, keeps reading it for five minutes across every remount. Let the
+  // read fail and silence it at the OBSERVER instead: `reportErrors: false` keeps it out of the
+  // telemetry, `roles` stays null, and the selects below are already written to disable on null.
+  const loadRoles = useCallback(() => accessApi.listRoles(workspaceSlug), [workspaceSlug]);
   const { items: roles } = useResourceList<AccessRoleRow>(
     `workspace:${workspaceSlug}:access-roles`,
     loadRoles,
+    { reportErrors: false },
   );
+
+  // The subjects key is this panel's alone, so swallowing inside the fetcher costs nobody else a
+  // distinction, and answering `[]` is what the hand-rolled loader did: an unreadable directory
+  // and an empty one offer the picker the same nothing.
 
   const loadSubjects = useCallback(
     () => subjectsDirectory(workspaceSlug).catch(() => [] as AccessSubject[]),

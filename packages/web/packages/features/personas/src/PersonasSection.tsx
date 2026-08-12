@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { readTokenSubject } from "@agentic-toolkit/data";
+import { readTokenSubject, revalidateResources } from "@agentic-toolkit/data";
 import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
@@ -15,9 +15,10 @@ import { slugify } from "@agentic-toolkit/ui/lib/slug";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { StackLevels, useRailHost, CreateResourceDialog } from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { api, type Persona, type UserService } from "@agentic-toolkit/data/personas";
+import { api, type Persona } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
 import { PersonasTable } from "./PersonasTable";
+import { PERSONA_SERVICES_CACHE_KEY, useUserServices } from "./useUserServices";
 
 /**
  * The Personas feature: the persona list as a stack LEVEL and the editor as the leaf (the "All
@@ -93,13 +94,14 @@ export function PersonasSection({
     queryKey: ["personas", tenant, workspaceSlug ?? null],
     queryFn: () => api.personas.list({ workspace: workspaceSlug }),
   });
-  const servicesQuery = useQuery({
-    queryKey: ["persona-services", tenant],
-    queryFn: () => api.services.list(),
-  });
-  const services = servicesQuery.data ?? [];
+  // The services ride the SHARED hook, not a second `useQuery` of their own: the Services pane
+  // reads the same list, and two keys for one list meant two requests and two invalidations that
+  // never reached each other — a service created over there stayed missing from this editor's
+  // picker. `useUserServices` reports its own failures, hence no report for them below.
+  const { items: serviceRows, error: servicesError } = useUserServices();
+  const services = serviceRows ?? [];
   // Surface load failures once settled (after retry), matching the old catch-and-report.
-  const loadError = personasQuery.error ?? servicesQuery.error ?? null;
+  const loadError = personasQuery.error ?? null;
   useEffect(() => {
     if (loadError) reportUnexpectedAuthError(loadError, { feature: "personas", step: "list" });
   }, [loadError]);
@@ -107,7 +109,7 @@ export function PersonasSection({
     ? loadError instanceof Error
       ? loadError.message
       : "Failed to load personas."
-    : null;
+    : servicesError;
   // Creating a persona is a MODAL over the stack, never a blank editor leaf (HTD recipe
   // `must-create-in-modal`): the `+` opens it, and on save the created persona is selected so its
   // full editor (personality, purpose, abilities, …) opens.
@@ -128,9 +130,11 @@ export function PersonasSection({
 
   // After a write: invalidate EVERY personas variant (all workspace scopes — a create/save can
   // affect other workspaces' lists too) plus the services list; active queries refetch immediately.
+  // The services live in the shared resource cache, which is keyed `["resource-list", tenant, key]`
+  // — a bare `invalidateQueries(["persona-services"])` would match nothing there.
   const reload = () => {
     void queryClient.invalidateQueries({ queryKey: ["personas"] });
-    void queryClient.invalidateQueries({ queryKey: ["persona-services"] });
+    revalidateResources((k) => k === PERSONA_SERVICES_CACHE_KEY);
   };
 
   const rows = personasQuery.data ?? [];

@@ -208,10 +208,11 @@ export function ProjectsFeature({
 
   // The workspace's TEMPLATES, for the create dialog's picker — both kinds, under the workspace
   // key the Templates pane and the card-create dialog share, so one read answers all three. The
-  // board ones are selected out at the call site. Fails soft: no templates means no picker, never
-  // no create.
+  // board ones are selected out at the call site. No templates means no picker here, never no
+  // create — but the read does NOT swallow its failure, because the Templates pane owns this entry
+  // and a fabricated empty success would tell it, silently, that the workspace has no templates.
   const loadTemplates = useCallback(
-    () => projectTemplatesApi.list({ workspace: workspaceSlug }).catch(() => [] as Template[]),
+    () => projectTemplatesApi.list({ workspace: workspaceSlug }),
     [workspaceSlug],
   );
   const { items: templateRows } = useResourceList<Template>(

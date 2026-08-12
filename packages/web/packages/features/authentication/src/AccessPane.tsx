@@ -141,8 +141,14 @@ export function AccessPane({
 
   // A create/update/delete re-reads both halves of the join — the groups because they changed,
   // the buckets because a name shown on every row comes from there.
+  //
+  // Swallowing, and it has to: every caller re-reads AFTER its own write succeeded, so a failed
+  // re-read is neither a failed save nor a failed delete, and one of those callers is a fire-and-
+  // forget `void refresh()` in the create dialog below, where a rejection is an unhandled promise
+  // rejection and nothing more. The failure still reaches the screen as `loadError`, which is the
+  // banner the two list hooks above already feed.
   const refresh = useCallback(async () => {
-    await Promise.all([reloadDefs(), reloadGroups()]);
+    await Promise.all([reloadDefs(), reloadGroups()]).catch(() => {});
   }, [reloadDefs, reloadGroups]);
 
   // The host's directories, held in a ref so each FETCHER's identity depends on the ecosystem

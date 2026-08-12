@@ -291,15 +291,15 @@ export function TriagePane({
     [projectId],
   );
   const loadParticipants = useCallback(
-    () => projectsApi.participants.list(projectId).catch(() => [] as ProjectParticipant[]),
+    () => projectsApi.participants.list(projectId),
     [projectId],
   );
   const loadMilestones = useCallback(
-    () => projectMilestonesApi.list(projectId).catch(() => [] as Milestone[]),
+    () => projectMilestonesApi.list(projectId),
     [projectId],
   );
   const loadIterations = useCallback(
-    () => projectIterationsApi.list({ workspace: workspaceSlug }).catch(() => [] as Iteration[]),
+    () => projectIterationsApi.list({ workspace: workspaceSlug }),
     [workspaceSlug],
   );
 

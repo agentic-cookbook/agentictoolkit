@@ -49,10 +49,30 @@ import { type ReactNode } from "react";
 // everything. A module-scope client outlives the remount, which is the entire fix.
 let browserClient: QueryClientType | undefined;
 
+/**
+ * How long a resource list/item survives with no component reading it.
+ *
+ * Deliberately far longer than the 5-minute `staleTime` below: these bytes are what paints
+ * INSTANTLY on the next visit while the re-read settles behind them, so dropping them at the
+ * staleness boundary would trade the whole point of the resource hooks — no blank list on a click —
+ * for nothing, since a stale seed still repaints and still revalidates.
+ */
+export const RESOURCE_GC_TIME = 30 * 60 * 1000;
+
 function makeQueryClient(): QueryClientType {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } },
   });
+  // Pinned on the CLIENT, by key prefix, and not only in the two reading hooks. A cache entry's
+  // gcTime is whatever its most recent observer asked for, and the resource hooks are not the only
+  // things that create these entries: a prefetch (`prefetchQuery`) and a post-write
+  // `setQueryData` both mint one with NO observer at all. Left to the client default those entries
+  // would be collected after five minutes — so a hover-warmed item, or the row a create just
+  // seeded, would be gone by the time the click that it exists for arrives. Defaults keyed on the
+  // shared prefix give every writer of a `resource-*` entry the same lifetime as its readers.
+  client.setQueryDefaults(["resource-list"], { gcTime: RESOURCE_GC_TIME });
+  client.setQueryDefaults(["resource-item"], { gcTime: RESOURCE_GC_TIME });
+  return client;
 }
 
 /**

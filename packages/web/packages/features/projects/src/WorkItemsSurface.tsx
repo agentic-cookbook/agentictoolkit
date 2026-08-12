@@ -182,12 +182,20 @@ export function WorkItemsSurface({
     () => projectsApi.statuses.list(projectId).catch(() => [] as ProjectStatus[]),
     [projectId],
   );
+  // The pickers' option lists — participants, iterations, milestones, templates. Each is
+  // DECORATIVE here and degrades to an empty picker (the `?? []`s below), but none of them
+  // swallows the failure in its FETCHER, because every one of these keys is also the primary list
+  // of another pane: a `.catch(() => [])` writes a fabricated SUCCESS into the shared entry, and
+  // that pane then reads "there is nothing here", shows no error, and goes on reading it for as
+  // long as the entry stays fresh. The failure is kept in the cache; which pane SHOWS it is the
+  // owning pane's business.
   const loadParticipants = useCallback(
-    () => projectsApi.participants.list(projectId).catch(() => [] as ProjectParticipant[]),
+    () => projectsApi.participants.list(projectId),
     [projectId],
   );
-  // The label vocabulary the editor SUGGESTS. Like the pickers above it fails soft to an empty
-  // list: labels are typed as readily as they are browsed, so losing the suggestions costs
+  // The label vocabulary the editor SUGGESTS — the one read here that DOES fail soft in its
+  // fetcher, and can: no other pane reads this key, so an empty answer fabricates nothing for
+  // anyone else. Labels are typed as readily as browsed, so losing the suggestions costs
   // convenience, never the ability to label a card.
   const loadLabels = useCallback(
     () => projectsApi.labels(projectId).catch(() => [] as string[]),
@@ -195,29 +203,27 @@ export function WorkItemsSurface({
   );
   // The WORKSPACE's time-boxes, cached under the workspace rather than the project: the same list
   // answers every board its owner runs, so navigating between two projects in one workspace must
-  // not re-read it. It fails soft like the pickers above — a card can always be saved without
-  // being committed to a cycle.
+  // not re-read it. Degrades to an empty picker here — a card can always be saved without being
+  // committed to a cycle.
   const loadIterations = useCallback(
-    () =>
-      projectIterationsApi
-        .list({ workspace: workspaceSlug })
-        .catch(() => [] as Iteration[]),
+    () => projectIterationsApi.list({ workspace: workspaceSlug }),
     [workspaceSlug],
   );
   // THIS board's plan — under the project, where the iterations are under the workspace, because
   // that is the actual difference between the two: a cycle spans boards, a milestone is one
   // board's own delivery. The SAME cache key the Milestones pane fills, so a milestone renamed
-  // there is what the pickers here offer without a second read. Fails soft for the same reason.
+  // there is what the pickers here offer without a second read. Degrades to an empty picker for the
+  // same reason — and its failure belongs to that pane, which is why it is not swallowed here.
   const loadMilestones = useCallback(
-    () => projectMilestonesApi.list(projectId).catch(() => [] as Milestone[]),
+    () => projectMilestonesApi.list(projectId),
     [projectId],
   );
   // The workspace's TEMPLATES, for the create modal's picker. Both kinds, under the workspace key
   // the Templates pane fills — the dialog selects the card ones out, because one cache key must
   // mean one list: a `kind`-filtered read stored here would silently hide half the pane's rows.
-  // Fails soft like the pickers: no templates simply means no picker, never no create.
+  // No templates simply means no picker here, never no create.
   const loadTemplates = useCallback(
-    () => projectTemplatesApi.list({ workspace: workspaceSlug }).catch(() => [] as Template[]),
+    () => projectTemplatesApi.list({ workspace: workspaceSlug }),
     [workspaceSlug],
   );
   const {

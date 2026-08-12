@@ -3,12 +3,35 @@
 import { useCallback } from "react";
 import { useQuery, type QueryKey, type PlaceholderDataFunction } from "@tanstack/react-query";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { getToolkitQueryClient } from "./query";
+import { RESOURCE_GC_TIME, getToolkitQueryClient } from "./query";
 import { isNotFound } from "./http";
 import { useTenantId } from "./tenant";
 
 function resourceItemKey(cacheKey: string, tenantId: string | null, id: string): QueryKey {
   return ["resource-item", tenantId, cacheKey, id];
+}
+
+/**
+ * Re-read every cached ITEM whose cache key `match` accepts, whatever its id. The mirror of
+ * `revalidateResources` for {@link useResourceItemQuery}, with the same posture: a mounted reader
+ * refetches immediately, an unmounted one is only marked stale, and failures are swallowed because
+ * the caller is a wake signal rather than a transaction.
+ *
+ * It exists for the write that invalidates a read it holds no reference to — the classic being a
+ * DERIVED item whose id does not change when the thing it derives from does (a per-team member
+ * count keyed on the team-ID SET: adding a member changes the count and not the key, so nothing
+ * about the entry looks out of date). Matching on the cache key rather than the id is the point:
+ * the writer knows WHAT it invalidated, not which ids are currently cached.
+ */
+export function revalidateResourceItems(match: (cacheKey: string) => boolean): void {
+  void getToolkitQueryClient()
+    .invalidateQueries({
+      predicate: (query) => {
+        const key = query.queryKey;
+        return key[0] === "resource-item" && typeof key[2] === "string" && match(key[2]);
+      },
+    })
+    .catch(() => {});
 }
 
 // Mirrors react-query's own internal (unexported) `NonFunctionGuard`. Its `placeholderData` option
@@ -101,9 +124,10 @@ export function useResourceItemQuery<T>(
       // NO retry, overriding the client's default of 1: the pane SHOWS this failure, and the
       // 404 path below has to reach the user promptly rather than after a pointless second try.
       retry: false,
-      // Outlives `staleTime`, for the same reason the list's does: these bytes are what paints
-      // instantly on the next visit while the re-read settles behind them.
-      gcTime: 30 * 60 * 1000,
+      // Outlives `staleTime`, for the same reason the list's does — see {@link RESOURCE_GC_TIME},
+      // which the client also pins as the default for every `resource-item` entry so the prefetch
+      // and writer below, which mint entries with no observer, keep them just as long.
+      gcTime: RESOURCE_GC_TIME,
       // `placeholderData`, NEVER `initialData`. A list row is a PARTIAL item; `initialData` would
       // write it into the cache as the server's answer, and every later reader would be served a
       // half item that never refetches. A placeholder paints and is discarded the moment the real

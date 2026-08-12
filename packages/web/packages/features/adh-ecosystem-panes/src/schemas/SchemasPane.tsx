@@ -111,7 +111,14 @@ export function SchemasPane({
     itemIcon: <Table2 size={16} aria-hidden />,
     newLabel: "New bucket",
     leaf,
-    emptyLabel: schemas === null ? "Loading…" : "No buckets yet.",
+    // A failed read leaves `schemas` null forever, so "Loading…" alone would be a spinner that
+    // never resolves in the rail while the error sits in the pane body. Same three-way as the
+    // sibling Applications pane.
+    emptyLabel: loadError
+      ? "Couldn't load buckets."
+      : schemas === null
+        ? "Loading…"
+        : "No buckets yet.",
     // The spinner before "Buckets" — the only thing that says a revalidation is running behind rows
     // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
     busy: isFetching,

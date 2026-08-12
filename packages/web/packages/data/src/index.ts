@@ -57,6 +57,7 @@ export {
   useResourceItemQuery,
   useResourceItemPrefetch,
   useResourceItemWriter,
+  revalidateResourceItems,
   type ResourceItem,
   type ResourceItemQuery,
 } from "./use-resource-item";

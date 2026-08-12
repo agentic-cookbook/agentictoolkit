@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 import { Bot, Trash2, UserRound } from "lucide-react";
 
-import { useResourceList } from "@agentic-toolkit/data";
+import { revalidateResourceItems, useResourceList } from "@agentic-toolkit/data";
 import { teamMembersApi, type TeamMember } from "@agentic-toolkit/data/teams";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api as personaApi, type Persona } from "@agentic-toolkit/data/personas";
@@ -21,6 +21,12 @@ import {
 } from "@agentic-toolkit/resource";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** The cache key of the landing's per-team member-count badges (read by `TeamsFeature`). It is
+ *  named here, next to the writes that make it wrong, because that read is keyed on the TEAM-ID
+ *  SET: adding or removing a member changes the counts and NOT the key, so nothing about the entry
+ *  looks out of date and only an explicit invalidation gets the badge to move. */
+export const TEAM_MEMBER_COUNTS_CACHE_KEY = "team-member-counts";
 
 /** The create modal's draft: add EITHER an existing customer by email OR one of the caller's
  *  personas. The two are mutually exclusive — picking one clears the other — and a picked persona
@@ -90,7 +96,14 @@ export function TeamMembersPane({
   // Swallowing: both callers below re-read AFTER their own write has already succeeded, so a failed
   // re-read must not be reported as a failed add or remove. The failure still reaches the screen —
   // it lands in the hook's `error`, which the banner renders.
-  const refreshMembers = useCallback(() => reloadMembers().catch(() => {}), [reloadMembers]);
+  //
+  // The landing's count badges are a SEPARATE cached read that this pane's writes invalidate but
+  // cannot change the key of (see {@link TEAM_MEMBER_COUNTS_CACHE_KEY}), so they are marked stale
+  // here: the landing refetches them if it is on screen, and re-reads on its next visit if not.
+  const refreshMembers = useCallback(() => {
+    revalidateResourceItems((k) => k === TEAM_MEMBER_COUNTS_CACHE_KEY);
+    return reloadMembers().catch(() => {});
+  }, [reloadMembers]);
 
   const selectedId = leaf?.leafId ?? null;
   const selected = selectedId

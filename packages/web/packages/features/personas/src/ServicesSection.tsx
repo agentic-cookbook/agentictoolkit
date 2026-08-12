@@ -28,6 +28,7 @@ import {
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useResourceList } from "@agentic-toolkit/data";
 import { fmtDate } from "./format";
+import { useUserServices } from "./useUserServices";
 import {
   api,
   type UserService,
@@ -44,10 +45,11 @@ import {
 /** The stand-in while the template catalog is outstanding. Module scope so it keeps one identity. */
 const EMPTY_TEMPLATES: Template[] = [];
 
-/* Both reads below are MODULE-SCOPE functions, which is what `useResourceList` requires of a
+/* The read below is a MODULE-SCOPE function, which is what `useResourceList` requires of a
  * fetcher: a new identity means "the scope changed, read again", so an inline closure would read on
- * every render. Both are caller-scoped — neither closes over anything — so one cache entry serves
- * every mount. */
+ * every render. It is caller-scoped — it closes over nothing — so one cache entry serves every
+ * mount. The services list itself is read through the shared {@link useUserServices}, which is the
+ * one cache both this pane and the persona editor's service picker share. */
 
 /** The service templates. A failure is REPORTED and then answered with an empty catalog: the
  *  picker is an accelerator, and losing it must not stop anyone typing a service in by hand. */
@@ -55,16 +57,6 @@ function loadServiceTemplates(): Promise<Template[]> {
   return api.templates().catch((err) => {
     reportUnexpectedAuthError(err, { feature: "services", step: "templates" });
     return EMPTY_TEMPLATES;
-  });
-}
-
-/** The caller's services. Reported here and RETHROWN, because unlike the catalog above this list
- *  IS the surface — the pane shows the failure. `reportErrors: false` at the call site is what
- *  keeps one failure from being reported twice under two different contexts. */
-function loadUserServices(): Promise<UserService[]> {
-  return api.services.list().catch((err) => {
-    reportUnexpectedAuthError(err, { feature: "services", step: "list" });
-    throw err;
   });
 }
 
@@ -842,12 +834,7 @@ export function ServicesSection({
 
   // The services, cached: coming back to this pane paints the list on the first frame and re-reads
   // behind that paint, instead of showing "Loading…" for the length of a round trip every time.
-  const {
-    items: services,
-    reload,
-    error,
-    isFetching,
-  } = useResourceList<UserService>("persona-services", loadUserServices, { reportErrors: false });
+  const { items: services, reload, error, isFetching } = useUserServices();
 
   // Swallowing: every caller below re-reads AFTER its own write succeeded, so a failed re-read must
   // not surface as an unhandled rejection. It still reaches the screen — as `error`.

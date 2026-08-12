@@ -88,6 +88,20 @@ export function AuthPane({
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
+  // …but only over the ecosystem they were typed against. `edits` is a DELTA, and this pane is NOT
+  // remounted when `ecosystemId` changes — the item hook simply re-keys — so unreset edits would be
+  // laid over the NEXT ecosystem's policy and saved onto it. Before caching, the per-ecosystem
+  // `refresh` cleared them as part of the load; nothing does now, so the switch is watched here.
+  // Adjusted DURING render (React's own idiom for state that must reset on a prop change) rather
+  // than in an effect: an effect resets one frame late, and that frame is a live edit surface.
+  const [editsFor, setEditsFor] = useState<string | null>(ecosystemId ?? null);
+  if (editsFor !== (ecosystemId ?? null)) {
+    setEditsFor(ecosystemId ?? null);
+    setEdits({});
+    setSaveError(null);
+    setSaved(false);
+  }
+
   // The values shown = the loaded policy with any unsaved edits laid over it.
   const effective: AuthSettings | null = settings ? { ...settings, ...edits } : null;
   const dirty = Object.keys(edits).length > 0;

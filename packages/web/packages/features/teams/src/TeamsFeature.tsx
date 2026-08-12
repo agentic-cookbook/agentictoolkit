@@ -16,7 +16,7 @@ import {
   type ResourceTopic,
 } from "@agentic-toolkit/resource";
 import { TeamSettingsPane } from "./TeamSettingsPane";
-import { TeamMembersPane } from "./TeamMembersPane";
+import { TEAM_MEMBER_COUNTS_CACHE_KEY, TeamMembersPane } from "./TeamMembersPane";
 import { TeamPermissionsPane } from "./TeamPermissionsPane";
 import { TeamDetail, teamBlank, teamValidate } from "./TeamDetail";
 
@@ -122,17 +122,20 @@ export function TeamsFeature({
   // the cards their badges and nothing else (and stays out of the auth telemetry a real read
   // failure belongs in).
   //
-  // The TEAM IDS are the cache id, which is how it keeps refetching on exactly the change it used
-  // to: a create or a delete produces a different set and so a different entry, while returning to
-  // the landing with the same teams costs no request. A null id (no teams, or a list withheld
-  // pending §2) reads nothing at all — the list's scoping posture and this sibling read agree.
+  // The TEAM IDS are the cache id, which covers half of what it used to refetch on: a create or a
+  // delete produces a different set and so a different entry, while returning to the landing with
+  // the same teams costs no request. The other half — a MEMBERSHIP change, which moves a count
+  // without moving the key — is invalidated by the members pane itself against
+  // {@link TEAM_MEMBER_COUNTS_CACHE_KEY}, because there is nothing about this entry for the cache
+  // to notice. A null id (no teams, or a list withheld pending §2) reads nothing at all — the
+  // list's scoping posture and this sibling read agree.
   const countsId = teams && teams.length > 0 ? teams.map((t) => t.id).join(",") : null;
   const loadCounts = useCallback(
     () => teamMembersApi.counts().catch(() => new Map<string, number>()),
     [],
   );
   const { item: counts } = useResourceItemQuery<Map<string, number>>(
-    "team-member-counts",
+    TEAM_MEMBER_COUNTS_CACHE_KEY,
     countsId,
     loadCounts,
   );

@@ -331,12 +331,18 @@ export function ProjectOverviewPane({
   /* ── The lists this pane summarises ────────────────────────────────────────
    * The SAME cache keys the topics that own these lists use, so the two directions of a
    * navigation both paint from cache: Overview → Work Items is instant, and so is the way back.
-   * Each summary read fails SOFT to an empty list — a project's front door should still tell you
-   * what it is when one of four background reads is unavailable, and each panel's own zero state
-   * is a truthful reading of "nothing came back". The project record itself is the exception: it
-   * IS the pane, so its absence is the "not found" state. */
+   * Every summary degrades SOFT here — each panel falls back to `?? []` and shows its own zero
+   * state, because a project's front door should still tell you what it is when one of four
+   * background reads is unavailable. But only the reads nobody else owns swallow the failure in
+   * their FETCHER (statuses, artifacts, the activity head): those keys are read as decoration and
+   * an empty answer fabricates nothing for anyone else. The work items and the programs rethrow,
+   * because those keys are the primary lists of the Work Items and Programs topics — a
+   * `.catch(() => [])` would write a fabricated SUCCESS into the shared entry, and those panes
+   * would then say "there is nothing here", with no error, for as long as it stayed fresh. The
+   * project record itself is the exception to the softness: it IS the pane, so its absence is the
+   * "not found" state. */
   const loadItems = useCallback(
-    () => projectWorkItemsApi.listForProject(projectId).catch(() => [] as WorkItem[]),
+    () => projectWorkItemsApi.listForProject(projectId),
     [projectId],
   );
   const loadStatuses = useCallback(
@@ -388,11 +394,12 @@ export function ProjectOverviewPane({
   );
 
   // The workspace's programs, for the membership picker below — the SAME cache key the Programs
-  // topic reads, so joining a program here and opening that topic do not disagree. Fails soft
-  // like the other summaries: a board is still worth editing when the roll-up list is briefly
-  // unavailable, and the picker's orphan guard keeps the current membership selectable regardless.
+  // topic reads, so joining a program here and opening that topic do not disagree. Degrades to an
+  // empty picker HERE — a board is still worth editing when the roll-up list is briefly
+  // unavailable, and the picker's orphan guard keeps the current membership selectable regardless
+  // — but the failure is left in the shared entry for the Programs topic, which owns it, to show.
   const loadPrograms = useCallback(
-    () => projectProgramsApi.list({ workspace: workspaceSlug }).catch(() => [] as Program[]),
+    () => projectProgramsApi.list({ workspace: workspaceSlug }),
     [workspaceSlug],
   );
   const { items: programRows } = useResourceList<Program>(

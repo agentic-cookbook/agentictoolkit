@@ -259,20 +259,18 @@ export function TeamPermissionsPane({
   // settles the matrix onto the fallback just as finally as a success settles it onto the server's.
   const featuresSettled = featureRows !== null || featuresError !== null;
 
+  // A PLAIN read, and it has to be: this cache key is shared with `ItemAccessPanel`, which knows
+  // nothing about this pane's feature list. A fetcher that never settles until THIS pane's
+  // features land would, once registered on the shared entry, hold the OTHER pane's roles list in
+  // Loading forever — a promise nobody can resolve, on a query that outlives the mount that made
+  // it. The features-first rule below is a RENDER gate instead, which is where the invariant it
+  // protects actually lives.
   const loadRoles = useCallback((): Promise<AccessRoleRow[]> => {
     // No workspace ⇒ a DEFINED empty list (not null), so the rail shows the "open from your hub"
     // message rather than an eternal "Loading…" spinner.
     if (!workspaceSlug) return Promise.resolve([]);
-    // Features FIRST: no role is readable until the list it will be projected onto is final.
-    // `toInput`/`differs` close over `features`, and the master/detail hook re-derives the baseline
-    // from `toInput` on every render — so a draft built against one list and re-based against
-    // another would diff index-misaligned rows and could submit a grant under the wrong feature
-    // key. A promise that never settles is how this hook is held in Loading; the moment the
-    // features read answers, THIS fetcher's identity changes and the hook cancels the wait and
-    // reads for real.
-    if (!featuresSettled) return new Promise<AccessRoleRow[]>(() => {});
     return accessApi.listRoles(workspaceSlug);
-  }, [workspaceSlug, featuresSettled]);
+  }, [workspaceSlug]);
 
   const {
     items: loadedRoles,
@@ -292,9 +290,17 @@ export function TeamPermissionsPane({
     await reloadRoles();
   }, [reloadFeatures, reloadRoles]);
 
+  // Features FIRST: no role is readable until the list it will be projected onto is final.
+  // `toInput`/`differs` close over `features`, and the master/detail hook re-derives the baseline
+  // from `toInput` on every render — so a draft built against one list and re-based against
+  // another would diff index-misaligned rows and could submit a grant under the wrong feature key.
+  // Holding `roles` at null until the features answer is what keeps that from happening, and it
+  // holds however the roles themselves arrived: a live read, or the shared cache entry a sibling
+  // pane already filled (which a gate inside the fetcher could never see).
+  //
   // A failed read used to be substituted with `[]` so the pane didn't hang on "Loading…" forever;
   // the hook leaves `items` null instead, so make that substitution here.
-  const roles = loadedRoles ?? (rolesError ? NO_ROLES : null);
+  const roles = !featuresSettled ? null : (loadedRoles ?? (rolesError ? NO_ROLES : null));
   // One banner, two reads. Roles wins when both failed: it is the one that emptied the list, and
   // the feature failure has already been absorbed into the fallback matrix.
   const loadError = rolesError ?? featuresError;
@@ -412,7 +418,9 @@ export function TeamPermissionsPane({
           : "No roles yet.",
     // The spinner before "Roles" — the only thing that says a revalidation is running behind rows
     // the cache already put on screen. `emptyLabel` covers the FIRST read and nothing after.
-    busy: isFetching,
+    // `!featuresSettled` counts too: the roles are withheld until the features answer, so that
+    // wait is a read in progress from the reader's side even when the roles themselves are in hand.
+    busy: isFetching || !featuresSettled,
     // No workspace ⇒ no create affordance (the pane is only usable from a hub workspace; the
     // empty state says so). Elsewhere the `+` opens the scoped create modal.
     onNew: workspaceSlug ? () => setNewOpen(true) : undefined,

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ecosystemsApi } from "./ecosystems";
+import { useTenantId } from "../tenant";
 
 /**
  * The default (account-infrastructure) ecosystem id — THE resolver for workspace-level panes
@@ -48,8 +49,14 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
    *  admits to reading is the first. */
   isFetching: boolean;
 } {
+  // The TENANT is a key segment, exactly as it is for every resource list and item. The answer is
+  // resolved server-side FOR THE CALLER (`?workspace=` is membership-gated), so an unscoped key
+  // would let a sign-in as somebody else read the previous account's resolution as fresh — and the
+  // client that holds it is at module scope now, so that entry survives every navigation in the
+  // tab rather than dying with the page subtree that created it.
+  const tenantId = useTenantId();
   const query = useQuery({
-    queryKey: ["workspace-default-ecosystem", workspaceSlug ?? null],
+    queryKey: ["workspace-default-ecosystem", tenantId, workspaceSlug ?? null],
     queryFn: () => ecosystemsApi.workspaceDefaultEcosystemId(workspaceSlug),
     retry: false,
   });
