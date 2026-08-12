@@ -14,9 +14,11 @@ export interface GroupTopicItem {
   id: string;
   label: string;
   icon: ReactNode;
-  /** What this member is for. When ANY member carries one, the no-selection leaf becomes the
-   *  standard TopicOverview (one card per member) instead of the `emptyHint` placeholder — an
-   *  opt-in through the data, so entity rosters without descriptions keep the plain hint. */
+  /** What this member is for, shown under its label in the `TopicOverview` CARD GRID — which is
+   *  the level's no-selection landing only when the level declares `overview: "cards"`. This
+   *  component never declares it, so a description set here currently renders NOWHERE: the
+   *  unselected frontier is the quiet `TopicSelectHint` nudge, whose copy comes from the group's
+   *  `itemNoun` / `overviewHelp` props. Put the guidance there. */
   description?: string;
   /** Declare `"list"` for a member whose pane publishes deeper rails (a schema browser, an entity
    *  list), so the cascading view treats choosing it as an INTERMEDIATE select (the detail holds).
@@ -54,6 +56,8 @@ export function StackGroupDetail({
   busy,
   leafHeader,
   emptyHint = "Select a topic.",
+  itemNoun,
+  overviewHelp,
   urlSelection,
   renderSubLeaf,
 }: {
@@ -74,8 +78,18 @@ export function StackGroupDetail({
   busy?: boolean;
   /** Rendered once above the active member's content, in the leaf (e.g. a Save/Cancel bar). */
   leafHeader?: ReactNode;
-  /** Shown in the leaf until a member is chosen (no auto-selection into the child rail). */
+  /** FALLBACK copy for the leaf until a member is chosen — reached only when this group's level is
+   *  NOT the stack's unselected frontier (the usual case is that it IS, and the frame's own nudge
+   *  replaces this). Word the frontier through `itemNoun` / `overviewHelp` instead; a hint set
+   *  here is invisible on the ordinary path. */
   emptyHint?: ReactNode;
+  /** Singular noun for one member ("token kind", "dashboard"), forwarded to the level so the
+   *  frame's frontier nudge reads "Select a token kind" instead of the generic line. */
+  itemNoun?: string;
+  /** The group's bespoke frontier blurb — what these members are and why to pick one — forwarded
+   *  to the level and rendered under the nudge's headline. This, not {@link GroupTopicItem
+   *  .description}, is where a group's landing copy lives. */
+  overviewHelp?: ReactNode;
   /** Opt-in URL-driven selection (a deep-linkable sub-tab / section). When provided, the active
    *  member lives in the URL instead of internal state — reads come from `selectedId` and every
    *  select/clear routes through `onSelect` so the caller can push the segment (mirrors
@@ -109,6 +123,8 @@ export function StackGroupDetail({
     selectedId: active?.id ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
+    itemNoun,
+    overviewHelp,
   };
   return (
     <StackLevels levels={[level]}>

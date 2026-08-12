@@ -61,15 +61,22 @@ export function TokensFeature({
       <StackGroupDetail
         levelId="token-sections"
         title="Tokens"
-        emptyHint="Select API tokens or Storage tokens."
+        // The two-kind split IS the thing to explain, so it is said in the frontier nudge the
+        // frame actually renders while nothing is selected — not as per-member `description`s,
+        // which only a `overview: "cards"` level draws (this one is not) and which would have
+        // rendered nowhere.
+        itemNoun="token kind"
+        overviewHelp={
+          "An API token (tmp_) is personal — it acts as YOU across the REST paths you scope it " +
+          "to. A storage token (adh_) is a principal of its own, reaching the one isolated bucket " +
+          "minted with it and nothing else."
+        }
         urlSelection={{ selectedId: section ?? null, onSelect: pushSegment }}
         items={[
           {
             id: "api",
             label: "API tokens",
             icon: <KeyRound size={16} aria-hidden />,
-            description:
-              "Personal tmp_ credentials that act as you across the REST paths you scope them to.",
             // Both members publish a deeper rail, so choosing one is an INTERMEDIATE select and the
             // cascading view must hold the detail rather than swap it.
             leadsTo: "list",
@@ -79,8 +86,6 @@ export function TokensFeature({
             id: "storage",
             label: "Storage tokens",
             icon: <HardDrive size={16} aria-hidden />,
-            description:
-              "adh_ principals of their own, each reaching one isolated bucket and nothing else.",
             leadsTo: "list",
             render: () => <StorageTokensSection leaf={leaf} workspace={workspaceSlug} />,
           },
