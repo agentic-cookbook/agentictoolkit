@@ -13,7 +13,15 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { CreateResourceDialog, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 
-import { RevealedSecret, TokenFact, TokenFacts, whenOr } from "./token-detail";
+import {
+  isMissingToken,
+  MissingToken,
+  RevealedSecret,
+  TokenFact,
+  TokenFacts,
+  useMintedSecret,
+  whenOr,
+} from "./token-detail";
 
 /** The create form's draft. An ARRAY of picked prefixes rather than a Set: the shared create
  *  dialog decides "dirty" by `JSON.stringify`, which serialises every Set as `{}`. */
@@ -41,8 +49,9 @@ export function ApiTokensSection({ leaf }: { leaf?: TopicLeaf }) {
   const qc = useQueryClient();
   const [newOpen, setNewOpen] = useState(false);
   // The one-time reveal, kept WITH the id it belongs to so it can only ever render inside that
-  // token's detail (see RevealedSecret).
-  const [minted, setMinted] = useState<{ id: string; secret: string } | null>(null);
+  // token's detail (see RevealedSecret) — and OUTSIDE component state, because minting navigates
+  // and a navigation remounts this subtree (see useMintedSecret).
+  const { minted, remember, forget } = useMintedSecret("api-tokens");
 
   const tokensQuery = useQuery({ queryKey: ["api-tokens"], queryFn: tokensApi.list });
   // Fetched at the SECTION, not inside the modal: it gates whether the modal may save at all, and
@@ -57,7 +66,9 @@ export function ApiTokensSection({ leaf }: { leaf?: TopicLeaf }) {
     mutationFn: tokensApi.revoke,
     onSuccess: async () => {
       // The row is gone, so the URL must stop naming it before the list refetches — otherwise the
-      // leaf points at an id the level no longer publishes.
+      // leaf points at an id the level no longer publishes. Drop any held secret with it: the
+      // credential it belonged to no longer exists, and the store outlives this component.
+      forget();
       leaf?.onSelect(null);
       await qc.invalidateQueries({ queryKey: ["api-tokens"] });
     },
@@ -77,7 +88,13 @@ export function ApiTokensSection({ leaf }: { leaf?: TopicLeaf }) {
     selectedId: leaf?.leafId ?? null,
     onSelect: (id) => leaf?.onSelect(id),
     onClear: () => leaf?.onSelect(null),
-    emptyLabel: tokensQuery.isPending ? "Loading…" : "No API tokens yet.",
+    // A failed load is not an empty account. Collapsing the two tells someone who has tokens that
+    // they have none — the one reading of this list that invites them to mint a duplicate.
+    emptyLabel: tokensQuery.isPending
+      ? "Loading…"
+      : tokensQuery.isError
+        ? "Couldn’t load your API tokens."
+        : "No API tokens yet.",
     onNew: () => setNewOpen(true),
     newLabel: "New API token",
     itemNoun: "API token",
@@ -93,14 +110,31 @@ export function ApiTokensSection({ leaf }: { leaf?: TopicLeaf }) {
         {tokensQuery.isError && <ErrorText error="Couldn’t load your API tokens. Please refresh." />}
         {revokeMutation.isError && <ErrorText error="Couldn’t revoke that token. Please try again." />}
 
+        {/* Gated on the id the URL names, NOT on a row from the list: the invalidation that will
+            contain the new token is still in flight when this first renders, so a reveal nested
+            inside `selected` would be withheld at exactly the moment it is needed — and the secret
+            is unrecoverable. Still keyed to one id, so it can never sit under another's facts. */}
+        {minted !== null && minted.id === leaf?.leafId && (
+          <div className="max-w-2xl">
+            <RevealedSecret secret={minted.secret} />
+          </div>
+        )}
+
+        {/* A URL naming a token the list doesn't have. The frame's select nudge is suppressed by
+            the non-null selectedId, so without this the pane is blank. */}
+        {isMissingToken({
+          leafId: leaf?.leafId,
+          found: Boolean(selected),
+          isFetching: tokensQuery.isFetching,
+          isError: tokensQuery.isError,
+          mintedId: minted?.id,
+        }) && <MissingToken noun="API token" />}
+
         {/* Nothing selected needs no branch here: while this list is the frontier with no
             selection, the frame hides these children and shows its own select nudge, worded from
             `itemNoun` + `overviewHelp` above — so the invitation is written once. */}
         {selected && (
           <div className="flex max-w-2xl flex-col gap-6">
-            {minted !== null && minted.id === selected.id && (
-              <RevealedSecret secret={minted.secret} />
-            )}
             <TokenFacts>
               <TokenFact label="Name" value={selected.name} />
               <TokenFact label="Prefix" value={`${selected.prefix}…`} mono />
@@ -161,7 +195,7 @@ export function ApiTokensSection({ leaf }: { leaf?: TopicLeaf }) {
           onClose={() => setNewOpen(false)}
           onCreated={(created) => {
             setNewOpen(false);
-            setMinted({ id: created.id, secret: created.token });
+            remember({ id: created.id, secret: created.token });
             void qc.invalidateQueries({ queryKey: ["api-tokens"] });
             leaf?.onSelect(created.id);
           }}

@@ -137,10 +137,10 @@ describe("groupUsage", () => {
   });
 
   // An application row is an acting key that overlaps nothing, so the reason it stays out of the
-  // total is not double-counting: the API returns it to platform admins only, covering the whole
-  // ecosystem, and a workspace total that absorbed it would report other tenants' traffic as this
-  // workspace's. It must still REACH a section — a kind matching no filter is dropped silently,
-  // which is exactly how these rows stayed invisible.
+  // total is not double-counting: it covers a whole ecosystem the caller manages, and a workspace
+  // total that absorbed it would report other tenants' traffic as this workspace's. It must still
+  // REACH a section — a kind matching no filter is dropped silently, which is exactly how these
+  // rows stayed invisible.
   it("gives applications their own section and keeps them out of the total", () => {
     const app = row({
       kind: "application",

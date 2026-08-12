@@ -143,10 +143,10 @@ const ZERO: UsageTotals = { requests: 0, bytes: 0, tokens: 0, costMicros: 0 };
  * ecosystem row (a different axis entirely — the tenant realm's bill) is pulled out too.
  *
  * APPLICATION rows are an acting key like the others and overlap nothing, but they are still
- * excluded from the total for a different reason: the backend returns them to PLATFORM ADMINS
- * only, alongside the ecosystem row, because an application is owned by the ecosystem and by no
- * workspace. Folding realm-wide traffic into what reads as a personal or workspace total would
- * make the same category error the ecosystem row is pulled out to avoid.
+ * excluded from the total for a different reason: an application is owned by its ECOSYSTEM and by
+ * no workspace, so the backend derives these rows from the ecosystems the caller manages rather
+ * than from the workspace being viewed. Folding realm-wide traffic into what reads as a personal
+ * or workspace total would make the same category error the ecosystem row is pulled out to avoid.
  *
  * Every kind therefore lands in a section or the `ecosystem` slot. A kind that matched neither
  * would be dropped without a trace — which is how application rows stayed invisible before this
@@ -180,8 +180,11 @@ export function groupUsage(rows: UsageRow[]): UsageView {
   if (tokens.length > 0) {
     sections.push({
       id: "tokens",
-      title: "API tokens",
-      description: "Traffic made with a personal token. A persona's own token is metered under that persona instead.",
+      // A `token` row is a STORAGE principal (`adh_…`), the only credential whose acting key is
+      // the token itself. A personal `tmp_` API token acts as YOU, so its traffic is inside the
+      // people rows above and it is deliberately not listed here — see the backend's `subjects.ts`.
+      title: "Storage tokens",
+      description: "Traffic made by a storage token acting as itself. A personal API token acts as you, so its traffic is counted above.",
       rows: tokens,
     });
   }

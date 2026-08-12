@@ -19,7 +19,15 @@ import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { CreateResourceDialog, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 
-import { RevealedSecret, TokenFact, TokenFacts, whenOr } from "./token-detail";
+import {
+  isMissingToken,
+  MissingToken,
+  RevealedSecret,
+  TokenFact,
+  TokenFacts,
+  useMintedSecret,
+  whenOr,
+} from "./token-detail";
 
 interface StorageTokenDraft {
   /** The rdid LEAF only — the server composes `token.<owner>.<leaf>`. */
@@ -57,7 +65,10 @@ export function StorageTokensSection({
 }) {
   const qc = useQueryClient();
   const [newOpen, setNewOpen] = useState(false);
-  const [minted, setMinted] = useState<{ id: string; secret: string } | null>(null);
+  // Held OUTSIDE component state, because minting navigates and a navigation remounts this subtree
+  // (see useMintedSecret). Keyed by workspace as well as surface: the same rail mints for a
+  // different owner under `?workspace=`, and one owner's secret must not survive into the other's.
+  const { minted, remember, forget } = useMintedSecret(`storage-tokens:${workspace ?? "self"}`);
 
   // Keyed by scope; mutations prefix-invalidate ["token-principals"], so the scoped and unscoped
   // variants (this rail and the org Configuration panel) refresh together.
@@ -72,6 +83,8 @@ export function StorageTokensSection({
   const revokeMutation = useMutation({
     mutationFn: (id: string) => tokenPrincipalsApi.revoke(id, { workspace }),
     onSuccess: async () => {
+      // Drop any held secret with the row it belonged to — the store outlives this component.
+      forget();
       leaf?.onSelect(null);
       await qc.invalidateQueries({ queryKey: ["token-principals"] });
     },
@@ -91,7 +104,12 @@ export function StorageTokensSection({
     selectedId: leaf?.leafId ?? null,
     onSelect: (id) => leaf?.onSelect(id),
     onClear: () => leaf?.onSelect(null),
-    emptyLabel: tokensQuery.isPending ? "Loading…" : "No tokens yet.",
+    // See ApiTokensSection: a failed load is not an empty account, and saying so invites a duplicate.
+    emptyLabel: tokensQuery.isPending
+      ? "Loading…"
+      : tokensQuery.isError
+        ? "Couldn’t load these tokens."
+        : "No tokens yet.",
     onNew: () => setNewOpen(true),
     newLabel: "New storage token",
     itemNoun: "storage token",
@@ -109,12 +127,25 @@ export function StorageTokensSection({
           <ErrorText error="Couldn’t revoke that token. Please try again." />
         )}
 
+        {/* See ApiTokensSection: gated on the id the URL names, not on a row from the list, so the
+            reveal is not withheld by the refetch the mint itself started. */}
+        {minted !== null && minted.id === leaf?.leafId && (
+          <div className="max-w-2xl">
+            <RevealedSecret secret={minted.secret} />
+          </div>
+        )}
+
+        {isMissingToken({
+          leafId: leaf?.leafId,
+          found: Boolean(selected),
+          isFetching: tokensQuery.isFetching,
+          isError: tokensQuery.isError,
+          mintedId: minted?.id,
+        }) && <MissingToken noun="storage token" />}
+
         {/* See ApiTokensSection: the unselected state is the frame's own nudge, not ours. */}
         {selected && (
           <div className="flex max-w-2xl flex-col gap-6">
-            {minted !== null && minted.id === selected.id && (
-              <RevealedSecret secret={minted.secret} />
-            )}
             <TokenFacts>
               <TokenFact label="Name" value={selected.slug} />
               <TokenFact label="Identifier" value={selected.rdid} mono />
@@ -175,7 +206,7 @@ export function StorageTokensSection({
           onClose={() => setNewOpen(false)}
           onCreated={(created) => {
             setNewOpen(false);
-            setMinted({ id: created.id, secret: created.token });
+            remember({ id: created.id, secret: created.token });
             void qc.invalidateQueries({ queryKey: ["token-principals"] });
             leaf?.onSelect(created.id);
           }}

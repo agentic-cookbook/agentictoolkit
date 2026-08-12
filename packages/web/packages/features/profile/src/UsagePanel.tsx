@@ -176,6 +176,7 @@ const rowId = (row: UsageRow): string => `${row.scope}:${row.principalId}`;
 const KIND_LABEL: Partial<Record<UsageRow["kind"], string>> = {
   token: "token",
   persona: "persona",
+  application: "application",
   ecosystem: "ecosystem",
 };
 
