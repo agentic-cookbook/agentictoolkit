@@ -218,13 +218,31 @@ export function OrgSettingsForm({
   const [description, setDescription] = useState(org.description ?? "");
   const { busy, error, run } = useAction();
   const qc = useQueryClient();
-  // A save that changes the slug renames the workspace's URL space; re-sync the form
-  // whenever the loaded org changes identity (e.g. after such a save or a refetch).
-  useEffect(() => {
-    setName(org.name);
-    setSlug(org.slug);
-    setDescription(org.description ?? "");
-  }, [org]);
+
+  // Re-sync the form whenever the loaded org changes — after a save that renamed the workspace's
+  // URL space, and now also when a background revalidation lands behind the instant paint. NEVER
+  // over an unsaved edit: caching is what makes that distinction necessary, because a re-read can
+  // arrive mid-edit where the pre-cache code read once per org and could not, and `readOnly` is no
+  // defence (it follows `isSettled`, which stays true for exactly these background reads). While
+  // the user has typing on screen, Save or Discard is their call, not a refetch's.
+  //
+  // "Edited" is measured against the copy the fields were SEEDED from, not the one that just
+  // arrived. Diffing against the new copy would read a change made ELSEWHERE as the user's own
+  // typing and then refuse to ever re-sync again, pinning the form to a value nobody entered.
+  //
+  // Done during the render that first sees the new record (React's own idiom for state that must
+  // reset on a prop change) rather than in an effect, so no frame paints the previous org's values.
+  const [seeded, setSeeded] = useState(org);
+  if (seeded !== org) {
+    const edited =
+      name !== seeded.name || slug !== seeded.slug || description !== (seeded.description ?? "");
+    setSeeded(org);
+    if (!edited) {
+      setName(org.name);
+      setSlug(org.slug);
+      setDescription(org.description ?? "");
+    }
+  }
 
   const dirty =
     name !== org.name || slug !== org.slug || description !== (org.description ?? "");
@@ -269,9 +287,9 @@ export function OrgSettingsForm({
   // slug" arm suppressed the stale answer — which is exactly the arm that goes false when you
   // return to your own slug. The pane then told you your CURRENT handle was already taken.
   //
-  // Unsettled falls to "checking", except on the org's own stored slug: the post-rename `useEffect`
-  // resync re-seeds `slug` while `debouncedSlug` trails, and "Checking…" over a slug nobody touched
-  // is the same lie in the other direction.
+  // Unsettled falls to "checking", except on the org's own stored slug: the post-rename re-seed
+  // above sets `slug` while `debouncedSlug` trails, and "Checking…" over a slug nobody touched is
+  // the same lie in the other direction.
   const slugSettled = debouncedSlug === slug;
   const slugStatus: SlugStatus = !slug
     ? "idle"

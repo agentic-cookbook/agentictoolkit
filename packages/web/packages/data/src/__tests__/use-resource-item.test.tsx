@@ -37,16 +37,13 @@ function Probe({
   id,
   load,
   seedFrom,
-  absent,
 }: {
   id: string | null
   load: (id: string) => Promise<{ body: string }>
   seedFrom?: () => { body: string } | undefined
-  absent?: boolean
 }) {
   const { item, isSettled, isFetching, error } = useResourceItemQuery('/docs', id, load, {
     seedFrom,
-    absent,
   })
   return (
     <div
@@ -61,9 +58,7 @@ function Probe({
 }
 
 function MissingProbe(props: React.ComponentProps<typeof Probe>) {
-  const { isMissing } = useResourceItemQuery('/docs', props.id, props.load, {
-    absent: props.absent,
-  })
+  const { isMissing } = useResourceItemQuery('/docs', props.id, props.load)
   return <div data-testid="missing">{String(isMissing)}</div>
 }
 
@@ -118,12 +113,6 @@ describe('useResourceItemQuery', () => {
     signInAs('A')
     render(<MissingProbe id="d4" load={() => Promise.reject(notFound())} />)
     await waitFor(() => expect(screen.getByTestId('missing')).toHaveTextContent('true'))
-  })
-
-  it('reports missing when a settled list says the row is absent', () => {
-    signInAs('A')
-    render(<MissingProbe id="d5" load={() => new Promise(() => {})} absent />)
-    expect(screen.getByTestId('missing')).toHaveTextContent('true')
   })
 
   it('does not report missing for an ordinary failure', async () => {

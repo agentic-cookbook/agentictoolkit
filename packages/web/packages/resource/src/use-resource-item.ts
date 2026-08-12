@@ -23,7 +23,7 @@ export function useResourceItem<T>(
   cacheKey: string,
   id: string | null,
   load: (id: string) => Promise<T>,
-  opts?: { seedFrom?: () => T | undefined; absent?: boolean; reportErrors?: boolean },
+  opts?: { seedFrom?: () => T | undefined; reportErrors?: boolean },
 ): ResourceItem<T> {
   const { isMissing, ...rest } = useResourceItemQuery(cacheKey, id, load, opts);
   // Report only. The host owns the alert AND the pop that follows it, so the stack comes apart

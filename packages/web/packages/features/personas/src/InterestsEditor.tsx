@@ -313,8 +313,14 @@ export function InterestsEditor({ personaId }: { personaId: string | null }) {
   // handlers are async and two can be in flight at once, so a value would carry whatever the list
   // was when the button was clicked and the slower one would republish rows its sibling has
   // already removed — the same class of bug `save`/`remove` address by key rather than by index.
+  //
+  // A null `prev` publishes NOTHING. Null is "this list has never been read, or its read failed",
+  // and folding it to `[]` would turn one saved card into a fabricated WHOLE list — written into
+  // the shared entry as a success, erasing the error with it, so the Knowledge facet would show a
+  // persona's single interest where it has ten. Leaving the entry untouched keeps the next read a
+  // real one; this editor's own cards are already correct without it.
   const publishRows = (next: (prev: SpecialInterestRow[]) => SpecialInterestRow[]) =>
-    setRows((prev) => next(prev ?? []));
+    setRows((prev) => (prev === null ? null : next(prev)));
 
   // `save`/`remove` take the card's KEY, never its array index or position at call time. Both are
   // async: the array can reorder while one is in flight (a sibling's delete resolving first, a

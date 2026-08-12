@@ -38,6 +38,7 @@ import {
   useQueryClient,
   type QueryClient as QueryClientType,
 } from "@tanstack/react-query";
+import { onSessionChange, readTokenSubject } from "@agentic-toolkit/auth/client";
 import { type ReactNode } from "react";
 
 // ONE client per browser tab, at MODULE scope — not in component state.
@@ -75,6 +76,45 @@ function makeQueryClient(): QueryClientType {
   return client;
 }
 
+// The principal (`sub`) whose data the cached entries hold. Compared, never trusted for anything
+// else — see `watchSession`.
+let cachedFor: string | null = null;
+
+/**
+ * Empty the cache the moment the signed-in principal changes.
+ *
+ * The client above is at MODULE scope and survives every remount, which is the whole point — but
+ * it also survives a SIGN-OUT and the next sign-in, and nothing else drops it. Cache keys don't
+ * save us: the resource keys carry the tenant (`ecosystem_id`), which two users of one ecosystem
+ * SHARE, and plenty of toolkit queries are keyed by nothing personal at all (`["api-tokens"]`,
+ * `["workspace-members", slug]`). So on a shared machine — sign out, someone else signs in, no
+ * reload — the second user is served the first's rows out of cache, instantly, with no refetch to
+ * correct them: the entries are still inside the 5-minute `staleTime`, so react-query considers
+ * them fresh and never asks the server. A `clear()` is the only thing that is right for ALL of
+ * them at once, which is why this lives with the client rather than with any one key.
+ *
+ * Bound where the browser client is minted, so a client without this guard cannot exist, and so
+ * nothing depends on a module-level side effect surviving `"sideEffects": false`.
+ *
+ * The SUBJECT and not the raw token: a refresh writes a brand-new token for the SAME user every
+ * time it runs, and clearing on that would throw away the cache on a timer.
+ *
+ * `storage` covers the same swap performed in ANOTHER tab of this origin: it fires only in the
+ * tabs that did not write, which is exactly the set that would otherwise keep serving the previous
+ * account's rows.
+ */
+function watchSession(): void {
+  cachedFor = readTokenSubject();
+  const check = () => {
+    const subject = readTokenSubject();
+    if (subject === cachedFor) return;
+    cachedFor = subject;
+    browserClient?.clear();
+  };
+  onSessionChange(check);
+  window.addEventListener("storage", check);
+}
+
 /**
  * The toolkit's query client. Callers may pass this to `useQuery`/`useMutation` explicitly rather
  * than relying on {@link ToolkitQueryProvider} being above them — which is what lets a hook used
@@ -84,7 +124,11 @@ export function getToolkitQueryClient(): QueryClientType {
   // Server: a FRESH client per call. A shared one would leak one request's data into another
   // request's render — the one case where module scope is exactly wrong.
   if (typeof window === "undefined") return makeQueryClient();
-  return (browserClient ??= makeQueryClient());
+  if (!browserClient) {
+    browserClient = makeQueryClient();
+    watchSession();
+  }
+  return browserClient;
 }
 
 export function ToolkitQueryProvider({ children }: { children: ReactNode }) {

@@ -11,6 +11,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
+import { bucketsCacheKey } from "./schema-model";
 import type { SchemaDefinition, SchemaDefinitionInput } from "./schema-model";
 import { ButtonBar } from "@agentic-toolkit/resource";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
@@ -69,7 +70,7 @@ export function SchemasPane({
     reload: refresh,
     error: loadError,
     isFetching,
-  } = useResourceList<SchemaDefinition>(`ecosystem:${ecosystemId ?? ""}:buckets`, load);
+  } = useResourceList<SchemaDefinition>(bucketsCacheKey(ecosystemId), load);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }

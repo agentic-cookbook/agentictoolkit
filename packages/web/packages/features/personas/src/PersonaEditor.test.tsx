@@ -757,6 +757,9 @@ describe("PersonaEditor unsaved-work guard", () => {
         if (g === null) live.delete(id);
         else live.set(id, g);
       }),
+      popStack: vi.fn(),
+      reportMissing: vi.fn(),
+      reportBusy: vi.fn(),
       toolbarSlot: null,
     };
     return { live, registry };

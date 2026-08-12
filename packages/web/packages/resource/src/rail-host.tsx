@@ -114,29 +114,42 @@ const LevelDepthContext = createContext(0);
  */
 const BusyTargetContext = createContext<string | null>(null);
 
-/** Serialise a level array's identity (id, title, selection, and every row's id + label +
- *  sublabel) so the publish effect re-runs on any change the merged stack renders — including a
- *  live rename of the level's title (e.g. a persona's name) or a row label/sublabel (e.g. an
- *  integration flipping from its auth method to "Configured"), which `items.length` alone would
- *  miss and leave stale in the rail header / breadcrumb. Not every render's new array/closure
- *  identity. */
+/** One object's PLAIN fields — string, number, boolean — as an unambiguous string. `JSON.stringify`
+ *  and not a `k=v` join so a label containing the separator can't forge another field's value.
+ *  An absent or null field is simply missing from the output, which is itself a distinct string, so
+ *  a selection clearing to `null` still reads as a change. */
+function plainFields(o: object): string {
+  const plain: Record<string, string | number | boolean> = {};
+  for (const [k, v] of Object.entries(o)) {
+    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") plain[k] = v;
+  }
+  return JSON.stringify(plain);
+}
+
+/** Serialise a level array's identity so the publish effect re-runs on any change the merged stack
+ *  renders — a live rename of a level's title (a persona's), a row's label or sublabel (an
+ *  integration flipping from its auth method to "Configured"), a list resolving from "Loading…" to
+ *  empty, a read starting — none of which change `items.length` and all of which would otherwise
+ *  sit stale in the rail. Not every render's new array/closure identity, which is the churn this
+ *  key exists to prevent.
+ *
+ *  EVERY plain field, rather than a hand-kept list of the ones known to change. The list was
+ *  hand-kept and it was wrong repeatedly: `emptyLabel`, `overview` and `busy` were each appended
+ *  after one of their changes was found stuck on screen, and `blocked`, `preview`/`previewLines`
+ *  and `newActive` were still missing — a row's amber "needs attention" dot
+ *  (`PersonaEditor`, `NotebookPane`), a note's body preview, and the gold in-progress `+` all
+ *  change while the level is mounted, and all of them left the rail showing the previous value.
+ *  Nothing distinguished the fields that happened to be named; the enumeration was the defect.
+ *
+ *  What plainness leaves out is a real limit, not an oversight: `titleActions`, `railSlot`,
+ *  `headerSlot` and a row's `icon`/`trailing` are React nodes, freshly allocated on most renders,
+ *  so keying on them would re-register every level on every render — and their handlers are
+ *  closures, which is worse. A level whose ONLY change is inside such a node keeps the previously
+ *  registered one until some plain field moves. Give such a node a plain companion field (the way
+ *  `busy` carries the spinner) rather than expecting the node itself to be noticed. */
 function levelsKey(levels: TopicLevel[]): string {
   return levels
-    .map(
-      // `emptyLabel` is part of the key: an empty list's rows don't change between "Loading…",
-      // "Nothing here yet.", and an error message, so without it a list that resolves from loading
-      // to empty/error would keep re-showing the stale "Loading…" (the level never re-registers).
-      // `overview` too: it flips (false) while a master/detail inline editor is open —
-      // same re-registration need as emptyLabel, or the frontier keeps the stale card grid.
-      // `busy` too, and for the same reason: a read starting or finishing changes NOTHING else
-      // about the level, so without it the spinner would never reach the screen.
-      (l) =>
-        `${l.id}:${l.title ?? ""}:${l.selectedId ?? ""}:${l.emptyLabel ?? ""}:${l.defaultSelectedId ?? ""}:${
-          l.overview === false ? "!o" : ""
-        }:${l.busy ? "!b" : ""}:${l.items
-          .map((it) => `${it.id}=${it.label}=${it.sublabel ?? ""}`)
-          .join(",")}`,
-    )
+    .map((l) => `${plainFields(l)}[${l.items.map(plainFields).join(",")}]`)
     .join("|");
 }
 
@@ -178,6 +191,13 @@ export function StackLevels({ levels, children }: { levels: TopicLevel[]; childr
  * Publish ONE leaf-most rail level (a master/detail list, whose detail — the editor — publishes
  * nothing deeper) at the current depth. A hook, not a wrapper, because there is no deeper child to
  * advance the depth for. Pass null to clear (single-record topics). No-op outside a host.
+ *
+ * Being a hook has one consequence a caller has to know: it names no {@link BusyTargetContext} for
+ * this level, because it has no children to wrap. So a detail area that contains a
+ * {@link useReportBusy} caller must be published with {@link StackLevels} instead — a hook cannot
+ * put itself between the level and the pane reporting under it, and the report would otherwise walk
+ * past this level to the nearest `StackLevels` ANCESTOR and spin the wrong list, which is worse
+ * than no spinner because the user reads it as that list reloading.
  */
 export function useStackLevel(level: TopicLevel | null): void {
   const depth = useContext(LevelDepthContext);

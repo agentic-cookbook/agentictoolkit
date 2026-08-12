@@ -38,6 +38,7 @@ import {
 import { cn } from "../lib/utils"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
 import { TopicOverview, TopicSelectHint } from "./topic-overview"
+import { deepestSelectedLevel } from "./stack-frontier"
 import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
 import { useShowDebugFrames, useSlowAnimations, SLOW_ANIM_FACTOR } from "./debug-options"
 // The cascade's DECISIONS — the selection chain's weight, the entrance bounce, the exit curve, the
@@ -137,6 +138,14 @@ interface TopicLevel {
    *  package calls it for re-click-deselect, breadcrumb up-navigation, and Back. */
   onClear: () => void
   emptyLabel?: string
+  /** A read is in flight for this level — its rows, or the item selected in it. Draws a spinner
+   *  immediately before the level's title, without moving it. */
+  busy?: boolean
+  /** Warm a row before it is clicked. Called with the row's id once the pointer or keyboard focus
+   *  has rested on it briefly. The level decides WHAT to warm — the item's data
+   *  (`useResourceItemPrefetch`), the route it leads to (`router.prefetch`), or both;
+   *  `TopicDetailItem.leadsTo` already says which kind of row it is. Fire-and-forget. */
+  onPrefetch?: (id: string) => void
   /** Create affordance: when set, a right-justified `+` in this level's list header fires it
    *  (replaces the old leading "New…" rail row). */
   onNew?: () => void
@@ -434,9 +443,10 @@ export function HierarchicalMenuDetail({
   const firstUnselected = levels.findIndex((l) => l.selectedId == null)
   const frontier = firstUnselected === -1 ? levels.length - 1 : firstUnselected
   const rendered = levels.slice(0, frontier + 1)
-  // The deepest SELECTED level (whose detail is showing): the frontier if every level is selected,
-  // else one above it; -1 when nothing is selected. Back clears exactly this level.
-  const deepestSelected = firstUnselected === -1 ? frontier : frontier - 1
+  // The deepest SELECTED level (whose detail is showing) — the shared answer, not a second copy of
+  // the arithmetic: Back here and the host's pop must agree about which level is the leaf, and two
+  // expressions that could drift would clear the wrong list intermittently (see that module).
+  const deepestSelected = deepestSelectedLevel(levels)
 
   const { attemptExit, exitAlertProps } = useExitGate(exitGuard)
 
@@ -1867,6 +1877,8 @@ function MinimizedStack({
               selectedId={level.selectedId}
               onSelect={railOnSelect(level, attemptExit)}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+              busy={level.busy}
+              onPrefetch={level.onPrefetch}
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
@@ -2338,6 +2350,8 @@ function CoveredStack({
                 railOnSelect(level, attemptExit)(id)
               }}
               emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+              busy={level.busy}
+              onPrefetch={level.onPrefetch}
               onNew={level.onNew}
               newLabel={level.newLabel}
               newActive={level.newActive}
@@ -3380,6 +3394,8 @@ function CascadingStack({
                   else run()
                 }}
                 emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+                busy={level.busy}
+                onPrefetch={level.onPrefetch}
                 onNew={level.onNew}
                 newLabel={level.newLabel}
                 newActive={level.newActive}
@@ -3660,6 +3676,8 @@ function NarrowStack({
             selectedId={level.selectedId}
             onSelect={railOnSelect(level, attemptExit)}
             emptyLabel={level.emptyLabel ?? "Nothing here yet."}
+            busy={level.busy}
+            onPrefetch={level.onPrefetch}
             onNew={level.onNew}
             newLabel={level.newLabel}
             newActive={level.newActive}

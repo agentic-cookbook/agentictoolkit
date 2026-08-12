@@ -98,7 +98,11 @@ export function GroupMembersEditor({
     }
   }
 
+  // `busy` for the same reason `add` holds it: every control here — including this trash button —
+  // is `disabled={locked}`, so without it a remove leaves the whole editor live for the length of
+  // the request and a second click fires a second DELETE.
   async function remove(member: AccessGroupMember) {
+    setBusy(true);
     setError(null);
     try {
       await bucketAccessApi.removeMember(groupId, member.id);
@@ -106,6 +110,8 @@ export function GroupMembersEditor({
     } catch (err) {
       reportUnexpectedAuthError(err, { feature: "bucket-access", step: "remove-member" });
       setError(err instanceof Error ? err.message : "Failed to remove member.");
+    } finally {
+      setBusy(false);
     }
   }
 

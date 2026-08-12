@@ -118,6 +118,9 @@ describe("RailHostBoundary breadcrumb", () => {
       registerLevels: vi.fn(),
       unregisterLevels: vi.fn(),
       registerExitGuard: vi.fn(),
+      popStack: vi.fn(),
+      reportMissing: vi.fn(),
+      reportBusy: vi.fn(),
       toolbarSlot: null,
     };
     render(

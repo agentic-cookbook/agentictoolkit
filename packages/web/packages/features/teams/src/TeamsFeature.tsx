@@ -117,10 +117,17 @@ export function TeamsFeature({
   // so the affordance is unreachable anyway.)
   const canCreate = slug != null && lookup !== "failed" && lookup !== "none";
 
-  // Member counts for the "All" landing cards (one request, grouped per team). Decorative —
-  // failures are swallowed in the fetcher, which answers an empty map, so a counts outage costs
-  // the cards their badges and nothing else (and stays out of the auth telemetry a real read
-  // failure belongs in).
+  // Member counts for the "All" landing cards (one request, grouped per team). Decorative: a
+  // failure costs the cards their badges (`counts` stays null, the fallback below is an empty map)
+  // and nothing else, and `reportErrors: false` keeps it out of the auth telemetry a real read
+  // failure belongs in.
+  //
+  // The failure REACHES the cache as a failure, though — no `.catch(() => new Map())` in the
+  // fetcher. A caught rejection resolves, and a resolved fetcher is a SUCCESS: the fabricated empty
+  // map would be stored under this key as the server's own answer, fresh for five minutes and kept
+  // for thirty, so one blip during a counts outage would strip the badges off the landing for half
+  // an hour after the backend recovered, with no read left to correct it. An errored entry holds no
+  // data, so the next visit reads again.
   //
   // The TEAM IDS are the cache id, which covers half of what it used to refetch on: a create or a
   // delete produces a different set and so a different entry, while returning to the landing with
@@ -130,14 +137,12 @@ export function TeamsFeature({
   // to notice. A null id (no teams, or a list withheld pending §2) reads nothing at all — the
   // list's scoping posture and this sibling read agree.
   const countsId = teams && teams.length > 0 ? teams.map((t) => t.id).join(",") : null;
-  const loadCounts = useCallback(
-    () => teamMembersApi.counts().catch(() => new Map<string, number>()),
-    [],
-  );
+  const loadCounts = useCallback(() => teamMembersApi.counts(), []);
   const { item: counts } = useResourceItemQuery<Map<string, number>>(
     TEAM_MEMBER_COUNTS_CACHE_KEY,
     countsId,
     loadCounts,
+    { reportErrors: false },
   );
   const memberCounts = counts ?? EMPTY_COUNTS;
 

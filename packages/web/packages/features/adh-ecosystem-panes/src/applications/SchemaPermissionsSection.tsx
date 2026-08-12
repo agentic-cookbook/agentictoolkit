@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { useResourceList } from "@agentic-toolkit/data";
@@ -8,6 +8,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
+import { bucketsCacheKey } from "../schemas/schema-model";
 import type { SchemaDefinition } from "../schemas/schema-model";
 import { DetailSection } from "@agentic-toolkit/resource";
 import { SchemaGrantNode } from "./SchemaGrantNode";
@@ -19,24 +20,34 @@ import { type SchemaGrant, newSchemaGrant } from "./permission-model";
  * the Schemas feature; here we only grant + permission.
  */
 
-/** Module scope, so one identity serves every mount of this section — which is what lets the
- *  catalog be read once for the whole ecosystem instead of once per application opened. */
-const loadSchemaDefinitions = (): Promise<SchemaDefinition[]> => schemasApi.list();
-
 export function SchemaPermissionsSection({
   grants,
   onChange,
+  ecosystemRdid,
 }: {
   grants: SchemaGrant[];
   onChange: (next: SchemaGrant[]) => void;
+  /** The owning pane's ecosystem scope — the SAME value `SchemasPane` reads its buckets under. */
+  ecosystemRdid?: string;
 }) {
-  // The ecosystem's schema catalog, cached: every application's permissions section wants the same
+  // The ecosystem's bucket catalog, cached: every application's permissions section wants the same
   // list, and it was previously re-fetched for each one opened. A failure still leaves
   // `definitions` null and the section quiet, exactly as before — but it is now REPORTED rather
   // than becoming an unhandled rejection, which is what the hook's default error handling buys.
+  //
+  // The Buckets pane's OWN entry ({@link bucketsCacheKey}), not a private one of this section's:
+  // it is the same catalog read the same way, so sharing the entry means making a bucket over in
+  // Buckets puts it in this picker (that pane re-reads its list after every write, and this is now
+  // that list), and opening an application costs no request at all when Buckets has been visited.
+  // A second key would have been a second copy, refreshed by nobody.
+  //
+  // Scoped, where this read used to pass no ecosystem at all and take back every bucket the caller
+  // could see across ALL of them — its sibling readers (`SchemasPane`, `AccessPane`) both scope,
+  // and an application can only be granted buckets from its own ecosystem anyway.
+  const load = useCallback(() => schemasApi.list(ecosystemRdid), [ecosystemRdid]);
   const { items: definitions } = useResourceList<SchemaDefinition>(
-    "schema-definitions",
-    loadSchemaDefinitions,
+    bucketsCacheKey(ecosystemRdid),
+    load,
   );
   const [picking, setPicking] = useState(false);
   const [pick, setPick] = useState("");

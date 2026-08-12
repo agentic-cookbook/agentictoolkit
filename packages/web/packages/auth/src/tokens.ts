@@ -39,6 +39,39 @@ export function tokensFromResponse(data: BackendTokenFields): AuthTokens {
   return { accessToken, refreshToken: '' }
 }
 
+const sessionListeners = new Set<() => void>()
+
+// Copy before iterating: a listener may unsubscribe itself (or another) from inside the callback,
+// and mutating a Set mid-iteration silently skips entries.
+function announceSessionChange(): void {
+  for (const fn of [...sessionListeners]) fn()
+}
+
+/**
+ * Run `fn` whenever the stored tokens are written or cleared — a sign-in, a sign-out, a refresh.
+ * Returns an unsubscribe.
+ *
+ * Exists because the session is a PROCESS-WIDE fact that outlives any one React tree, and things
+ * that cache per-principal data at module scope (`@agentic-toolkit/data`'s query client) have to
+ * hear about a change without being reachable from a component. Announced from here — the only
+ * two writers of the storage key — rather than from the AuthProvider, so a refresh that swaps the
+ * session from `refresh.ts` is heard just as loudly as a login.
+ *
+ * The direction matters: `data` already depends on `auth`, so `auth` cannot import `data` to push
+ * at it. A listener seam is the only way across that keeps the dependency one-way.
+ *
+ * Listeners are told THAT the session moved, never what it moved to — the storage is right there,
+ * and a payload would only invite a listener to trust a stale copy of it. Note that a refresh
+ * fires this with the SAME principal, so a listener that does something expensive must compare
+ * (e.g. {@link readTokenSubject}) before acting.
+ */
+export function onSessionChange(fn: () => void): () => void {
+  sessionListeners.add(fn)
+  return () => {
+    sessionListeners.delete(fn)
+  }
+}
+
 export function readTokens(): AuthTokens | null {
   return readJson<AuthTokens>(authConfig().storageKey)
 }
@@ -46,6 +79,7 @@ export function readTokens(): AuthTokens | null {
 export function writeTokens(tokens: AuthTokens): void {
   if (typeof window === 'undefined') return
   window.localStorage.setItem(authConfig().storageKey, JSON.stringify(tokens))
+  announceSessionChange()
 }
 
 export function clearTokens(): void {
@@ -54,6 +88,7 @@ export function clearTokens(): void {
   // The cached identity dies with the session — never leave a user blob behind a
   // dropped token (it'd be inert, since readUser is gated on tokens, but stale).
   window.localStorage.removeItem(userKey())
+  announceSessionChange()
 }
 
 export function readAccessToken(): string | null {

@@ -254,9 +254,13 @@ function TopicList({
           if (covered && active) return
           onSelect(item.id)
         }}
-        onPointerEnter={onPrefetch ? () => armPrefetch(item.id) : undefined}
+        // Never ARM on the row that is already open: a prefetch is a guess about where the user is
+        // going, and this item's read has already happened. Warming it again re-reads it behind the
+        // pane the user is looking at, and the read spins this very list. The DISARM handlers stay
+        // unconditional — they only ever cancel a timer another row armed.
+        onPointerEnter={onPrefetch && !active ? () => armPrefetch(item.id) : undefined}
         onPointerLeave={onPrefetch ? disarmPrefetch : undefined}
-        onFocus={onPrefetch ? () => armPrefetch(item.id) : undefined}
+        onFocus={onPrefetch && !active ? () => armPrefetch(item.id) : undefined}
         onBlur={onPrefetch ? disarmPrefetch : undefined}
         aria-current={active ? "true" : undefined}
         // Icon-only rows have no visible text → carry the label as the accessible name, plus the
@@ -688,6 +692,25 @@ export function TopicRail({
 
   // The titled header's inner content. The control slot is a fixed width matching where item icons
   // start; the title is CENTERED in the remaining header width with the New `+` immediately after it;
+  // The read indicator, in two parts on purpose.
+  //
+  // This is the VISUAL half, and it is decoration: `aria-hidden`, because the live region mounted
+  // on the column below already says the same thing, and two sources for one fact announce twice.
+  // Defined once because it appears in every header shape — a rail the user collapsed to an icon
+  // strip is still reading, and a strip that shows nothing while it reads makes the click that
+  // started the read look like it did nothing.
+  const busyIcon = <Loader2 className="size-3 animate-spin text-apt-text-muted" aria-hidden />
+  // The ANNOUNCEMENT half. ALWAYS mounted, with its TEXT as the thing that changes: assistive tech
+  // announces a live region's mutations, not its arrival, so a region inserted into the DOM at the
+  // same instant it fills conveys nothing at all — which is what a `{busy && <span role="status">}`
+  // amounts to. It sits on the column rather than in the header because every header shape can be
+  // busy, including the two that have no title to hang the icon beside.
+  const busyAnnouncement = (
+    <span role="status" aria-live="polite" className="sr-only">
+      {busy ? "Loading" : ""}
+    </span>
+  )
+
   // the toggle/close controls are right-justified.
   const headerInner = (
     <>
@@ -709,12 +732,11 @@ export function TopicRail({
                 is CENTRED on the header (see the note above), so the shift would be visible on
                 every click. It must also live outside the `truncate` box, which would clip it. */}
             {busy && (
-              <span className="absolute top-1/2 right-full mr-1.5 -translate-y-1/2">
-                <Loader2
-                  className="size-3 animate-spin text-apt-text-muted"
-                  role="status"
-                  aria-label="Loading"
-                />
+              <span
+                data-htd-busy
+                className="absolute top-1/2 right-full mr-1.5 -translate-y-1/2"
+              >
+                {busyIcon}
               </span>
             )}
             <span className="truncate">{title}</span>
@@ -747,6 +769,7 @@ export function TopicRail({
         className,
       )}
     >
+      {busyAnnouncement}
       {/* Drag handle on the trailing border (desktop): resize the column; the parent snaps to
           undisclosed below a third, full past the natural width. Fixed-width rails
           (no onResize) render no handle. */}
@@ -766,7 +789,10 @@ export function TopicRail({
           start, the left-aligned title where item labels start, the right-justified New `+` / collapse
           toggle, and a divider beneath — so every titled list reserves the same header height and
           their rows line up. Without a title (standalone TopicDetail) or when collapsed, fall back to
-          the bare control strip (priority: leftControl → backSlot → toggle/`+` → nothing). */}
+          the bare control strip (priority: leftControl → backSlot → toggle/`+` → busy alone → nothing).
+          EVERY shape carries the busy icon: collapsing a rail to make room for the detail pane is a
+          first-class gesture, and the read a click starts is exactly as invisible in an icon strip as
+          it is in a titled header — more so, since the strip has no title for it to sit beside. */}
       {title !== undefined && !collapsed ? (
         <div
           data-htd-header
@@ -779,6 +805,7 @@ export function TopicRail({
         <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {leftControl}
           <span className="flex items-center gap-1">
+            {busy && <span data-htd-busy>{busyIcon}</span>}
             {newButton}
             {closeButton}
           </span>
@@ -787,6 +814,7 @@ export function TopicRail({
         <div data-htd-header className="flex shrink-0 items-center justify-between px-1.5 pt-1.5">
           {backSlot}
           <span className="flex items-center gap-1">
+            {busy && <span data-htd-busy>{busyIcon}</span>}
             {newButton}
             {showToggle && <span className="max-md:hidden">{collapseToggle}</span>}
           </span>
@@ -798,11 +826,24 @@ export function TopicRail({
             // Collapsed icon strip (~48px): stack the `+` above the toggle. Else right-justify the row.
             collapsed ? "flex-col" : "justify-end pr-1.5",
             // Without a `+`, the strip is just the desktop-only collapse toggle — hidden on mobile.
-            !newButton && "max-md:hidden",
+            // The busy icon overrides that: a read in progress is worth showing on mobile too.
+            !newButton && !busy && "max-md:hidden",
           )}
         >
+          {busy && <span data-htd-busy>{busyIcon}</span>}
           {newButton}
           {showToggle && <span className={cn(newButton && "max-md:hidden")}>{collapseToggle}</span>}
+        </div>
+      ) : busy ? (
+        // No title and no controls at all — a bare list that is nonetheless reading.
+        <div
+          data-htd-busy
+          className={cn(
+            "flex shrink-0 items-center pt-1.5",
+            collapsed ? "justify-center" : "justify-end pr-1.5",
+          )}
+        >
+          {busyIcon}
         </div>
       ) : null}
       {/* The shared list-header hook (filter + actions) for entity lists hosted in the

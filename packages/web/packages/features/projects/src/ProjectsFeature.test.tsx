@@ -141,6 +141,9 @@ function Harness({ children }: { children: ReactNode }) {
           return next;
         }),
       registerExitGuard: () => {},
+      popStack: () => {},
+      reportMissing: () => {},
+      reportBusy: () => {},
       toolbarSlot: null,
     }),
     [],

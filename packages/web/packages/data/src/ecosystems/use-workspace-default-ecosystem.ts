@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { ecosystemsApi } from "./ecosystems";
+import { useToolkitQueryClient } from "../query";
 import { useTenantId } from "../tenant";
 
 /**
@@ -19,10 +20,9 @@ import { useTenantId } from "../tenant";
  * caller that treats pending as "still resolving" then waited on an answer that was never coming
  * — which is how every create on a slug-less mount ended up permanently blocked.
  *
- * Lives here — on the ToolkitQueryProvider client, next to the API it wraps — so
- * there is ONE cache entry per slug platform-wide; hosts must consume this hook
- * rather than re-implementing the query on their own QueryClient (two caches,
- * double fetch, split invalidation).
+ * Lives here — on the toolkit's own query client, next to the API it wraps — so there is ONE cache
+ * entry per slug platform-wide; hosts must consume this hook rather than re-implementing the query
+ * on their own QueryClient (two caches, double fetch, split invalidation).
  *
  * `ecosystemId` stays undefined while loading AND when there is no infrastructure ecosystem;
  * `isError` distinguishes a failed resolution (`retry: false` — one shot) so callers can show a
@@ -55,11 +55,23 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
   // client that holds it is at module scope now, so that entry survives every navigation in the
   // tab rather than dying with the page subtree that created it.
   const tenantId = useTenantId();
-  const query = useQuery({
-    queryKey: ["workspace-default-ecosystem", tenantId, workspaceSlug ?? null],
-    queryFn: () => ecosystemsApi.workspaceDefaultEcosystemId(workspaceSlug),
-    retry: false,
-  });
+  // The client PASSED, not read from context — the same shape `useResourceList` and
+  // `useResourceItemQuery` use, and for the same reason: this hook is called from panes
+  // (`EcosystemConfigGate`, `IntegrationsFeature`, an integration's destinations) that a host can
+  // mount anywhere, and reading it from context alone makes an absent `ToolkitQueryProvider` a
+  // "No QueryClient set" THROW at the top of the pane rather than a pane that simply works. The
+  // provider hands out this very singleton, so a host that does mount one is unaffected — and the
+  // "ONE cache entry per slug platform-wide" the doc above promises is now true by construction
+  // instead of by contract.
+  const client = useToolkitQueryClient();
+  const query = useQuery(
+    {
+      queryKey: ["workspace-default-ecosystem", tenantId, workspaceSlug ?? null],
+      queryFn: () => ecosystemsApi.workspaceDefaultEcosystemId(workspaceSlug),
+      retry: false,
+    },
+    client,
+  );
   return {
     ecosystemId: query.data?.id ?? undefined,
     canManage: query.data?.canManage ?? true,

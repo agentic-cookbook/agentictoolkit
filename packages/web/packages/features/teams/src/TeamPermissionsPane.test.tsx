@@ -188,6 +188,9 @@ function Harness({ children }: { children: ReactNode }) {
           return next;
         }),
       registerExitGuard: (_id: string, _guard: PaneExitGuard | null) => {},
+      popStack: () => {},
+      reportMissing: () => {},
+      reportBusy: () => {},
       toolbarSlot: null,
     }),
     [],

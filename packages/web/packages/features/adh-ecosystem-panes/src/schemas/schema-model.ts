@@ -11,6 +11,26 @@
 // tables (see api/schemas.ts). Each table's `type` is one of the
 // `content`/`personal` table types the DB exposes (see available-types.ts).
 
+/**
+ * The cache key the ecosystem's bucket catalog lives under — ONE entry, shared by the Buckets pane
+ * that edits it and by every reader that only wants to pick from it (an application's Schema
+ * Permissions section).
+ *
+ * A function, and exported, because the sharing IS the behaviour: `useResourceList` entries are
+ * identified by this string, so a reader that spells its own key gets a SECOND copy of the same
+ * catalog — one the Buckets pane's create/delete re-read never touches, which then serves a bucket
+ * list missing the bucket just made for up to the full `staleTime` and lingers for the whole
+ * `gcTime` after that. Two literals in two files are one edit away from being that second copy;
+ * one function cannot be.
+ *
+ * Every caller must pair it with the matching fetch — `schemasApi.list(ecosystemId)` for the same
+ * id. The id is part of the key because `list` FILTERS by it client-side: the unscoped call answers
+ * every bucket the caller can see across ecosystems, which is a different list, not a fresher one.
+ */
+export function bucketsCacheKey(ecosystemId: string | undefined): string {
+  return `ecosystem:${ecosystemId ?? ""}:buckets`;
+}
+
 /** One ADH table within a schema definition. Structure only. */
 export interface SchemaTable {
   /** Stable client id for React keys / cross-referencing grants. */

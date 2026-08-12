@@ -10,11 +10,11 @@ import {
   type CrudTableMeta,
 } from "@agentic-toolkit/crud";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { useStackLevel, useRailExitGuard } from "@agentic-toolkit/resource";
+import { StackLevels, useRailExitGuard } from "@agentic-toolkit/resource";
 
 /**
  * Knowledge Bases, in the one merged stack: the persona-memory tables are PUBLISHED as a rail level
- * (via {@link useStackLevel}), and the chosen table's {@link CrudDataView} is the leaf — a
+ * (via {@link StackLevels}), and the chosen table's {@link CrudDataView} is the leaf — a
  * hierarchical topic/detail like every other feature, not a nested table list inside the pane.
  * Nothing auto-selects; the open editor's unsaved-work guard is registered so a switch prompts
  * Save / Discard / Cancel. Selection is local (this pane's deeper selection isn't a URL segment).
@@ -67,31 +67,39 @@ export function KnowledgeBasesPane({
     selectedId: active?.table ?? null,
     onSelect: setSelected,
     onClear: () => setSelected(null),
-    // The spinner in front of "Knowledge Bases", and the ONE read this list has to report. Its
-    // rows arrive as a prop — the host's catalog, known synchronously — so the only thing it ever
-    // waits on is the viewer, which is what decides whether a row is readable and therefore
-    // whether it is offered at all. The selected table's body is not this level's to report: a
-    // CrudDataView pages its own rows and shows its own state for them.
+    // The spinner in front of "Knowledge Bases", for the ONE read this level does itself. Its rows
+    // arrive as a prop — the host's catalog, known synchronously — so the only thing it ever waits
+    // on is the viewer, which is what decides whether a row is readable and therefore whether it is
+    // offered at all. The open table's own read spins the same list, but it reports that itself
+    // (CrudDataView calls `useReportBusy`) rather than being folded in here.
     busy: !viewerReady,
     // "No tables." would be a lie for the paint before auth settles, when the list is empty
     // because the answer isn't in yet.
     emptyLabel: viewerReady ? "No tables." : "Loading…",
   };
-  useStackLevel(level);
   // Null unless the open table's editor is dirty — the CrudDataView publishes only while dirty,
   // and unmounting withdraws. No `active` gate needed.
   useRailExitGuard(exitGuard);
 
-  return active ? (
-    <CrudDataView
-      key={active.key}
-      meta={active}
-      scopeEcosystemId={scopeEcosystemId}
-      onGuardChange={registerGuard}
-    />
-  ) : (
-    <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
-      Select a table to view its data.
-    </p>
+  // `StackLevels` and not the `useStackLevel` HOOK, even though this is one leaf-most level: the
+  // detail below contains a `useReportBusy` caller (CrudDataView reports its own paging read), and
+  // only the wrapper names this level as the busy target for what it wraps. Under the hook that
+  // report would walk past this level to the nearest `StackLevels` ancestor — the host's own
+  // feature list — and spin THAT, which reads as an unrelated list reloading.
+  return (
+    <StackLevels levels={[level]}>
+      {active ? (
+        <CrudDataView
+          key={active.key}
+          meta={active}
+          scopeEcosystemId={scopeEcosystemId}
+          onGuardChange={registerGuard}
+        />
+      ) : (
+        <p className="p-6 font-mono text-sm text-apt-text-dim" role="status">
+          Select a table to view its data.
+        </p>
+      )}
+    </StackLevels>
   );
 }

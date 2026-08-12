@@ -151,7 +151,12 @@ export function TeamMembersPane({
     selectedId,
     onSelect: (id) => leaf?.onSelect(id),
     onClear: () => leaf?.onSelect(null),
-    emptyLabel: members === null ? "Loading…" : "No members yet.",
+    // A failed read leaves `members` null exactly as a pending one does, so "Loading…" alone would
+    // spin here forever. The pane's own `ErrorText` says so, but the rail is the merged host stack —
+    // it can be on screen with this pane's body nowhere near it, and then the rail is the only
+    // thing the user sees.
+    emptyLabel:
+      members !== null ? "No members yet." : loadError ? "Couldn’t load members." : "Loading…",
     // The spinner in this list's title while a read is in flight — including the re-read behind a
     // cached paint, which is the only signal that rows already on screen are being checked.
     busy: membersFetching,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useQuery, type QueryKey, type PlaceholderDataFunction } from "@tanstack/react-query";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { RESOURCE_GC_TIME, getToolkitQueryClient } from "./query";
@@ -46,10 +46,14 @@ export interface ResourceItem<T> {
   /** The item, or null when there is nothing to show yet. May be a SEED (see `seedFrom`) until
    *  `isSettled` is true. */
   item: T | null;
-  /** The server's answer for THIS id is on screen — success or failure. False while a read is in
-   *  flight and while a seed is standing in for one. A pane must stay READ-ONLY until this is
-   *  true: editing a seed means editing a partial item and saving over whatever the server
-   *  actually has. Trivially true when there is no id to read. */
+  /** The server's answer for THIS id is on screen — success or failure. False while the FIRST
+   *  read is in flight and while a seed is standing in for one. A pane must stay READ-ONLY until
+   *  this is true: editing a seed means editing a partial item and saving over whatever the server
+   *  actually has. Trivially true when there is no id to read.
+   *
+   *  Once true for an id it STAYS true until the id changes: a background revalidation is not a
+   *  reason to lock an editor the user is already typing in. Drive a spinner from `isFetching`,
+   *  never from this. */
   isSettled: boolean;
   /** A read is in flight. Drive the topic list's spinner from this. */
   isFetching: boolean;
@@ -63,9 +67,13 @@ export interface ResourceItem<T> {
 }
 
 export interface ResourceItemQuery<T> extends ResourceItem<T> {
-  /** The item is GONE: the read 404'd, or a settled list says the id is not in it. The composed
-   *  hook in `@agentic-toolkit/resource` turns this into the host's alert; nothing else should
-   *  act on it directly. */
+  /** The item is GONE: the read 404'd. The composed hook in `@agentic-toolkit/resource` turns this
+   *  into the host's alert; nothing else should act on it directly.
+   *
+   *  A 404 and nothing else. List-absence looks like the other half of the same fact and is not:
+   *  every list on this platform filters, so a row missing from the one on screen is far more often
+   *  a filter than a deletion, and a pane that concluded "gone" from it would back the user out of
+   *  an item that exists. */
   isMissing: boolean;
 }
 
@@ -78,9 +86,6 @@ export interface ResourceItemQuery<T> extends ResourceItem<T> {
  * @param id The item to read; null reads nothing.
  * @param load Fetch one item by id.
  * @param opts.seedFrom What is already known about this item — typically the matching list row.
- * @param opts.absent A SETTLED list says this id is not in it. The list-absence half of "gone";
- *   the 404 half is detected here. Pass `false`/omit while the list is still loading, or a pane
- *   would announce a deletion it has no evidence for.
  * @param opts.reportErrors Report a failed read to the auth reporter. Default true. Pass FALSE when
  *   `load` already reports its own — the same rule, and the same reason, as
  *   {@link ResourceListOptions.reportErrors}: a fetcher that reports and then rethrows would
@@ -93,7 +98,7 @@ export function useResourceItemQuery<T>(
   cacheKey: string,
   id: string | null,
   load: (id: string) => Promise<T>,
-  opts?: { seedFrom?: () => T | undefined; absent?: boolean; reportErrors?: boolean },
+  opts?: { seedFrom?: () => T | undefined; reportErrors?: boolean },
 ): ResourceItemQuery<T> {
   const tenantId = useTenantId();
   const client = getToolkitQueryClient();
@@ -152,8 +157,22 @@ export function useResourceItemQuery<T>(
   // Settled means "the answer for THIS id has landed". A placeholder is not an answer, and a
   // pending first read is not one either — both are exactly the windows a pane must not edit in.
   // An ERROR is an answer: settled is not the same as successful.
-  const isSettled =
-    id == null || (!query.isPending && !query.isPlaceholderData && !query.isFetching);
+  //
+  // STICKY per id, and it has to be. `isFetching` is true for BACKGROUND revalidations too — the
+  // focus refetch react-query does by default once `staleTime` elapses, a hover prefetch of the
+  // row that is already open, a live-stream wake — and every one of those happens with the
+  // server's answer already on screen. Reading `isFetching` straight would UN-settle the pane each
+  // time, and callers bind `readOnly`/`disabled` to this: an editor the user has had open for five
+  // minutes would go dead mid-keystroke, swallowing typing with no cursor change and no message.
+  // Once the answer for an id has landed it stays landed; a new id starts unsettled again.
+  //
+  // Latched with a render-phase setState (React's own idiom for state that must reset on a prop
+  // change) rather than an effect, so the settled render is never one frame behind the answer.
+  const [settledFor, setSettledFor] = useState<string | null>(null);
+  const answered =
+    id != null && !query.isPending && !query.isPlaceholderData && !query.isFetching;
+  if (answered && settledFor !== id) setSettledFor(id);
+  const isSettled = id == null || settledFor === id;
 
   // `refetch` is referentially stable, so `reload` is too — which is what lets callers hold it in
   // a dependency array or hand it to a child as `onChanged`.
@@ -170,7 +189,7 @@ export function useResourceItemQuery<T>(
     isFetching: id != null && (query.isFetching || query.isPending),
     error: err == null ? null : err instanceof Error ? err.message : "Failed to load.",
     reload,
-    isMissing: (opts?.absent ?? false) || isNotFound(query.error),
+    isMissing: isNotFound(query.error),
   };
 }
 
@@ -217,13 +236,24 @@ export function useResourceItemPrefetch<T>(
   const client = getToolkitQueryClient();
   return useCallback(
     (id: string) => {
+      const key = resourceItemKey(cacheKey, tenantId, id);
       void client
-        .prefetchQuery({
-          queryKey: resourceItemKey(cacheKey, tenantId, id),
-          queryFn: () => load(id),
-          retry: false,
-        })
-        .catch(() => {});
+        .prefetchQuery({ queryKey: key, queryFn: () => load(id), retry: false })
+        .catch(() => {})
+        .then(() => {
+          // Leave NOTHING behind on failure. `.catch` above only silences the promise this
+          // function threw away; react-query has already written the rejection into the SHARED
+          // entry, and `retry: false` means one hover is enough. The click that follows would
+          // mount its pane against an entry that is already in error and paint "Failed to load"
+          // before its own read had a chance — a guess turning into a user-visible event, which
+          // is exactly what this hook promises not to do.
+          //
+          // Only when the entry is STILL in error: a real reader may have mounted and succeeded
+          // in the meantime, and dropping its rows would cost the very read this was warming.
+          if (client.getQueryState(key)?.status === "error") {
+            client.removeQueries({ queryKey: key, exact: true });
+          }
+        });
     },
     [client, cacheKey, tenantId, load],
   );

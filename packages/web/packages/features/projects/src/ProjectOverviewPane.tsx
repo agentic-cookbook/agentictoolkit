@@ -333,14 +333,15 @@ export function ProjectOverviewPane({
    * navigation both paint from cache: Overview → Work Items is instant, and so is the way back.
    * Every summary degrades SOFT here — each panel falls back to `?? []` and shows its own zero
    * state, because a project's front door should still tell you what it is when one of four
-   * background reads is unavailable. But only the reads nobody else owns swallow the failure in
-   * their FETCHER (statuses, artifacts, the activity head): those keys are read as decoration and
-   * an empty answer fabricates nothing for anyone else. The work items and the programs rethrow,
-   * because those keys are the primary lists of the Work Items and Programs topics — a
-   * `.catch(() => [])` would write a fabricated SUCCESS into the shared entry, and those panes
-   * would then say "there is nothing here", with no error, for as long as it stayed fresh. The
-   * project record itself is the exception to the softness: it IS the pane, so its absence is the
-   * "not found" state. */
+   * background reads is unavailable. That fallback is at the READ SITE, not in the fetcher, for
+   * every key another topic also reads: work items, artifacts and programs all rethrow, because
+   * those keys are the primary lists of the Work Items, Material and Programs topics — a
+   * `.catch(() => [])` writes a fabricated SUCCESS into the SHARED entry, and those panes would
+   * then say "there is nothing here", with no error, for as long as it stayed fresh. Only the two
+   * reads nobody else owns swallow in their fetcher (the statuses and the activity HEAD — the
+   * Activity topic reads a different, paginated key), where an empty answer fabricates nothing for
+   * anyone. The project record itself is the exception to the softness: it IS the pane, so its
+   * absence is the "not found" state. */
   const loadItems = useCallback(
     () => projectWorkItemsApi.listForProject(projectId),
     [projectId],
@@ -353,10 +354,7 @@ export function ProjectOverviewPane({
     () => projectsApi.participants.list(projectId),
     [projectId],
   );
-  const loadArtifacts = useCallback(
-    () => projectArtifactsApi.list(projectId).catch(() => [] as ProjectArtifact[]),
-    [projectId],
-  );
+  const loadArtifacts = useCallback(() => projectArtifactsApi.list(projectId), [projectId]);
   // Newest-first, and only the head of the trail: the Activity topic owns the paginated read.
   const loadActivity = useCallback(
     () =>

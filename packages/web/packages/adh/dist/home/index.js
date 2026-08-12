@@ -69,7 +69,16 @@ function WorkspaceBar({
 // src/home/useWorkspaceRoute.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { workspacePrefsApi, readCachedWorkspace, writeCachedWorkspace } from "@agentic-toolkit/data";
+import {
+  useResourceItemQuery,
+  useResourceItemWriter,
+  workspacePrefsApi,
+  readCachedWorkspace,
+  writeCachedWorkspace
+} from "@agentic-toolkit/data";
+var PREFS_CACHE_KEY = "workspace-prefs";
+var PREFS_ID = "me";
+var loadPrefs = () => workspacePrefsApi.get();
 var seededByUs = null;
 var SEED_HANDOFF_MS = 1e4;
 function withUrlExtras(href) {
@@ -86,7 +95,20 @@ function useWorkspaceRoute({
 }) {
   const router = useRouter();
   const [stored, setStored] = useState(() => readCachedWorkspace());
-  const [prefsSettled, setPrefsSettled] = useState(false);
+  const { item: prefs, error: prefsError } = useResourceItemQuery(
+    PREFS_CACHE_KEY,
+    PREFS_ID,
+    loadPrefs
+  );
+  const writePrefs = useResourceItemWriter(PREFS_CACHE_KEY);
+  const settledByRead = prefs !== null || prefsError !== null;
+  const [bailed, setBailed] = useState(false);
+  useEffect(() => {
+    if (settledByRead) return;
+    const bail = setTimeout(() => setBailed(true), 5e3);
+    return () => clearTimeout(bail);
+  }, [settledByRead]);
+  const prefsSettled = settledByRead || bailed;
   const arrivedOnOwnGuess = useRef(
     workspaceSlug !== void 0 && seededByUs !== null && workspaceSlug === seededByUs.slug && Date.now() - seededByUs.at <= SEED_HANDOFF_MS
   );
@@ -96,31 +118,11 @@ function useWorkspaceRoute({
   useEffect(() => {
     seededByUs = null;
   }, []);
-  const wroteLocally = useRef(false);
+  const [wroteLocally, setWroteLocally] = useState(false);
+  const preference = wroteLocally ? stored : prefs?.slug ?? stored;
   useEffect(() => {
-    let alive = true;
-    const bail = setTimeout(() => {
-      if (alive) setPrefsSettled(true);
-    }, 5e3);
-    workspacePrefsApi.get().then((prefs) => {
-      if (!alive) return;
-      clearTimeout(bail);
-      if (prefs.slug && !wroteLocally.current) {
-        setStored(prefs.slug);
-        writeCachedWorkspace(prefs.slug);
-      }
-      setPrefsSettled(true);
-    }).catch(() => {
-      if (alive) {
-        clearTimeout(bail);
-        setPrefsSettled(true);
-      }
-    });
-    return () => {
-      alive = false;
-      clearTimeout(bail);
-    };
-  }, []);
+    if (prefs?.slug && !wroteLocally) writeCachedWorkspace(prefs.slug);
+  }, [prefs, wroteLocally]);
   const resolved = useMemo(() => {
     if (workspaces === null) return void 0;
     const known = (s) => s && workspaces.some((w) => w.slug === s) ? s : null;
@@ -128,8 +130,8 @@ function useWorkspaceRoute({
     if (fromUrl) return fromUrl;
     if (workspaceSlug !== void 0) return void 0;
     if (!prefsSettled) return void 0;
-    return known(stored) ?? workspaces[0]?.slug ?? null;
-  }, [workspaces, workspaceSlug, stored, prefsSettled]);
+    return known(preference) ?? workspaces[0]?.slug ?? null;
+  }, [workspaces, workspaceSlug, preference, prefsSettled]);
   useEffect(() => {
     if (resolved && resolved !== workspaceSlug) {
       seededByUs = { slug: resolved, at: Date.now() };
@@ -138,15 +140,16 @@ function useWorkspaceRoute({
   }, [resolved, workspaceSlug, hrefFor, router]);
   useEffect(() => {
     if (!resolved || resolved !== workspaceSlug || pendingWrite !== resolved) return;
-    if (resolved === stored) return;
+    if (resolved === preference) return;
     setPendingWrite(null);
     if (canPersist && !canPersist(resolved)) return;
-    wroteLocally.current = true;
+    setWroteLocally(true);
     writeCachedWorkspace(resolved);
     setStored(resolved);
+    writePrefs(PREFS_ID, { slug: resolved });
     workspacePrefsApi.put({ slug: resolved }).catch(() => {
     });
-  }, [resolved, workspaceSlug, stored, pendingWrite, canPersist]);
+  }, [resolved, workspaceSlug, preference, pendingWrite, canPersist, writePrefs]);
   const onSelect = useCallback(
     (slug) => {
       seededByUs = null;

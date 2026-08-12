@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { revalidateResources } from "@agentic-toolkit/data";
+import { revalidateResourceItems, revalidateResources } from "@agentic-toolkit/data";
 import { useProjectLive } from "@agentic-toolkit/data/projects";
 
 /**
@@ -23,6 +23,13 @@ import { useProjectLive } from "@agentic-toolkit/data/projects";
  *   • the project rail's own key, when the caller passes one — a rename, a health change or a
  *     new board is a change that shows up OUTSIDE the board.
  *
+ * And the board's own RECORD, which is not a list at all. `revalidateResources` matches only
+ * `resource-list` entries, so a rename, a health change or an estimate scale turned off — every one
+ * of them a change that lives on the record and in no list — would otherwise sit stale behind the
+ * wake that was announcing it. `revalidateResourceItems` is the mirror for those, and it matches on
+ * the COLLECTION key (an item key is collection + id), so the two collections holding this record
+ * are named outright rather than derived from `projectId`.
+ *
  * Deliberately NOT covered: `workspace:*` and `program:*`. Iterations, programs and templates
  * belong to the workspace, not to any board, so one board's activity cannot change them; waking
  * them would be a request per board gesture buying nothing.
@@ -41,6 +48,10 @@ export function useBoardLive(projectId: string | null | undefined, listKey?: str
         key.startsWith("work-item:") ||
         key.startsWith("iteration:"),
     );
+    // `project:projects` holds the board record under its own id; `subject-project` holds the same
+    // record cached under the persona/product whose Project topic resolved it. An unmounted entry
+    // is only marked stale, so naming every id in those two collections costs no request.
+    revalidateResourceItems((key) => key === "project:projects" || key === "subject-project");
   }, [projectId, listKey]);
 
   useProjectLive(projectId, revalidate);

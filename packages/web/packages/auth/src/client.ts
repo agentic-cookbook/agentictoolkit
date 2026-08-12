@@ -4,7 +4,13 @@ import { refreshAccessToken } from './refresh'
 import { readAccessToken, tokensFromResponse, type BackendTokenFields } from './tokens'
 import type { AuthTokens, AuthUser } from './types'
 
-export { tokensFromResponse, readAccessToken, readTokenSubject, type BackendTokenFields } from './tokens'
+export {
+  tokensFromResponse,
+  readAccessToken,
+  readTokenSubject,
+  onSessionChange,
+  type BackendTokenFields,
+} from './tokens'
 
 // Injected by the host so its telemetry fetch-wrapper can tag the physical
 // RequestInit this client retries after a refresh (or the exchange retry after a

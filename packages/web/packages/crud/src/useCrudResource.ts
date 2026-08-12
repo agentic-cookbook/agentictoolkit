@@ -27,12 +27,13 @@ export function rowKey(meta: CrudTableMeta, row: CrudRow): string {
 
 export interface CrudResource {
   rows: CrudRow[]
-  /** Nothing to show YET — true only until the first list lands, so a re-list keeps the current
-   *  rows on screen instead of flashing. Drive a table's skeleton with this. */
+  /** Nothing to show YET — true until a list lands for the CURRENT table + filter, so a re-list of
+   *  the same one keeps its rows on screen instead of flashing while a switch to a different one
+   *  does not leave the previous table's rows standing. Drive a table's skeleton with this. */
   loading: boolean
   /** A list call is OPEN, whether or not there are rows already. The one to report upward with
-   *  `useReportBusy`: `loading` is false for every re-list and every visit after the first, which
-   *  are the reads a spinner in front of the list's title exists to show. */
+   *  `useReportBusy`: `loading` is false for every re-list of a list already on screen, which is
+   *  exactly the read a spinner in front of the list's title exists to show. */
   fetching: boolean
   error: string | null
   refresh: () => Promise<void>
@@ -65,13 +66,10 @@ export function useCrudResource(
   scopeEcosystemId?: string,
 ): CrudResource {
   const [rows, setRows] = useState<CrudRow[]>([])
-  const [loading, setLoading] = useState(true)
-  // Separate from `loading` because they answer different questions and only one of them may
-  // suppress itself: `loading` is deliberately quiet for re-lists (see `hasLoadedRef` below), which
-  // makes it useless for saying a request is open. Initialised to match `loading` rather than for a
-  // reason of its own — the list effect raises it before any request goes out, so the starting
-  // value is never read; two flags that start differently would only invite a reader to look for a
-  // difference that isn't there.
+  // The one stored flag: a list call is OPEN. `loading` is DERIVED from it below rather than stored
+  // alongside it — the two answer different questions but can never legally disagree about whether
+  // a request is in flight, and two `useState`s updated at four sites apiece is four chances for
+  // them to drift.
   const [fetching, setFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // The scope override rides every verb's URL; empty string means "no override".
@@ -86,15 +84,18 @@ export function useCrudResource(
   // flight — only the LATEST call may write state, or a slow stale response
   // would overwrite the new table's rows.
   const listSeq = useRef(0)
-  // `loading` blocks the UI (the table swaps to a spinner), so only signal it
-  // before anything has loaded this mount — post-mutation re-lists keep the
-  // current rows rendered instead of flashing. A failed background refresh
-  // shows the error next to the stale rows, which is accepted.
-  const hasLoadedRef = useRef(false)
+  // WHICH list the rows on screen came from — not merely whether some list has landed. `loading`
+  // blocks the UI (the table swaps to a skeleton), and suppressing it for a re-list of the SAME
+  // list is the point: a post-mutation re-list keeps the current rows rendered instead of flashing,
+  // and a failed background refresh shows its error next to the stale rows, which is accepted.
+  // Switching table or filter is not that case — nothing has loaded for the new list, and a
+  // mount-scoped "has loaded" boolean would suppress the skeleton anyway and leave the PREVIOUS
+  // table's rows sitting under the new table's header until its list lands.
+  const listId = `${meta.basePath}?${listQuery}`
+  const loadedFor = useRef<string | null>(null)
 
   const refresh = useCallback(async () => {
     const seq = ++listSeq.current
-    if (!hasLoadedRef.current) setLoading(true)
     setFetching(true)
     setError(null)
     try {
@@ -102,7 +103,7 @@ export function useCrudResource(
         `${API_BASE}${meta.basePath}${listQuery ? `?${listQuery}` : ''}`,
       )
       if (seq !== listSeq.current) return
-      hasLoadedRef.current = true
+      loadedFor.current = listId
       setRows(fetched)
     } catch (err) {
       if (seq !== listSeq.current) return
@@ -110,12 +111,14 @@ export function useCrudResource(
     } finally {
       // Guarded by the same sequence check as the writes above: a superseded call must not report
       // that the list it was overtaken by has finished.
-      if (seq === listSeq.current) {
-        setLoading(false)
-        setFetching(false)
-      }
+      if (seq === listSeq.current) setFetching(false)
     }
-  }, [meta, listQuery])
+  }, [meta, listQuery, listId])
+
+  // Nothing to show YET: a call is open and no answer for THIS list has arrived. Derived, so it
+  // cannot be raised, lowered or forgotten independently of `fetching` — every branch that opens or
+  // closes a request already moves the one flag it reads.
+  const loading = fetching && loadedFor.current !== listId
 
   useEffect(() => {
     void refresh()

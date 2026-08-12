@@ -161,6 +161,11 @@ export function WorkItemsSurface({
   // so both the config the bar compares against and the navigation applying one performs need it.
   const view = asViewId(leaf.leafId);
 
+  // Guards this component's OWN state setters after an unmount, and nothing else. It must never
+  // gate a `setItems` below: that writes through to the module-scope query cache, which outlives
+  // this component by design — so skipping the settle or the rollback would leave an UNCONFIRMED
+  // optimistic value cached as if the server had accepted it, and the next visit to this board
+  // would paint a card in a column the write actually failed to put it in.
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
@@ -314,14 +319,12 @@ export function WorkItemsSurface({
       setItems((cur) => cur?.map((i) => (i.id === itemId ? { ...i, statusId } : i)) ?? cur);
       try {
         const saved = await projectWorkItemsApi.update(itemId, { statusId });
-        if (mounted.current) {
-          // Adopt the saved row ONLY while this move is still the latest on the card
-          // (its statusId is still the target we set); a newer move must not be clobbered.
-          setItems(
-            (cur) =>
-              cur?.map((i) => (i.id === itemId && i.statusId === statusId ? saved : i)) ?? cur,
-          );
-        }
+        // Adopt the saved row ONLY while this move is still the latest on the card
+        // (its statusId is still the target we set); a newer move must not be clobbered.
+        setItems(
+          (cur) =>
+            cur?.map((i) => (i.id === itemId && i.statusId === statusId ? saved : i)) ?? cur,
+        );
         return true;
       } catch (e) {
         if (mounted.current) {
@@ -329,7 +332,7 @@ export function WorkItemsSurface({
         }
         try {
           const server = await projectWorkItemsApi.get(itemId);
-          if (mounted.current && server) {
+          if (server) {
             // Reconcile to the server's true statusId ONLY while the card still sits at
             // the target we set — a newer move that already moved it on must not be
             // reverted.
@@ -396,11 +399,9 @@ export function WorkItemsSurface({
 
       try {
         const saved = await projectWorkItemsApi.move(itemId, target);
-        if (mounted.current) {
-          setItems(
-            (cur) => cur?.map((i) => (i.id === itemId ? { ...i, rank: saved.rank } : i)) ?? cur,
-          );
-        }
+        setItems(
+          (cur) => cur?.map((i) => (i.id === itemId ? { ...i, rank: saved.rank } : i)) ?? cur,
+        );
       } catch (e) {
         if (mounted.current) {
           setMoveError(e instanceof Error ? e.message : "Failed to reorder the card.");
@@ -429,31 +430,29 @@ export function WorkItemsSurface({
       setItems((cur) => cur?.map((i) => (i.id === itemId ? { ...i, ...dates } : i)) ?? cur);
       try {
         const saved = await projectWorkItemsApi.update(itemId, dates);
-        if (mounted.current) {
-          // Only the dates are adopted, for the same reason the board adopts only `rank`:
-          // a status move or an edit that landed while this was in flight lives on the
-          // same row, and replacing the whole row would answer it with older values.
-          setItems(
-            (cur) =>
-              cur?.map((i) =>
-                i.id === itemId
-                  ? { ...i, startDate: saved.startDate, dueDate: saved.dueDate }
-                  : i,
-              ) ?? cur,
-          );
-        }
+        // Only the dates are adopted, for the same reason the board adopts only `rank`:
+        // a status move or an edit that landed while this was in flight lives on the
+        // same row, and replacing the whole row would answer it with older values.
+        setItems(
+          (cur) =>
+            cur?.map((i) =>
+              i.id === itemId
+                ? { ...i, startDate: saved.startDate, dueDate: saved.dueDate }
+                : i,
+            ) ?? cur,
+        );
       } catch (e) {
         if (mounted.current) {
           setMoveError(e instanceof Error ? e.message : "Failed to change the dates.");
-          setItems(
-            (cur) =>
-              cur?.map((i) =>
-                i.id === itemId
-                  ? { ...i, startDate: before.startDate, dueDate: before.dueDate }
-                  : i,
-              ) ?? cur,
-          );
         }
+        setItems(
+          (cur) =>
+            cur?.map((i) =>
+              i.id === itemId
+                ? { ...i, startDate: before.startDate, dueDate: before.dueDate }
+                : i,
+            ) ?? cur,
+        );
       }
     },
     [items],

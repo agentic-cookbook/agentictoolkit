@@ -28,11 +28,17 @@ import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
  * item acknowledgement below (already gated on nothing being dirty) and a pane popping itself,
  * both of which have decided to leave. Routing it through the guard would put a Discard/Stay
  * prompt in front of a pane whose target no longer exists.
+ *
+ * Returns whether it actually popped, so a caller that has to keep the user moving can tell the
+ * no-op case apart and handle it itself. Assignable to the registry's `() => void` member as-is;
+ * a publisher calling {@link useStackPop} sees nothing of this.
  */
-export function useHostPopStack(levels: TopicLevel[]): () => void {
+export function useHostPopStack(levels: TopicLevel[]): () => boolean {
   return useCallback(() => {
     const at = deepestSelectedLevel(levels);
-    if (at >= 0) levels[at]?.onClear();
+    if (at < 0) return false;
+    levels[at]?.onClear();
+    return true;
   }, [levels]);
 }
 
@@ -99,14 +105,17 @@ export interface HostMissingAlert {
  * omission — invisible until the rare case fires, at which point the user is stuck in a pane whose
  * subject no longer exists.
  *
- * @param popStack What to run on acknowledgement — {@link useHostPopStack}'s result.
+ * @param popStack What to run on acknowledgement — {@link useHostPopStack}'s result. Typed by its
+ *   `boolean`, not as `() => void`: a void-returning parameter accepts the same function at the
+ *   call site and then makes its answer unreadable in here, and the answer is what tells the no-op
+ *   pop apart from the real one.
  * @param suppressed Hold the alert back (pass `guards.size > 0`). Acknowledging pops the stack,
  *   and popping out from under an unsaved editor would discard the user's work in order to tell
  *   them the work's target is gone. The report is NOT withdrawn by suppression, so the alert
  *   appears the moment that editor is saved or discarded.
  */
 export function useHostMissingAlert(
-  popStack: () => void,
+  popStack: () => boolean,
   suppressed: boolean,
 ): HostMissingAlert {
   // Which items panes have reported gone. A Set, not a boolean: two panes can be on screen at
@@ -124,8 +133,17 @@ export function useHostMissingAlert(
   }, []);
 
   const acknowledge = useCallback(() => {
-    setMissing(new Set());
-    popStack();
+    // Clear the Set ONLY when the pop had nothing to clear. The normal path pops the leaf, which
+    // unmounts the pane that reported and lets its own `useReportMissing` cleanup withdraw exactly
+    // its own id. Clearing here as well would also drop a SECOND pane's still-true report — and
+    // that pane never re-reports, because its `isMissing` has not changed and the effect that
+    // publishes it does not re-run — so the alert for its item would be lost for good.
+    //
+    // The no-op pop is the case that needs the clear: a single-record topic (published with
+    // `useStackLevel(null)`, or a root pane with nothing selected above it) has no selection to
+    // back out of and therefore nothing that will unmount. Without this, `missing` would stay
+    // non-empty and the alert would re-open on the very next render, with no way past it.
+    if (!popStack()) setMissing(new Set());
   }, [popStack]);
 
   const missingAlert = (
@@ -134,6 +152,10 @@ export function useHostMissingAlert(
       title="That item is no longer there"
       description="It was moved or deleted on the server since you last loaded it. Returning you to the list."
       onConfirm={acknowledge}
+      // Acknowledging NAVIGATES (it pops the stack), so the button has to be the only way through:
+      // in alert mode every dismissal gesture routes to `onConfirm`, and pressing Escape to make a
+      // dialog go away would move the user out of the pane instead. See {@link AlertModal.dismissible}.
+      dismissible={false}
     />
   );
 

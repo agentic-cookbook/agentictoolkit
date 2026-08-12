@@ -21,6 +21,7 @@ import {
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
 import {
+  revalidateResources,
   useResourceItemPrefetch,
   useResourceItemWriter,
   useResourceList,
@@ -137,15 +138,13 @@ export function ResearchPane({
 
   // Keyed by the FILTERS as well as the workspace: each filter set is its own list, so clearing a
   // search and going back to it is a repaint rather than a round trip.
+  const listPrefix = `research:${workspaceSlug ?? ""}:list:`;
+  const listKey = `${listPrefix}${applied.q}|${applied.category}|${applied.tag}`;
   const {
     items: docs,
     error: listError,
     reload: reloadDocs,
-  } = useResourceList<ResearchSummary>(
-    `research:${workspaceSlug ?? ""}:list:${applied.q}|${applied.category}|${applied.tag}`,
-    loadDocs,
-    { reportErrors: false },
-  );
+  } = useResourceList<ResearchSummary>(listKey, loadDocs, { reportErrors: false });
 
   const loadUniverse = useCallback(async () => {
     try {
@@ -208,13 +207,19 @@ export function ResearchPane({
   // Swallowing, and it has to: every caller re-reads AFTER its own write succeeded, and their
   // catch blocks say "Failed to save." / "Failed to delete.". A failed re-read is neither. The
   // list's failure still reaches the screen, as `listError`.
-  const refresh = useCallback(
-    () =>
-      Promise.all([reloadDocs(), reloadUniverse(), reloadCategories(), reloadTags()])
-        .then(() => undefined)
-        .catch(() => {}),
-    [reloadDocs, reloadUniverse, reloadCategories, reloadTags],
-  );
+  const refresh = useCallback(() => {
+    // The SIBLING filter keys first. `reloadDocs` re-reads the one filter set on screen, but a save
+    // changes the very fields the other keys are built from — a document's category and its tags —
+    // so every other cached filter set for this workspace is now potentially wrong. Without this,
+    // clearing a search back to a filter visited earlier repaints the document under labels it no
+    // longer has, from cache, with no read. Unmounted lists are only marked stale, so this issues
+    // no request; the key on screen is excluded because `reloadDocs` already re-reads it and
+    // invalidating it too would cancel that read and start a second one.
+    revalidateResources((key) => key !== listKey && key.startsWith(listPrefix));
+    return Promise.all([reloadDocs(), reloadUniverse(), reloadCategories(), reloadTags()])
+      .then(() => undefined)
+      .catch(() => {});
+  }, [reloadDocs, reloadUniverse, reloadCategories, reloadTags, listKey, listPrefix]);
 
   // ── Selection + draft ─────────────────────────────────────────────────────
   // Dual-mode selection: the open document's id lives in the URL (URL-driven, deep-linkable) when

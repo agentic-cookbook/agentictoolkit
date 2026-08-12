@@ -199,6 +199,7 @@ export function ApplicationDetail({
       <SchemaPermissionsSection
         grants={draft.schemaGrants}
         onChange={(schemaGrants) => onChange({ ...draft, schemaGrants })}
+        ecosystemRdid={ecosystemRdid}
       />
 
       {app ? (

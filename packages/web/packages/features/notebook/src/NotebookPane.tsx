@@ -18,6 +18,7 @@ import {
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
 import {
+  revalidateResources,
   useResourceItemPrefetch,
   useResourceItemWriter,
   useResourceList,
@@ -271,26 +272,30 @@ export function NotebookPane({
   // scope has to be in the key spelled out — "uncategorized" is a scope no category name can
   // express, and an unfiltered list under a named category is not the whole notebook.
   const scopeKey = uncategorized ? UNCATEGORIZED_SLUG : activeCategoryName;
+  const listPrefix = `notes:${workspaceSlug ?? ""}:list:`;
+  const listKey = `${listPrefix}${scopeKey}|${applied.q}|${applied.category}|${applied.tag}`;
   const {
     items: notes,
     error: listError,
     reload: reloadNotes,
-  } = useResourceList<NoteSummary>(
-    `notes:${workspaceSlug ?? ""}:list:${scopeKey}|${applied.q}|${applied.category}|${applied.tag}`,
-    loadNotes,
-    { reportErrors: false },
-  );
+  } = useResourceList<NoteSummary>(listKey, loadNotes, { reportErrors: false });
 
   // Swallowing, and it has to: every caller re-reads AFTER its own write succeeded, and their
   // catch blocks say "Failed to save." / "Failed to delete.". A failed re-read is neither. The
   // list's own failure still reaches the screen, as `listError`.
-  const refresh = useCallback(
-    () =>
-      Promise.all([reloadNotes(), reloadCategories(), reloadTags()])
-        .then(() => undefined)
-        .catch(() => {}),
-    [reloadNotes, reloadCategories, reloadTags],
-  );
+  const refresh = useCallback(() => {
+    // The SIBLING keys first. `reload` re-reads the one list on screen, but a save is exactly the
+    // write that changes which list a note belongs to — its category and its tags are what the key
+    // is built from — so every other scope/filter combination this workspace has cached is now
+    // potentially wrong. Without this, walking back into the category a note just LEFT repaints it
+    // still sitting there, from cache, with no read. Unmounted lists are only marked stale, so this
+    // issues no request; the key on screen is excluded because `reloadNotes` already re-reads it
+    // and invalidating it too would cancel that read and start a second one.
+    revalidateResources((key) => key !== listKey && key.startsWith(listPrefix));
+    return Promise.all([reloadNotes(), reloadCategories(), reloadTags()])
+      .then(() => undefined)
+      .catch(() => {});
+  }, [reloadNotes, reloadCategories, reloadTags, listKey, listPrefix]);
 
   // ── Selection + draft ─────────────────────────────────────────────────────
   const selectedId = noteId ?? null;

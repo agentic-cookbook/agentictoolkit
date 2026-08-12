@@ -145,6 +145,9 @@ function Harness({ children }: { children: ReactNode }) {
           else next.set(id, guard);
           return next;
         }),
+      popStack: () => {},
+      reportMissing: () => {},
+      reportBusy: () => {},
       toolbarSlot: null,
     }),
     [],
