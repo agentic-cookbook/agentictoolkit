@@ -11,7 +11,7 @@ import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { tokenPrincipalsApi, type TokenPrincipal } from "@agentic-toolkit/data/ecosystem-config";
 import { isConflict } from "@agentic-toolkit/data";
-import { useReportSettingsDirty } from "@agentic-toolkit/resource";
+import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
  * Tokens feature: mint / list / revoke owner-decoupled STORAGE-access token
@@ -52,6 +52,12 @@ export function StorageTokensPanel({
     queryFn: () => tokenPrincipalsApi.list({ ecosystemId, workspace }),
   });
   const tokens: TokenPrincipal[] = tokensQuery.data ?? [];
+
+  // The load is invisible here in a way the other panes' is not: an unfinished read has no rows, and
+  // no-rows-yet is drawn as "No tokens yet." below — a wrong answer, not a pending one. Reporting
+  // upward puts the spinner on the Configuration list that published this pane, which is the only
+  // surface saying anything at all while the request is open.
+  useReportBusy(tokensQuery.isFetching);
 
   const mintMutation = useMutation({
     mutationFn: (body: Parameters<typeof tokenPrincipalsApi.mint>[0]) =>

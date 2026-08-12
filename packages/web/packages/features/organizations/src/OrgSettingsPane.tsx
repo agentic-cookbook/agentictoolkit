@@ -139,10 +139,11 @@ export function OrgSettingsGroup({
       levelId="org-settings"
       title="Settings"
       items={items}
-      // The spinner in front of "Settings". The group's four rows are static, so what it reports is
-      // the body behind the one that is selected — and Profile is the only body this group fetches.
-      // Social links, Addresses and Usage each read inside their own pane and draw their own
-      // loading state there, one component below the level published here and out of its reach.
+      // The spinner in front of "Settings", for the ONE read this group holds itself: Profile's.
+      // Social links, Addresses and Usage each read inside their own pane, a component below this
+      // level and unable to reach it — so they call `useReportBusy` and the host raises the same
+      // flag on their behalf. Hoisting those three here instead would fire all four requests the
+      // moment the group opens, to report whichever one the user actually asked for.
       busy={org.isFetching}
       urlSelection={leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined}
     />

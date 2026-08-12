@@ -282,6 +282,14 @@ export function useReportMissing(id: string | null, missing: boolean): void {
  *
  * Do NOT call this from a pane that publishes its own level — set `busy` on that level instead, or
  * the same read lights two spinners and asks the user to tell them apart.
+ *
+ * DO call it from a pane that already draws its own first-load skeleton, and pass `isFetching`
+ * anyway. A skeleton answers "is there anything to show yet", which is false only on the FIRST
+ * visit; the spinner answers "am I still reading", which is what the second visit needs — that
+ * visit paints instantly from cache and then revalidates in complete silence without this. The two
+ * are not the duplicate the paragraph above rules out: that one is two list spinners competing for
+ * the same read, this one is a body saying it is empty while a list says it is reading. Pass the OR
+ * of every read the pane holds, so the spinner outlasts the first one to land.
  */
 export function useReportBusy(busy: boolean): void {
   const ctx = useContext(RailHostContext);

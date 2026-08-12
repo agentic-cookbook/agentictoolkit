@@ -4,6 +4,7 @@ import { ImageIcon, Upload } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { authedJson } from "@agentic-toolkit/auth/client";
+import { useReportBusy } from "@agentic-toolkit/resource";
 
 /**
  * Persona avatar upload. Drives the existing presigned R2 flow:
@@ -24,19 +25,34 @@ export function PersonaAvatarField({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  // The preview resolve is the one read in this editor with NO flag of its own — an unresolved URL
+  // and a persona with no avatar draw the same placeholder. Deliberately not cached (see below), so
+  // it runs on every visit, which is exactly when it should be visible.
+  const [resolving, setResolving] = useState(false);
+
+  // Nothing here publishes a topic list, so this reports up to the one that did — the persona's
+  // topic list, whose Identity row this field sits behind. See `useReportBusy`.
+  useReportBusy(resolving);
 
   useEffect(() => {
     if (!value) {
       setPreviewUrl(null);
+      setResolving(false);
       return;
     }
     let cancelled = false;
+    setResolving(true);
+    // Uncached on purpose: this is a short-lived presigned GET, and a cache that replayed it after
+    // it expired would show a broken image rather than a stale one.
     authedJson<{ url: string }>(`/api/storage/downloads/${value}`)
       .then((r) => {
         if (!cancelled) setPreviewUrl(r.url);
       })
       .catch(() => {
         if (!cancelled) setPreviewUrl(null);
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false);
       });
     return () => {
       cancelled = true;

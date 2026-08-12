@@ -8,6 +8,7 @@ import {
   socialLinksKey,
   PRIVACY_KEY,
 } from "@agentic-toolkit/data/profile";
+import { useReportBusy } from "@agentic-toolkit/resource";
 import { SocialLinksSection } from "./SocialLinksSection";
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -30,6 +31,11 @@ export function SocialLinksPanel({
   });
 
   const grants = privacyQuery.data ?? [];
+
+  // Publishes no topic list of its own: the settings list one component up owns the spinner. Both
+  // reads, because the section is not finished until the tiers arrive — and the privacy read is not
+  // surfaced anywhere else at all. See `useReportBusy`.
+  useReportBusy(socialLinksQuery.isFetching || privacyQuery.isFetching);
 
   return (
     <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">

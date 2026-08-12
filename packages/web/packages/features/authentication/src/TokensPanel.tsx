@@ -9,6 +9,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { tokensApi, type ApiToken } from "@agentic-toolkit/data/security";
+import { useReportBusy } from "@agentic-toolkit/resource";
 
 /**
  * API tokens panel: create (with scope + read-only flag), list, and revoke
@@ -36,6 +37,11 @@ export function TokensPanel(): ReactElement {
 
   const tokens: ApiToken[] = tokensQuery.data ?? [];
   const prefixes: string[] = scopesQuery.data ?? [];
+
+  // This panel is a settings body, not a publisher: the list one component up owns the spinner. The
+  // token read in particular has nothing else to say it is running — an unfinished list is drawn as
+  // "No tokens yet." below, which is a wrong answer rather than a pending one. See `useReportBusy`.
+  useReportBusy(tokensQuery.isFetching || scopesQuery.isFetching);
 
   // ── Mutations ──────────────────────────────────────────────────────────────
   const mintMutation = useMutation({

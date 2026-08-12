@@ -7,6 +7,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { accessApi, type AccessRoleRow } from "@agentic-toolkit/data/access";
 import { workspaceMembersApi, type WorkspaceMember } from "@agentic-toolkit/data/organizations";
+import { useReportBusy } from "@agentic-toolkit/resource";
 
 // Takes its workspace as PROPS rather than reading the hub's workspace context: three apps
 // mount this roster now, and only one of them has that context. A hook that silently returns
@@ -59,6 +60,15 @@ export function MembersPanel({
     enabled: isOrg,
     retry: false,
   });
+
+  // This panel is a topic's body, not a publisher, so the three reads above have no list of their
+  // own — the feature's topic list one component up owns the spinner. All three, because the roster
+  // is not usable until the roles and assignments decide whether each row gets a live selector or a
+  // static chip, and those two surface nowhere: a viewer watching the chips turn into selectors is
+  // the only sign either one landed. See `useReportBusy`.
+  useReportBusy(
+    membersQuery.isFetching || rolesQuery.isFetching || assignmentsQuery.isFetching,
+  );
 
   const setRole = useMutation({
     mutationFn: async ({ member, roleId }: { member: WorkspaceMember; roleId: string }) => {

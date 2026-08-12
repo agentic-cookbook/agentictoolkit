@@ -10,6 +10,7 @@ import { Stat } from "@agentic-toolkit/ui/components/stat";
 
 import { getUsageSummary, usageSummaryKey, type UsageRow } from "@agentic-toolkit/data/profile";
 import { isForbidden } from "@agentic-toolkit/data";
+import { useReportBusy } from "@agentic-toolkit/resource";
 import {
   capFor,
   capPercent,
@@ -40,6 +41,11 @@ export function UsagePanel({ workspaceSlug }: { workspaceSlug?: string } = {}) {
     queryFn: () => getUsageSummary(workspaceSlug ? { workspace: workspaceSlug } : undefined),
     retry: false,
   });
+
+  // Publishes no topic list of its own: the settings list one component up owns the spinner. Above
+  // the early returns below, because a hook may not sit behind a branch — and because the error
+  // return is exactly where a pane would otherwise leave a report standing. See `useReportBusy`.
+  useReportBusy(usageQuery.isFetching);
 
   if (usageQuery.isError) {
     // An org's Settings rail is open to every member, but the usage of an org's PEOPLE is

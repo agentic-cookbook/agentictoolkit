@@ -41,7 +41,7 @@ import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { useReportSettingsDirty } from "@agentic-toolkit/resource";
+import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
  * The empty list, hoisted to module scope: `bagsQuery.data ?? []` would otherwise mint a
@@ -82,6 +82,10 @@ export function ServerBagsPane({
     queryFn: () => ecosystemServerBagsApi.get(ecosystemId!),
     enabled: !!ecosystemId,
   });
+
+  // Publishes no topic list of its own: the Configuration list one component up owns the spinner,
+  // and this report is the only way a read down here reaches it. See `useReportBusy`.
+  useReportBusy(bagsQuery.isFetching);
 
   const createMutation = useMutation({
     mutationFn: (body: EcosystemServerBagCreate) =>

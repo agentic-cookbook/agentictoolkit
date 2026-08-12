@@ -41,7 +41,7 @@ import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { useReportSettingsDirty } from "@agentic-toolkit/resource";
+import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
  * The empty list, hoisted to module scope: `flagsQuery.data ?? []` would otherwise mint a
@@ -73,6 +73,12 @@ export function FeatureFlagsPane({
     queryFn: () => ecosystemFeatureFlagsApi.get(ecosystemId!),
     enabled: !!ecosystemId,
   });
+
+  // This pane publishes no topic list, so the read above has nowhere of its own to show itself —
+  // the Configuration list one component up owns the spinner, and reporting is how the read gets
+  // there. The table's own `loading` below is not a substitute: it is `isPending`, false on every
+  // revisit.
+  useReportBusy(flagsQuery.isFetching);
 
   const createMutation = useMutation({
     mutationFn: (body: EcosystemFeatureFlagCreate) =>

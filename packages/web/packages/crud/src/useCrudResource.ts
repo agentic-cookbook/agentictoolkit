@@ -27,7 +27,13 @@ export function rowKey(meta: CrudTableMeta, row: CrudRow): string {
 
 export interface CrudResource {
   rows: CrudRow[]
+  /** Nothing to show YET — true only until the first list lands, so a re-list keeps the current
+   *  rows on screen instead of flashing. Drive a table's skeleton with this. */
   loading: boolean
+  /** A list call is OPEN, whether or not there are rows already. The one to report upward with
+   *  `useReportBusy`: `loading` is false for every re-list and every visit after the first, which
+   *  are the reads a spinner in front of the list's title exists to show. */
+  fetching: boolean
   error: string | null
   refresh: () => Promise<void>
   /** Mutations throw on failure (the caller renders the message inline) and
@@ -60,6 +66,13 @@ export function useCrudResource(
 ): CrudResource {
   const [rows, setRows] = useState<CrudRow[]>([])
   const [loading, setLoading] = useState(true)
+  // Separate from `loading` because they answer different questions and only one of them may
+  // suppress itself: `loading` is deliberately quiet for re-lists (see `hasLoadedRef` below), which
+  // makes it useless for saying a request is open. Initialised to match `loading` rather than for a
+  // reason of its own — the list effect raises it before any request goes out, so the starting
+  // value is never read; two flags that start differently would only invite a reader to look for a
+  // difference that isn't there.
+  const [fetching, setFetching] = useState(true)
   const [error, setError] = useState<string | null>(null)
   // The scope override rides every verb's URL; empty string means "no override".
   const scopeQuery = scopeEcosystemId ? `ecosystemId=${encodeURIComponent(scopeEcosystemId)}` : ''
@@ -82,6 +95,7 @@ export function useCrudResource(
   const refresh = useCallback(async () => {
     const seq = ++listSeq.current
     if (!hasLoadedRef.current) setLoading(true)
+    setFetching(true)
     setError(null)
     try {
       const fetched = await authedJson<CrudRow[]>(
@@ -94,7 +108,12 @@ export function useCrudResource(
       if (seq !== listSeq.current) return
       setError(errorMessage(err))
     } finally {
-      if (seq === listSeq.current) setLoading(false)
+      // Guarded by the same sequence check as the writes above: a superseded call must not report
+      // that the list it was overtaken by has finished.
+      if (seq === listSeq.current) {
+        setLoading(false)
+        setFetching(false)
+      }
     }
   }, [meta, listQuery])
 
@@ -159,5 +178,17 @@ export function useCrudResource(
     [removeRow, refresh],
   )
 
-  return { rows, loading, error, refresh, create, update, remove, createRow, updateRow, removeRow }
+  return {
+    rows,
+    loading,
+    fetching,
+    error,
+    refresh,
+    create,
+    update,
+    remove,
+    createRow,
+    updateRow,
+    removeRow,
+  }
 }

@@ -17,6 +17,7 @@ import { Badge } from '@agentic-toolkit/ui/components/badge'
 import { Button } from '@agentic-toolkit/ui/components/button'
 import { Checkbox } from '@agentic-toolkit/ui/components/checkbox'
 import { ApiButton } from '@agentic-toolkit/api-explorer'
+import { useReportBusy } from '@agentic-toolkit/resource'
 import { MoveToEcosystemDialog } from './MoveToEcosystemDialog'
 import { ResizableSplit } from '@agentic-toolkit/ui/components/resizable-split'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
@@ -95,7 +96,14 @@ function formatCellDisplay(value: unknown): string {
  */
 export function CrudDataView({ meta, filter, scopeEcosystemId, onGuardChange }: CrudDataViewProps) {
   const resource = useCrudResource(meta, filter, scopeEcosystemId)
-  const { rows, loading, error } = resource
+  const { rows, loading, fetching, error } = resource
+
+  // This view is a topic's body in every one of its mounts (the All-Data browser, Knowledge bases,
+  // an integration's synced data, a persona's tables), and it publishes no list of its own — so the
+  // list above owns the spinner. `fetching`, not `loading`: switching tables keeps the previous
+  // table's rows on screen while the new one loads, and a re-list after a save shows nothing at
+  // all, which are precisely the reads the pane's own spinner below is written to suppress.
+  useReportBusy(fetching)
 
   // A single active row for the detail pane, identified by its primary key (a
   // server row) or its synthetic draft key. Stable across a re-list, unlike an

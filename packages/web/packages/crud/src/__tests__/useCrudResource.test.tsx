@@ -159,6 +159,100 @@ describe('useCrudResource', () => {
   })
 })
 
+describe('useCrudResource fetching', () => {
+  // `loading` deliberately goes quiet after the first list so the table keeps its rows instead of
+  // flashing a spinner. That makes it the wrong flag to report a read upward with — a pane that
+  // reported it would light the topic list's spinner on the first visit only, and stay silent for
+  // every re-list and every table switch after. `fetching` is the flag those need, so these say
+  // what it does at exactly the moments `loading` says nothing.
+
+  /** A list call the test resolves by hand. */
+  function deferredList(): { resolve: (rows: unknown) => void } {
+    const handle = { resolve: (_: unknown) => {} }
+    authedJson.mockImplementationOnce(
+      () => new Promise((resolve) => { handle.resolve = resolve }) as never,
+    )
+    return handle
+  }
+
+  it('is true while the first list is open and false once it lands', async () => {
+    const first = deferredList()
+    const { result } = renderHook(() => useCrudResource(tiers))
+    expect(result.current.fetching).toBe(true)
+    await act(async () => { first.resolve([{ id: '1' }]) })
+    expect(result.current.fetching).toBe(false)
+  })
+
+  it('stays true through a re-list, the one `loading` sits out', async () => {
+    authedJson.mockResolvedValueOnce([{ id: '1' }])
+    const { result } = renderHook(() => useCrudResource(tiers))
+    await waitFor(() => expect(result.current.loading).toBe(false))
+
+    const again = deferredList()
+    let refreshing!: Promise<void>
+    act(() => { refreshing = result.current.refresh() })
+    // The divergence this flag exists for: the rows stay on screen (`loading` false) while a
+    // request is genuinely open (`fetching` true).
+    expect(result.current.loading).toBe(false)
+    expect(result.current.fetching).toBe(true)
+
+    await act(async () => {
+      again.resolve([{ id: '1' }, { id: '2' }])
+      await refreshing
+    })
+    expect(result.current.fetching).toBe(false)
+  })
+
+  it('goes true again when the table SWITCHES under a live hook', async () => {
+    // The most visible case: the browser is still showing the previous table's rows, because
+    // `hasLoadedRef` is already set, so nothing on screen says the new table is on its way.
+    authedJson.mockResolvedValueOnce([{ id: '1' }])
+    const { result, rerender } = renderHook(({ meta }) => useCrudResource(meta), {
+      initialProps: { meta: tiers },
+    })
+    await waitFor(() => expect(result.current.fetching).toBe(false))
+
+    const switched = deferredList()
+    rerender({ meta: links })
+    expect(result.current.loading).toBe(false)
+    expect(result.current.fetching).toBe(true)
+
+    await act(async () => { switched.resolve([]) })
+    expect(result.current.fetching).toBe(false)
+  })
+
+  it('is not cleared by a SUPERSEDED list landing after a newer one started', async () => {
+    // Same out-of-order guard the row write has. Without it, a slow first table answering after the
+    // user moved on would report the second table's still-open read as finished.
+    authedJson.mockResolvedValueOnce([{ id: '1' }])
+    const { result, rerender } = renderHook(({ meta }) => useCrudResource(meta), {
+      initialProps: { meta: tiers },
+    })
+    await waitFor(() => expect(result.current.fetching).toBe(false))
+
+    const stale = deferredList()
+    rerender({ meta: links })
+    const current = deferredList()
+    rerender({ meta: tiers })
+    expect(result.current.fetching).toBe(true)
+
+    await act(async () => { stale.resolve([{ id: 'stale' }]) })
+    expect(result.current.fetching).toBe(true)
+    expect(result.current.rows).toEqual([{ id: '1' }])
+
+    await act(async () => { current.resolve([{ id: 'fresh' }]) })
+    expect(result.current.fetching).toBe(false)
+    expect(result.current.rows).toEqual([{ id: 'fresh' }])
+  })
+
+  it('is false after a list FAILS, so a broken read cannot leave a spinner turning', async () => {
+    authedJson.mockRejectedValueOnce(new Error('Service unavailable'))
+    const { result } = renderHook(() => useCrudResource(tiers))
+    await waitFor(() => expect(result.current.error).toBe('Service unavailable'))
+    expect(result.current.fetching).toBe(false)
+  })
+})
+
 describe('useCrudResource filter', () => {
   it('appends the filter as a query string to the list call', async () => {
     authedJson.mockResolvedValueOnce([])
