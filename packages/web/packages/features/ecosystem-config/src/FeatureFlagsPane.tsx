@@ -41,6 +41,7 @@ import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
+import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
@@ -295,7 +296,10 @@ export function FeatureFlagsPane({
             {confirmDelete
               ? `“${confirmDelete.key}” will be removed. Anything reading it falls back to its default.`
               : ""}
-            {deleteError && <span className="mt-2 block text-destructive">{deleteError}</span>}
+            {/* `DialogErrorText`, not `ErrorText`: Base UI renders `DialogDescription` as a
+                `<p>`, and `ErrorText`'s own `<p role="alert">` cannot legally nest inside one.
+                Its docstring holds the reasoning for the `role` this treatment keeps. */}
+            <DialogErrorText error={deleteError} />
           </>
         }
         confirmLabel="Delete"
@@ -430,7 +434,7 @@ export function FlagDialog({
             Enabled
           </Label>
           {save.error ? (
-            <p className="text-sm text-destructive">{save.error}</p>
+            <ErrorText error={save.error} />
           ) : (
             // Why Save is grey — shown from the FIRST frame, not gated on `dirty`. A create
             // surface opens already blocked, on a requirement ("a key is required") that is

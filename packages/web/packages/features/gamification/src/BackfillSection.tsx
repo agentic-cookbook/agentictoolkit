@@ -7,6 +7,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { isForbidden } from "@agentic-toolkit/data";
 import { gamificationApi } from "@agentic-toolkit/data/gamification";
 import { Button } from "@agentic-toolkit/ui/components/button";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 import { useRealmCatalog } from "./realm-catalog";
 import { forbiddenAware } from "./err-text";
@@ -72,7 +73,7 @@ export function BackfillSection({ ecosystemId }: { ecosystemId?: string }) {
         </Button>
       </div>
       {backfillNote && <p className="mt-3 text-sm text-apt-green">{backfillNote}</p>}
-      {backfillError && <p className="mt-3 text-sm text-apt-red">{backfillError}</p>}
+      <ErrorText error={backfillError} className="mt-3" />
     </div>
   );
 }

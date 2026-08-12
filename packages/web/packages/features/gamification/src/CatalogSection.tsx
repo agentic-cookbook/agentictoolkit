@@ -29,6 +29,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 import { useRealmCatalog } from "./realm-catalog";
 import { forbiddenAware } from "./err-text";
@@ -290,7 +291,7 @@ export function CatalogSection({ ecosystemId }: { ecosystemId?: string }) {
         </Button>
       </div>
 
-      {loadError && <p className="mt-4 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="mt-4" />
       {!catalog && !loadError && <p className="mt-4 text-sm text-apt-text-muted">Loading…</p>}
 
       {/* Badges grouped by line */}
@@ -475,11 +476,7 @@ export function CatalogSection({ ecosystemId }: { ecosystemId?: string }) {
               <span className="text-sm text-apt-text">Hidden until earned</span>
             </Label>
 
-            {formError && (
-              <p className="text-sm text-apt-red" role="alert">
-                {formError}
-              </p>
-            )}
+            <ErrorText error={formError} />
 
             {/* Why Save is grey. Gated on `badgeDirty` so the Add dialog doesn't open by
                 complaining about fields nobody has been asked for yet — "nothing to save" needs
@@ -527,11 +524,7 @@ export function CatalogSection({ ecosystemId }: { ecosystemId?: string }) {
           deleteTarget ? (
             <>
               <span>{`Delete "${deleteTarget.name}"? Members holding it lose it.`}</span>
-              {deleteError && (
-                <span className="mt-2 block text-apt-red" role="alert">
-                  {deleteError}
-                </span>
-              )}
+              <DialogErrorText error={deleteError} />
             </>
           ) : undefined
         }

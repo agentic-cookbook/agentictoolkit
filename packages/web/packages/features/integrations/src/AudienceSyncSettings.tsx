@@ -6,6 +6,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { integrationsApi } from "@agentic-toolkit/data/integrations";
 import { errMsg } from "@agentic-toolkit/data";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
@@ -115,7 +116,7 @@ export function AudienceSyncSettings({ connectionId, initial }: SyncSettingsForm
           contacts.
         </p>
       </div>
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
       {saved && <p className="text-sm text-apt-green">Sync settings saved.</p>}
       <div className="flex justify-end">
         <Button type="submit" size="sm" disabled={busy || !canSave}>

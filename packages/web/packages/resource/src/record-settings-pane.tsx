@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { ButtonBar } from "./master-detail/MasterDetailLayout";
 import type { MasterDetailForm } from "./master-detail/useMasterDetailForm";
 
@@ -61,7 +62,7 @@ export function RecordSettingsPane<TItem, TInput>({
           rail and Delete in the entity pane's Danger section, so this bar keeps just Cancel/Save. */}
       <ButtonBar actions={form.actions} showCreate={false} showDelete={false} title={title} trailing={trailing} help={help} />
       <section className="flex min-w-0 flex-1 flex-col gap-6 overflow-y-auto px-6 py-4">
-        {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+        <ErrorText error={loadError} />
         {form.editing && form.draft ? (
           <>
             {extraActions}

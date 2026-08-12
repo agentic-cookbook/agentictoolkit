@@ -55,8 +55,14 @@ export function SchemaGrantNode({
         title="(deleted schema)"
         subtitle={grant.schemaId}
         actions={
-          <Button type="button" variant="ghost" size="icon-sm" onClick={onRemove} title="Remove">
-            <Trash2 className="text-apt-red" />
+          <Button
+            type="button"
+            variant="destructive-ghost"
+            size="icon-sm"
+            onClick={onRemove}
+            title="Remove"
+          >
+            <Trash2 />
           </Button>
         }
       >
@@ -76,8 +82,14 @@ export function SchemaGrantNode({
       actions={
         <>
           <PermissionToggles value={grant.permissions} onChange={setSchemaPermissions} />
-          <Button type="button" variant="ghost" size="icon-sm" onClick={onRemove} title="Remove schema">
-            <Trash2 className="text-apt-red" />
+          <Button
+            type="button"
+            variant="destructive-ghost"
+            size="icon-sm"
+            onClick={onRemove}
+            title="Remove schema"
+          >
+            <Trash2 />
           </Button>
         </>
       }

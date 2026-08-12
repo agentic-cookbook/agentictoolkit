@@ -4,6 +4,7 @@ import { Field } from "@agentic-toolkit/ui/blocks";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { SchemaDefinition, SchemaDefinitionInput } from "./schema-model";
 import { DetailSection } from "@agentic-toolkit/resource";
 import { SchemaTablesEditor } from "./SchemaTablesEditor";
@@ -100,7 +101,7 @@ export function SchemaDefinitionDetail({
             />
 
             {/* Form-level error (name OR tables) — not bound to a single field. */}
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
           </CardContent>
         </Card>
       </DetailSection>

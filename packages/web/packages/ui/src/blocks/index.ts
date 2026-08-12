@@ -18,7 +18,7 @@ export { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "../lib/detail-pane"
 // TopicSelectHint is THE "select something" placeholder card — every pane that waits on a
 // choice renders it (the stack frontier does so automatically); EmptyState stays the home
 // for genuinely empty/loading/error panes.
-export { TopicOverview, TopicSelectHint } from "./topic-overview"
+export { TopicSelectHint } from "./topic-select-hint"
 export {
   HierarchicalTopicDetail,
   type TopicLevel,

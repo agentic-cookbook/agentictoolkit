@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { ButtonBar, type MasterDetailActions } from "./MasterDetailLayout";
 
 /**
@@ -35,7 +36,7 @@ export function MasterDetailLeaf<TInput>({
 }) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {error && <p className="px-6 pt-4 text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} className="px-6 pt-4" />
       <ButtonBar actions={form.actions} showCreate={false} trailing={trailing} help={help} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-4">
         {form.editing && form.draft ? (

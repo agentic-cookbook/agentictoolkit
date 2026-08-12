@@ -51,6 +51,11 @@
       "development": "./src/lib/nav-rail.ts",
       "import": "./dist/lib/nav-rail.js"
     },
+    "./lib/quiet-control": {
+      "types": "./dist/lib/quiet-control.d.ts",
+      "development": "./src/lib/quiet-control.ts",
+      "import": "./dist/lib/quiet-control.js"
+    },
     "./lib/tone": {
       "types": "./dist/lib/tone.d.ts",
       "development": "./src/lib/tone.ts",

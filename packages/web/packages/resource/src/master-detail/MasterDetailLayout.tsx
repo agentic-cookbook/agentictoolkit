@@ -109,7 +109,7 @@ export function FeatureTitle({
       <div className="flex items-center gap-2">
         {trailing}
         {help && (
-          <HelpPopover triggerClassName="flex items-center text-apt-text-muted transition-colors hover:text-apt-text">
+          <HelpPopover>
             {help}
           </HelpPopover>
         )}
@@ -222,7 +222,7 @@ export function ButtonBar({
       />
       {trailing && <div className="ml-1 flex items-center">{trailing}</div>}
       {help && (
-        <HelpPopover triggerClassName="ml-1 flex items-center text-apt-text-muted transition-colors hover:text-apt-text">
+        <HelpPopover triggerClassName="ml-1">
           {help}
         </HelpPopover>
       )}

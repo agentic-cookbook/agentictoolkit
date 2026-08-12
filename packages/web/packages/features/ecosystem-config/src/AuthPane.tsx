@@ -11,6 +11,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { confirmNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { ecosystemsApi, type AuthSettings, type SignupMode } from "@agentic-toolkit/data/ecosystems";
 import { EditActionBar, useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
@@ -169,7 +170,7 @@ export function AuthPane({
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-3xl space-y-7">
           {help && <p className="text-sm text-apt-text-muted">{help}</p>}
-          {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+          <ErrorText error={loadError} />
           {!effective && !loadError && (
             <p className="text-sm text-apt-text-muted">Loading…</p>
           )}

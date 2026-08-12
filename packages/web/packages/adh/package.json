@@ -61,6 +61,11 @@
       "development": "./src/legal/index.ts",
       "import": "./dist/legal/index.js"
     },
+    "./messaging": {
+      "types": "./dist/messaging/index.d.ts",
+      "development": "./src/messaging/index.ts",
+      "import": "./dist/messaging/index.js"
+    },
     "./themes": {
       "types": "./dist/themes/index.d.ts",
       "development": "./src/themes/index.ts",

@@ -1,23 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Fragment } from "react";
 import type { ReactNode } from "react";
+import {
+  HierarchicalDetailView,
+  type TopicDetailItem,
+  type TopicLevel,
+} from "@agentic-toolkit/ui/blocks";
 import { confirmNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
 import { SettingsPanel } from "./SettingsPanel";
 import { SettingsNavProvider, type SettingsNav } from "./settings-nav";
-// NO `import "./settings.css"` here, deliberately — see package.json's "comment:styles".
-// tsup extracts a side-effect CSS import into a sibling dist/index.css and DELETES the
-// import from the emitted JS, so in a production build nothing would pull the stylesheet
-// in and every rule below would be missing while `next dev` and vitest (which take the
-// `development` condition straight to this source) looked perfect. The sheet ships as
-// "@agentic-toolkit/account/styles.css" and is @imported by adh's adh-site.css, the one
-// stylesheet all ~45 sites already load.
 
 export interface Topic {
   id: string;
   label: string;
   icon?: ReactNode;
+  /** Render a separator row after this item. */
   dividerAfter?: boolean;
   /** Explicit navigation target for this item (each item can route anywhere). */
   href: string;
@@ -26,40 +24,54 @@ export interface Topic {
   content: ReactNode;
 }
 
+/**
+ * The settings sections as ONE hierarchical topic/detail level — the same stack the rest of the
+ * platform renders, and the same shape `admin` uses (`admin/src/components/admin-shell.tsx`).
+ *
+ * This used to be a hand-rolled `<ul>` of `.settings-nav-item` buttons beside a `.settings-content`
+ * pane: a second navigator carrying its own active flag, its own CSS and its own responsive rules,
+ * rebuilding what `HierarchicalDetailView` already provides (rail collapse, the icon strip, the
+ * disclosure sequence, keyboard handling). `settings.css` went with it — every class in it was
+ * written for this file's markup and nothing else, so once the markup left, the whole stylesheet
+ * was 34 selectors matching no element on any site. That mattered more here than it did while the
+ * sheet was hub's private file: it now reached every site in the fleet through adh-site.css.
+ *
+ * Five props went at the same time (`slot`, `afterId`, `slotActive`, `contentHeader`,
+ * `contentOverride`): all were implemented here but passed by NO caller — not hub's `/settings`
+ * (`SettingsTab`), not the User Settings overlay. Their one intended consumer — the Ecosystems
+ * tab's active-ecosystem selector — is gone, and the stack expresses the same ideas as `railSlot` /
+ * `headerSlot` / `titleActions` if they are ever wanted again.
+ *
+ * Settings ALWAYS shows a section — `/settings` resolves to the first one (`resolveSettingsTopic`)
+ * and the overlay opens on `DEFAULT_SETTINGS_TOPIC` — so `onClear` (re-click-deselect,
+ * breadcrumb-up, Back) returns to that default rather than to an empty pane, and the stack's own
+ * no-selection nudge never shows here. No breadcrumb: `/settings` already sits under `HomeTabs`,
+ * and the overlay under its own DialogTitle.
+ */
 export function SettingsLayout({
   topics,
   activeId,
-  afterId,
-  slot,
-  slotActive,
-  contentHeader,
-  contentOverride,
   onNavigate,
 }: {
   topics: Topic[];
   activeId?: string;
-  /** Render `slot` as a nav row immediately after the item with this id. */
-  afterId?: string;
-  slot?: ReactNode;
-  /** Move the selection bar onto the slot row (no topic is active). */
-  slotActive?: boolean;
-  /** Render as a full-width row above the whole topic|details grid (e.g. the
-   *  resource action bar). Stays put as topics switch beneath it. */
-  contentHeader?: ReactNode;
-  /** Render this instead of the active topic's content (e.g. the "All" landing). */
-  contentOverride?: ReactNode;
   /** Controlled mode: handle topic selection in-place instead of routing to
    *  `topic.href`. Used by the settings overlay so it can switch sections without
    *  navigating away from the route it's layered over. */
   onNavigate?: (topic: Topic) => void;
 }) {
   const router = useRouter();
-  const active = slotActive
-    ? undefined
-    : (topics.find((t) => t.id === activeId) ?? undefined);
-  const content = contentOverride ?? active?.content;
+  const active = topics.find((t) => t.id === activeId) ?? undefined;
 
-  // Picking a section. A nav row is a <button> that calls router.push — which the shared
+  const items: TopicDetailItem[] = topics.map((t) => ({
+    id: t.id,
+    label: t.label,
+    icon: t.icon,
+    dividerAfter: t.dividerAfter,
+    disabled: t.disabled,
+  }));
+
+  // Picking a section. A rail row is a <button> that calls router.push — which the shared
   // UnsavedChangesGuard does NOT intercept (it catches anchor clicks + programmatic navigations
   // that consult confirmNavigation). Uncontrolled (the /settings route), route through
   // confirmNavigation() so switching sections with a dirty panel open prompts Discard/Stay
@@ -91,60 +103,36 @@ export function SettingsLayout({
     },
   };
 
-  const grid = (
-    <div className="settings-layout">
-      <aside className="settings-nav" aria-label="Settings sections">
-        <ul>
-          {slot && afterId === undefined && (
-            <li className={`settings-nav-slot${slotActive ? " is-active" : ""}`}>
-              {slot}
-            </li>
-          )}
-          {topics.map((t) => (
-            <Fragment key={t.id}>
-              <li>
-                <button
-                  type="button"
-                  disabled={t.disabled}
-                  className={`settings-nav-item${t.id === active?.id ? " is-active" : ""}`}
-                  onClick={() => {
-                    void selectTopic(t);
-                  }}
-                >
-                  {t.icon}
-                  <span className="settings-nav-label">{t.label}</span>
-                </button>
-              </li>
-              {t.dividerAfter && (
-                <li className="settings-nav-divider" role="separator" />
-              )}
-              {slot && afterId === t.id && (
-                <li className={`settings-nav-slot${slotActive ? " is-active" : ""}`}>
-                  {slot}
-                </li>
-              )}
-            </Fragment>
-          ))}
-        </ul>
-      </aside>
-      <main className="settings-content">
-        {content && <SettingsPanel>{content}</SettingsPanel>}
-      </main>
-    </div>
-  );
+  const levels: TopicLevel[] = [
+    {
+      id: "settings",
+      title: "Settings",
+      // Keeps the landmark this surface used to own as its own `<aside aria-label="Settings
+      // sections">`. Every rail in the stack is otherwise called "Topic list", so a reader who
+      // navigates BY landmark (the User Settings overlay opens over whatever page they were on)
+      // would have to guess which of the identically-named regions holds the sections.
+      railLabel: "Settings sections",
+      items,
+      selectedId: active?.id ?? null,
+      onSelect: (id) => {
+        const t = topics.find((x) => x.id === id);
+        if (t) void selectTopic(t);
+      },
+      // Back to the default section — see the note above on why this is never an empty pane.
+      onClear: () => {
+        const first = topics[0];
+        if (first) void selectTopic(first);
+      },
+    },
+  ];
 
-  // A `contentHeader` (the resource action bar) spans the full width above the
-  // whole topic|details grid; without one, the grid stands alone as before.
   return (
     <SettingsNavProvider value={nav}>
-      {!contentHeader ? (
-        grid
-      ) : (
-        <div className="settings-shell">
-          {contentHeader}
-          {grid}
-        </div>
-      )}
+      {/* `showBreadcrumb` defaults to TRUE, so the suppression has to be explicit — see the note
+          above on why this surface carries no trail of its own. */}
+      <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
+        {active?.content && <SettingsPanel>{active.content}</SettingsPanel>}
+      </HierarchicalDetailView>
     </SettingsNavProvider>
   );
 }

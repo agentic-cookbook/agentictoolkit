@@ -25,6 +25,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
+import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 import { forbiddenAware } from "./err-text";
 
@@ -224,7 +225,7 @@ export function EventTypesSection({ ecosystemId }: { ecosystemId?: string }) {
         </Button>
       </div>
 
-      {loadError && <p className="mt-4 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="mt-4" />
       {!types && !loadError && <p className="mt-4 text-sm text-apt-text-muted">Loading…</p>}
 
       {types && types.length === 0 && (
@@ -309,11 +310,7 @@ export function EventTypesSection({ ecosystemId }: { ecosystemId?: string }) {
               />
             </Field>
 
-            {formError && (
-              <p className="text-sm text-apt-red" role="alert">
-                {formError}
-              </p>
-            )}
+            <ErrorText error={formError} />
 
             {/* Why Save is grey — shown from the FIRST frame, not gated on `dirty`. `canSave`
                 disables the button, so `submit()`'s own required-fields guard can no longer be
@@ -366,11 +363,7 @@ export function EventTypesSection({ ecosystemId }: { ecosystemId?: string }) {
           deleteTarget ? (
             <>
               <span>{`Delete "${deleteTarget.name}"? Anything still posting this event will 404.`}</span>
-              {deleteError && (
-                <span className="mt-2 block text-apt-red" role="alert">
-                  {deleteError}
-                </span>
-              )}
+              <DialogErrorText error={deleteError} />
             </>
           ) : undefined
         }

@@ -41,6 +41,7 @@ import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
+import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
@@ -293,7 +294,9 @@ export function ServerBagsPane({
             {confirmDelete
               ? `“${confirmDelete.key}” will be removed. Anything reading it falls back to its default.`
               : ""}
-            {deleteError && <span className="mt-2 block text-destructive">{deleteError}</span>}
+            {/* `DialogErrorText` — the shared nestable error line; see its docstring for why
+                `ErrorText`'s `<p>` cannot go inside `DialogDescription`. */}
+            <DialogErrorText error={deleteError} />
           </>
         }
         confirmLabel="Delete"
@@ -436,7 +439,7 @@ export function BagDialog({
             />
           </Field>
           {save.error ? (
-            <p className="text-sm text-destructive">{save.error}</p>
+            <ErrorText error={save.error} />
           ) : (
             // Why Save is grey — shown from the FIRST frame, not gated on `dirty`. A create
             // surface opens already blocked (an empty value box is not valid JSON), and the

@@ -10,6 +10,7 @@ import { useReportSettingsDirty } from "@agentic-toolkit/resource";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 import { useRealmCatalog } from "./realm-catalog";
 import { forbiddenAware } from "./err-text";
@@ -161,7 +162,7 @@ export function LevelsSection({ ecosystemId }: { ecosystemId?: string }) {
       {/* The load error belongs here as well as on the Catalog section: as its own topic this is
           the only thing on screen, and an empty rung list with no explanation reads as "this realm
           has no levels" — the opposite of what a 403 means. */}
-      {loadError && <p className="mt-4 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="mt-4" />
       {!catalog && !loadError && <p className="mt-4 text-sm text-apt-text-muted">Loading…</p>}
 
       {catalog && (
@@ -200,7 +201,7 @@ export function LevelsSection({ ecosystemId }: { ecosystemId?: string }) {
             ))}
           </div>
 
-          {ladderError && <p className="mt-2 text-sm text-apt-red">{ladderError}</p>}
+          <ErrorText error={ladderError} className="mt-2" />
 
           <div className="mt-3 flex items-center gap-2">
             <Button

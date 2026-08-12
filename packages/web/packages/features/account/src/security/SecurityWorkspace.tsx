@@ -14,9 +14,12 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { List, ListItem } from "@agentic-toolkit/ui/components/list";
+import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Spinner } from "@agentic-toolkit/ui/components/spinner";
 import { SectionHeader } from "@agentic-toolkit/ui/blocks/section-header";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import {
   confirmTotp,
@@ -115,9 +118,7 @@ function TotpCard({ status }: { status: MfaStatus }): ReactElement {
               </Button>
             </div>
             {confirm.isError && (
-              <p className="text-xs text-apt-red" role="alert">
-                {extractErrorMessage(confirm.error, "That code didn’t match.")}
-              </p>
+              <ErrorText error={extractErrorMessage(confirm.error, "That code didn’t match.")} className="text-xs" />
             )}
           </div>
         ) : (
@@ -159,30 +160,31 @@ function PasskeysCard(): ReactElement {
       </CardHeader>
       <CardContent className="space-y-3">
         {data && data.items.length > 0 ? (
-          <ul className="space-y-2">
+          <List>
             {data.items.map((cred) => (
-              <li
-                key={cred.id}
-                className="flex items-center justify-between rounded-lg border border-apt-border p-2.5"
-              >
+              <ListItem key={cred.id} className="justify-between py-2">
                 <span className="flex items-center gap-2 text-sm text-apt-text">
                   {cred.name || "Unnamed"}
                   <Badge variant="neutral">{cred.kind === "security_key" ? "Security key" : "Passkey"}</Badge>
                 </span>
                 <Button
                   size="sm"
-                  variant="ghost"
+                  variant="destructive-ghost"
                   onClick={() => remove.mutate(cred.id)}
                   disabled={remove.isPending}
-                  className="text-apt-red"
                 >
                   Remove
                 </Button>
-              </li>
+              </ListItem>
             ))}
-          </ul>
+          </List>
         ) : (
-          <p className="text-sm text-apt-text-muted">No passkeys or security keys yet.</p>
+          /* No action slot: the "Add passkey" / "Add security key" pair is the very
+             next thing in this card, so a button here would point at itself. */
+          <EmptyState
+            title="No passkeys or security keys yet."
+            description="Name a device below and register it to sign in without a password."
+          />
         )}
         <div className="flex flex-wrap items-end gap-2 border-t border-apt-border pt-3">
           <div className="flex-1 space-y-1">
@@ -199,9 +201,7 @@ function PasskeysCard(): ReactElement {
           </Button>
         </div>
         {register.isError && (
-          <p className="text-xs text-apt-red" role="alert">
-            {extractErrorMessage(register.error, "Registration was cancelled or failed.")}
-          </p>
+          <ErrorText error={extractErrorMessage(register.error, "Registration was cancelled or failed.")} className="text-xs" />
         )}
       </CardContent>
     </Card>
@@ -313,9 +313,7 @@ export function SecurityWorkspace(): ReactElement {
         </div>
       )}
       {isError && (
-        <p className="text-sm text-apt-red" role="alert">
-          Couldn’t load your security settings. Reload to try again.
-        </p>
+        <ErrorText error="Couldn’t load your security settings. Reload to try again." />
       )}
       {data && (
         <>

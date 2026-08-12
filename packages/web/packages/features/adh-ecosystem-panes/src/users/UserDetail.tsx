@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { EcosystemUser, EcosystemUserInput } from "../api/customers";
 import { DetailSection } from "@agentic-toolkit/resource";
 
@@ -98,7 +99,7 @@ export function UserDetail({
             onChange={(v) => set("avatarUrl", v)}
           />
 
-          {error && <p className="text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} />
         </CardContent>
       </Card>
     </DetailSection>

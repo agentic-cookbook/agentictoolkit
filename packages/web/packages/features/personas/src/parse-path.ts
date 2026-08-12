@@ -7,7 +7,8 @@
 /** The selection PersonasFeature renders, parsed from a route's path segments. Maps 1:1 onto
  *  PersonasFeature's props (the host supplies `basePath`). */
 export interface PersonasPathSelection {
-  /** The open persona's id (first path segment), or undefined for nothing open (the All table). */
+  /** The open persona's id (first path segment), or undefined for nothing open (the rail plus the
+   *  frame's select nudge — there is no table beside it; docs/ui/fleet-ui-audit.md §1.5). */
   personaId?: string;
   /** The active editor sub-tab (second path segment), or undefined for the first tab (Identity). */
   subTab?: string;
@@ -15,7 +16,7 @@ export interface PersonasPathSelection {
 
 /**
  * Parse a personas route's catch-all `path` segments:
- *   (none) / []            → {} (nothing open; the All personas table)
+ *   (none) / []            → {} (nothing open; the select nudge)
  *   [personaId]            → { personaId } (that persona open, first editor tab)
  *   [personaId, subTab]    → { personaId, subTab } (that persona open, on that editor tab)
  */

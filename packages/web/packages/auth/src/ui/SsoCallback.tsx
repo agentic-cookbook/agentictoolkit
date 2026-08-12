@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { exchangeSsoCode } from '../client'
 import { takeReturnTo, PENDING_LINK_KEY } from '../sso'
 import { oauthErrorMessage, accountExistsLinkBody, accountExistsTitle, loginDisabledTitle, loginDisabledBody } from '../labels'
@@ -170,7 +171,7 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
     <div className="flex-1 flex items-center justify-center bg-apt-bg text-apt-text-muted">
       {error ? (
         <div className="text-center">
-          <p className="mb-3 text-apt-red">{error}</p>
+          <ErrorText error={error} className="mb-3" />
           <a href={loginHref} className="text-apt-gold">Back to login</a>
         </div>
       ) : (

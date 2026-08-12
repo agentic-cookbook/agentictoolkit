@@ -206,12 +206,14 @@ export function OrganizationsFeature({
       itemIcon={<Building2 size={16} aria-hidden />}
       nameSuffix="Organization"
       topics={topics}
-      landing={{
+      rail={{
         title: "Organizations",
         help: "The organizations you belong to. Pick one to manage its config values, tokens, teams and record — or create a new one.",
         emptyLabel: "You aren't in any organizations yet.",
+        // The slug, not the display name, is the unique key — two orgs may share a name, and
+        // the slug is what every URL, invite link and API path carries. Without it beside the
+        // name the rail can show two rows a user cannot tell apart.
         getSublabel: (w) => w.slug,
-        renderMeta: () => null,
       }}
       newLabel="New Organization"
       // `open` is a constant here because ResourceExplorer MOUNTS the dialog only while it is

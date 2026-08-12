@@ -21,6 +21,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   integrationsApi,
   type MaskedProviderConfig,
@@ -298,8 +299,8 @@ export function IntegrationsPane({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {loadError && <p className="px-6 pt-4 text-sm text-apt-red">{loadError}</p>}
-      {catalogError && <p className="px-6 pt-4 text-sm text-apt-red">{catalogError}</p>}
+      <ErrorText error={loadError} className="px-6 pt-4" />
+      <ErrorText error={catalogError} className="px-6 pt-4" />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto px-6 py-4">
         {cfg && provider && form.draft ? (
           <div className="flex flex-col gap-6">

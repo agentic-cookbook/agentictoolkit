@@ -73,7 +73,8 @@ var HELP_TOPICS = [
   },
   {
     // Same split as MCP: the old hub-features.md's H2 sections are now child topics, one per
-    // feature area, so /hub lands on the children overview cards.
+    // feature area, so /hub lands on the children level's select nudge with those children in the
+    // rail beside it — the same landing Quickstart, Reference and MCP get.
     id: "hub",
     label: "Hub Features",
     slug: "hub",

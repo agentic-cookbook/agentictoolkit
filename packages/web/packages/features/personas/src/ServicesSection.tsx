@@ -95,82 +95,6 @@ function templateLabel(t: Template): string {
   return media.length > 0 ? `${t.name} (${media.join("/")})` : t.name;
 }
 
-// ─── ServicesTable ────────────────────────────────────────────────────────────
-
-function StatusBadge({ connectStatus }: { connectStatus: string }) {
-  if (connectStatus === "connected") {
-    return (
-      <span className="rounded bg-apt-green/15 px-1.5 py-0.5 font-mono text-[0.65rem] text-apt-green">
-        connected
-      </span>
-    );
-  }
-  if (connectStatus === "failed") {
-    return (
-      <span className="rounded bg-apt-red/15 px-1.5 py-0.5 font-mono text-[0.65rem] text-apt-red">
-        failed
-      </span>
-    );
-  }
-  return (
-    <span className="rounded bg-apt-surface-2 px-1.5 py-0.5 font-mono text-[0.65rem] text-apt-text-muted">
-      unknown
-    </span>
-  );
-}
-
-function ServicesTable({
-  services,
-  onSelect,
-}: {
-  services: UserService[];
-  onSelect: (id: string) => void;
-}) {
-  if (services.length === 0) {
-    return <p className="px-6 pb-4 text-sm text-apt-text-muted">No services yet.</p>;
-  }
-  return (
-    <div className="px-6 pt-2 pb-6">
-      <div className="overflow-hidden rounded-xl border border-apt-border">
-        <table className="w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-apt-border bg-apt-surface-2/40 text-left font-mono text-[0.7rem] uppercase tracking-wider text-apt-text-muted">
-              <th className="px-3 py-2 font-medium">Name</th>
-              <th className="px-3 py-2 font-medium">Provider</th>
-              <th className="px-3 py-2 font-medium">Status</th>
-              <th className="px-3 py-2 font-medium">Base URL</th>
-              <th className="px-3 py-2 font-medium">Models</th>
-            </tr>
-          </thead>
-          <tbody>
-            {services.map((s, i) => (
-              <tr
-                key={s.id}
-                onClick={() => onSelect(s.id)}
-                className={`cursor-pointer transition-colors hover:bg-apt-surface-2 ${
-                  i > 0 ? "border-t border-apt-border" : ""
-                }`}
-              >
-                <td className="px-3 py-2 text-apt-text">{s.name}</td>
-                <td className="px-3 py-2 font-mono text-xs text-apt-text-muted">{s.providerKind}</td>
-                <td className="px-3 py-2">
-                  <StatusBadge connectStatus={s.connectStatus} />
-                </td>
-                <td className="max-w-[14rem] truncate px-3 py-2 font-mono text-xs text-apt-text-muted">
-                  {s.baseUrl}
-                </td>
-                <td className="px-3 py-2 font-mono text-xs text-apt-text-muted">
-                  {s.models.length > 0 ? String(s.models.length) : "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
 // ─── ModelsTable ──────────────────────────────────────────────────────────────
 
 function CapChip({ label }: { label: string }) {
@@ -792,7 +716,7 @@ function ServiceEditor({
 
 /**
  * The Services section: a HierarchicalTopicDetail whose rail is the service list
- * and whose pane is the editor (the "All services" table while nothing is open).
+ * and whose pane is the editor (the frame's select hint while nothing is open).
  * "New Service" lives in the top bar; the breadcrumb names the open service.
  *
  * DUAL SELECTION MODE (mirrors PersonasSection): pass `urlSelection` and the open service is
@@ -851,7 +775,7 @@ export function ServicesSection({
   }));
 
   // The open service: the selected id resolved against the loaded rows. An unknown/deleted id (or
-  // none) is "nothing open" → the All table (fail-fast, never a blank screen).
+  // none) is "nothing open" → the select hint (fail-fast, never a blank screen).
   const openService = openServiceId ? rows.find((s) => s.id === openServiceId) ?? null : null;
   const levels: TopicLevel[] = [
     {
@@ -868,9 +792,12 @@ export function ServicesSection({
       // "New Service" is a right-justified `+` in the list header; it opens the create modal.
       onNew: () => setNewOpen(true),
       newLabel: "New Service",
-      // This level's unselected state is a REAL landing (the All table below), never the automatic
-      // TopicOverview grid (mirrors PersonasSection).
-      overview: false,
+      // The unselected pane is the frame's select hint and nothing else (docs/ui/fleet-ui-audit.md
+      // §1.5) — the rail beside it already lists every service (mirrors PersonasSection).
+      itemNoun: "service",
+      // The failure rides INSIDE the hint: the frontier overview hides the pane's children with
+      // `display: none`, so the `<ErrorText>` below is unreadable whenever any row is listed.
+      overviewHelp: error ? <ErrorText error={error} /> : undefined,
     },
   ];
 
@@ -898,10 +825,9 @@ export function ServicesSection({
         onCancel={() => selectService(null)}
       />
     ) : (
-      <>
-        <ErrorText error={error} className="px-6 pt-4" />
-        <ServicesTable services={rows} onSelect={(id) => selectService(id)} />
-      </>
+      // Nothing open: the frame's select hint owns this pane. It only yields to these children
+      // when the list is EMPTY — which is exactly when a load failure has to be readable.
+      <ErrorText error={error} className="px-6 pt-4" />
     );
 
   // Create is a scoped modal: an optional template picker + the service's fields (HTD recipe

@@ -16,6 +16,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 /**
  * The product's GAMIFICATION REALM config (each product IS an ecosystem = a "realm"). A
@@ -297,7 +298,7 @@ export function RealmSettingsPane({
       <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
         <div className="max-w-3xl space-y-7">
           {help && <p className="text-sm text-apt-text-muted">{help}</p>}
-          {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+          <ErrorText error={loadError} />
           {!draft && !loadError && <p className="text-sm text-apt-text-muted">Loading…</p>}
 
           {draft && (

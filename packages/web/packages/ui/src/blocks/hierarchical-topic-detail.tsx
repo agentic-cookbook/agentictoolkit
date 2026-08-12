@@ -28,7 +28,7 @@ import { hlog } from "./htdv-log"
 import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
 import { useExitGate, type PaneExitGuard } from "../hooks/useExitGate"
 import { TopicRail, FULL_RAIL, COLLAPSED_RAIL, type TopicDetailItem, type RailSlot } from "./topic-detail"
-import { TopicOverview, TopicSelectHint } from "./topic-overview"
+import { TopicSelectHint } from "./topic-select-hint"
 import { DETAIL_PANE_ATTR } from "../lib/detail-pane"
 import { deepestSelectedLevel } from "./stack-frontier"
 
@@ -68,6 +68,12 @@ export interface TopicLevel {
   /** Left-aligned heading naming this list (e.g. "Workspaces", "Ecosystems"), shown above the rows
    *  with a divider beneath. Every level should set one so the lists' rows align vertically. */
   title?: string
+  /** Accessible name for the rail's landmark, when "Topic list" (the fleet-wide default) is not
+   *  enough to tell it apart. A stack renders one landmark per open level, all called "Topic
+   *  list", so a surface a reader jumps to BY LANDMARK — one that used to own a named sidebar of
+   *  its own — names itself here. Not defaulted to `title`, which would rename ~50 existing rails
+   *  at once; this is opt-in per level. */
+  railLabel?: string
   items: TopicDetailItem[]
   selectedId: string | null
   /** Default answer for every row in this list: does choosing one lead to another topic LIST, or
@@ -89,11 +95,13 @@ export interface TopicLevel {
   /** The AUTOMATIC no-selection detail (default on): while this level is the frontier with
    *  nothing selected, the pane stays almost empty — one quiet, centered nudge to select
    *  something (`TopicSelectHint`), named as specifically as this level allows (see
-   *  `itemNoun` / `overviewHelp`). Pass `"cards"` for a level whose card grid (one card per
-   *  row: icon + label + `description`; clicking selects) IS its landing page (the help
-   *  site's topic browser). Pass `false` for a level whose unselected state has a REAL
-   *  landing of its own (ResourceExplorer's searchable entity landing). */
-  overview?: boolean | "cards"
+   *  `itemNoun` / `overviewHelp`). Pass `false` ONLY where the pane is already holding a real
+   *  editor with nothing selected — the inline CREATE form (`useMasterDetailLevel`),
+   *  which the nudge would otherwise cover. Never to hang a landing page there: an
+   *  unselected frontier is the nudge and nothing else (docs/ui/fleet-ui-audit.md §1.5) —
+   *  which is why there is no longer a card-grid opt-in: a grid of the rows the rail is
+   *  already showing IS a second surface beside the rail. */
+  overview?: boolean
   /** Singular noun for one row ("workspace", "site", "work item") — the select nudge names
    *  it: "Select a workspace …". Omit to fall back to the level's `title` ("Select an item
    *  from Workspaces …"), or to the fully generic line when neither is set. */
@@ -101,7 +109,7 @@ export interface TopicLevel {
   /** Bespoke nudge copy: WHAT one of these rows is and WHY to choose one (a string or
    *  richer nodes), shown under the "Select …" line. With an EMPTY list it shows alone —
    *  the blurb still explains what belongs here while the rail shows `emptyLabel`. Ignored
-   *  when `overview` is `false`, and while the `"cards"` grid is showing (non-empty list). */
+   *  when `overview` is `false`. */
   overviewHelp?: ReactNode
   /** Make `id` the selection at THIS level, keeping ancestors and clearing descendants.
    *  Pure navigation — the package decides WHEN to call it (a click on a not-yet-selected
@@ -786,41 +794,30 @@ export function HierarchicalTopicDetail({
   })
 
   // THE AUTOMATIC FRONTIER DETAIL: while the frontier list has no selection, the detail pane is
-  // owned by the package — by default an almost-empty centered nudge to select something
-  // (TopicSelectHint), named for the level (`itemNoun` → `title` → generic) and carrying the
-  // level's bespoke `overviewHelp` blurb, instead of whatever placeholder the host passed as
-  // children. A level whose card grid is a real landing opts into the per-row cards
-  // (`overview: "cards"`); a level whose unselected state has a real landing of its own opts out
-  // entirely (`overview: false`). It exists ONLY in that state: the moment the frontier gains a
-  // selection the host's real detail (children) shows.
-  // The cards are titled by the parent's selected row (the entity whose topics these are), else
-  // the level's title.
+  // owned by the package — an almost-empty centered nudge to select something (TopicSelectHint),
+  // named for the level (`itemNoun` → `title` → generic) and carrying the level's bespoke
+  // `overviewHelp` blurb, instead of whatever placeholder the host passed as children. A level
+  // whose unselected pane already holds a real editor — the inline CREATE form, the one case —
+  // opts out entirely (`overview: false`), never to hang a landing page there. It exists ONLY in
+  // that state: the moment the frontier gains a selection the host's real detail (children) shows.
+  // There is exactly ONE shape here, by rule: a card grid of the same rows the rail is already
+  // showing is a second surface beside the rail (docs/ui/fleet-ui-audit.md §1.5).
   const frontierLevel = firstUnselected === -1 ? null : levels[firstUnselected]
-  const parentOfFrontier = firstUnselected > 0 ? levels[firstUnselected - 1] : null
-  const overviewTitle =
-    parentOfFrontier?.items.find((it) => it.id === parentOfFrontier.selectedId)?.label ??
-    frontierLevel?.title
   const overview =
-    frontierLevel && frontierLevel.overview !== false ? (
-      frontierLevel.overview === "cards" && frontierLevel.items.length > 0 ? (
-        <TopicOverview
-          title={overviewTitle}
-          items={frontierLevel.items}
-          onSelect={(id) => frontierLevel.onSelect(id)}
-        />
-      ) : frontierLevel.items.length > 0 || frontierLevel.overviewHelp != null ? (
-        // The nudge names the level's rows as specifically as it can (itemNoun → title →
-        // generic) and carries the level's bespoke overviewHelp blurb. An EMPTY list with a
-        // blurb still shows the blurb alone (it explains what belongs here); empty without
-        // one renders nothing — the host's own children placeholder stands.
-        <TopicSelectHint
-          noun={frontierLevel.itemNoun}
-          listTitle={frontierLevel.title}
-          selectable={frontierLevel.items.length > 0}
-        >
-          {frontierLevel.overviewHelp}
-        </TopicSelectHint>
-      ) : null
+    // The nudge names the level's rows as specifically as it can (itemNoun → title → generic)
+    // and carries the level's bespoke overviewHelp blurb. An EMPTY list with a blurb still shows
+    // the blurb alone (it explains what belongs here); empty without one renders nothing — the
+    // host's own children placeholder stands.
+    frontierLevel &&
+    frontierLevel.overview !== false &&
+    (frontierLevel.items.length > 0 || frontierLevel.overviewHelp != null) ? (
+      <TopicSelectHint
+        noun={frontierLevel.itemNoun}
+        listTitle={frontierLevel.title}
+        selectable={frontierLevel.items.length > 0}
+      >
+        {frontierLevel.overviewHelp}
+      </TopicSelectHint>
     ) : null
   // `children` stay MOUNTED under the overview AND in the SAME tree position: in a merged stack
   // the deeper levels are PUBLISHED by components living in children (StackLevels), so unmounting
@@ -1478,6 +1475,7 @@ function MinimizedStack({
               title={level.title}
               busy={level.busy}
               onPrefetch={level.onPrefetch}
+              railLabel={level.railLabel}
               isRoot={i === 0}
               // Selection is shown by the dash (root) + the connector overlay, matching the covered
               // stack — not the gold bar (which standalone TopicDetail keeps).
@@ -1980,6 +1978,7 @@ function CoveredStack({
               title={level.title}
               busy={level.busy}
               onPrefetch={level.onPrefetch}
+              railLabel={level.railLabel}
               // Rows are ALWAYS full (never an icon strip): the wrapper's clip makes the peek, and the
               // hover wipe reveals the labels — so there is no covered↔full content swap to jar the wipe.
               covered={false}
@@ -2234,6 +2233,7 @@ function NarrowStack({
             title={level.title}
             busy={level.busy}
             onPrefetch={level.onPrefetch}
+            railLabel={level.railLabel}
             isRoot={i === 0}
             // The pane IS the screen here, so the rail must FILL it. Left to itself the rail sizes to
             // its rows — right in the wide stack, where each list is a stretched grid cell, but in a

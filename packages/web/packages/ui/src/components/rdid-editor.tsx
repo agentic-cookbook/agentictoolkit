@@ -3,6 +3,7 @@
 import * as React from "react"
 
 import { Input } from "./input"
+import { FieldFootnote } from "./field-footnote"
 import { fieldCaptionClass } from "../lib/typography"
 
 export interface RdidEditorProps {
@@ -62,11 +63,7 @@ export function RdidEditor({
           onChange={onInput}
         />
       )}
-      {error ? (
-        <span className="font-mono text-[0.7rem] text-apt-red">{error}</span>
-      ) : (
-        hint && <span className="font-mono text-[0.7rem] text-apt-text-dim">{hint}</span>
-      )}
+      <FieldFootnote hint={hint} error={error} />
     </div>
   )
 }

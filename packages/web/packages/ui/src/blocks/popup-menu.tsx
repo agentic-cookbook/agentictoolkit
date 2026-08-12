@@ -14,10 +14,10 @@ import {
 } from "../components/dropdown-menu"
 import { cn } from "../lib/utils"
 
-// Faithful port of the adh.com/home resource selector —
-// hub/src/components/home/resource/ResourcePopup.tsx (+ .ecosystem-popup__*
-// in settings.css) — decoupled from routing: selection is a callback, where the
-// hub deep-links. Built from the shared dropdown-menu.
+// Faithful port of the adh.com/home resource selector — originally
+// hub/src/components/home/resource/ResourcePopup.tsx (+ .ecosystem-popup__* in that site's
+// settings.css), both since deleted — decoupled from routing: selection is a callback, where
+// the hub deep-links. Built from the shared dropdown-menu.
 
 export interface PopupMenuItem {
   id: string

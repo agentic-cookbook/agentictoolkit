@@ -101,13 +101,7 @@ export function SchemaTablesEditor({
           Add all
         </Button>
         {tables.length > 0 && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => onChange([])}
-            className="text-apt-red hover:text-apt-red"
-          >
+          <Button type="button" variant="destructive-ghost" size="sm" onClick={() => onChange([])}>
             Remove all
           </Button>
         )}
@@ -149,13 +143,13 @@ export function SchemaTablesEditor({
               </Field>
               <Button
                 type="button"
-                variant="ghost"
+                variant="destructive-ghost"
                 size="icon"
                 onClick={() => removeTable(table.id)}
                 title="Remove table"
                 aria-label={`Remove ${table.name || "table"}`}
               >
-                <Trash2 className="text-apt-red" />
+                <Trash2 />
               </Button>
             </ListItem>
           ))}

@@ -99,9 +99,9 @@ const enter = (el: HTMLElement, from: Element | null = document.body) =>
 const leave = (el: HTMLElement, to: Element | null) =>
   fireEvent.pointerOut(el, { relatedTarget: to })
 
-/** The RAIL row for a label. A frontier level opted into `overview: "cards"` renders the same
- *  labels as overview CARDS (role button too), so a bare getByRole can be ambiguous — the rail
- *  row is the one that carries `data-htd-row`. */
+/** The RAIL row for a label. A frontier level used to be able to repeat those same labels into the
+ *  pane as overview CARDS (buttons too), which made a bare getByRole ambiguous; that opt-in is gone,
+ *  but the disambiguation stays — the rail row is the one carrying `data-htd-row`. */
 const railRow = (name: RegExp): HTMLElement => {
   const rows = screen.getAllByRole('button', { name }).filter((b) => b.hasAttribute('data-htd-row'))
   if (rows.length !== 1) throw new Error(`expected exactly one rail row for ${name}, got ${rows.length}`)
@@ -817,8 +817,10 @@ describe('HierarchicalTopicDetail — narrow (navigation-stack) layout', () => {
 
 describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
   // With a region chosen and no ecosystem, the ecosystems list is the unselected frontier and the
-  // pane belongs to the package. The three modes: default nudge / `overview: "cards"` / a host
-  // `overviewHelp` blurb (which wins over both).
+  // pane belongs to the package. There are two modes and no third: the default nudge, and the same
+  // nudge carrying a host `overviewHelp` blurb. Every one of these asserts that no ROW is duplicated
+  // into the pane — that is the rule (docs/ui/fleet-ui-audit.md §1.5), and the card grid that used
+  // to be the `overview: "cards"` opt-in is exactly what it forbids.
   const pane = (container: HTMLElement): HTMLElement => {
     const el = container.querySelector('section')
     if (!(el instanceof HTMLElement)) throw new Error('no detail pane')
@@ -877,29 +879,20 @@ describe('HierarchicalTopicDetail — the automatic frontier detail', () => {
     expect(within(pane(container)).queryByText(/^Select /)).toBeNull()
   })
 
-  it('renders the card grid only for a level opted into overview: "cards"', () => {
+  it('overview: false is the only opt-out, and it yields the pane to the host — not to a landing', () => {
     const levels = levelsFor({ region: 'us' })
-    levels[1] = { ...levels[1]!, overview: 'cards' }
+    levels[1] = { ...levels[1]!, overview: false, overviewHelp: 'Pick an ecosystem.' }
     const { container } = render(
       <HierarchicalTopicDetail levels={levels}>
         <p>landing</p>
       </HierarchicalTopicDetail>,
     )
     expect(pane(container).querySelector('[data-htd-select-hint]')).toBeNull()
-    expect(within(pane(container)).getByText('Core Platform')).toBeInTheDocument()
-  })
-
-  it('the "cards" grid wins over overviewHelp while the list has rows to show as cards', () => {
-    const levels = levelsFor({ region: 'us' })
-    levels[1] = { ...levels[1]!, overview: 'cards', overviewHelp: 'Pick an ecosystem.' }
-    const { container } = render(
-      <HierarchicalTopicDetail levels={levels}>
-        <p>landing</p>
-      </HierarchicalTopicDetail>,
-    )
-    expect(within(pane(container)).getByText('Core Platform')).toBeInTheDocument()
-    expect(pane(container).querySelector('[data-htd-select-hint]')).toBeNull()
+    // The blurb is ignored under the opt-out, and the rows still never appear in the pane: the
+    // host's own children stand, which is the ONE case that exists (the inline create form).
     expect(within(pane(container)).queryByText('Pick an ecosystem.')).toBeNull()
+    expect(within(pane(container)).queryByText('Core Platform')).toBeNull()
+    expect(within(pane(container)).getByText('landing')).toBeInTheDocument()
   })
 })
 

@@ -71,11 +71,13 @@ function HelpMasterDetail({
           icon: topicIcon(it.id)
         })),
         selectedId: l.selectedId,
-        // Every help level IS a topic browser, so its card grid (icon + label + description per
-        // row) is the level's real landing page — not a placeholder to nudge past. HMDV's default
-        // unselected-frontier detail is the quiet "select something" hint, so each level opts into
-        // the cards explicitly.
-        overview: "cards",
+        // Every help level is a topic browser, and its unselected frontier is the platform nudge
+        // like everywhere else — a card grid repeating the rows the rail is already showing is the
+        // second-surface-beside-the-rail that docs/ui/fleet-ui-audit.md §1.5 forbids. `itemNoun` +
+        // `overviewHelp` are what make the nudge read for a docs site: without the blurb the shared
+        // headline offers to "view or edit" the topic, which is not what this surface does.
+        itemNoun: "topic",
+        overviewHelp: "Choose a topic from the list to read it here.",
         onSelect: (id) => {
           const href = hrefById.get(id);
           if (href) router.push(href);

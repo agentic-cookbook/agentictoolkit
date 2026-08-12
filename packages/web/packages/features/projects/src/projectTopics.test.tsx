@@ -202,14 +202,11 @@ describe("projectTopics", () => {
     ]);
   });
 
-  it("gives every topic a description, which is what earns both rails their overview cards", () => {
-    // ResourceExplorer and StackGroupDetail each upgrade the no-selection leaf to the standard
-    // TopicOverview only when descriptions are present — so a topic added without one silently
-    // downgrades that landing for BOTH surfaces.
-    for (const topic of projectTopics({ workspaceSlug: "acme" })) {
-      expect(topic.description.length).toBeGreaterThan(0);
-    }
-  });
+  // REMOVED: "gives every topic a description, which is what earns both rails their overview cards".
+  // The premise was never true — neither ResourceExplorer nor StackGroupDetail ever set the level
+  // `overview` opt-in, so a missing description downgraded nothing — and the card grid it named is
+  // gone outright (docs/ui/fleet-ui-audit.md §1.5). `description` is now carried and rendered
+  // nowhere, so asserting its presence enforced a string no user could read.
 
   it("hands each pane the context's title, project, and leaf", () => {
     for (const topic of projectTopics({ workspaceSlug: "acme" })) {

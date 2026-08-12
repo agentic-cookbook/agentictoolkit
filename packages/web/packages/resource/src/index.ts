@@ -10,7 +10,7 @@
 
 // The resource orchestrator + its config types.
 export { ResourceExplorer } from "./resource-explorer";
-export type { ResourceTopic, TopicLeaf, ResourceLandingConfig } from "./resource-explorer";
+export type { ResourceTopic, TopicLeaf, ResourceRailConfig } from "./resource-explorer";
 // Re-exported (it is declared with the stack, in @agentic-toolkit/ui) because it is part of
 // TopicLeaf's OWN signature: a consumer implementing a leaf here shouldn't have to reach into
 // another package to name the argument the stack hands it.

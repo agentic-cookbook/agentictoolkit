@@ -74,8 +74,11 @@ export interface ProjectTopicDef {
   id: string;
   label: string;
   icon: ReactNode;
-  /** What this topic is for. Both rails turn descriptions into the standard no-selection
-   *  overview cards, so writing one here is what gives BOTH surfaces that landing. */
+  /** What this topic is for. Carried on the row and rendered NOWHERE by either rail: it fed the
+   *  card grid a level could once opt into for its unselected frontier, and that opt-in is gone
+   *  (docs/ui/fleet-ui-audit.md §1.5 — the unselected frontier is the select nudge and nothing
+   *  else). Neither rail ever set that opt-in anyway. To explain a LIST, set the level's
+   *  `overviewHelp`, which is the copy the nudge renders. */
   description: string;
   /** Forwarded verbatim to either rail: `"list"` for a topic whose pane publishes a deeper
    *  rail, so choosing it is an intermediate select rather than the final one. */

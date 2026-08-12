@@ -7,6 +7,7 @@ import { RailHostBoundary, StackLevels, useBasePathRoute } from "@agentic-toolki
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 
 import { IntegrationsPane } from "./IntegrationsPane";
 import { integrationsSegments, type IntegrationsPathSelection } from "./parse-path";
@@ -127,7 +128,7 @@ export function IntegrationsFeature({
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           {/* Reported alongside whatever DID load — one failed read (say, the personas list) must
               not blank the destinations that are fine, nor the pane below them. */}
-          {error && <p className="px-6 pt-4 text-sm text-apt-red">{error}</p>}
+          <ErrorText error={error} className="px-6 pt-4" />
           <Body
             destinations={destinations}
             selected={selected}

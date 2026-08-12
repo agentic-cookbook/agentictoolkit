@@ -4,6 +4,7 @@ import * as React from "react";
 import { ArrowRightLeft, TriangleAlert } from "lucide-react";
 import { Button } from "../components/button";
 import { Disclosure } from "../components/disclosure";
+import { ErrorText } from "../components/error-text";
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import {
@@ -23,7 +24,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from "../components/dialog";
-import { cn } from "../lib/utils";
 
 /**
  * Which NAMESPACE a workspace slug is drawn from.
@@ -330,7 +330,7 @@ export function TransferOwnershipSection({
                 )}
               </>
             )}
-            {error && <p className={cn("text-sm", "text-apt-red")}>{error}</p>}
+            <ErrorText error={error} />
           </div>
 
           {/* The gate, shown only once the preflight has answered: typing it out before the

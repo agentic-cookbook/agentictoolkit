@@ -11,6 +11,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   useStackLevel,
   useRailExitGuard as useWorkspaceExitGuard,
@@ -568,7 +569,7 @@ export function ResearchPane({
                   onChange={(e) => onChange({ ...draft, category: e.target.value })}
                 />
               </Field>
-              {error && <p className="text-sm text-apt-red">{error}</p>}
+              <ErrorText error={error} />
             </>
           )}
         />

@@ -53,7 +53,8 @@ export interface EcosystemsTopicConfig {
   id: string;
   label: string;
   icon: ReactNode;
-  /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
+  /** What this topic is for. Carried on the row, rendered nowhere: the card grid it used to feed at
+   *  an unselected frontier is gone (docs/ui/fleet-ui-audit.md §1.5). See `TopicDetailItem`. */
   description?: string;
   dividerAfter?: boolean;
 }
@@ -755,12 +756,14 @@ export function EcosystemsFeature({
           itemIcon={<Network size={16} aria-hidden />}
           topics={topics}
           newLabel={`New ${singular}…`}
-          landing={{
+          rail={{
             title: plural,
             help: `Open ${an(lowerSingular)} to manage it, or create a new one.`,
             emptyLabel: `No ${lowerPlural} yet.`,
+            // The rdid, not the display name, is the identity: `name` is free text a rename can
+            // duplicate, while the reverse-domain identifier is the stored handle every address
+            // derives from. Two rows with the same name are otherwise indistinguishable.
             getSublabel: (e) => e.identifier,
-            renderMeta: () => null,
           }}
           renderDialog={(onClose, onCreated) => (
             // The workspace New Product form: Display Name + Slug are typed; the

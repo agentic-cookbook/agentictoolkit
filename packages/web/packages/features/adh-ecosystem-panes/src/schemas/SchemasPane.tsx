@@ -9,6 +9,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
 import { bucketsCacheKey } from "./schema-model";
@@ -128,7 +129,7 @@ export function SchemasPane({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      {loadError && <p className="px-6 pt-4 text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} className="px-6 pt-4" />
       <ButtonBar
         actions={form.actions}
         showCreate={false}
@@ -195,7 +196,7 @@ export function SchemasPane({
                   onChange={(e) => onChange({ ...draft, description: e.target.value })}
                 />
               </Field>
-              {error && <p className="text-sm text-apt-red">{error}</p>}
+              <ErrorText error={error} />
             </>
           )}
         />

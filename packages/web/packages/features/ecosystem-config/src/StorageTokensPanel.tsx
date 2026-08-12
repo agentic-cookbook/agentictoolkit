@@ -7,6 +7,7 @@ import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { tokenPrincipalsApi, type TokenPrincipal } from "@agentic-toolkit/data/ecosystem-config";
@@ -183,9 +184,7 @@ export function StorageTokensPanel({
             <CardContent className="space-y-2 pt-6">
               <h3 className="text-lg font-medium">Your tokens</h3>
               {tokensQuery.isError ? (
-                <p className="text-sm text-destructive">
-                  Couldn’t load your tokens. Please refresh.
-                </p>
+                <ErrorText error="Couldn’t load your tokens. Please refresh." />
               ) : (
                 tokens.length === 0 && (
                   <p className="text-sm text-muted-foreground">No tokens yet.</p>

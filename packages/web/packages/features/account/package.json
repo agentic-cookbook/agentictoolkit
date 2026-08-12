@@ -10,20 +10,18 @@
   "sideEffects": ["**/*.css"],
   "comment:tier": "MECHANISM, deliberately: this package must never import @agentic-toolkit/adh* (scripts/check_boundaries.py). The two settings panels that DO need adh vocabulary — AppearancePanel and ThemePickerRow, which use useAppearanceSettings and theme-preview — live in @agentic-toolkit/adh instead. That is not a compromise: adh depends on THIS package to build the topic registry, so an adh import here would be a dependency cycle as well as a tier violation.",
   "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. One entry only: every module here renders.",
-  "comment:styles": "`./styles.css` is how settings.css REACHES a page, and the only way: SettingsLayout.tsx must not `import \"./settings.css\"`. tsup extracts a side-effect CSS import into a sibling dist/index.css and DELETES the import from the emitted JS, so nothing in dist would ever pull it in — the stylesheet would load in `next dev`/vitest (the `development` condition resolves to src, where Next's compiler honours the import) and be silently absent from every production build, on all ~45 sites. Same delivery as @agentic-toolkit/auth: copy-css.mjs mirrors src/**/*.css into dist, this key names the copy, and @agentic-toolkit/adh's adh-site.css @imports it so every site in the fleet gets it through the one stylesheet it already loads.",
+  "comment:styles": "This package ships NO stylesheet: `settings.css` and the `./styles.css` export went with the hand-rolled settings grid SettingsLayout.tsx used to render (it renders HierarchicalDetailView now, whose styling is Tailwind utilities the `./sources.css` registration below already covers). If a `.css` is ever added back here, it needs BOTH a `./styles.css` export and a `build:css` step running copy-css.mjs, and adh's adh-site.css has to @import it — a side-effect `import \"./x.css\"` from a component is not enough: tsup extracts it into a sibling dist/index.css and DELETES the import from the emitted JS, so the sheet loads in `next dev`/vitest (the `development` condition resolves to src) and is silently absent from every production build, on all ~45 sites. @agentic-toolkit/auth still does it the right way if a worked example is wanted.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./styles.css": "./dist/layout/settings.css",
     "./sources.css": "./sources.css"
   },
   "scripts": {
-    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build": "tsup && pnpm run build:types",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
-    "build:css": "node ../../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

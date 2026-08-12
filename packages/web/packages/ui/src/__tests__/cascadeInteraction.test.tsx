@@ -100,9 +100,8 @@ describe("must-animate-every-menu-closure (wiring)", () => {
         <div>detail</div>
       </HierarchicalMenuDetail>,
     )
-    // Scoped to the RAIL: a level opted into `overview: "cards"` duplicates every row as a card in
-    // the frontier's detail, so an unscoped name can resolve to 2 elements. The default frontier
-    // detail is now the select-something nudge (no duplication), but the scoping stays — it is
+    // Scoped to the RAIL: the frontier detail is the select-something nudge, which duplicates no
+    // row, so an unscoped name resolves to one element today. The scoping stays anyway — it is
     // correct regardless of what the pane holds.
     const rail = within(container.querySelector<HTMLElement>('[data-htd-col="0"]')!)
     fireEvent.click(rail.getByRole("button", { name: /Acme/ }))
@@ -226,9 +225,6 @@ function Walk({ rootId }: { rootId: string }) {
               { id: "keys", label: "Keys" },
             ],
             selectedId: topic,
-            // The card grid (not the default nudge), so T57 can prove the hold blocks the
-            // frontier overview: without the hold, "Hooks"/"Keys" cards would enter the pane.
-            overview: "cards",
             onSelect: setTopic,
             onClear: () => setTopic(null),
           }),
@@ -258,16 +254,16 @@ describe("must-hold-the-detail-until-the-final-choice (wiring)", () => {
     expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false)
 
     // T57 — the INTERMEDIATE select: choosing Settings discloses the Topics choosing list. The pane
-    // must keep showing the last final choice's content — not the Topics overview (its cards would
-    // put "Hooks"/"Keys" inside the detail section) and not the host's landing.
+    // must keep showing the last final choice's content — not the Topics frontier overview (which
+    // would put the select nudge inside the detail section) and not the host's landing.
     const features = within(container.querySelector<HTMLElement>('[data-htd-col="1"]')!)
     fireEvent.click(features.getByRole("button", { name: /Settings/ }))
     await waitFor(() =>
       expect(displayHidden(detailPane().getByText("DETAIL integrations/hooks"))).toBe(false),
     )
     expect(displayHidden(detailPane().getByText(/LANDING/))).toBe(true) // the host's landing stays hidden
-    expect(detailPane().queryByText("Hooks")).toBeNull() // no overview card at the frontier
-    expect(detailPane().queryByText("Keys")).toBeNull()
+    // …and no frontier overview: the held content occupies the slot the nudge would have taken.
+    expect(container.querySelector("section")!.querySelector("[data-htd-select-hint]")).toBeNull()
 
     // T58 — the FINAL CHOICE: Keys leads to no further topic list, so the detail changes ONCE,
     // straight to the final choice's detail; the held content is gone.

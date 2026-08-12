@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { CircleHelp } from "lucide-react"
 
 import { cn } from "../lib/utils"
+import { quietControlClass } from "../lib/quiet-control"
 import {
   Popover,
   PopoverTrigger,
@@ -44,7 +45,7 @@ export function SectionHeader({
           <Popover>
             <PopoverTrigger
               aria-label="About this section"
-              className="flex items-center text-apt-text-muted outline-none transition-colors hover:text-apt-text focus-visible:text-apt-text"
+              className={quietControlClass}
             >
               <CircleHelp size={16} />
             </PopoverTrigger>

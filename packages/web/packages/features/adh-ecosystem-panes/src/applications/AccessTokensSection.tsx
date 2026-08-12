@@ -9,6 +9,7 @@ import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { applicationsPrototypeApi, type AccessToken } from "../api/applications-prototype";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
@@ -143,7 +144,7 @@ export function AccessTokensSection({ appId }: { appId: string }) {
           </div>
         )}
 
-        {error && <p className="text-sm text-apt-red">{error}</p>}
+        <ErrorText error={error} />
 
         {tokens.length === 0 ? (
           <p className="text-sm text-apt-text-muted">No tokens yet.</p>
@@ -159,12 +160,12 @@ export function AccessTokensSection({ appId }: { appId: string }) {
                 </span>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructive-ghost"
                   size="icon-sm"
                   onClick={() => revoke(t.id, t.name)}
                   title="Revoke token"
                 >
-                  <Trash2 className="text-apt-red" />
+                  <Trash2 />
                 </Button>
               </ListItem>
             ))}

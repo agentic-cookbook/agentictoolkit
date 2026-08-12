@@ -13,6 +13,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   integrationsApi,
   oauthCallbackUrl,
@@ -289,7 +290,7 @@ export function ConnectAccountDialog({
                 />
               </div>
             ))}
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
@@ -315,7 +316,7 @@ export function ConnectAccountDialog({
                 <>Connect using the credentials saved in this integration.</>
               )}
             </p>
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
@@ -332,7 +333,7 @@ export function ConnectAccountDialog({
             <p className="text-sm text-apt-text-muted">
               You&apos;ll be sent to {displayName} to authorize access, then returned here.
             </p>
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
@@ -362,7 +363,7 @@ export function ConnectAccountDialog({
                 it, then connect.
               </p>
             )}
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>
                 Cancel
@@ -391,7 +392,7 @@ export function ConnectAccountDialog({
                 onExit={onPlaidExit}
               />
             ) : (
-              error && <p className="text-sm text-apt-red">{error}</p>
+              <ErrorText error={error} />
             )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={busy}>

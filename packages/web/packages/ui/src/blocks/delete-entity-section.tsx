@@ -6,6 +6,7 @@ import { Button } from "../components/button";
 import { Input } from "../components/input";
 import { Label } from "../components/label";
 import { Disclosure } from "../components/disclosure";
+import { ErrorText } from "../components/error-text";
 import { cn } from "../lib/utils";
 import {
   Dialog,
@@ -279,7 +280,7 @@ export function DeleteEntitySection({
                   onChange={(e) => setTyped(e.target.value)}
                   aria-invalid={error ? true : undefined}
                 />
-                {error && <p className="text-sm text-apt-red">{error}</p>}
+                <ErrorText error={error} />
               </div>
               <DialogFooter>
                 <Button

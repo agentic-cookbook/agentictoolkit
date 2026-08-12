@@ -26,6 +26,7 @@ import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { UserCard, UserCardSkeleton, type UserCardDto } from "@agentic-toolkit/ui/blocks";
 import { EditActionBar } from "@agentic-toolkit/resource";
 import { DetailSection } from "@agentic-toolkit/resource";
@@ -323,9 +324,7 @@ export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
   if (meQuery.isError || !me) {
     return (
       <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center py-12">
-        <p className="text-sm text-apt-red">
-          Could not load profile. Refresh to try again.
-        </p>
+        <ErrorText error="Could not load profile. Refresh to try again." />
       </div>
     );
   }

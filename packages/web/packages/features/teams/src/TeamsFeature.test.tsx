@@ -2,7 +2,7 @@
 //
 // Component tests for TeamsFeature's HOST-SCOPING states — the seam this branch's reviews
 // worked hardest on. Only the data subpaths (teams, ecosystems) and next/navigation are
-// mocked; the list/landing wiring (useResourceList + ResourceExplorer + the rail-host
+// mocked; the list/rail wiring (useResourceList + ResourceExplorer + the rail-host
 // publish path) runs for real inside the same minimal host harness the sibling features'
 // tests use.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -66,6 +66,10 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
     <div>
       {levels.map((l) => (
         <div key={l.id}>
+          {/* The rail carries the empty label. It used to be read off the "All teams" card
+              landing too; that landing is gone (docs/ui/fleet-ui-audit.md §1.5), so the rail
+              is the only surface that states WHY a host has no teams. */}
+          {l.items.length === 0 ? <p>{l.emptyLabel}</p> : null}
           {l.items.map((item) => (
             <button key={item.id} type="button" onClick={() => l.onSelect(item.id)}>
               {item.label}
@@ -130,10 +134,12 @@ describe("TeamsFeature host-scoping states", () => {
     ).toBeTruthy();
     // The create affordance is suppressed (its create could never succeed here).
     expect(screen.queryByText(/new team/i)).toBeNull();
-    // The scoping posture is consistent: neither the list nor the sibling counts fetch fires.
+    // The scoping posture is consistent: neither the list nor the workspace lookup fires.
     expect(listMock).not.toHaveBeenCalled();
-    expect(countsMock).not.toHaveBeenCalled();
     expect(idForSlugMock).not.toHaveBeenCalled();
+    // Nothing decorates a card grid any more, so nothing reads the cross-team member counts —
+    // the landing that needed them is gone (docs/ui/fleet-ui-audit.md §1.5).
+    expect(countsMock).not.toHaveBeenCalled();
   });
 
   it("scoped host: resolves the workspace ecosystem, lists its teams, offers creation", async () => {
@@ -142,7 +148,7 @@ describe("TeamsFeature host-scoping states", () => {
         <TeamsFeature basePath="/acme/teams" workspaceSlug="acme" all />
       </Harness>,
     );
-    // Renders in BOTH the published rail row and the "All teams" landing card.
+    // Renders as a published rail row — the one surface that lists the teams.
     expect((await screen.findAllByText("Core Team")).length).toBeGreaterThan(0);
     expect(idForSlugMock).toHaveBeenCalledWith("acme");
     await waitFor(() => expect(listMock).toHaveBeenCalledWith("eco1"));

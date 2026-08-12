@@ -39,7 +39,13 @@ export const teamMembersApi = {
     return body.members ?? [];
   },
 
-  /** Member count per team in the caller's scope — for the All-teams landing cards. */
+  /** Member count per team in the caller's scope (`GET /team/members/counts`).
+   *
+   *  It was built for the All-teams landing cards, and **nothing in the fleet calls it now** —
+   *  that landing is gone, and an unselected teams frontier is the select hint, which decorates
+   *  nothing (see the `overview` rule). `TeamsFeature.test.tsx` asserts the absence rather than
+   *  leaving it to drift. Kept because the route it wraps is live and this client mirrors the
+   *  backend's surface, not the current callers'; delete it with the route, not before. */
   async counts(): Promise<Map<string, number>> {
     const body = await authedJson<{
       counts?: Array<{ teamId: string; count: number }>;

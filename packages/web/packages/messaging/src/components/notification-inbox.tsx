@@ -34,6 +34,7 @@ import {
 import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { Tabs, TabsList, TabsTab } from '@agentic-toolkit/ui/components/tabs'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 
 import {
   useInbox,
@@ -350,11 +351,7 @@ export function NotificationInbox({ className }: { className?: string }) {
         </p>
       </header>
 
-      {actionError && (
-        <p role="alert" className="border-b border-apt-border px-4 py-2 text-xs text-apt-red">
-          {actionError}
-        </p>
-      )}
+      <ErrorText error={actionError} className="border-b border-apt-border px-4 py-2 text-xs" />
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         {loading ? (
@@ -363,9 +360,7 @@ export function NotificationInbox({ className }: { className?: string }) {
             <span>Loading…</span>
           </div>
         ) : error ? (
-          <p role="alert" className="px-4 py-6 text-sm text-apt-red">
-            {error}
-          </p>
+          <ErrorText error={error} className="px-4 py-6" />
         ) : items.length === 0 ? (
           <div className="p-4">
             <EmptyState

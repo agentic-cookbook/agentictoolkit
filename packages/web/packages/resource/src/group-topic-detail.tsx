@@ -14,11 +14,10 @@ export interface GroupTopicItem {
   id: string;
   label: string;
   icon: ReactNode;
-  /** What this member is for, shown under its label in the `TopicOverview` CARD GRID — which is
-   *  the level's no-selection landing only when the level declares `overview: "cards"`. This
-   *  component never declares it, so a description set here currently renders NOWHERE: the
-   *  unselected frontier is the quiet `TopicSelectHint` nudge, whose copy comes from the group's
-   *  `itemNoun` / `overviewHelp` props. Put the guidance there. */
+  /** What this member is for. Carried on the row, rendered nowhere — it never did become a card
+   *  grid here (that took the level-level `overview` opt-in, which this component never set), and
+   *  the opt-in itself is now gone (docs/ui/fleet-ui-audit.md §1.5). The no-selection leaf is the
+   *  select nudge; to explain the LIST, set the level's `overviewHelp`. */
   description?: string;
   /** Declare `"list"` for a member whose pane publishes deeper rails (a schema browser, an entity
    *  list), so the cascading view treats choosing it as an INTERMEDIATE select (the detail holds).

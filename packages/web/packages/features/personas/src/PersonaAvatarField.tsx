@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { ImageIcon, Upload } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
 import { Button } from "@agentic-toolkit/ui/components/button";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { authedJson } from "@agentic-toolkit/auth/client";
 import { useReportBusy } from "@agentic-toolkit/resource";
 
@@ -111,7 +112,7 @@ export function PersonaAvatarField({
             </Button>
           )}
         </div>
-        {error && <span className="text-xs text-apt-red">{error}</span>}
+        <ErrorText error={error} className="text-xs" />
       </div>
     </div>
   );

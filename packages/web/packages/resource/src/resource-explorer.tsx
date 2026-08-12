@@ -3,7 +3,6 @@
 import {
   Fragment,
   useCallback,
-  useMemo,
   useState,
   type ReactElement,
   type ReactNode,
@@ -11,13 +10,13 @@ import {
 import { useRouter } from "next/navigation";
 import {
   HierarchicalTopicDetail,
+  ListHeader,
   TopicSelectHint,
   type TopicDetailItem,
   type TopicLevel,
   type TopicSelectOptions,
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ResourceLanding } from "./resource-landing";
 import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";
 
@@ -36,7 +35,8 @@ export interface ResourceTopic {
   id: string;
   label: string;
   icon: ReactNode;
-  /** What this topic is for — feeds the standard no-selection TopicOverview cards. */
+  /** What this topic is for. Carried on the row, rendered nowhere: the card grid it used to feed at
+   *  an unselected frontier is gone (docs/ui/fleet-ui-audit.md §1.5). See `TopicDetailItem`. */
   description?: string;
   dividerAfter?: boolean;
   /** Declare `"list"` for a topic whose pane publishes a deeper rail (a master/detail list, a
@@ -55,12 +55,26 @@ export interface ResourceTopic {
   ) => ReactNode;
 }
 
-export interface ResourceLandingConfig<T> {
+/** The resource RAIL's naming — its header, its empty label, and the blurb the frame
+ *  prints under the select nudge while nothing is selected. There is no card landing:
+ *  an HTDV's unselected pane is the select hint and nothing else (docs/ui/fleet-ui-audit.md
+ *  §1.5), so the rail beside it is the only place the entities are listed. */
+export interface ResourceRailConfig<T> {
   title: string;
   help: string;
   emptyLabel: string;
-  getSublabel: (item: T) => string;
-  renderMeta: (item: T) => ReactNode;
+  /** The row's second line — the value that DISAMBIGUATES two rows sharing a display name
+   *  (an org's slug, a team's reverse-domain identifier, a project's status). The card
+   *  landing showed it and searched it; §1.5 took the LANDING, not the FACT, so the rail
+   *  carries it as `TopicDetailItem.sublabel` and the rail filter matches it alongside the
+   *  label — a user pasting an identifier out of a URL still finds the row. Omit for a list
+   *  whose labels are already unique and self-explaining. */
+  getSublabel?: (item: T) => string;
+  /** The list's load failure, in the HOST's words. Shown as the rail's empty label instead
+   *  of "Loading…": `items` stays `null` after a failed fetch (see `useResourceList`), which
+   *  is indistinguishable from "still loading" from here, so without this the rail claims to
+   *  be loading forever — the eternal spinner that reads as an outage. */
+  loadError?: string | null;
 }
 
 /**
@@ -72,8 +86,8 @@ export interface ResourceLandingConfig<T> {
  *
  * Level 0 is the resource list itself (no popup — the entity is a first-class rail
  * level); selecting one scopes the topics in level 1. With nothing selected ("All"),
- * the pane is the resource card landing; the entity-first model means New lives in
- * the top bar and Delete lives in the entity pane's Danger zone. URL-driven:
+ * the pane is the frame's select hint and nothing else; the entity-first model means New
+ * lives in the top bar and Delete lives in the entity pane's Danger zone. URL-driven:
  * `<basePath>/all` or `<basePath>/<id>/<topic>`. All the selection/fallback/
  * default-topic wiring is owned here.
  *
@@ -95,14 +109,14 @@ export function ResourceExplorer<T>({
   itemIcon,
   nameSuffix,
   topics,
-  landing,
+  rail,
   newLabel,
   renderDialog,
   reload,
   prefetchItem,
 }: {
   all?: boolean;
-  /** Promote the TOPICS to the first (and only) rail: no resource list, no "All" landing. The
+  /** Promote the TOPICS to the first (and only) rail: no resource list, no "All" state. The
    *  scoped resource is `activeId ?? defaultId`, so the feature opens straight on the default
    *  resource's topics. The Ecosystem feature uses this — its resource list moves into a topic
    *  ("Child Ecosystems") instead of being the top-level rail. Persona Services / Teams leave it
@@ -128,9 +142,9 @@ export function ResourceExplorer<T>({
   /** Suffix in feature titles, e.g. "Ecosystem" → "Applications (Core Ecosystem)". */
   nameSuffix: string;
   topics: ResourceTopic[];
-  /** The "All" card-landing config — required for the classic list-first arrangement; omit in
-   *  `promoteTopics` mode, which has no "All" landing (the resource list moves into a topic). */
-  landing?: ResourceLandingConfig<T>;
+  /** The resource rail's naming — required for the classic list-first arrangement; omit in
+   *  `promoteTopics` mode, which has no resource rail (the resource list moves into a topic). */
+  rail?: ResourceRailConfig<T>;
   /** The "New …" affordance label. Omit to SUPPRESS creation entirely (rail `+` and
    *  dialog) — for a host state where a create could never succeed (e.g. an unscoped
    *  feature-site mount awaiting the platform scoping decision). */
@@ -141,8 +155,8 @@ export function ResourceExplorer<T>({
   renderDialog?: (onClose: () => void, onCreated: (id: string) => void) => ReactNode;
   /** Re-fetch the resource list. Awaited after a CREATE, before routing to the new id: the list is
    *  fetched once per mount, so without this the new row isn't in `items`, `knownId` is false, and
-   *  the fallback below would land the user on the "All" landing — the resource they just created
-   *  would look like it had vanished. */
+   *  the fallback below would drop the user back on the unselected "All" state — the resource they
+   *  just created would look like it had vanished. */
   reload?: () => Promise<void>;
   /** Warm the ROW'S OWN RECORD as the pointer rests on it, beside the route this already warms.
    *  The two halves of one click: the route prefetch fetches the segment, and this fetches what
@@ -184,18 +198,23 @@ export function ResourceExplorer<T>({
     [router],
   );
   const [newOpen, setNewOpen] = useState(false);
+  // The resource rail's filter. The removed card landing carried the only search over this
+  // list (docs/ui/fleet-ui-audit.md §1.5 took the landing, not the FUNCTION), so the field
+  // moves to the rail's own `headerSlot` — the stack's documented hook for exactly this.
+  const [filter, setFilter] = useState("");
 
   const validTopics = new Set(topics.map((t) => t.id));
 
   // In `promoteTopics` mode a bare/unknown path scopes to the DEFAULT resource (there is no
-  // "All" landing — the feature opens straight on the default's topics). Otherwise the classic
+  // "All" state — the feature opens straight on the default's topics). Otherwise the classic
   // list-first behaviour applies: an unknown/deleted id (or a topic word mistaken for an id)
-  // falls back to the "All" landing once the list has loaded, rather than a phantom-scoped pane.
+  // falls back to the unselected "All" state once the list has loaded, rather than a phantom-
+  // scoped pane.
   const requestedId = activeId ?? (promoteTopics ? defaultId : undefined);
   const explicitAll = !promoteTopics && all === true;
   const loaded = items !== null;
   const knownId = requestedId !== undefined && (items ?? []).some((i) => getId(i) === requestedId);
-  // Bare base path (no id, not explicit /all): render the "All" landing. There is no
+  // Bare base path (no id, not explicit /all): the unselected "All" state. There is no
   // resume / last-id tracking (see below) — the user picks an entity. Never "All" in promoteTopics.
   const bare = !explicitAll && requestedId === undefined;
   const isAll =
@@ -220,17 +239,36 @@ export function ResourceExplorer<T>({
 
   const newButtonLabel = newLabel?.replace(/…+$/, "").trim();
 
-  // No resume / no last-id tracking: nothing is auto-selected. A bare base path shows the "All"
-  // landing (every entity as a card); the user picks an entity (and then a topic) themselves.
+  // No resume / no last-id tracking: nothing is auto-selected. A bare base path shows the rail
+  // with nothing selected; the user picks an entity (and then a topic) themselves.
 
   // Level 0 = the resource list; level 1 = the topics scoped to the selection.
-  // The rail shows just the name (one line) — the reverse-domain id / sublabel still
-  // appears on the "All" cards, so the list stays uncluttered.
-  const entityItems: TopicDetailItem[] = (items ?? []).map((it) => ({
+  // The rail shows just the name (one line) — the reverse-domain id / sublabel is the
+  // entity pane's to show, so the list stays uncluttered.
+  const query = filter.trim().toLowerCase();
+  const allEntityItems: TopicDetailItem[] = (items ?? []).map((it) => ({
     id: getId(it),
     label: getLabel(it),
+    sublabel: rail?.getSublabel?.(it),
     icon: itemIcon,
   }));
+  // Filtering narrows the ROWS only — `active`/`titleFor` above still read the unfiltered
+  // `items`, so filtering away the selected entity never blanks its pane or its breadcrumb.
+  //
+  // Two things the match deliberately does NOT do. It never drops the OPEN entity: a level whose
+  // `selectedId` names no row it renders is a selection the pointer cannot reach, and every
+  // consumer that resolves the selection by lookup — the breadcrumb (`items.find(...)?.label ??
+  // selectedId`, which would print a raw uuid), the row highlight, the scroll-into-view — reads
+  // the filtered array. And it matches the SUBLABEL as well as the label, because the identifier
+  // is the string users actually paste in (the card landing's search matched both).
+  const entityItems = query
+    ? allEntityItems.filter(
+        (i) =>
+          i.id === scopedId ||
+          i.label.toLowerCase().includes(query) ||
+          (i.sublabel ?? "").toLowerCase().includes(query),
+      )
+    : allEntityItems;
   const topicItems: TopicDetailItem[] = topics.map((t) => ({
     id: t.id,
     label: t.label,
@@ -242,14 +280,24 @@ export function ResourceExplorer<T>({
 
   const resourceLevel: TopicLevel = {
     id: "resource",
-    title: landing?.title ?? "",
+    title: rail?.title ?? "",
     // Choosing an entity always discloses its TOPICS list — every row is an intermediate select
     // for the cascading view's detail hold (must-hold-the-detail-until-the-final-choice).
     leadsTo: "list",
     items: entityItems,
-    // The entity list's unselected state is the REAL card landing below (searchable, with New) —
-    // opt out of the frame's automatic topic overview so it isn't replaced by plain cards.
-    overview: false,
+    // The unselected pane is the frame's select hint and nothing else — the rail beside it
+    // already lists every entity, so a card landing would only be a second copy of it in a
+    // wider format (docs/ui/fleet-ui-audit.md §1.5). The host's blurb rides under that nudge,
+    // but only while there is something to pick: `overviewHelp` also FORCES the hint onto an
+    // EMPTY list, and "Select a team" beside a rail reading "No teams yet." is a dead end.
+    //
+    // Gated on the UNFILTERED list, like the `headerSlot` below: "there is nothing to pick" is a
+    // fact about the tenant's data, not about the box the user just typed in. Reading the filtered
+    // count here suppressed the blurb — and with it the whole nudge, since the frame's gate is
+    // `items.length > 0 || overviewHelp != null` — the moment a query matched nothing, and this
+    // pane's other branch is `null`, so a mistyped filter blanked the entire detail pane.
+    itemNoun: nameSuffix.toLowerCase(),
+    overviewHelp: allEntityItems.length > 0 ? rail?.help : undefined,
     selectedId: isAll ? null : (scopedId ?? null),
     // No default topic appended — selecting an entity shows its topics list with nothing focused.
     onSelect: (id, opts) => select(`${basePath}/${id}`, opts),
@@ -262,7 +310,33 @@ export function ResourceExplorer<T>({
       prefetchItem?.(id);
     },
     onClear: () => router.push(basePath, { scroll: false }),
-    emptyLabel: landing?.emptyLabel ?? "",
+    // FOUR different reasons for an empty rail, and they must not be spoken as one. An un-loaded
+    // list is `items === null`, which maps to zero rows exactly like a genuinely empty one — so
+    // without this the rail asserts "No teams yet." at a host that has teams, for as long as the
+    // fetch takes. (The card landing used to own this distinction; §1.5 took the landing, so the
+    // rail states it now.) A FAILED load also leaves `items === null` and is indistinguishable
+    // from a pending one from here, so the host names it: `rail.loadError` wins over "Loading…",
+    // which would otherwise sit there forever and read as an outage.
+    emptyLabel: !loaded
+      ? (rail?.loadError ?? "Loading…")
+      : query
+        ? `No matches for “${filter.trim()}”.`
+        : (rail?.emptyLabel ?? ""),
+    // The filter field, in the level's own pinned header strip. Shown only once the list has
+    // arrived with something in it: a filter over nothing to filter is noise, and over a list
+    // that has not loaded it is a control that cannot work yet.
+    headerSlot:
+      loaded && allEntityItems.length > 0 ? (
+        <ListHeader
+          ariaLabel={`Filter ${rail?.title ?? nameSuffix}`}
+          search={{
+            value: filter,
+            onChange: setFilter,
+            label: `Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`,
+            grow: true,
+          }}
+        />
+      ) : undefined,
     // "New …" is a right-justified `+` in the resource list header — absent entirely
     // when the host suppressed creation (newLabel omitted).
     onNew: newLabel != null ? () => setNewOpen(true) : undefined,
@@ -272,7 +346,13 @@ export function ResourceExplorer<T>({
     id: "topic",
     // The topics list belongs to the selected entity — name it after that entity (falling back to
     // the entity noun in promoteTopics, where a rail header reads "Ecosystem" until the name loads).
-    title: entityItems.find((e) => e.id === scopedId)?.label ?? (promoteTopics ? nameSuffix : "Topics"),
+    // The UNFILTERED rows, for the same reason `active`/`titleFor` read the unfiltered `items`:
+    // a rail filter narrows what is listed, never what is open, and reading the filtered array
+    // here flipped this header (and the breadcrumb tail derived from it) from the entity's name
+    // to the literal "Topics" while its pane was still on screen showing that entity's data.
+    title:
+      allEntityItems.find((e) => e.id === scopedId)?.label ??
+      (promoteTopics ? nameSuffix : "Topics"),
     // The frontier's select nudge: name the rows and say what choosing one does.
     itemNoun: "topic",
     overviewHelp: `Each topic is one working area of this ${nameSuffix.toLowerCase()} — its apps, users, settings, and so on. Picking one opens that area's list or pane here.`,
@@ -328,27 +408,15 @@ export function ResourceExplorer<T>({
     },
   });
 
-  // `children` land in the frontier pane: the "All" card landing while nothing is selected, a
-  // "pick a topic" placeholder once an entity is selected but no topic is, else the topic's pane
-  // (keyed by scopedId so a resource switch remounts it).
+  // `children` land in the frontier pane: nothing while the resource rail is the unselected
+  // frontier (the frame's own select hint owns that pane — §1.5), a "pick a topic" placeholder
+  // once an entity is selected but no topic is, else the topic's pane (keyed by scopedId so a
+  // resource switch remounts it).
   const content =
     promoteTopics && !scopedId ? (
       // Default resource still resolving (or the tenant has none): hold the frontier.
       <EmptyState title="Loading…" />
-    ) : isAll && landing ? (
-      <ResourceLanding
-        items={items}
-        title={landing.title}
-        help={landing.help}
-        emptyLabel={landing.emptyLabel}
-        basePath={basePath}
-        getId={getId}
-        getLabel={getLabel}
-        getSublabel={landing.getSublabel}
-        cardHref={(item) => `${basePath}/${getId(item)}`}
-        renderMeta={landing.renderMeta}
-      />
-    ) : topic == null ? (
+    ) : isAll ? null : topic == null ? (
       // Fallback only — the frame's automatic frontier nudge replaces this whenever the
       // topics level is the unselected frontier of the merged stack.
       <TopicSelectHint title="Select a topic to view." />
@@ -366,7 +434,7 @@ export function ResourceExplorer<T>({
         setNewOpen(false);
         // Pull the created row into the list BEFORE routing to it. `items` is fetched once per
         // mount, so it does not yet contain `id`; routing first would make `knownId` false and the
-        // fallback above would show the "All" landing instead of the new resource — it would look
+        // fallback above would show the unselected "All" state instead of the new resource — it would look
         // like the create silently failed. A failed refresh still routes: the id is real, and the
         // list reconciles on its next load.
         try {

@@ -23,6 +23,7 @@ import { Button } from '@agentic-toolkit/ui/components/button'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { Textarea } from '@agentic-toolkit/ui/components/textarea'
 import { TooltipProvider } from '@agentic-toolkit/ui/components/tooltip'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 
 import { useDmThread, type DmMessage } from '../hooks/use-dms'
 import { PresenceDot } from './presence-dot'
@@ -213,9 +214,7 @@ export function DmThread({
               <span>Loading messages…</span>
             </div>
           ) : error ? (
-            <p role="alert" className="py-6 text-sm text-apt-red">
-              {error}
-            </p>
+            <ErrorText error={error} className="py-6" />
           ) : messages.length === 0 ? (
             <p className="py-6 text-center text-sm text-apt-text-muted">
               No messages yet. Say hello!
@@ -262,11 +261,7 @@ export function DmThread({
             {sending ? <Spinner className="text-current" /> : <SendHorizontal aria-hidden="true" />}
           </Button>
         </form>
-        {sendError && (
-          <p role="alert" className="border-t border-apt-border px-4 py-2 text-xs text-apt-red">
-            {sendError}
-          </p>
-        )}
+        <ErrorText error={sendError} className="border-t border-apt-border px-4 py-2 text-xs" />
       </section>
     </TooltipProvider>
   )

@@ -16,6 +16,7 @@ import { Button } from '@agentic-toolkit/ui/components/button'
 import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
 import { Spinner } from '@agentic-toolkit/ui/components/spinner'
 import { TooltipProvider } from '@agentic-toolkit/ui/components/tooltip'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 
 import { type DmConversation } from '../hooks/use-dms'
 import { PresenceDot } from './presence-dot'
@@ -131,9 +132,7 @@ export function DmList({
               <span>Loading conversations…</span>
             </div>
           ) : error ? (
-            <p role="alert" className="px-4 py-6 text-sm text-apt-red">
-              {error}
-            </p>
+            <ErrorText error={error} className="px-4 py-6" />
           ) : chats.length === 0 ? (
             <div className="p-4">
               <EmptyState

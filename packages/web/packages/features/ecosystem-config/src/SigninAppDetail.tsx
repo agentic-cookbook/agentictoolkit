@@ -7,6 +7,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Plus, Trash2 } from "lucide-react";
 import { DetailSection } from "@agentic-toolkit/resource";
 import type { SigninApp, SigninAppInput } from "@agentic-toolkit/data/ecosystem-config";
@@ -120,12 +121,12 @@ function OriginsEditor({
             />
             <Button
               type="button"
-              variant="ghost"
+              variant="destructive-ghost"
               size="icon-sm"
               onClick={() => removeOrigin(row.id)}
               title="Remove origin"
             >
-              <Trash2 className="text-apt-red" />
+              <Trash2 />
             </Button>
           </div>
         ))}
@@ -246,7 +247,7 @@ export function SigninAppDetail({
               onChange={(allowedReturnOrigins) => onChange({ ...draft, allowedReturnOrigins })}
             />
 
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
           </CardContent>
         </Card>
       </DetailSection>

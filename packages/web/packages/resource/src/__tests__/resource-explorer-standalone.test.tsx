@@ -72,13 +72,7 @@ function Harness({ dirty }: { dirty: boolean }) {
       nameSuffix="Project"
       topics={topics}
       newLabel="New"
-      landing={{
-        title: "All",
-        help: "help",
-        emptyLabel: "none",
-        getSublabel: () => "",
-        renderMeta: () => null,
-      }}
+      rail={{ title: "All", help: "help", emptyLabel: "none" }}
     />
   );
 }
@@ -150,7 +144,7 @@ describe("ResourceExplorer standalone exit guard", () => {
           nameSuffix="Project"
           topics={topics}
           newLabel="New"
-          landing={{ title: "All", help: "h", emptyLabel: "none", getSublabel: () => "", renderMeta: () => null }}
+          rail={{ title: "All", help: "h", emptyLabel: "none" }}
         />
       </Wrap>,
     );

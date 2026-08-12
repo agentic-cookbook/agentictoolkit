@@ -12,6 +12,7 @@ import {
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { Spinner } from "@agentic-toolkit/ui/components/spinner";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
 import {
@@ -143,9 +144,7 @@ export function PreferencesCard(): ReactElement {
           </div>
         )}
         {isError && (
-          <p className="text-sm text-apt-red" role="alert">
-            Couldn’t load your preferences. Reload to try again.
-          </p>
+          <ErrorText error="Couldn’t load your preferences. Reload to try again." />
         )}
         {data && (
           <div className="space-y-1">
@@ -196,11 +195,7 @@ export function PreferencesCard(): ReactElement {
                   Saved
                 </span>
               )}
-              {save.isError && (
-                <span className="text-sm text-apt-red" role="alert">
-                  Couldn’t save — try again.
-                </span>
-              )}
+              {save.isError && <ErrorText error="Couldn’t save — try again." />}
             </div>
           </div>
         )}

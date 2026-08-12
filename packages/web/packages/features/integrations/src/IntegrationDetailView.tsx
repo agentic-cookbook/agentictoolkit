@@ -404,7 +404,7 @@ export function IntegrationDetailView({
                 </Button>
               </div>
               {added && <p className="text-sm text-apt-green">integration added</p>}
-              {error && <p className="text-sm text-apt-red">{error}</p>}
+              <ErrorText error={error} />
               {!error && blockedReason && touched && (
                 <p className="text-sm text-apt-text-muted" role="status">
                   {blockedReason}
@@ -418,7 +418,7 @@ export function IntegrationDetailView({
                   {busy ? "Saving…" : "Save"}
                 </Button>
               </div>
-              {error && <p className="text-sm text-apt-red">{error}</p>}
+              <ErrorText error={error} />
               {!error && blockedReason && touched && (
                 <p className="text-sm text-apt-text-muted" role="status">
                   {blockedReason}

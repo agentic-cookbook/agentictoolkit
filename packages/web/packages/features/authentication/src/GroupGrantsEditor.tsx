@@ -169,14 +169,14 @@ export function GroupGrantsEditor({
                 />
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructive-ghost"
                   size="icon"
                   onClick={() => remove(grant)}
                   disabled={locked}
                   title="Remove grant"
                   aria-label={`Remove grant on ${targetLabel(grant)}`}
                 >
-                  <Trash2 className="text-apt-red" />
+                  <Trash2 />
                 </Button>
               </span>
             </ListItem>

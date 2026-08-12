@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@agentic-toolkit/ui/components/dialog";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import { DialogErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
 import { Field } from "@agentic-toolkit/ui/blocks";
@@ -511,14 +512,7 @@ export function AddressesSection({
               <span>
                 {`Remove ${deleteTarget.label || addressSummary(deleteTarget)} from your card?`}
               </span>
-              {deleteError && (
-                <span
-                  className="mt-2 block text-apt-red"
-                  role="alert"
-                >
-                  {deleteError}
-                </span>
-              )}
+              <DialogErrorText error={deleteError} />
             </>
           ) : undefined
         }

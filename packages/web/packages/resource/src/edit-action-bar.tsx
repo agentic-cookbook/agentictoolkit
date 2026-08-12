@@ -37,7 +37,16 @@ export function EditActionBar({
       aria-label="Editing actions"
       className="flex items-center gap-1 border-y border-apt-border bg-apt-bg px-6 py-2"
     >
-      <div className="min-w-0 flex-1 truncate text-sm">{status}</div>
+      {/* The status cell is a LIVE REGION, and it is one here rather than at each call site.
+          Every caller passes the same ternary — a red save error, else a muted "Saved." — and
+          none of them was announced: the error span mounts after the failure, so marking the
+          span itself `role="alert"` is the arrangement that works least often (a live region
+          has to be in the DOM before its content changes). This cell always renders, so the
+          swap inside it is what gets read. `status` (polite) rather than `alert` because the
+          same node carries the success message, and an assertive "Saved." interrupts. */}
+      <div role="status" className="min-w-0 flex-1 truncate text-sm">
+        {status}
+      </div>
       <SaveCancelButtons
         canCancel={dirty}
         canSave={canSave}

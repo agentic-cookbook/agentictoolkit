@@ -3,7 +3,7 @@
 import { useCallback, type ReactElement } from "react";
 import { useRouter } from "next/navigation";
 import { Settings, Users, Shield, UsersRound } from "lucide-react";
-import { teamsApi, teamMembersApi, type Team } from "@agentic-toolkit/data/teams";
+import { teamsApi, type Team } from "@agentic-toolkit/data/teams";
 import { ecosystemsApi } from "@agentic-toolkit/data/ecosystems";
 import {
   useResourceItemQuery,
@@ -16,21 +16,17 @@ import {
   type ResourceTopic,
 } from "@agentic-toolkit/resource";
 import { TeamSettingsPane } from "./TeamSettingsPane";
-import { TEAM_MEMBER_COUNTS_CACHE_KEY, TeamMembersPane } from "./TeamMembersPane";
+import { TeamMembersPane } from "./TeamMembersPane";
 import { TeamPermissionsPane } from "./TeamPermissionsPane";
 import { TeamDetail, teamBlank, teamValidate } from "./TeamDetail";
 
-/** The stand-in while the counts read is outstanding or has given up. Module scope so it keeps one
- *  identity: a fresh `new Map()` per render would make every consumer of it re-derive. */
-const EMPTY_COUNTS: ReadonlyMap<string, number> = new Map<string, number>();
-
 /**
- * The Teams feature workspace (FTD model): a team selector popup + the "All"
- * landing, then the entity pane (Team) / Members / Permissions scoped to the
- * selected team. New lives in the popup; Delete lives in the Team pane's Danger
- * zone. Shared wiring lives in ResourceExplorer. Rendered by the host's teams
- * route (the hub's /<slug>/teams/[[...path]]) — a site-less workspace like
- * /organizations.
+ * The Teams feature workspace (FTD model): a team selector popup whose unselected
+ * pane is the frame's select hint, then the entity pane (Team) / Members /
+ * Permissions scoped to the selected team. New lives in the popup; Delete lives in
+ * the Team pane's Danger zone. Shared wiring lives in ResourceExplorer. Rendered by
+ * the host's teams route (the hub's /<slug>/teams/[[...path]]) — a site-less
+ * workspace like /organizations.
  */
 export function TeamsFeature({
   basePath,
@@ -117,35 +113,6 @@ export function TeamsFeature({
   // so the affordance is unreachable anyway.)
   const canCreate = slug != null && lookup !== "failed" && lookup !== "none";
 
-  // Member counts for the "All" landing cards (one request, grouped per team). Decorative: a
-  // failure costs the cards their badges (`counts` stays null, the fallback below is an empty map)
-  // and nothing else, and `reportErrors: false` keeps it out of the auth telemetry a real read
-  // failure belongs in.
-  //
-  // The failure REACHES the cache as a failure, though — no `.catch(() => new Map())` in the
-  // fetcher. A caught rejection resolves, and a resolved fetcher is a SUCCESS: the fabricated empty
-  // map would be stored under this key as the server's own answer, fresh for five minutes and kept
-  // for thirty, so one blip during a counts outage would strip the badges off the landing for half
-  // an hour after the backend recovered, with no read left to correct it. An errored entry holds no
-  // data, so the next visit reads again.
-  //
-  // The TEAM IDS are the cache id, which covers half of what it used to refetch on: a create or a
-  // delete produces a different set and so a different entry, while returning to the landing with
-  // the same teams costs no request. The other half — a MEMBERSHIP change, which moves a count
-  // without moving the key — is invalidated by the members pane itself against
-  // {@link TEAM_MEMBER_COUNTS_CACHE_KEY}, because there is nothing about this entry for the cache
-  // to notice. A null id (no teams, or a list withheld pending §2) reads nothing at all — the
-  // list's scoping posture and this sibling read agree.
-  const countsId = teams && teams.length > 0 ? teams.map((t) => t.id).join(",") : null;
-  const loadCounts = useCallback(() => teamMembersApi.counts(), []);
-  const { item: counts } = useResourceItemQuery<Map<string, number>>(
-    TEAM_MEMBER_COUNTS_CACHE_KEY,
-    countsId,
-    loadCounts,
-    { reportErrors: false },
-  );
-  const memberCounts = counts ?? EMPTY_COUNTS;
-
   // Entity-first topics (FTD spec §4): the team itself, then Members, Permissions.
   const topics: ResourceTopic[] = [
     {
@@ -209,9 +176,17 @@ export function TeamsFeature({
       // site mount (§2 pending) or a workspace whose ecosystem failed to resolve / doesn't
       // exist — otherwise the rail offers a dialog whose create is permanently rejected.
       newLabel={canCreate ? "New Team…" : undefined}
-      landing={{
+      rail={{
         title: "All teams",
         help: "Pick a team to manage its settings, members, and permissions.",
+        // The reverse-domain identifier is the team's unique key — display names are free text
+        // and two teams in one workspace may share one. It is also what `teamValidate` checks
+        // for collisions, so it is the value a user needs to see before naming a new team.
+        getSublabel: (t) => t.identifier,
+        // A failed list leaves `items` null forever (`useResourceList` sets the error and
+        // never fills the array), so without this the rail would sit on "Loading…" and the
+        // error would be invisible — the rail is the only surface that can show it.
+        loadError: error,
         emptyLabel:
           slug == null
             ? "Teams aren't available on this site yet — open them from your hub workspace."
@@ -220,15 +195,6 @@ export function TeamsFeature({
               : lookup === "none"
                 ? "This workspace has no ecosystem to hold teams yet."
                 : "No teams yet.",
-        getSublabel: (t) => t.identifier,
-        renderMeta: (t) => {
-          const n = memberCounts.get(t.id) ?? 0;
-          return (
-            <span className="inline-flex items-center gap-1 font-mono text-xs text-apt-text-dim">
-              <Users size={12} aria-hidden /> {n} member{n === 1 ? "" : "s"}
-            </span>
-          );
-        },
       }}
       renderDialog={canCreate ? (onClose, onCreated) => (
         <CreateResourceDialog

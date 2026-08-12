@@ -17,12 +17,11 @@ import { StackLevels, useRailHost, CreateResourceDialog } from "@agentic-toolkit
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api, type Persona } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
-import { PersonasTable } from "./PersonasTable";
 import { PERSONA_SERVICES_CACHE_KEY, useUserServices } from "./useUserServices";
 
 /**
- * The Personas feature: the persona list as a stack LEVEL and the editor as the leaf (the "All
- * personas" table while nothing is open). Under a rail host it PUBLISHES its level into the host's
+ * The Personas feature: the persona list as a stack LEVEL and the editor as the leaf (the frame's
+ * select hint while nothing is open). Under a rail host it PUBLISHES its level into the host's
  * merged stack (via `useRailHost`) and renders only the leaf; standalone it renders its own
  * HierarchicalTopicDetail. "New Persona" is a `+` in the list header; the breadcrumb names the open
  * persona (from the level).
@@ -35,8 +34,7 @@ import { PERSONA_SERVICES_CACHE_KEY, useUserServices } from "./useUserServices";
  *
  * Three facets the editor renders cross a package boundary this feature can't reach on its own, so
  * a host injects them (see {@link PersonaEditor} for the exact fallback behavior when omitted):
- * `renderChatPane`, `profileUrlFor` (also used by {@link PersonasTable}'s Preview link), and
- * `renderKnowledgeBases`.
+ * `renderChatPane`, `profileUrlFor`, and `renderKnowledgeBases`.
  */
 export function PersonasSection({
   urlSelection,
@@ -66,8 +64,8 @@ export function PersonasSection({
   };
   /** Renders the live try-it chat for a saved persona. See {@link PersonaEditor}. */
   renderChatPane?: (persona: Persona) => ReactNode;
-  /** The persona's public profile URL for a given slug — threaded to both the editor's Identity
-   *  facet and {@link PersonasTable}'s Preview link. See {@link PersonaEditor}. */
+  /** The persona's public profile URL for a given slug — threaded to the editor's Identity
+   *  facet. See {@link PersonaEditor}. */
   profileUrlFor?: (slug: string) => string;
   /** Renders the Knowledge Bases browser scoped to a persona's owned ecosystem. See
    *  {@link PersonaEditor}. */
@@ -146,7 +144,7 @@ export function PersonasSection({
   }));
 
   // The open persona: the selected id resolved against the loaded rows. An unknown/deleted id (or
-  // none) is "nothing open" → the All table (fail-fast, never a blank screen).
+  // none) is "nothing open" → the select hint (fail-fast, never a blank screen).
   const openPersona = openPersonaId ? rows.find((p) => p.id === openPersonaId) ?? null : null;
   const levels: TopicLevel[] = [
     {
@@ -160,9 +158,14 @@ export function PersonasSection({
       // "New Persona" is a right-justified `+` in the list header; it opens the create modal.
       onNew: () => setNewOpen(true),
       newLabel: "New Persona",
-      // This level's unselected state is a REAL landing (the All table below), never the automatic
-      // TopicOverview grid.
-      overview: false,
+      // The unselected pane is the frame's select hint and nothing else (docs/ui/fleet-ui-audit.md
+      // §1.5) — the rail beside it already lists every persona.
+      itemNoun: "persona",
+      // The load failure has to ride INSIDE the hint. The frontier overview hides the pane's
+      // children outright (`display: none`), so the `<ErrorText>` below is only readable while
+      // the list is empty — and a personas list that loaded while the SERVICES list failed is
+      // non-empty, which would swallow that error silently.
+      overviewHelp: error ? <ErrorText error={error} /> : undefined,
     },
   ];
 
@@ -192,10 +195,9 @@ export function PersonasSection({
         renderTransferOwnership={renderTransferOwnership}
       />
     ) : (
-      <>
-        <ErrorText error={error} className="px-6 pt-4" />
-        <PersonasTable personas={rows} onSelect={(id) => selectPersona(id)} profileUrlFor={profileUrlFor} />
-      </>
+      // Nothing open: the frame's select hint owns this pane. It only yields to these children
+      // when the list is EMPTY — which is exactly when a load failure has to be readable.
+      <ErrorText error={error} className="px-6 pt-4" />
     );
 
   // Create is a scoped modal (HTD recipe `must-create-in-modal`): Name + Slug identify the persona;

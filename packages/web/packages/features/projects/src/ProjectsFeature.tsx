@@ -3,7 +3,6 @@
 import { useCallback, type ReactElement, type ReactNode } from "react";
 import { FolderKanban } from "lucide-react";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
@@ -19,7 +18,6 @@ import { useResourceItemPrefetch, useResourceList } from "@agentic-toolkit/data"
 import { ResourceExplorer, CreateResourceDialog, type ResourceTopic } from "@agentic-toolkit/resource";
 import { projectTopics } from "./projectTopics";
 import { ProjectsCommandPalette } from "./ProjectsCommandPalette";
-import { type BadgeVariant } from "./helpers";
 import { itemWordsOf } from "./vocabulary";
 import { useBoardLive } from "./useBoardLive";
 
@@ -41,27 +39,6 @@ import { useBoardLive } from "./useBoardLive";
  * Items hosts the five interchangeable views (List / Board / Table / Timeline /
  * Calendar) via WorkItemsSurface (4e); Activity is the audit trail.
  */
-
-/* ── Status badge ─────────────────────────────────────────────────────────
- * `status` is a free-form varchar (DB default 'active'), so map the known
- * lifecycle values to a Badge tone and fall back to neutral for anything else. */
-function statusVariant(status: string): BadgeVariant {
-  switch (status) {
-    case "active":
-      return "success";
-    case "paused":
-    case "on_hold":
-      return "orange";
-    case "completed":
-      return "blue";
-    default:
-      return "neutral";
-  }
-}
-
-function StatusBadge({ status }: { status: string }): ReactElement {
-  return <Badge variant={statusVariant(status)}>{status}</Badge>;
-}
 
 /* ── Create-project form ──────────────────────────────────────────────────── */
 
@@ -276,12 +253,14 @@ export function ProjectsFeature({
         itemIcon={<FolderKanban size={16} aria-hidden />}
         topics={topics}
         newLabel="New Project…"
-        landing={{
+        rail={{
           title: "All projects",
           help: "Pick a project to view its overview, work items, and activity.",
           emptyLabel: "No projects yet.",
+          // Status is the one fact that separates a live project from an archived one at a
+          // glance. The card grid carried it as a badge; the rail carries it as the row's
+          // second line, so dropping the grid doesn't drop the fact.
           getSublabel: (p) => p.status,
-          renderMeta: (p) => <StatusBadge status={p.status} />,
         }}
         renderDialog={(onClose, onCreated) => (
           <CreateResourceDialog

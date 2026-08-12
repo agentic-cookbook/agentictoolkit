@@ -7,6 +7,7 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { isRdid } from "@agentic-toolkit/ui/lib/rdid";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   APPLICATION_KINDS,
   type ApplicationInput,
@@ -191,7 +192,7 @@ export function ApplicationDetail({
               scopePrefix={scopePrefix}
             />
 
-            {error && <p className="text-sm text-apt-red">{error}</p>}
+            <ErrorText error={error} />
           </CardContent>
         </Card>
       </DetailSection>

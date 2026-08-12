@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Select } from "@agentic-toolkit/ui/components/select";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { accessApi, type AccessRoleRow } from "@agentic-toolkit/data/access";
 import { workspaceMembersApi, type WorkspaceMember } from "@agentic-toolkit/data/organizations";
 import { useReportBusy } from "@agentic-toolkit/resource";
@@ -118,9 +119,7 @@ export function MembersPanel({
             <CardContent className="space-y-2 pt-6">
               <h3 className="text-lg font-medium">Members</h3>
               {membersQuery.isError ? (
-                <p className="text-sm text-destructive">
-                  Couldn’t load the members. Please refresh.
-                </p>
+                <ErrorText error="Couldn’t load the members. Please refresh." />
               ) : membersQuery.isPending ? (
                 <p className="text-sm text-muted-foreground">Loading…</p>
               ) : members.length === 0 ? (
@@ -168,11 +167,7 @@ export function MembersPanel({
                 ))
               )}
               {setRole.isError && (
-                <p className="text-sm text-destructive">
-                  {setRole.error instanceof Error
-                    ? setRole.error.message
-                    : "Couldn’t change the role."}
-                </p>
+                <ErrorText error={setRole.error instanceof Error ? setRole.error.message : "Couldn’t change the role."} />
               )}
             </CardContent>
           </Card>

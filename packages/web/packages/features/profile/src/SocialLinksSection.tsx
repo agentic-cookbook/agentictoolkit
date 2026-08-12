@@ -12,6 +12,7 @@ import {
   DialogFooter,
 } from "@agentic-toolkit/ui/components/dialog";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import { DialogErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
 import { PLATFORM_LABELS } from "@agentic-toolkit/ui/blocks";
 import { List, ListItem } from "@agentic-toolkit/ui/components/list";
@@ -440,14 +441,7 @@ export function SocialLinksSection({
               <span>
                 {`Remove ${PLATFORM_LABELS[deleteTarget.platform] ?? deleteTarget.platform} from your card?`}
               </span>
-              {deleteError && (
-                <span
-                  className="mt-2 block text-apt-red"
-                  role="alert"
-                >
-                  {deleteError}
-                </span>
-              )}
+              <DialogErrorText error={deleteError} />
             </>
           ) : undefined
         }

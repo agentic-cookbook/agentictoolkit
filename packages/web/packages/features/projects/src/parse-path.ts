@@ -9,8 +9,9 @@
 /** The selection ProjectsFeature renders, parsed from a route's path segments.
  *  Maps 1:1 onto ProjectsFeature's props (the host supplies `basePath`). */
 export interface ProjectsPathSelection {
-  /** The explicit "All projects" landing (`…/all`). Omitted for a bare path — a
-   *  bare path lets ResourceExplorer resume last-selected or show All. */
+  /** The explicit unselected state (`…/all`) — the rail plus the frame's select nudge, no
+   *  landing (docs/ui/fleet-ui-audit.md §1.5). Omitted for a bare path — a bare path lets
+   *  ResourceExplorer resume last-selected or fall back to this. */
   all?: boolean;
   activeProjectId?: string;
   activeTopic?: string;
@@ -19,7 +20,7 @@ export interface ProjectsPathSelection {
 
 /**
  * Parse a projects route's catch-all `path` segments:
- *   (none) / []          → {} (bare: resume last-selected or the All landing)
+ *   (none) / []          → {} (bare: resume last-selected, else nothing selected)
  *   ["all"]              → { all: true }
  *   [id]                 → { activeProjectId: id }
  *   [id, topic]          → { activeProjectId: id, activeTopic: topic }

@@ -4,7 +4,7 @@
 // ResourceExplorer recipe. This package's vitest config is jsdom (see vitest.config.ts) and
 // drives React with @testing-library/react. Only the data domain boundary
 // (@agentic-toolkit/data/projects) plus the Next navigation/link hooks are mocked, so the
-// landing → create → topic wiring is exercised, not the transport.
+// rail → create → topic wiring is exercised, not the transport.
 //
 // ResourceExplorer PUBLISHES its resource + topic rail levels into a rail HOST (via
 // StackLevels) rather than rendering them itself, so a tiny <Rail> harness backed by the
@@ -21,10 +21,13 @@ import {
 } from "@agentic-toolkit/resource";
 import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 
-// ResourceExplorer uses next/navigation's useRouter internally; a stub is enough (selection is
-// prop-driven, not click-driven). useParams is no longer read — the feature takes basePath.
+// ResourceExplorer uses next/navigation's useRouter internally. `push` is a shared spy, not a
+// throwaway: with the "All" card landing gone (docs/ui/fleet-ui-audit.md §1.5) the rail row IS
+// the only way into a project, so the route it builds is what has to be asserted. `vi.hoisted`
+// because the factory runs before the module body's consts initialize.
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // next/link pulls the App Router context in; a plain anchor is enough for these render/label
@@ -104,18 +107,27 @@ beforeEach(() => {
 // local statement of intent; do not "fix" the config to match the claim that was here.
 afterEach(cleanup);
 
-/** Renders the published rail affordances (e.g. the "New Project" button) the way the workspace
- *  shell would, so the test can drive the shell-owned rail slot. */
+/** Renders the published rail — its rows, its empty label, and its affordances (e.g. the "New
+ *  Project" button) — the way the workspace shell would. The rows matter since the "All" card
+ *  landing was removed: the rail is now the only surface listing the projects. */
 function Rail({ levels }: { levels: TopicLevel[] }) {
   return (
     <div>
-      {levels.map((l) =>
-        l.onNew ? (
-          <button key={l.id} type="button" onClick={() => l.onNew?.()}>
-            {l.newLabel}
-          </button>
-        ) : null,
-      )}
+      {levels.map((l) => (
+        <div key={l.id}>
+          {l.items.length === 0 ? <p>{l.emptyLabel}</p> : null}
+          {l.items.map((item) => (
+            <button key={item.id} type="button" onClick={() => l.onSelect(item.id)}>
+              {item.label}
+            </button>
+          ))}
+          {l.onNew ? (
+            <button type="button" onClick={() => l.onNew?.()}>
+              {l.newLabel}
+            </button>
+          ) : null}
+        </div>
+      ))}
     </div>
   );
 }
@@ -160,7 +172,7 @@ function Harness({ children }: { children: ReactNode }) {
 }
 
 describe("ProjectsFeature", () => {
-  it("lists projects from projectsApi.list on the All landing", async () => {
+  it("lists projects from projectsApi.list into the published rail", async () => {
     render(
       <Harness>
         <ProjectsFeature basePath="/w1/projects" all />
@@ -233,13 +245,13 @@ describe("ProjectsFeature", () => {
       </Harness>,
     );
 
-    // The landing card's href is built from `basePath` (ResourceExplorer's
-    // `cardHref`), so this pins that `basePath` is the FULL base — workspace
-    // included — rather than a bare `/home` a caller might pass by mistake. A
-    // wrong base here means a project click resolves to the wrong workspace
-    // segment and SiteHomeShell bounces the user back to their default workspace.
-    const link = (await screen.findByText("Website relaunch")).closest("a");
-    expect(link?.getAttribute("href")).toBe("/home/mine/p1");
+    // The rail row's route is built from `basePath` (ResourceExplorer's level `onSelect`), so
+    // this pins that `basePath` is the FULL base — workspace included — rather than a bare
+    // `/home` a caller might pass by mistake. A wrong base here means a project click resolves
+    // to the wrong workspace segment and SiteHomeShell bounces the user back to their default
+    // workspace.
+    fireEvent.click(await screen.findByRole("button", { name: "Website relaunch" }));
+    expect(push).toHaveBeenCalledWith("/home/mine/p1", { scroll: false });
   });
 
   it("creates a project scoped to the given workspace, not the creator", async () => {

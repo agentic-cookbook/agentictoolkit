@@ -20,11 +20,12 @@ import { CollapseToggle } from "../components/collapse-toggle"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/tooltip"
 import { cn } from "../lib/utils"
 
-// Faithful port of the adh.com/home topic rail — the SOURCE OF TRUTH:
-// hub/src/components/settings/SettingsLayout.tsx + settings.css
-// (.settings-layout / .settings-nav / .settings-nav-item / .settings-nav-divider
-// / .settings-content), translated 1:1 from CSS to utilities with the apt-*
-// tokens (--accent → apt-gold, --text → apt-text, --border → apt-border …).
+// Faithful port of the adh.com/home topic rail, originally translated 1:1 from
+// hub/src/components/settings/SettingsLayout.tsx + its settings.css (.settings-layout /
+// .settings-nav / .settings-nav-item / .settings-nav-divider / .settings-content) into
+// utilities with the apt-* tokens (--accent → apt-gold, --text → apt-text, --border →
+// apt-border …). That original is GONE — the hub now renders this, so this file is the
+// source of truth and there is nothing left to stay faithful to.
 
 export interface TopicDetailItem {
   id: string
@@ -45,8 +46,12 @@ export interface TopicDetailItem {
    *  preview at all, so a list whose row height is a user preference can keep passing `preview`
    *  and let this one number carry the setting — including its "off" position. */
   previewLines?: number
-  /** What this topic is for — one or two sentences. Feeds the standard no-selection
-   *  overview (TopicOverview: one card per topic, icon + label + this text). */
+  /** What this topic is for — one or two sentences. **This component renders it nowhere.** It fed
+   *  the card grid that a level could opt into for its unselected frontier, and that opt-in is gone
+   *  (docs/ui/fleet-ui-audit.md §1.5 — the unselected frontier is the select nudge and nothing
+   *  else), so setting it changes no pixel here. It survives because hosts carry the same row shape
+   *  into surfaces that DO show a blurb (a selected topic's `EmptyState`); to explain a LIST, use
+   *  the level's `overviewHelp`, which is the copy the nudge renders. */
   description?: string
   /** 16px leading icon; tints with the label (currentColor). The rail is always
    *  collapsible, so every row is guaranteed an icon — a neutral ring fills in
@@ -521,6 +526,7 @@ export function TopicRail({
   showToggle = true,
   title,
   busy = false,
+  railLabel,
   covered = false,
   isRoot = false,
   selectionStyle = "bar",
@@ -589,6 +595,11 @@ export function TopicRail({
    *  small spinner immediately before the title. One spinner covers BOTH reads: from the user's
    *  side there is one list and one wait, and two spinners in one header would be noise. */
   busy?: boolean
+  /** Accessible name for this rail's `<aside>` landmark. Defaults to "Topic list", which every
+   *  rail in the fleet shares — override only where a reader navigates to this surface BY
+   *  landmark and needs it told apart from the sibling rails open beside it. Deliberately not
+   *  derived from `title`: that would rename every existing rail at once. */
+  railLabel?: string
   /** This list is covered (peeking) in the "covered" style: rows render as a left-aligned icon
    *  strip. The covered stack reveals the whole list on hover by re-layering the real rail
    *  full-width above its neighbours (there is no per-row/header popover). */
@@ -759,7 +770,7 @@ export function TopicRail({
     // sits flush against the edge.
     <aside
       ref={asideRef}
-      aria-label="Topic list"
+      aria-label={railLabel ?? "Topic list"}
       // A left drop-shadow (covered style) reads against `--color-shadow` (a token, not a raw
       // colour) so the child casts a physical edge over its covered parent. Referenced via a CSS
       // var so the project-guidelines colour checker stays clean (no raw hex / rgb()).

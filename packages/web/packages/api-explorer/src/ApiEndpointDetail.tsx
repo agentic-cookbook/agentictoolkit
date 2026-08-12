@@ -12,6 +12,7 @@ import { Field, FieldGroup } from '@agentic-toolkit/ui/blocks'
 import { Tabs, TabsList, TabsTab, TabsPanel } from '@agentic-toolkit/ui/components/tabs'
 import { Disclosure } from '@agentic-toolkit/ui/components/disclosure'
 import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
 import { CodeBlock } from './CodeBlock'
 import {
   bodyAllowed,
@@ -380,7 +381,7 @@ function TryItPanel({
           <div className="flex flex-col gap-2 rounded-lg border border-apt-border bg-apt-surface p-3">
             <span className="font-mono text-xs font-semibold uppercase tracking-wider text-apt-text-muted">Result</span>
             {error ? (
-              <p className="text-sm text-apt-red">{error}</p>
+              <ErrorText error={error} />
             ) : result ? (
               <>
                 <div className="flex items-center gap-2 text-sm">

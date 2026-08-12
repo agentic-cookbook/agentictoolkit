@@ -26,8 +26,11 @@ export interface HelpTopic {
    *  `reference/errors`. The help site generates one SSR route per slug; the slug path mirrors the
    *  id path down the tree. */
   slug: string
-  /** One/two-sentence blurb feeding the auto topic-overview cards (shown when this node's level is
-   *  the frontier with nothing deeper selected). */
+  /** One/two-sentence blurb. It renders as the `EmptyState` body when this topic is SELECTED and has
+   *  no content of its own (`HelpSurface.tsx:47`, `HelpWindow.tsx:26`). It used to also land an
+   *  UNSELECTED level as a grid of one card per sibling; that opt-in is gone
+   *  (docs/ui/fleet-ui-audit.md §1.5 — an unselected frontier is the select nudge and nothing else),
+   *  so a blurb on a topic nobody has picked yet is now carried but not shown. */
   description?: string
   /** Child topics. Presence opens the children as the next hierarchical level when this node is
    *  selected. A node MAY carry both `children` and its own `contentKey` — then it is a *section*
@@ -109,7 +112,8 @@ export const HELP_TOPICS: HelpTopic[] = [
   },
   {
     // Same split as MCP: the old hub-features.md's H2 sections are now child topics, one per
-    // feature area, so /hub lands on the children overview cards.
+    // feature area, so /hub lands on the children level's select nudge with those children in the
+    // rail beside it — the same landing Quickstart, Reference and MCP get.
     id: 'hub',
     label: 'Hub Features',
     slug: 'hub',

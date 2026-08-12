@@ -12,6 +12,7 @@ import { useSettingsDirty } from "@agentic-toolkit/resource";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { EditActionBar } from "@agentic-toolkit/resource";
 import { DetailSection } from "@agentic-toolkit/resource";
 import { useSettingsNav } from "../layout/settings-nav";
@@ -182,7 +183,7 @@ export function AccountPanel() {
                     autoComplete="new-password"
                   />
                 </div>
-                {pwError && <p className="text-xs text-apt-red">{pwError}</p>}
+                <ErrorText error={pwError} className="text-xs" />
               </CardContent>
             </Card>
           </DetailSection>

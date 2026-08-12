@@ -4,70 +4,7 @@ import type { ReactElement, ReactNode } from "react"
 
 import { MousePointerClick } from "lucide-react"
 
-import { Card, CardHeader, CardTitle, CardDescription } from "../components/card"
-import type { TopicDetailItem } from "./topic-detail"
-
-/**
- * The OPT-IN no-selection detail for a topic list (`TopicLevel.overview: "cards"`): one
- * card per topic — the topic's icon + label with its `description` under it — laid out
- * in a responsive grid. Clicking a card selects that topic in the list (`onSelect` is
- * the level's own select). For a level whose card grid IS its landing page (the help
- * site's topic browser); everywhere else the default no-selection detail is the quiet
- * `TopicSelectHint` nudge.
- */
-export function TopicOverview({
-  title,
-  items,
-  onSelect,
-}: {
-  /** Optional heading above the grid (e.g. the owning entity's name). */
-  title?: string
-  items: TopicDetailItem[]
-  onSelect: (id: string) => void
-}): ReactElement {
-  return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
-      <div className="flex flex-col gap-4 px-6 pt-6 pb-6">
-        {title && (
-          <h2 className="font-mono text-sm font-semibold tracking-[0.02em] text-apt-text">
-            {title}
-          </h2>
-        )}
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(230px,1fr))]">
-          {items.map((it) => (
-            <button
-              key={it.id}
-              type="button"
-              onClick={() => onSelect(it.id)}
-              className="group rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-apt-gold/60"
-            >
-              <Card className="h-full gap-2 transition-colors group-hover:border-apt-gold/60">
-                <CardHeader>
-                  {/* `items-start` + `leading-snug` + `break-words`/`anywhere` let a long
-                      label (a full domain has no spaces to wrap on) wrap cleanly across
-                      lines INSIDE the card instead of overflowing/clipping at its edge —
-                      the icon stays pinned to the first line. `min-w-0` is what lets the
-                      label wrap rather than force the flex row wider than the card. */}
-                  <CardTitle className="flex items-start gap-2 leading-snug text-apt-text">
-                    <span aria-hidden className="mt-0.5 shrink-0 text-apt-text-muted">
-                      {it.icon}
-                    </span>
-                    <span className="min-w-0 break-words [overflow-wrap:anywhere]">{it.label}</span>
-                  </CardTitle>
-                  {it.description && (
-                    <CardDescription className="text-sm text-apt-text-muted">
-                      {it.description}
-                    </CardDescription>
-                  )}
-                </CardHeader>
-              </Card>
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
+import { Card } from "../components/card"
 
 /** "a"/"an" for the nudge's noun — UI copy only, no attempt at fuller English rules. */
 const article = (noun: string): string => (/^[aeiou]/i.test(noun) ? "an" : "a")
@@ -86,9 +23,10 @@ const article = (noun: string): string => (/^[aeiou]/i.test(noun) ? "an" : "a")
  * `children` is the level's bespoke `overviewHelp` copy — WHAT one of these rows is and
  * WHY to choose one — rendered under the headline; with `selectable: false` (an empty
  * list) the blurb shows alone, since there is nothing to select yet and the rail already
- * shows the level's `emptyLabel`. A level whose cards are a genuine landing opts back
- * into the `TopicOverview` grid with `overview: "cards"`. `data-htd-select-hint` is the
- * stable hook for tests, so they never couple to the copy.
+ * shows the level's `emptyLabel`. There is no richer alternative to opt into: an
+ * unselected frontier is this card and nothing else (docs/ui/fleet-ui-audit.md §1.5),
+ * which is why the card-grid landing this file used to also export is gone.
+ * `data-htd-select-hint` is the stable hook for tests, so they never couple to the copy.
  */
 export function TopicSelectHint({
   title,

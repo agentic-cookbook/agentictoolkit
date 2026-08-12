@@ -116,7 +116,10 @@ collapsible — there is no opt-in flag; the leading slot is always reserved (em
 when there is no `railSlot`). `TopicDetailItem`: `{ id, label, sublabel?,
 inlineSublabel?, description?, icon?, dividerAfter?, spacerAfter?, disabled? }`
 (`inlineSublabel` renders the sublabel on the label's line for dense single-line
-rows; `description` feeds the hierarchical view's topic-overview card).
+rows; `description` is carried on the row but rendered NOWHERE by either this
+primitive or the hierarchical view — it fed the latter's topic-overview card,
+which was deleted in [[hierarchical-topic-detail]] 1.19.0, so hosts keep it only
+for surfaces of their own that show a blurb).
 `RailSlot = ReactNode | (collapsed: boolean) =>
 ReactNode`. Exports: `TopicDetail`, `TopicDetailItem`, `RailSlot`.
 

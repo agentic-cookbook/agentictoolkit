@@ -87,6 +87,13 @@ export default defineConfig({
     // (server bags, feature flags). No React — its own light entry so a dialog can
     // import the gate without pulling a UI barrel.
     'settings-dialogs/index': 'src/settings-dialogs/index.ts',
+    // The Messaging compose form + log, shared by the admin tool (platform-wide) and the
+    // per-product pane. 'use client', and its own entry so that directive stays off any
+    // other subpath. The queries/mutation are INJECTED by the consumer and the wire shapes
+    // are structural local minimums — the same arrangement, for the same reason, as
+    // persona-chat below: it keeps this package free of @tanstack/react-query and
+    // @agentic-toolkit/adh-api-types, which both of its two consumers already carry.
+    'messaging/index': 'src/messaging/index.ts',
     // The shared persona-chat backend (SSE parser + status/retry state machine +
     // PersonaChatBackend class). Pure TS, no React. The auth-aware fetchers are
     // INJECTED by the consumer; the chat contract types are a traceable local copy

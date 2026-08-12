@@ -6,6 +6,7 @@ import {
   InvitationPendingUsersPane,
   InvitationInvitesPane,
 } from "@agentic-toolkit/ui/blocks/invitation-panes";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useAuth } from "@agentic-toolkit/auth";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { NotesAndHistory } from "./NotesAndHistory";
@@ -34,7 +35,7 @@ export function EcoRequestsPane({ ecosystemRdid }: { ecosystemRdid: string }): R
   const { data: requests = [], isPending, isError } = useEcoInvitationRequests(ecosystemRdid);
   const deleteRow = useEcoDeleteRow(ecosystemRdid, "request");
 
-  if (isError) return <p className="text-sm text-destructive">Failed to load requests.</p>;
+  if (isError) return <ErrorText error="Failed to load requests." />;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -65,7 +66,7 @@ export function EcoPendingUsersPane({ ecosystemRdid }: { ecosystemRdid: string }
   const sendInvitations = useEcoSendInvitations(ecosystemRdid);
   const addPendingUsers = useEcoAddPendingUsers(ecosystemRdid);
 
-  if (isError) return <p className="text-sm text-destructive">Failed to load pending users.</p>;
+  if (isError) return <ErrorText error="Failed to load pending users." />;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -113,7 +114,7 @@ export function EcoInvitesPane({ ecosystemRdid }: { ecosystemRdid: string }): Re
   const { data: invites = [], isPending, isError } = useEcoInvites(ecosystemRdid);
   const deleteRow = useEcoDeleteRow(ecosystemRdid, "invite");
 
-  if (isError) return <p className="text-sm text-destructive">Failed to load invites.</p>;
+  if (isError) return <ErrorText error="Failed to load invites." />;
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

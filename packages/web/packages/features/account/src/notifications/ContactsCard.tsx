@@ -17,6 +17,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
 import { Spinner } from "@agentic-toolkit/ui/components/spinner";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   addContact,
   confirmContactVerification,
@@ -86,7 +87,7 @@ function ContactRow({
           )}
           <Button
             size="icon-sm"
-            variant="ghost"
+            variant="destructive-ghost"
             aria-label={`Remove ${contact.value}`}
             onClick={() => remove.mutate()}
             disabled={remove.isPending || isPrimaryEmail}
@@ -94,7 +95,7 @@ function ContactRow({
               isPrimaryEmail ? "Your primary email can’t be removed" : `Remove ${contact.value}`
             }
           >
-            <Trash2 className="text-apt-red" />
+            <Trash2 />
           </Button>
         </div>
       </div>
@@ -138,19 +139,13 @@ function ContactRow({
       )}
 
       {start.isError && (
-        <p className="mt-2 text-xs text-apt-red" role="alert">
-          {extractErrorMessage(start.error, "Couldn’t send a code.")}
-        </p>
+        <ErrorText error={extractErrorMessage(start.error, "Couldn’t send a code.")} className="mt-2 text-xs" />
       )}
       {confirm.isError && (
-        <p className="mt-2 text-xs text-apt-red" role="alert">
-          {extractErrorMessage(confirm.error, "That code didn’t match.")}
-        </p>
+        <ErrorText error={extractErrorMessage(confirm.error, "That code didn’t match.")} className="mt-2 text-xs" />
       )}
       {remove.isError && (
-        <p className="mt-2 text-xs text-apt-red" role="alert">
-          {extractErrorMessage(remove.error, "Couldn’t remove this contact.")}
-        </p>
+        <ErrorText error={extractErrorMessage(remove.error, "Couldn’t remove this contact.")} className="mt-2 text-xs" />
       )}
     </div>
   );
@@ -204,9 +199,7 @@ export function ContactsCard({ rowExtra }: ContactsCardProps = {}): ReactElement
           </div>
         )}
         {isError && (
-          <p className="text-sm text-apt-red" role="alert">
-            Couldn’t load your contacts. Reload to try again.
-          </p>
+          <ErrorText error="Couldn’t load your contacts. Reload to try again." />
         )}
         {data && (
           <>
@@ -258,9 +251,7 @@ export function ContactsCard({ rowExtra }: ContactsCardProps = {}): ReactElement
               </Button>
             </form>
             {add.isError && (
-              <p className="text-xs text-apt-red" role="alert">
-                {extractErrorMessage(add.error, "Couldn’t add that contact.")}
-              </p>
+              <ErrorText error={extractErrorMessage(add.error, "Couldn’t add that contact.")} className="text-xs" />
             )}
             {type === "phone" && (
               <p className="text-xs leading-relaxed text-apt-text-dim">

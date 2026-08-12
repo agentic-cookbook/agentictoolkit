@@ -12,6 +12,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   integrationsApi,
   type MaskedProviderConfig,
@@ -185,7 +186,7 @@ function GmailSyncSettings({ connectionId, initial }: SyncSettingsFormProps) {
         />
         <p className="text-xs text-apt-text-muted">Between 1 and 366. Leave blank to keep the default.</p>
       </div>
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
       {/* Why Save is grey. `canSave` disables the button, so onSave's own range check can no
           longer be reached by clicking; without this an out-of-range window reads as a broken
           button. Gated on `dirty` — a stored value the user hasn't touched isn't their problem. */}
@@ -321,7 +322,7 @@ function RedditSyncSettings({ connectionId, initial }: SyncSettingsFormProps) {
           Comma-separated. Only watched posts mentioning a keyword are kept; blank keeps everything.
         </p>
       </div>
-      {error && <p className="text-sm text-apt-red">{error}</p>}
+      <ErrorText error={error} />
       {/* Why Save is grey — same reasoning as the Gmail form above: the gate makes onSave's own
           name check unreachable by click, so it has to be visible instead. */}
       {!error && blockedReason && dirty && (
@@ -485,7 +486,7 @@ export function ProviderConnections({
 
   return (
     <DetailSection title="Connected accounts" action={connectAction}>
-      {loadError && <p className="text-sm text-apt-red">{loadError}</p>}
+      <ErrorText error={loadError} />
 
       {/* A failed read leaves the rows null, where the pre-cache code substituted an empty array —
           so the error is what suppresses "Loading…" here, or a failure would spin forever. */}
@@ -521,9 +522,8 @@ export function ProviderConnections({
                     {syncingId === c.id ? "Syncing…" : "Sync now"}
                   </Button>
                   <Button
-                    variant="ghost"
+                    variant="destructive-ghost"
                     size="sm"
-                    className="text-apt-red hover:bg-apt-red/10"
                     onClick={() => setDisconnectTarget(c)}
                   >
                     Disconnect

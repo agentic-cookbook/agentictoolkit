@@ -139,14 +139,14 @@ export function GroupMembersEditor({
                 </span>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructive-ghost"
                   size="icon"
                   onClick={() => remove(member)}
                   disabled={locked}
                   title="Remove member"
                   aria-label={`Remove ${label}`}
                 >
-                  <Trash2 className="text-apt-red" />
+                  <Trash2 />
                 </Button>
               </ListItem>
             );

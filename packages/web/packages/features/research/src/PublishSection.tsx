@@ -141,9 +141,14 @@ export function PublishSection({
           </Button>
         </div>
         {route !== "" && !routeValid ? (
-          <p className="text-xs text-apt-red">
-            Lowercase letters, digits, “-” and “_”; 2–128 chars, starting with a letter or digit.
-          </p>
+          // ErrorText, not a hand-written red <p>: this is the platform's inline validation line,
+          // and the primitive is what carries `role="alert"` — the hand-rolled version turned red
+          // for a sighted reader and said nothing at all to a screen reader, next to an input that
+          // is already `aria-invalid`. `text-xs` matches the hint it alternates with (below).
+          <ErrorText
+            className="text-xs"
+            error="Lowercase letters, digits, “-” and “_”; 2–128 chars, starting with a letter or digit."
+          />
         ) : (
           <p className="text-xs text-apt-text-dim">
             {trimmed ? publicUrl(userSlug, trimmed) : "Choose a route to publish this paper publicly."}
