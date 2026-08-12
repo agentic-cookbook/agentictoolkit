@@ -1,7 +1,11 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { WorkspaceNotManageable, WorkspaceResolutionError } from "@agentic-toolkit/resource";
+import {
+  WorkspaceNotManageable,
+  WorkspaceResolutionError,
+  useReportBusy,
+} from "@agentic-toolkit/resource";
 import { useWorkspaceDefaultEcosystemId } from "@agentic-toolkit/data/ecosystems";
 
 /**
@@ -33,7 +37,16 @@ export function EcosystemConfigGate({
   feature: string;
   children: (ecosystemId: string | undefined) => ReactNode;
 }): ReactElement {
-  const { ecosystemId, canManage, isError } = useWorkspaceDefaultEcosystemId(workspaceSlug);
+  const { ecosystemId, canManage, isError, isFetching } =
+    useWorkspaceDefaultEcosystemId(workspaceSlug);
+  // The spinner in front of the topic list this gate sits under. What it reports is the SCOPE
+  // resolution, not the gated pane's contents: until the id lands the pane below is a shell with
+  // nothing to read against, and the resolution is cached, so from the second visit on there is no
+  // "Loading…" branch left to give it away. Reported upward rather than published as a level's
+  // `busy` because the gate is mounted BELOW the list, one topic at a time, and has no level of its
+  // own to hang it on. `isFetching`, never `isPending` — pending is false on exactly the cached
+  // re-read the spinner exists for.
+  useReportBusy(isFetching);
   if (isError) return <WorkspaceResolutionError />;
   if (ecosystemId && !canManage) return <WorkspaceNotManageable feature={feature} />;
   return <>{children(ecosystemId)}</>;
