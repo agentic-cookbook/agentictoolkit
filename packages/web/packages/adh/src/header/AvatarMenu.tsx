@@ -58,7 +58,7 @@ function initialsOf(name: string | undefined | null): string {
 
 /**
  * The signed-in account menu: the avatar in the bar, and under it the user's name
- * plus the three account destinations — Home, Settings, Log out.
+ * plus the three account destinations — Home, User Settings, Log out.
  *
  * It is an ACCOUNT menu, not a nav menu. A site's own destinations live in the bar
  * and in the site-name menu (the brand dropdown); routing them through here as well
@@ -95,17 +95,25 @@ export function AvatarMenu({
   const settingsBody = (
     <>
       <Settings className="adh-avatar-menu__item-icon" />
-      <span className="adh-avatar-menu__item-label">Settings</span>
+      <span className="adh-avatar-menu__item-label">User Settings</span>
     </>
   )
-  const settingsItem = settingsHref ? (
-    <DropdownMenuLinkItem render={<Link href={settingsHref} />} className="adh-avatar-menu__item">
-      {settingsBody}
-    </DropdownMenuLinkItem>
-  ) : onSettings ? (
+  // `onSettings` WINS over `settingsHref`, the same precedence SiteMenu's commandTrailing
+  // applies (SiteMenu.tsx: `authenticated && onSettings ? … : authenticated && settingsHref ?
+  // …`). SiteHeader passes both — a resolved `onSettings` (its own prop, else the settings
+  // overlay's openSettings once signed in) and whatever `settingsHref` its caller supplied —
+  // and only suppresses the href for the switcher. Ordering them the other way round here made
+  // one header answer the same click two ways: the switcher opened the in-page overlay while
+  // the avatar menu navigated to the hub, on any site whose caller passes a href. In-page
+  // beats a cross-site navigation whenever both are available.
+  const settingsItem = onSettings ? (
     <DropdownMenuItem onClick={onSettings} className="adh-avatar-menu__item">
       {settingsBody}
     </DropdownMenuItem>
+  ) : settingsHref ? (
+    <DropdownMenuLinkItem render={<Link href={settingsHref} />} className="adh-avatar-menu__item">
+      {settingsBody}
+    </DropdownMenuLinkItem>
   ) : null
 
   return (

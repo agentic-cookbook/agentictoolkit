@@ -32,6 +32,20 @@
 // The defaults below are the platform's single source of truth for how toolkit
 // panels fetch (retry once, 5-minute staleness — not react-query's retry-3/
 // stale-0), so the SAME panel behaves identically on every host.
+//
+// NESTING IS A NO-OP, NOT A SECOND CLIENT: "mount once" above is still the rule, but a
+// second <ToolkitQueryProvider> further down the same tree (a feature that mounts its own
+// alongside a host that already has one at its shell root — the User Settings overlay under
+// hub's shell provider is exactly this shape) cannot build a second QueryClient, because
+// there is no per-provider client to build: the provider hands down the module-scope
+// singleton below, so the inner one publishes the client the outer one already published.
+// That matters beyond tidiness. Two real clients under one subtree would mean every panel
+// under the inner provider refetching cold on mount (its cache starts empty) and, worse, a
+// write inside it invalidating only the throwaway inner cache — the outer panels a moment
+// ago showing the same data keep rendering the pre-write state, the identical trap the
+// paragraph above describes, just between two of this package's OWN clients instead of a
+// host's and this package's. The singleton closes that by construction, so a feature may
+// mount the provider it needs without knowing what is above it.
 import {
   QueryClient,
   QueryClientProvider,

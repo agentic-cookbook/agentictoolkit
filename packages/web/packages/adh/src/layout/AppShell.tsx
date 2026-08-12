@@ -9,6 +9,10 @@ import { SiteFooter, type FooterLink } from '@agentic-toolkit/adh/footer'
 import { SiteTelemetryProvider as TelemetryProvider } from '@agentic-toolkit/adh/telemetry'
 import { FeatureFlagsProvider } from '@agentic-toolkit/adh/flags'
 import { HelpProvider } from '@agentic-toolkit/adh/help'
+// The shared User Settings overlay (Task 8). Package path, not './settings/settings-overlay'
+// — see the matching `external` entry in tsup.config.ts for why a relative one here would
+// fork SettingsOverlayContext from the copy SiteHeader.tsx's useSettingsOverlay() reads.
+import { SettingsOverlayProvider } from '@agentic-toolkit/adh/settings'
 import { AdhAppShell } from '@agentic-toolkit/adh/layout'
 // Same rule, different package: deployment-env lives in adh-registry (the leaf this package
 // depends on) so that the registry's own seo/metadata.ts can read the identical allowlist
@@ -95,13 +99,25 @@ export function AppShell({ header, children, footer }: AppShellProps) {
             means the SDK is initialised before the header, the footer, or AppErrorBoundary can
             produce anything to report. Strictly more coverage, same behaviour. */}
         <TelemetryProvider>
-          <AdhAppShell
-            header={header}
-            footer={<SiteFooter links={footer?.links} />}
-            devTools={DEV_TOOLS_BUILD_ENABLED}
-          >
-            {children}
-          </AdhAppShell>
+          {/* Wraps the header too, so the avatar menu's User Settings row and the dialog
+              it opens share one context — the same reason HelpProvider sits where it does.
+              Mounted here rather than per-site so all 45 header-bearing sites inherit the
+              PROVIDER from one seam (Task 8). The ROW appears on 44 of them: `status`
+              renders <SiteHeader siteId="status"/> without a `useAuthSource`, so its header
+              takes the default `useAnonymousHeaderAuth` and reports no user — this is a
+              header-wiring fact, not an auth one; status/app/providers.tsx does mount a real
+              adh AuthProvider. Mounting here is safe either way: SettingsOverlayProvider
+              renders its (lazily-loaded) dialog body only while open, and SiteHeader never
+              calls openSettings for a signed-out visitor. */}
+          <SettingsOverlayProvider>
+            <AdhAppShell
+              header={header}
+              footer={<SiteFooter links={footer?.links} />}
+              devTools={DEV_TOOLS_BUILD_ENABLED}
+            >
+              {children}
+            </AdhAppShell>
+          </SettingsOverlayProvider>
         </TelemetryProvider>
       </HelpProvider>
     </FeatureFlagsProvider>

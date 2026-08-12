@@ -177,7 +177,7 @@ export function AdhHeader({
 }: AdhHeaderProps) {
   // The bar carries the primary nav in BOTH auth states. It used to be emptied when
   // signed in, because the avatar dropdown absorbed these links — that dropdown is an
-  // account menu now (name / Home / Settings / Log out), so emptying the bar would
+  // account menu now (name / Home / User Settings / Log out), so emptying the bar would
   // leave a signed-in visitor no nav at all. A site whose signed-in nav is long enough
   // to crowd the bar owns that: it should not hand the header a list it can't show.
   //

@@ -41,6 +41,15 @@
  * whoever remembered. */
 @import "@agentic-toolkit/messaging/sources.css";
 
+/* The User Settings surface's layout + topic rail (@agentic-toolkit/account's settings.css).
+ * Imported here for the same reason as the auth sheet above: AppShell mounts
+ * SettingsOverlayProvider on every one of the fleet's sites, so the overlay's stylesheet has
+ * to arrive through the sheet they all already load. It is NOT side-effect-imported from
+ * SettingsLayout.tsx — tsup strips such an import out of the emitted JS, which is how the
+ * whole sheet came to be missing from every production build while dev looked right (see
+ * that package's "comment:styles"). */
+@import "@agentic-toolkit/account/styles.css";
+
 /* NOTE: bitbag's CSS — the chat package's base.css + inline.css, and the bitbag
  * package's own chat + dock sheets — is NOT imported here. It all rides with the
  * lazily-loaded chat chunk (see FooterChatInner.tsx) so pages that never open the

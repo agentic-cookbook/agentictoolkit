@@ -29,7 +29,9 @@ function HeaderPreview() {
         { label: "Pricing", href: "#pricing" }
       ],
       trailingNavLinks: [{ label: "Blog", href: "#blog" }],
-      useAuthSource: usePreviewHeaderAuth
+      useAuthSource: usePreviewHeaderAuth,
+      onSettings: () => {
+      }
     }
   );
 }

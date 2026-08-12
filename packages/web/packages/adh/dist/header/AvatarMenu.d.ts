@@ -25,7 +25,7 @@ export type AvatarMenuProps = {
 };
 /**
  * The signed-in account menu: the avatar in the bar, and under it the user's name
- * plus the three account destinations — Home, Settings, Log out.
+ * plus the three account destinations — Home, User Settings, Log out.
  *
  * It is an ACCOUNT menu, not a nav menu. A site's own destinations live in the bar
  * and in the site-name menu (the brand dropdown); routing them through here as well

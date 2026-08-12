@@ -139,6 +139,13 @@ const GATES = [
     entry: 'themes/theme-preview',
     source: 'src/themes/theme-preview.ts',
   },
+  {
+    what: "the User Settings appearance panel's dev-only theme picker row",
+    gate: 'src/settings/AppearancePanel.tsx',
+    subpath: 'settings/ThemePickerRow',
+    entry: 'settings/ThemePickerRow',
+    source: 'src/settings/ThemePickerRow.tsx',
+  },
 ] as const
 
 describe('production bundle gates', () => {

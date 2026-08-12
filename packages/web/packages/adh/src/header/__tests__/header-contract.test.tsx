@@ -320,7 +320,7 @@ describe('AdhHeader (registry-free)', () => {
     expect(menu.textContent).toContain('Mike Fullerton')
     expect(
       Array.from(menu.querySelectorAll('[role="menuitem"]')).map((el) => el.textContent),
-    ).toEqual(['Home', 'Settings', 'Log out'])
+    ).toEqual(['Home', 'User Settings', 'Log out'])
   })
 
   // `name` alone is what an account is CALLED, which may be a slug — so it is

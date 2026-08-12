@@ -226,6 +226,7 @@ import { SiteFooter } from "@agentic-toolkit/adh/footer";
 import { SiteTelemetryProvider as TelemetryProvider } from "@agentic-toolkit/adh/telemetry";
 import { FeatureFlagsProvider } from "@agentic-toolkit/adh/flags";
 import { HelpProvider } from "@agentic-toolkit/adh/help";
+import { SettingsOverlayProvider } from "@agentic-toolkit/adh/settings";
 import { AdhAppShell as AdhAppShell2 } from "@agentic-toolkit/adh/layout";
 import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 import { jsx as jsx9 } from "react/jsx-runtime";
@@ -235,7 +236,7 @@ function AppShell({ header, children, footer }) {
     // FeatureFlagsProvider wraps the WHOLE shell, not just the page: the header/landing are
     // consumers, and a site's own pages read the same one flag set rather than fetching it a
     // second time.
-    /* @__PURE__ */ jsx9(FeatureFlagsProvider, { children: /* @__PURE__ */ jsx9(HelpProvider, { children: /* @__PURE__ */ jsx9(TelemetryProvider, { children: /* @__PURE__ */ jsx9(
+    /* @__PURE__ */ jsx9(FeatureFlagsProvider, { children: /* @__PURE__ */ jsx9(HelpProvider, { children: /* @__PURE__ */ jsx9(TelemetryProvider, { children: /* @__PURE__ */ jsx9(SettingsOverlayProvider, { children: /* @__PURE__ */ jsx9(
       AdhAppShell2,
       {
         header,
@@ -243,7 +244,7 @@ function AppShell({ header, children, footer }) {
         devTools: DEV_TOOLS_BUILD_ENABLED,
         children
       }
-    ) }) }) })
+    ) }) }) }) })
   );
 }
 

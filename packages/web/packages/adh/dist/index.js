@@ -38,9 +38,9 @@ function AvatarMenu({
   ] });
   const settingsBody = /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx(Settings, { className: "adh-avatar-menu__item-icon" }),
-    /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Settings" })
+    /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "User Settings" })
   ] });
-  const settingsItem = settingsHref ? /* @__PURE__ */ jsx(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: settingsHref }), className: "adh-avatar-menu__item", children: settingsBody }) : onSettings ? /* @__PURE__ */ jsx(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: settingsBody }) : null;
+  const settingsItem = onSettings ? /* @__PURE__ */ jsx(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: settingsBody }) : settingsHref ? /* @__PURE__ */ jsx(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: settingsHref }), className: "adh-avatar-menu__item", children: settingsBody }) : null;
   return /* @__PURE__ */ jsxs(DropdownMenu, { children: [
     /* @__PURE__ */ jsxs(
       DropdownMenuTrigger,

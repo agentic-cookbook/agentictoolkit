@@ -23,6 +23,30 @@ export default defineConfig({
     alias: {
       react: fileURLToPath(new URL('./node_modules/react', import.meta.url)),
       'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url)),
+      // ONE `next` in the test process, same reasoning as react/react-dom above, forced by
+      // Task 7 (the User Settings overlay): its render tree now crosses into
+      // @agentic-toolkit/account and @agentic-toolkit/resource, both pinned to next ^15.1.0,
+      // while this package's own devDependency is next ^16.2.9 — two genuinely different
+      // installed copies (confirmed: 15.5.18 vs 16.2.10, resolving to different files under
+      // node_modules/.pnpm). Unlike react, that mismatch is silent up to this task: nothing
+      // under src/ rendered an account/resource component before. Without this alias,
+      // `vi.mock('next/navigation', …)` in a test here (see settings/__tests__/
+      // userSettingsOverlay.test.tsx) only intercepts THIS package's next@16 copy — a
+      // component resolved from account/resource's own src (the `development` condition)
+      // still imports the bare specifier, which Node resolution walks up to THEIR next@15
+      // copy, unmocked. The result is the real Next.js useRouter() throwing "invariant
+      // expected app router to be mounted" instead of returning the mock, since jsdom has no
+      // App Router.
+      //
+      // The pin covers exactly the `next/*` subpaths those siblings import, which today is
+      // `next/link` and `next/navigation`. It is EIGHT siblings, not two, that carry their own
+      // next (account, auth, authentication, data, ecosystem-config, personas, profile,
+      // resource) — so do not reason about this list from the two package names above.
+      // `src/__tests__/nextAliasCoverage.test.ts` derives the required set from their source
+      // and fails by name when a panel reaches for a subpath that is missing here; adding the
+      // alias is the fix, and that test is what tells you to.
+      'next/navigation': fileURLToPath(new URL('./node_modules/next/navigation.js', import.meta.url)),
+      'next/link': fileURLToPath(new URL('./node_modules/next/link.js', import.meta.url)),
     },
   },
   test: {

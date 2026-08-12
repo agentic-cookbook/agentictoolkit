@@ -93,6 +93,14 @@ function HeaderPreview() {
       ]}
       trailingNavLinks={[{ label: 'Blog', href: '#blog' }]}
       useAuthSource={usePreviewHeaderAuth}
+      // Required, not optional: SiteHeader falls back to the settings overlay's
+      // openSettings whenever `onSettings` is absent and a user is present, and the
+      // canned source above makes a user present. Without this the PREVIEW's avatar
+      // menu opens the real User Settings dialog over the theme editor — the live
+      // account, from a swatch panel, for whoever is actually signed in. An inert
+      // handler keeps the row (it is a themable surface, which is the point of the
+      // preview) and keeps it from doing anything.
+      onSettings={() => {}}
     />
   )
 }

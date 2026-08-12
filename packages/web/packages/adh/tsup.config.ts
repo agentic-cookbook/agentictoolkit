@@ -102,6 +102,36 @@ export default defineConfig({
     // import comments) so this new entry shares their module state rather than inlining
     // a private copy.
     'auth/index': 'src/auth/index.ts',
+    // The User Settings surface (Task 7). `settings/index` is the always-loaded barrel
+    // (SettingsOverlayProvider/useSettingsOverlay) every site's shell mounts; the ~3,000
+    // LOC of panels (registry.tsx and everything it assembles, plus AppearancePanel) sit
+    // ONLY behind the separate `settings/UserSettingsOverlay` entry, which `index` reaches
+    // by a real `lazy()` import and by NOTHING else — a static re-export alongside it (which
+    // this barrel used to carry) re-anchors the same chunk in the eager graph of every
+    // consuming build and undoes the split; see settings/index.ts's own comment for the
+    // measurement, and tools/check-settings-boundary.py for the guard.
+    // ThemePickerRow is split out a second level further, same shape as the debug-env/
+    // theme-editor trio below: its own entry so AppearancePanel's folded
+    // NEXT_PUBLIC_DEPLOYMENT_ENV gate has a real chunk to gate out of production.
+    'settings/index': 'src/settings/index.ts',
+    'settings/UserSettingsOverlay': 'src/settings/UserSettingsOverlay.tsx',
+    'settings/ThemePickerRow': 'src/settings/ThemePickerRow.tsx',
+    // topics.ts is its own entry — NOT primarily for the usual reason a self-referencing
+    // module gets one (avoiding two inlined copies of its top-level `new Set(...)`,
+    // VALID_TOPICS): both modules that reach it internally, registry.tsx and
+    // UserSettingsOverlay.tsx, live inside the SAME entry (`settings/UserSettingsOverlay`),
+    // so esbuild would dedupe a relative `./topics` between them for free. The real reason
+    // is external and load-bearing: `settings/index` (the barrel) is "use client" — it
+    // re-exports SettingsOverlayProvider — and esbuild-plugin-preserve-directives hoists
+    // that directive onto the WHOLE built chunk, so anything reachable ONLY through the
+    // barrel becomes client-tainted in a production build even though it carries no
+    // directive itself. SETTINGS_TOPICS/DEFAULT_SETTINGS_TOPIC/resolveSettingsTopic must
+    // stay importable by a Server Component (hub's /settings route is exactly that shape),
+    // so this entry — carrying nothing client-tainted — is their one and only route, and
+    // `settings/index` does NOT re-export them (see settings/index.ts's own comment).
+    // Every internal reach still writes the full package path rather than `./topics`, so
+    // there is exactly one documented route to these exports, inside this package and out.
+    'settings/topics': 'src/settings/topics.ts',
 
     // ── The adh VOCABULARY tier, merged in from the former `@adh/chrome` ─────────────
     // These directories were an adh-owned package under `frontend/src/app/chrome/`
@@ -366,6 +396,53 @@ export default defineConfig({
     // every page — exactly the cost the split was for.
     '@agentic-toolkit/adh/footer/FooterChatInner',
     '@agentic-toolkit/adh/debug-console',
+    // STATE (again, not a LAZY boundary like the two lines just above — nothing here is
+    // a next/dynamic specifier): SettingsOverlayContext, held at module scope by
+    // settings-overlay.tsx. It is the light settings barrel itself (Task 8: AppShell.tsx
+    // mounts one SettingsOverlayProvider for the whole shell, and SiteHeader.tsx's
+    // useSettingsOverlay() reads it back). Both reach it by package path from OTHER
+    // entries — layout/index and header/index respectively — making it a self-reference
+    // of exactly the class '@agentic-toolkit/adh/flags' and '@agentic-toolkit/adh/help'
+    // are above, and the same STATE reason `@agentic-toolkit/adh/concepts` is. With
+    // bundle:true/splitting:false, a relative '../settings/settings-overlay' from either
+    // entry would inline its own PRIVATE context object, so AppShell's provider would
+    // write into one instance while SiteHeader's useSettingsOverlay() read from a
+    // different, never-provided one — a forked context, always null, silently, with no
+    // build error, and invisible in dev/vitest/tsc (which resolve the `development`
+    // condition straight to src, where there is exactly one module either way).
+    // Preserved import ⇒ one copy, resolved by the consumer. BOTH halves required: this
+    // entry, and every reaching module writing the full package path
+    // '@agentic-toolkit/adh/settings' rather than a relative one.
+    '@agentic-toolkit/adh/settings',
+    // The User Settings overlay body (Task 7). settings-overlay.tsx's SettingsOverlayProvider
+    // `lazy()`-imports this by package path so the panel graph — registry.tsx and everything
+    // it assembles — survives into dist/settings/index.js as a real dynamic import for the
+    // consumer's bundler to code-split, instead of esbuild inlining it and evaluating every
+    // panel eagerly on every page that mounts the provider (i.e. every site). Same trick as
+    // `@agentic-toolkit/adh/help/HelpWindow` above — but NOT the same barrel shape, and the
+    // difference is the whole point: help/index.ts ALSO re-exports HelpWindow statically, and
+    // a static re-export in an always-loaded barrel is exactly what pulls the lazy chunk back
+    // into a consumer's eager graph. settings/index.ts therefore names this entry once, in
+    // the dynamic import and nowhere else, and check-settings-boundary.py fails the build if
+    // that stops being true. hub's /settings route — the one host that renders the panels as
+    // a page — imports this specifier itself instead.
+    '@agentic-toolkit/adh/settings/UserSettingsOverlay',
+    // ThemePickerRow, split a level further below UserSettingsOverlay. AppearancePanel's
+    // NEXT_PUBLIC_DEPLOYMENT_ENV-folded gate `next/dynamic`-imports it by package path so
+    // there is a real chunk boundary for that gate to fold OUT of a production build — the
+    // same shape as the dev-only theme trio directly below, just one entry up the chain
+    // (settings/UserSettingsOverlay itself is already behind the lazy() split above, so this
+    // is the gate INSIDE that already-lazy panel, not a second top-level split).
+    '@agentic-toolkit/adh/settings/ThemePickerRow',
+    // topics.ts (entry above). Reached internally only from settings/UserSettingsOverlay
+    // (UserSettingsOverlay.tsx + registry.tsx) — preserved as a package-path import there
+    // anyway, not because a relative one would duplicate it (both modules share that one
+    // entry, so esbuild would dedupe them for free), but so the internal route matches the
+    // external one exactly: `@agentic-toolkit/adh/settings/topics` is also the ONLY route a
+    // consumer outside this package may use to reach SETTINGS_TOPICS/DEFAULT_SETTINGS_TOPIC/
+    // resolveSettingsTopic without going through the "use client"-tainted settings/index
+    // barrel — see settings/topics.ts's and settings/index.ts's own header comments.
+    '@agentic-toolkit/adh/settings/topics',
     // The dev-only theme trio, and these three are LOAD-BEARING in a way the rest of this
     // list is not: they are what keeps the site-theme editor (Monaco included) out of every
     // production bundle. With splitting:false a relative `import('./SiteThemeConsole')` is

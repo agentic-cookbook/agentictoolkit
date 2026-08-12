@@ -1,0 +1,179 @@
+/* The User Settings surface's shell: the topic|details grid and its nav rail. Reaches a page
+ * as "@agentic-toolkit/account/styles.css", @imported by adh's adh-site.css — never as a
+ * side-effect `import "./settings.css"` from SettingsLayout.tsx, which tsup strips out of the
+ * emitted JS (see package.json's "comment:styles").
+ *
+ * EVERY COLOUR NAMES A SHARED `--color-apt-*` TOKEN. It used to name bare `--text`/`--surface`/
+ * `--border`/`--accent`/… , which this file inherited verbatim from hub, where a :root block
+ * (sites/hub/src/site.css) aliases each one to exactly the apt token now written here — so on
+ * hub this is the same computed value it always was. Only three of the fleet's ~45 sites carry
+ * that alias block, and this sheet now loads on all of them: everywhere else every one of those
+ * bare names was undefined, making each declaration invalid at computed-value time — the nav
+ * column with no right border, the selected item's gold bar falling back to currentColor, the
+ * content panel transparent. A package stylesheet cannot depend on a host defining names the
+ * package does not ship.
+ *
+ * SELECTORS ARE SCOPED TO `settings-*`. The hub original also carried ~180 lines of generic
+ * unscoped rules (.field, .field-input, .panel-card, .empty-state, .error-banner, .status-dot,
+ * .group-card, .site-row, .endpoint-row, .ecosystem-popup…) belonging to markup that moved to
+ * @agentic-toolkit/organizations or was re-expressed as apt-* utilities (ui's PopupMenu and
+ * StatusDot each carry a `.ecosystem-popup__trigger` / `.status-dot` provenance comment marking
+ * the translation). None of them matched a single className anywhere in either toolkit or any
+ * of the fleet's sites, and as a private stylesheet they were merely dead — but this sheet is
+ * now loaded fleet-wide, where a rule named `.field` is a name collision waiting for the first
+ * site to use the obvious word for a form field. They are deleted; anything that needs them
+ * back should ship them next to the component that renders them. */
+
+/* Wraps the topic|details grid when a full-width content header (the resource
+   action bar) sits above it: a flex column so the bar takes its natural height
+   and the grid fills the rest. */
+.settings-shell {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-layout {
+  display: grid;
+  /* minmax(0, 1fr) (not 1fr) so the content column can shrink below its
+     content's intrinsic width — otherwise the panel overflows horizontally. */
+  grid-template-columns: 240px minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.settings-nav {
+  border-right: 1px solid var(--color-apt-border);
+  /* Tighter top inset (half the previous 32px) so the topic list sits closer to
+     the tab bar. No left inset so the selected item's gold bar sits flush against
+     the window edge (each item carries its own left padding for the content). */
+  padding: 16px 16px 32px 0;
+  /* The topic rail's distinct nav column. Use the shared token (not a literal)
+     so it follows the color mode — dark by default, light under Appearance →
+     Light. See @agentic-toolkit/themes tailwind.css --color-apt-nav. */
+  background: var(--color-apt-nav);
+}
+
+.settings-nav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.settings-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  border-left: 2px solid transparent;
+  font-size: 0.8rem;
+  letter-spacing: 0.02em;
+  /* Enabled items are NOT dimmed — only disabled ones are (see :disabled). */
+  color: var(--color-apt-text);
+  /* Small leading gap between the selection bar and the item; tighter trailing
+     (bottom) gap. (top right bottom left) */
+  padding: 4px 12px 2px 8px;
+  cursor: pointer;
+  transition: color calc(200ms * var(--apt-anim-scale, 1)) ease, border-color calc(200ms * var(--apt-anim-scale, 1)) ease;
+}
+
+/* Hovering an enabled, non-selected item shows a neutral (text-colored) bar —
+   the orange bar is reserved for the actual selection. Disabled items get no
+   hover affordance. */
+.settings-nav-item:not(:disabled):not(.is-active):hover {
+  border-left-color: var(--color-apt-text);
+}
+
+/* Selected: tint the text + icon (lucide uses currentColor) orange, with the
+   orange selection bar. */
+.settings-nav-item.is-active {
+  color: var(--color-apt-gold);
+  border-left-color: var(--color-apt-gold);
+}
+
+.settings-nav-item:disabled {
+  color: var(--color-apt-text-dim);
+  cursor: default;
+}
+
+.settings-nav-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.settings-nav-divider {
+  height: 1px;
+  margin: 4px 12px;
+  background: var(--color-apt-border);
+}
+
+.settings-content {
+  /* The dark-gray panel for the whole right side. Fills the layout height so
+     the feature content (and the topic|details divider) reach the bottom.
+     Insets are applied per-row inside (tab row pt-8/px-6, button bar/aside px-6)
+     so the dividers run edge-to-edge and the tab row still lines up with the
+     first nav item. */
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  background: var(--color-apt-surface);
+}
+
+@media (max-width: 768px) {
+  .settings-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-nav {
+    border-right: none;
+    border-bottom: 1px solid var(--color-apt-border);
+    padding: 16px;
+  }
+
+  .settings-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .settings-nav-item {
+    border-left: none;
+    border-bottom: 2px solid transparent;
+    padding: 8px 12px;
+  }
+
+  .settings-nav-item.is-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-apt-gold);
+  }
+  .settings-nav-item:not(:disabled):not(.is-active):hover {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-apt-text);
+  }
+
+  .settings-content {
+    padding: 32px 20px;
+  }
+}
+
+/* Active-ecosystem selector in the Ecosystems-tab sidebar (between the
+   "Ecosystems" item and the scoped items). */
+.settings-nav-slot {
+  border-left: 2px solid transparent;
+  /* Tighter trailing (bottom) gap after the popup menu. */
+  padding: 0.35rem 0.5rem 0.3rem;
+}
+/* "All" selected → the selection bar moves onto the popup row. */
+.settings-nav-slot.is-active {
+  border-left-color: var(--color-apt-gold);
+}

@@ -38,9 +38,9 @@ function AvatarMenu({
   ] });
   const settingsBody = /* @__PURE__ */ jsxs(Fragment, { children: [
     /* @__PURE__ */ jsx(Settings, { className: "adh-avatar-menu__item-icon" }),
-    /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Settings" })
+    /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "User Settings" })
   ] });
-  const settingsItem = settingsHref ? /* @__PURE__ */ jsx(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: settingsHref }), className: "adh-avatar-menu__item", children: settingsBody }) : onSettings ? /* @__PURE__ */ jsx(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: settingsBody }) : null;
+  const settingsItem = onSettings ? /* @__PURE__ */ jsx(DropdownMenuItem, { onClick: onSettings, className: "adh-avatar-menu__item", children: settingsBody }) : settingsHref ? /* @__PURE__ */ jsx(DropdownMenuLinkItem, { render: /* @__PURE__ */ jsx(Link, { href: settingsHref }), className: "adh-avatar-menu__item", children: settingsBody }) : null;
   return /* @__PURE__ */ jsxs(DropdownMenu, { children: [
     /* @__PURE__ */ jsxs(
       DropdownMenuTrigger,
@@ -1019,6 +1019,7 @@ import {
 import { useAnonymousHeaderAuth } from "@agentic-toolkit/adh/header-auth";
 import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath, siteProdUrl as siteProdUrl2, siteUrl as siteUrl2 } from "@agentic-toolkit/adh-registry";
 import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
+import { useSettingsOverlay } from "@agentic-toolkit/adh/settings";
 
 // src/header/SiteMenuSwitcher.tsx
 import { Fragment as Fragment5 } from "react";
@@ -2090,6 +2091,8 @@ function SiteHeader({
     settingsHref,
     onSettings
   } = { ...source, ...authOverrides };
+  const overlay = useSettingsOverlay();
+  const resolvedOnSettings = onSettings ?? (user != null ? overlay?.openSettings : void 0);
   const resolvedNavLinks = (typeof navLinks === "function" ? navLinks(user != null) : navLinks) ?? [];
   const hostname = useClientHost4();
   const conceptSite = isConceptSite(siteId);
@@ -2101,7 +2104,7 @@ function SiteHeader({
   const hubAuthHref = (path) => `${resolveHubHref(path)}?return_to=${encodeURIComponent(selfReturn)}`;
   const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
   const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
-  const switcherSettingsHref = onSettings ? void 0 : settingsHref ?? resolveHubHref("/settings");
+  const switcherSettingsHref = resolvedOnSettings ? void 0 : settingsHref ?? resolveHubHref("/settings");
   return /* @__PURE__ */ jsx18(
     AdhHeader2,
     {
@@ -2113,7 +2116,7 @@ function SiteHeader({
           resolveHref: resolveSwitchHref,
           personalSlug,
           authenticated: user != null,
-          onSettings,
+          onSettings: resolvedOnSettings,
           settingsHref: switcherSettingsHref,
           loginHref: resolvedLoginHref,
           signupHref: resolvedSignupHref,
@@ -2149,7 +2152,7 @@ function SiteHeader({
       onSignup,
       onLogout,
       settingsHref,
-      onSettings
+      onSettings: resolvedOnSettings
     }
   );
 }

@@ -13,5 +13,17 @@
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
  * Mirrors @agentic-toolkit/ui's components.css self-registration. */
+
+/* This package registers what IT mounts: `dist/index.js` reaches resource's
+ * components, so a host that registers `profile` alone still loses their utilities.
+ * Chained HERE because under pnpm's isolated node_modules only a declaring
+ * package can resolve the specifier.
+ *
+ * adh/sources.css chains `resource` too, so this line emits nothing new today.
+ * That is deliberate: a rule that fires only when no host already covers the dep
+ * is a rule whose answer depends on composition, and that is how the settings
+ * overlay shipped half-styled across the fleet. */
+@import "@agentic-toolkit/resource/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";

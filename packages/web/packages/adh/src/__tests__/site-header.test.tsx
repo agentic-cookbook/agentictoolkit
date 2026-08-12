@@ -90,6 +90,7 @@ vi.mock('@agentic-toolkit/messaging/components/notification-bell', () => ({
 import { SiteHeader } from '../header/SiteHeader'
 import { getSite, siteHeaderTitle, SITES } from '@agentic-toolkit/adh-registry'
 import type { HeaderAuthSourceOptions, HeaderAuthState } from '@agentic-toolkit/adh/header-auth'
+import { SettingsOverlayProvider } from '@agentic-toolkit/adh/settings'
 
 /** The centred label as it reaches the DOM. */
 const centreTitle = (): string | null =>
@@ -319,5 +320,66 @@ describe('SiteHeader notification bell', () => {
     render(<SiteHeader siteId="status" />)
     expect(await screen.findByRole('banner')).toBeTruthy()
     expect(screen.queryByTestId('adh-notification-bell')).toBeNull()
+  })
+})
+
+// SiteHeader falls back to the shared SettingsOverlayProvider's openSettings when
+// a site's own auth source/overrides supply no onSettings. `resolvedOnSettings` is what
+// crosses into AdhHeader (the avatar menu's User Settings row) and into the switcher's own
+// gear (switcherSettingsHref / SiteMenuSwitcher's onSettings) — see SiteHeader.tsx's own
+// comment above that computation for the full precedence.
+describe('SiteHeader — the shared settings overlay', () => {
+  const useSignedIn = (): HeaderAuthState => ({ user: { name: 'Ada' } })
+
+  it("falls back to the context's openSettings when signed in and no override was supplied", () => {
+    render(
+      <SettingsOverlayProvider>
+        <SiteHeader siteId="hub" useAuthSource={useSignedIn} />
+      </SettingsOverlayProvider>,
+    )
+    expect(typeof headerProps.current?.onSettings).toBe('function')
+    // The brand gear follows the same rule: a real handler means the switcher gets no
+    // fallback href, so it renders the in-app affordance rather than a link.
+    expect(switcherProps.current?.onSettings).toBe(headerProps.current?.onSettings)
+    expect(switcherProps.current?.settingsHref).toBeUndefined()
+  })
+
+  it("prefers the site's own onSettings over the context's, even when a provider is mounted", () => {
+    const ownOnSettings = vi.fn()
+    render(
+      <SettingsOverlayProvider>
+        <SiteHeader siteId="hub" useAuthSource={useSignedIn} onSettings={ownOnSettings} />
+      </SettingsOverlayProvider>,
+    )
+    expect(headerProps.current?.onSettings).toBe(ownOnSettings)
+    expect(switcherProps.current?.onSettings).toBe(ownOnSettings)
+  })
+
+  it('omits onSettings for a signed-out visitor even though a provider is mounted', () => {
+    const useAnonymous = (): HeaderAuthState => ({ user: null })
+    render(
+      <SettingsOverlayProvider>
+        <SiteHeader siteId="hub" useAuthSource={useAnonymous} />
+      </SettingsOverlayProvider>,
+    )
+    expect(headerProps.current?.onSettings).toBeUndefined()
+    expect(switcherProps.current?.onSettings).toBeUndefined()
+    // The avatar row is correctly omitted — but the switcher's own gear is not left
+    // dangling: with no handler to prefer, switcherSettingsHref falls back to a real
+    // '/settings' link, so SiteMenu.tsx (commandTrailing, ~line 412) still renders it
+    // as a live anchor rather than a dead button.
+    expect(switcherProps.current?.settingsHref).toContain('/settings')
+  })
+
+  it("omits only the avatar menu's User Settings row when signed in with no provider above it — the switcher's gear still gets a real settingsHref", () => {
+    // No <SettingsOverlayProvider> here: a host that renders SiteHeader outside the
+    // shared AppShell (or a test like this one) must not throw. `onSettings` is
+    // undefined either way, so the AVATAR menu's row is omitted (AvatarMenu.tsx has
+    // nothing to call) — but the switcher is not left with a dead gear: with no
+    // handler to prefer, switcherSettingsHref still resolves to a real '/settings'
+    // link, and SiteMenu.tsx renders that as a live anchor (same branch as above).
+    expect(() => render(<SiteHeader siteId="hub" useAuthSource={useSignedIn} />)).not.toThrow()
+    expect(headerProps.current?.onSettings).toBeUndefined()
+    expect(switcherProps.current?.settingsHref).toContain('/settings')
   })
 })

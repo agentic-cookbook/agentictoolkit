@@ -21,6 +21,12 @@ import { getSite, siteHeaderTitle, siteHomePath, siteProdUrl, siteUrl, type Site
 // '../concepts/participating': the concepts barrel reaches the same module, and a
 // relative specifier would give this entry its own copy of its module-level Set.
 import { isConceptSite } from '@agentic-toolkit/adh/concepts/participating'
+// The shared User Settings overlay AppShell mounts around every site (Task 8). Package
+// path, not a relative one — same self-reference reason as `isConceptSite` above, and
+// see the matching `external` entry in tsup.config.ts: a relative specifier here would
+// fork SettingsOverlayContext from the copy AppShell.tsx's provider writes into, so this
+// hook would always read null even with a provider mounted.
+import { useSettingsOverlay } from '@agentic-toolkit/adh/settings'
 import { SiteMenuSwitcher } from './SiteMenuSwitcher'
 import { DevToolsMenu } from './DevToolsMenu'
 
@@ -177,6 +183,16 @@ export function SiteHeader({
     settingsHref,
     onSettings,
   } = { ...source, ...authOverrides }
+  // The shared overlay AppShell mounts around every site (Task 8). A host may still pass
+  // its own onSettings (source or authOverrides, above) — that wins unconditionally, same
+  // precedence as every other auth field. Otherwise fall back to the context AppShell
+  // supplies, but ONLY once signed in: a signed-out visitor gets no settings row regardless
+  // of whether a provider is mounted, matching AdhHeader's own signed-out-vs-signed-in
+  // avatar-menu gate. `overlay` is null with no SettingsOverlayProvider above this header at
+  // all (a host that renders SiteHeader outside the shared AppShell) — that null propagates
+  // through to `undefined` below, so the row is correctly omitted rather than dead.
+  const overlay = useSettingsOverlay()
+  const resolvedOnSettings = onSettings ?? (user != null ? overlay?.openSettings : undefined)
   // Auth-dependent nav resolved HERE, after the source decided signed-in-or-not, so a
   // page's header component doesn't need its own useAuth() read just to vary its nav.
   const resolvedNavLinks = (typeof navLinks === 'function' ? navLinks(user != null) : navLinks) ?? []
@@ -231,15 +247,18 @@ export function SiteHeader({
   const resolvedSignupHref = signupHref ?? (onSignup ? undefined : hubAuthHref('/signup'))
 
   // The signed-in settings gear in the switcher: prefer the host's in-app overlay
-  // (onSettings); otherwise make the gear a link — to the site's own settingsHref
-  // if it set one, else the hub's settings page (satellites redirect there). Only
-  // a link target here; the switcher gates its visibility on `user != null`.
+  // (resolvedOnSettings — a caller's own handler, or the shared one AppShell's provider
+  // supplies); otherwise make the gear a link — to the site's own settingsHref if it set
+  // one, else the hub's settings page (satellites redirect there). Only a link target
+  // here; the switcher gates its visibility on `user != null`.
   //
   // `/settings`, not `/home/settings`: the account pages moved off `/home` when that segment
   // became the family's workspace redirect. The old path is still a redirect source in the hub's
   // next.config.ts, so this kept working — one wasted hop, and a link that reads as a route the
   // hub no longer has.
-  const switcherSettingsHref = onSettings ? undefined : (settingsHref ?? resolveHubHref('/settings'))
+  const switcherSettingsHref = resolvedOnSettings
+    ? undefined
+    : (settingsHref ?? resolveHubHref('/settings'))
 
   return (
     <AdhHeader
@@ -254,7 +273,7 @@ export function SiteHeader({
           resolveHref={resolveSwitchHref}
           personalSlug={personalSlug}
           authenticated={user != null}
-          onSettings={onSettings}
+          onSettings={resolvedOnSettings}
           settingsHref={switcherSettingsHref}
           // Signed-out top section: the menu's Login / Sign up rows reuse the same
           // env-resolved hrefs as the header's auth buttons (omitted when the site
@@ -334,7 +353,7 @@ export function SiteHeader({
       onSignup={onSignup}
       onLogout={onLogout}
       settingsHref={settingsHref}
-      onSettings={onSettings}
+      onSettings={resolvedOnSettings}
     />
   )
 }

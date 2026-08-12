@@ -1,0 +1,33 @@
+/* Tailwind source self-registration for @agentic-toolkit/account.
+ *
+ * Tailwind does not scan node_modules, so a consumer app must tell it to scan
+ * this package's className-bearing components. The package OWNS the globs here
+ * and a host adds one line:
+ *
+ *   @import "@agentic-toolkit/account/sources.css";
+ *
+ * Paths are relative to THIS file and travel with the package — identical
+ * through a dev pnpm link: symlink and a materialized prod copy. */
+
+/* This package registers what IT mounts. `dist/index.js` reaches components from
+ * api-explorer, crud and resource, so a host that registers `account` and not
+ * those three still loses their utilities. They are chained HERE rather than from
+ * `@agentic-toolkit/adh` because under pnpm's isolated node_modules only a
+ * declaring package can resolve the specifier.
+ *
+ * `resource` is chained from adh/sources.css too, so this line emits nothing new
+ * today — and that is the point. The rule cannot be "chain it only if nobody
+ * upstream does": that makes a package's correctness depend on its host's
+ * composition, and it is exactly how `account` itself went unregistered while the
+ * fleet rendered the settings overlay half-styled. Registration is local, or it
+ * is unreliable.
+ *
+ * authentication, personas and profile are declared dependencies this package's
+ * dist never imports, so they need no line; `auth`/`data`/`ui` ship no sources.css
+ * at all. `tools/tailwind_registration.py` (in adh) enforces this. */
+@import "@agentic-toolkit/api-explorer/sources.css";
+@import "@agentic-toolkit/crud/sources.css";
+@import "@agentic-toolkit/resource/sources.css";
+
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

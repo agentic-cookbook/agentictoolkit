@@ -13,5 +13,18 @@
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
  * Mirrors @agentic-toolkit/ui's components.css self-registration. */
+
+/* This package registers what IT mounts: `dist/index.js` reaches components from
+ * crud, resource and teams, so a host that registers `personas` alone still loses
+ * their utilities. Chained HERE rather than from `@agentic-toolkit/adh` because
+ * under pnpm's isolated node_modules only a declaring package can resolve the
+ * specifier. `resource` is chained from adh/sources.css as well and so emits
+ * nothing new — deliberately: a rule that fires only when no host already covers
+ * the dep is a rule whose result depends on composition, which is how the settings
+ * overlay shipped half-styled. `auth`/`data`/`ui` ship no sources.css. */
+@import "@agentic-toolkit/crud/sources.css";
+@import "@agentic-toolkit/resource/sources.css";
+@import "@agentic-toolkit/teams/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";

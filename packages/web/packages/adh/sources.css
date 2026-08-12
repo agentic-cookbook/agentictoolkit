@@ -34,5 +34,48 @@
  * serves src, so HMR must see source edits — while `dist` covers prod builds, where
  * `files` ships only `dist`, `src/styles` and this file, and the `src` glob simply
  * matches nothing. Neither is relied on in the environment where it is absent. */
+
+/* …and the packages THIS one drags in, because a host cannot be expected to know what
+ * they are. `@source` registers a package's own files; it says nothing about the
+ * feature packages its components mount. The User Settings overlay made that gap
+ * visible: `dist/layout` -> `dist/settings` -> account/authentication/personas/profile/
+ * resource, none of which any site registered — hub named 19 packages and not `account`,
+ * ~40 sites named none — so the modal mounted with a large fraction of its utilities
+ * never emitted. Measured on production builds: 48 missing panel utilities on `recipes`,
+ * 43 on `admin`, 5 on `hub`, including `grid-cols-[220px_1fr]`, the modal's own
+ * nav/content split. A collapsed two-column modal is not a build failure and not a
+ * warning — the class is simply absent from the stylesheet.
+ *
+ * Chaining here rather than in ~45 sites' globals is what makes the next such package
+ * free: one edge added at the owner, every consumer inherits it. The two backends that
+ * vendor this package inherit it too (they import ./styles.css, which imports this
+ * file), which is what registers the vendored panel `sources.css` files nothing else
+ * imports.
+ *
+ * Only DIRECT dependencies are listed, and deliberately: under pnpm's isolated
+ * node_modules a specifier resolves only if the importing package declares it, so
+ * `@agentic-toolkit/crud` — which `account` and `personas` pull in — cannot be named
+ * from here. It is chained from THEIR sources.css instead, and `teams` from `personas`.
+ * The rule is uniform: each package registers what it itself depends on.
+ *
+ * `@agentic-toolkit/{auth,data,themes,ui}` are absent because they ship no sources.css
+ * (`ui` self-registers through its own components.css, which adh-components.css already
+ * imports). `api-explorer` is absent from THIS file because adh already registers it from
+ * adh-help.css — where it belongs, since that is the surface that mounts it.
+ *
+ * `ecosystem-config` is absent because there is nothing to register. adh imports exactly
+ * one subpath of it, `ecosystem-config/dialog-state`, and the module closure reachable
+ * from that subpath contains ZERO `className` — it is state, not markup, so it emits no
+ * utilities and a registration would add nothing. (The package as a whole ships 107
+ * className occurrences, which is why the honest measure is the REACHABLE closure and not
+ * the dist as a lump; whole-package counting would demand a registration here and drag
+ * the package into both backends' vendor set to keep the @import resolvable, for no CSS
+ * whatsoever.) `tools/tailwind_registration.py` in adh applies exactly that measure. */
+@import "@agentic-toolkit/account/sources.css";
+@import "@agentic-toolkit/authentication/sources.css";
+@import "@agentic-toolkit/personas/sources.css";
+@import "@agentic-toolkit/profile/sources.css";
+@import "@agentic-toolkit/resource/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";

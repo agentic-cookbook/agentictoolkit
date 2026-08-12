@@ -14,5 +14,12 @@
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
  * Mirrors @agentic-toolkit/ui's components.css self-registration. */
+
+/* This package registers what IT mounts: `dist/index.js` reaches api-explorer's
+ * endpoint components, so a host that registers `crud` alone still loses their
+ * utilities. Chained HERE rather than from a host because under pnpm's isolated
+ * node_modules only a declaring package can resolve the specifier. */
+@import "@agentic-toolkit/api-explorer/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";
