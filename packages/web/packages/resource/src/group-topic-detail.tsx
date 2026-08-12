@@ -63,14 +63,14 @@ export function StackGroupDetail({
   /** The rail's heading (like every other stack rail): the group's name — "AI", the persona's
    *  name, etc. */
   title: string;
-  /** A read is in flight for this group — its own rows, or the body of the row it has selected.
-   *  Draws the spinner ahead of `title`.
+  /** A read THIS component is holding is in flight — the group's own rows, or something every
+   *  member is scoped by (the workspace's default ecosystem, say). Draws the spinner ahead of
+   *  `title`.
    *
-   *  A group's members are STATIC rows, so in practice this is always the second half: the body
-   *  behind whichever member is open. That body is read inside the member's own pane, which cannot
-   *  reach the level published here — so a caller who wants the spinner has to hold the read
-   *  itself and hand the member what it fetched. Omit it for a group whose members read nothing
-   *  per row. */
+   *  Not the place for a member's own body read: that happens inside the member's pane, a
+   *  component below, and the pane reports it with `useReportBusy` — which lights this same
+   *  spinner without the group having to hold six reads it does not need. Omit this prop entirely
+   *  for a group that reads nothing of its own; the members are still covered. */
   busy?: boolean;
   /** Rendered once above the active member's content, in the leaf (e.g. a Save/Cancel bar). */
   leafHeader?: ReactNode;

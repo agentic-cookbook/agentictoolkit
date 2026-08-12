@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { deepestSelectedLevel, type TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 
@@ -12,7 +12,8 @@ import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
  * facing alert copy is the sharpest case: two literals, one product, no way to notice they had
  * diverged short of opening both.
  *
- * Publishers use `rail-host.tsx`'s hooks (`useStackPop`, `useReportMissing`); hosts use these.
+ * Publishers use `rail-host.tsx`'s hooks (`useStackPop`, `useReportMissing`, `useReportBusy`);
+ * hosts use these.
  */
 
 /**
@@ -33,6 +34,52 @@ export function useHostPopStack(levels: TopicLevel[]): () => void {
     const at = deepestSelectedLevel(levels);
     if (at >= 0) levels[at]?.onClear();
   }, [levels]);
+}
+
+export interface HostBusyReports {
+  /** The {@link RailHostRegistry} member. Give it straight to the registry. */
+  reportBusy: (id: string, levelId: string, busy: boolean) => void;
+  /** The stack to RENDER: the levels handed in, with `busy` raised on each one some pane is
+   *  currently reading under. Render this instead of the raw merge — a host that kept rendering
+   *  the merge would collect the reports and show nothing. */
+  levels: TopicLevel[];
+}
+
+/**
+ * The host's answer to a pane that reads but publishes no level of its own: raise `busy` on the
+ * list whose detail area that pane occupies, so the spinner appears in front of THAT list's title.
+ *
+ * Folded here rather than at the publisher, because the publisher is the wrong component to know:
+ * the level belongs to an ancestor, and the pane doing the reading is the only one that knows a
+ * read is in flight. The report crosses that gap; this closes it.
+ *
+ * A level that already declares `busy` itself is left exactly as it is — one spinner per list, and
+ * a publisher that holds its own read stays the authority on it.
+ */
+export function useHostBusyReports(levels: TopicLevel[]): HostBusyReports {
+  // Reporter id → the level it is reading under. A Map and not a Set of level ids: two panes can
+  // be reading at once, and the first to finish must not clear the second's spinner.
+  const [reading, setReading] = useState<ReadonlyMap<string, string>>(new Map());
+
+  const reportBusy = useCallback((id: string, levelId: string, busy: boolean) => {
+    setReading((prev) => {
+      if (busy ? prev.get(id) === levelId : !prev.has(id)) return prev;
+      const next = new Map(prev);
+      if (busy) next.set(id, levelId);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
+
+  const withBusy = useMemo(() => {
+    // The common case by far — nobody is reading — returns the array UNCHANGED, identity included,
+    // so a host that folds this in cannot make its stack look new on every render.
+    if (reading.size === 0) return levels;
+    const busyLevels = new Set(reading.values());
+    return levels.map((l) => (l.busy || !busyLevels.has(l.id) ? l : { ...l, busy: true }));
+  }, [levels, reading]);
+
+  return { reportBusy, levels: withBusy };
 }
 
 export interface HostMissingAlert {

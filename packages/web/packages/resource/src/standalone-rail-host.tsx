@@ -18,7 +18,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "./rail-host";
-import { useHostMissingAlert, useHostPopStack } from "./host-stack";
+import { useHostBusyReports, useHostMissingAlert, useHostPopStack } from "./host-stack";
 
 /**
  * The standalone rail host: when a feature renders OUTSIDE a host (a feature site's /home),
@@ -127,13 +127,17 @@ export function StandaloneRailHost({
     return () => onDirtyChangeRef.current?.(false);
   }, []);
 
-  const mergedLevels = useMemo(
+  const registered = useMemo(
     () => [...registry.values()].sort((a, b) => a.depth - b.depth).flatMap((e) => e.levels),
     [registry],
   );
 
-  // The two host-side stack duties, shared with the hub's WorkspaceChromeProvider so a feature
-  // site's /home and the same feature inside the hub shell cannot drift. See `host-stack.tsx`.
+  // The host-side stack duties, shared with the hub's WorkspaceChromeProvider so a feature site's
+  // /home and the same feature inside the hub shell cannot drift. See `host-stack.tsx`.
+  // The busy fold comes FIRST: everything below renders `mergedLevels`, and a stack that had the
+  // reports folded in only at the view would leave the breadcrumb and the frontier reading a
+  // different array than the rails.
+  const { reportBusy, levels: mergedLevels } = useHostBusyReports(registered);
   const popStack = useHostPopStack(mergedLevels);
   const { reportMissing, missingAlert } = useHostMissingAlert(popStack, guards.size > 0);
 
@@ -146,6 +150,7 @@ export function StandaloneRailHost({
       registerExitGuard,
       popStack,
       reportMissing,
+      reportBusy,
       toolbarSlot: null,
       claimFeatureBar,
       featureBarSlot,
@@ -156,6 +161,7 @@ export function StandaloneRailHost({
       registerExitGuard,
       popStack,
       reportMissing,
+      reportBusy,
       claimFeatureBar,
       featureBarSlot,
     ],

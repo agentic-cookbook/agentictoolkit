@@ -26,6 +26,7 @@ describe("StackLevels", () => {
       registerExitGuard: vi.fn(),
       popStack: vi.fn(),
       reportMissing: vi.fn(),
+      reportBusy: vi.fn(),
       toolbarSlot: null,
     };
     const { unmount } = render(

@@ -60,6 +60,12 @@ export interface RailHostRegistry {
    *  other. The HOST owns the alert and the pop that follows it — one mount, so no feature can
    *  forget it and leave the user staring at a pane whose subject is gone. Required. */
   reportMissing: (id: string, missing: boolean) => void;
+  /** Report (true) or withdraw (false) that a pane is READING, so the list whose detail area it
+   *  occupies can spin in front of its title. `id` names the reporting pane and `levelId` the list
+   *  that owns it — keyed by both, so two panes reading at once cannot cancel each other and a
+   *  report can never light the wrong list. Required, for the same reason {@link reportMissing} is:
+   *  a host that quietly dropped these would show no spinner anywhere, and nothing would say so. */
+  reportBusy: (id: string, levelId: string, busy: boolean) => void;
   /** The DOM node of the shell's full-width button-bar slot; feature editors portal their action
    *  bar here so it spans the top instead of sitting inside the detail. Null with no host. */
   toolbarSlot: HTMLElement | null;
@@ -95,6 +101,18 @@ export function useRailHost(): RailHostRegistry | null {
  * (not effects) so a descendant reads its ancestors' depth during its own render.
  */
 const LevelDepthContext = createContext(0);
+
+/**
+ * The id of the level whose DETAIL AREA the surrounding content occupies — i.e. the list a
+ * descendant's read belongs to, which is what {@link useReportBusy} reports against.
+ *
+ * An id and not a depth. A depth looks like it would work and does not: {@link StackLevels} wraps
+ * its children and so advances the context, while {@link useStackLevel} is a hook with nothing to
+ * wrap and leaves it alone — so "one below me" means a different list depending on which mechanism
+ * the ancestor happened to use, and a reader cannot tell which it is under. The id is published by
+ * whoever publishes the level, so the two can never disagree.
+ */
+const BusyTargetContext = createContext<string | null>(null);
 
 /** Serialise a level array's identity (id, title, selection, and every row's id + label +
  *  sublabel) so the publish effect re-runs on any change the merged stack renders — including a
@@ -132,6 +150,7 @@ function levelsKey(levels: TopicLevel[]): string {
 export function StackLevels({ levels, children }: { levels: TopicLevel[]; children: ReactNode }) {
   const depth = useContext(LevelDepthContext);
   const ctx = useContext(RailHostContext);
+  const outerBusyTarget = useContext(BusyTargetContext);
   const id = useId();
   const register = ctx?.registerLevels;
   const unregister = ctx?.unregisterLevels;
@@ -144,8 +163,14 @@ export function StackLevels({ levels, children }: { levels: TopicLevel[]; childr
     return () => unregister(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [register, unregister, id, depth, key]);
+  // The children render in the DEEPEST of these levels' detail area, so that is the list a read
+  // among them belongs to. An empty publish keeps whatever the ancestor named — a link that adds
+  // no level of its own does not take ownership of its descendants' reads.
+  const busyTarget = levels.length > 0 ? levels[levels.length - 1]!.id : outerBusyTarget;
   return (
-    <LevelDepthContext.Provider value={depth + levels.length}>{children}</LevelDepthContext.Provider>
+    <LevelDepthContext.Provider value={depth + levels.length}>
+      <BusyTargetContext.Provider value={busyTarget}>{children}</BusyTargetContext.Provider>
+    </LevelDepthContext.Provider>
   );
 }
 
@@ -240,6 +265,34 @@ export function useReportMissing(id: string | null, missing: boolean): void {
     report(id, true);
     return () => report(id, false);
   }, [report, id, missing]);
+}
+
+/**
+ * Report that this pane is READING, so the topic list it sits under spins in front of its title.
+ *
+ * For the pane that publishes NO level of its own — a settings body, a member of a group — whose
+ * read is otherwise invisible: it has no list to put a spinner on, and the list that does have one
+ * is published a component above, out of its reach. `busy` is the pane's own in-flight flag
+ * (`isFetching`, not `isPending` — see {@link TopicLevel.busy}); the report is withdrawn when it
+ * goes false and on unmount, so a pane that navigates away never leaves a list spinning.
+ *
+ * It names no list, exactly as {@link useStackPop} names no level: the enclosing
+ * {@link StackLevels} publishes which one, so a pane cannot report against a list that isn't
+ * actually showing it. Outside a host, or with no level above it at all, it is a no-op.
+ *
+ * Do NOT call this from a pane that publishes its own level — set `busy` on that level instead, or
+ * the same read lights two spinners and asks the user to tell them apart.
+ */
+export function useReportBusy(busy: boolean): void {
+  const ctx = useContext(RailHostContext);
+  const report = ctx?.reportBusy;
+  const levelId = useContext(BusyTargetContext);
+  const id = useId();
+  useEffect(() => {
+    if (!report || levelId == null || !busy) return;
+    report(id, levelId, true);
+    return () => report(id, levelId, false);
+  }, [report, id, levelId, busy]);
 }
 
 /** The DOM node a feature editor should portal its action bar into, or null when there is no

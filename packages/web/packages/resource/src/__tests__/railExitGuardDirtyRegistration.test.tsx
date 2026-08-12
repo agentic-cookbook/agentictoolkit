@@ -17,6 +17,7 @@ function makeHost() {
       registerExitGuard,
       popStack: vi.fn(),
       reportMissing: vi.fn(),
+      reportBusy: vi.fn(),
       toolbarSlot: null,
     },
   };

@@ -27,6 +27,7 @@ const NOOP_REGISTRY: RailHostRegistry = {
   registerExitGuard: vi.fn(),
   popStack: vi.fn(),
   reportMissing: vi.fn(),
+  reportBusy: vi.fn(),
   toolbarSlot: null,
 };
 

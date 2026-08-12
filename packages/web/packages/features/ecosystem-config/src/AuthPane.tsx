@@ -12,7 +12,7 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { confirmNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
 import { ecosystemsApi, type AuthSettings, type SignupMode } from "@agentic-toolkit/data/ecosystems";
-import { EditActionBar, useReportSettingsDirty } from "@agentic-toolkit/resource";
+import { EditActionBar, useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**
  * The ecosystem's explicit AUTH POLICY pane — the conceptual "Auth settings" home for a
@@ -64,13 +64,24 @@ export function AuthPane({
   // Unsaved edits survive that revalidation for free: `edits` below is a DELTA laid over whatever
   // the server currently says, not a copy of it, so a re-read that lands mid-edit changes the
   // values UNDER the user's changes and keeps the changes themselves.
-  const { item: settings, error: loadError } = useResourceItemQuery<AuthSettings>(
+  const {
+    item: settings,
+    error: loadError,
+    isFetching,
+  } = useResourceItemQuery<AuthSettings>(
     "ecosystem-auth-settings",
     ecosystemId ?? null,
     loadAuthSettings,
     { reportErrors: false },
   );
   const writeSettings = useResourceItemWriter<AuthSettings>("ecosystem-auth-settings");
+
+  // This pane publishes no topic list of its own, so the read above has nowhere to show itself —
+  // it is the Configuration list, one component up, that owns the spinner. Reporting is how the
+  // read reaches it. `isFetching` and not `isPending`: on the second visit the policy is already
+  // painted (see the comment above) and the pane would otherwise revalidate in silence, which is
+  // exactly the visit the spinner exists for.
+  useReportBusy(isFetching);
 
   const [edits, setEdits] = useState<Partial<AuthSettings>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
