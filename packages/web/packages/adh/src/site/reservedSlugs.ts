@@ -129,11 +129,14 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
   'mcp',
   'applications',
   'projects',
-  // personaregistry — app/org, plus `persona`, a REDIRECT source in that site's `next.config.ts`
-  // for the same reason the hub's eight above are. It was `app/persona/[slug]` while the site put
-  // the family's `[workspace]` at its root; the site addresses a persona at its ROOT again
-  // (`app/[slug]`), and the old prefix stayed behind pointing at it. (`user` is the hub's public
-  // profile prefix, listed above, and is a redirect source on this site too.)
+  // personaregistry — `org` and `persona`, both REDIRECT sources in that site's `next.config.ts`
+  // for the same reason the hub's eight above are: a redirect source claims its segment as
+  // surely as a directory does. Neither is a directory there any more. `app/persona/[slug]`
+  // existed only while the family's `[workspace]` sat at that site's root; `app/org/[slug]` was
+  // older and outlived that window. Personas, users and organizations all address off the ROOT
+  // now (`app/[slug]`) — an org is shown the way a user is, so it needs no prefix — and the old
+  // prefixes stayed behind pointing at it. (`user` is the hub's public profile prefix, listed
+  // above, and is a redirect source on this site too.)
   'org',
   'persona',
   // research — app/{papers,search}.

@@ -51,20 +51,24 @@ describe('registry URL helpers (pins behaviour across the @agentic-toolkit/adh-r
   //
   // The persona handle IS the root segment: `agenticpersonaregistry.com/<handle>`. That is why
   // the site has no `app/[workspace]` — Next allows one dynamic name per level, and this site
-  // spends its on handles. A user's slug shares the namespace (the root page resolves a persona
-  // first, then a user), which makes `/<owner>/<persona>` the owner-scoped form.
+  // spends its on handles. A user's slug shares the namespace, and so does an ORGANIZATION's
+  // (the root page resolves persona, then user, then org), which makes `/<owner>/<persona>` the
+  // owner-scoped form for either kind of owner.
   it('the persona registry addresses personas and their owners at its root', () => {
     expect(personaProfilePath('bob')).toBe('/bob')
     expect(registryUserPath('ada')).toBe('/ada')
     expect(registryUserPersonaPath('ada', 'bob')).toBe('/ada/bob')
-    expect(registryOrgPath('acme')).toBe('/org/acme')
+    // An org is shown the way a user is — no `/org/` prefix. This is the assertion that fails
+    // if one ever comes back.
+    expect(registryOrgPath('acme')).toBe('/acme')
+    expect(registryUserPersonaPath('fishlamp', 'bitbag')).toBe('/fishlamp/bitbag')
   })
 
   it('every registry path helper percent-encodes its handle', () => {
     expect(personaProfilePath('a b')).toBe('/a%20b')
     expect(registryUserPath('a b')).toBe('/a%20b')
     expect(registryUserPersonaPath('a b', 'c d')).toBe('/a%20b/c%20d')
-    expect(registryOrgPath('a b')).toBe('/org/a%20b')
+    expect(registryOrgPath('a b')).toBe('/a%20b')
   })
 
   it('splitSiteTitle splits the brand lead from the accent', () => {

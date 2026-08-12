@@ -773,9 +773,14 @@ export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | nul
  * `app/[workspace]`: Next allows one dynamic name per level, so the root is either the
  * family's workspace segment or the registry's handles, and here it is the handles.
  *
- * A user's slug shares that root namespace (the page resolves a persona first, then a user),
- * so `/<owner>/<persona>` is the owner-scoped form of the same persona. Only `/org/<slug>` is
- * still a static prefix.
+ * A user's slug shares that root namespace, and so does an ORGANIZATION's: all three are
+ * minted flat, and the root page resolves them in that order (persona, user, org). An owner
+ * is an owner — `/<owner>/<persona>` is the owner-scoped form of the same persona whether the
+ * owner is a person or an org, which is why there is no longer an `/org/` prefix to mint.
+ *
+ * The order is a tiebreak, not a guarantee of disjointness: `uq_users_slug` and
+ * `uq_organizations_slug` are separate indexes and neither knows about persona handles, so
+ * `bob` can be all three and the first hit wins.
  */
 export function personaProfilePath(slug: string): string {
   return `/${encodeURIComponent(slug)}`
@@ -787,15 +792,19 @@ export function registryUserPath(slug: string): string {
   return `/${encodeURIComponent(slug)}`
 }
 
-/** A persona addressed through its OWNER. The same persona also has a global handle at
+/** A persona addressed through its OWNER — a user OR an organization, since both hold slugs
+ *  in the same root namespace. The same persona also has a global handle at
  *  `personaProfilePath`; this is the address that says whose it is. */
 export function registryUserPersonaPath(ownerSlug: string, personaSlug: string): string {
   return `${registryUserPath(ownerSlug)}/${encodeURIComponent(personaSlug)}`
 }
 
-/** An organization's public profile on the registry. */
+/** An organization's public profile on the registry — the SAME root namespace a user's slug
+ *  lives in. It is deliberately identical to `registryUserPath`: an org is shown the way a
+ *  user is, and its personas hang off it at `/<org>/<persona>` like anyone else's. The two
+ *  names are kept apart because the call sites mean different things, not different paths. */
 export function registryOrgPath(slug: string): string {
-  return `/org/${encodeURIComponent(slug)}`
+  return `/${encodeURIComponent(slug)}`
 }
 
 /**

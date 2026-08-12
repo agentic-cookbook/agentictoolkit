@@ -27392,6 +27392,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/orgs/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        /** Get an organization profile card and its public personas */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public organization profile card */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicOrgProfile"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/orgs/{ownerSlug}/personas/{personaSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ownerSlug: string;
+                personaSlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get a public persona scoped to its owning organization */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ownerSlug: string;
+                    personaSlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Public persona */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicPersona"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/orgs/{slug}/sheet": {
         parameters: {
             query?: never;
@@ -61564,6 +61664,13 @@ export interface components {
             emails: string[];
             phones: string[];
             addresses: components["schemas"]["PublicAddress"][];
+            personas: components["schemas"]["PublicPersonaSummary"][];
+        };
+        PublicOrgProfile: {
+            slug: string;
+            displayName: string;
+            description: string | null;
+            createdAt: string;
             personas: components["schemas"]["PublicPersonaSummary"][];
         };
         PublicPaperSummary: {
