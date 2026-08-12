@@ -118,12 +118,16 @@ describe('local cross-site origins', () => {
     const registry = getSite('personaregistry')!
     // The site id matches the suite's leaf dir (`personaregistry`), so the local
     // cross-site link resolves to where the suite actually serves the app.
+    // The path is `/home` and the answer is `/`, unlike every other case here: this
+    // site spends its root segment on public handles, so it has no workspace route and
+    // no `/home` to carry one to, and `carryPath` degrades to the root for exactly that
+    // (`hasHome: false`). So what this case still pins is the HOST derivation.
     expect(buildSiteHref(registry, 'hub-personas-move.dev.local', '/home')).toBe(
-      'https://personaregistry.hub-personas-move.dev.local/home',
+      'https://personaregistry.hub-personas-move.dev.local/',
     )
     // Local-only subdomain; testing/prod derive from prodHost (agenticpersonaregistry.com).
     expect(buildSiteHref(registry, 'testing.agenticdeveloperhub.com', '/home')).toBe(
-      'https://testing.agenticpersonaregistry.com/home',
+      'https://testing.agenticpersonaregistry.com/',
     )
   })
 })
@@ -461,6 +465,14 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     expect(getSite('hub-help')!.hasHome).toBe(false)
     expect(getSite('hub-help')!.workspaceRoute).toBeUndefined()
     expect(getSite('status')!.workspaceRoute).toBeUndefined()
+    // personaregistry is workspace-less for a DIFFERENT reason than the three above, and
+    // it is the only site where the reason is structural: Next allows one dynamic name per
+    // level, and this site's root is spent on `[slug]` — the public persona handle that is
+    // the whole point of the site — so `app/[workspace]` cannot also live there. Named
+    // literally because the walk above sees only the absent directory, not the collision
+    // that forces it, and re-adding a workspace here is a route the framework refuses.
+    expect(getSite('personaregistry')!.workspaceRoute).toBeUndefined()
+    expect(getSite('personaregistry')!.hasHome).toBe(false)
   })
 
 })

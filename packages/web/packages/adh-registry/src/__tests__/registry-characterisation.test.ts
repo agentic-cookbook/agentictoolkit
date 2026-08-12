@@ -34,25 +34,36 @@ describe('registry URL helpers (pins behaviour across the @agentic-toolkit/adh-r
     expect(['/home', '/']).toContain(siteHomePath('hub'))
   })
 
+  // The HOST is whatever `detectEnv` makes of the ambient `location.hostname` — the production
+  // domain under a node environment, `personaregistry.localhost` under jsdom — so naming a domain
+  // here would make the case pass or fail on the test environment rather than on the helper.
+  // What is fixed either way is the site it lands on and the fact that the handle is the WHOLE
+  // path: this is the assertion that fails if a prefix segment ever comes back.
   it('personaProfileUrl percent-encodes the slug onto the persona registry', () => {
-    expect(personaProfileUrl('a b')).toContain('/persona/a%20b')
+    const url = personaProfileUrl('a b')
+    expect(url).toContain('personaregistry')
+    expect(new URL(url).pathname).toBe('/a%20b')
   })
 
-  // Spelled literally rather than composed from the helpers they test. These four are the
-  // registry site's public URL space, and a host that links in mints them from here — an
-  // assertion that called the helper to build its own expectation would agree with any
-  // prefix, including the bare `/<handle>` that now resolves to a gated workspace instead.
-  it('the persona registry addresses each public namespace under its own prefix', () => {
-    expect(personaProfilePath('bob')).toBe('/persona/bob')
-    expect(registryUserPath('ada')).toBe('/user/ada')
-    expect(registryUserPersonaPath('ada', 'bob')).toBe('/user/ada/bob')
+  // Spelled literally rather than composed from the helpers they test. These are the registry
+  // site's public URL space, and a host that links in mints them from here — an assertion that
+  // called the helper to build its own expectation would agree with any prefix.
+  //
+  // The persona handle IS the root segment: `agenticpersonaregistry.com/<handle>`. That is why
+  // the site has no `app/[workspace]` — Next allows one dynamic name per level, and this site
+  // spends its on handles. A user's slug shares the namespace (the root page resolves a persona
+  // first, then a user), which makes `/<owner>/<persona>` the owner-scoped form.
+  it('the persona registry addresses personas and their owners at its root', () => {
+    expect(personaProfilePath('bob')).toBe('/bob')
+    expect(registryUserPath('ada')).toBe('/ada')
+    expect(registryUserPersonaPath('ada', 'bob')).toBe('/ada/bob')
     expect(registryOrgPath('acme')).toBe('/org/acme')
   })
 
   it('every registry path helper percent-encodes its handle', () => {
-    expect(personaProfilePath('a b')).toBe('/persona/a%20b')
-    expect(registryUserPath('a b')).toBe('/user/a%20b')
-    expect(registryUserPersonaPath('a b', 'c d')).toBe('/user/a%20b/c%20d')
+    expect(personaProfilePath('a b')).toBe('/a%20b')
+    expect(registryUserPath('a b')).toBe('/a%20b')
+    expect(registryUserPersonaPath('a b', 'c d')).toBe('/a%20b/c%20d')
     expect(registryOrgPath('a b')).toBe('/org/a%20b')
   })
 

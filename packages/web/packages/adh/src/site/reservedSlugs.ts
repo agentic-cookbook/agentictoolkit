@@ -129,7 +129,11 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
   'mcp',
   'applications',
   'projects',
-  // personaregistry — app/{org,persona}. (`user` is below.)
+  // personaregistry — app/org, plus `persona`, a REDIRECT source in that site's `next.config.ts`
+  // for the same reason the hub's eight above are. It was `app/persona/[slug]` while the site put
+  // the family's `[workspace]` at its root; the site addresses a persona at its ROOT again
+  // (`app/[slug]`), and the old prefix stayed behind pointing at it. (`user` is the hub's public
+  // profile prefix, listed above, and is a redirect source on this site too.)
   'org',
   'persona',
   // research — app/{papers,search}.

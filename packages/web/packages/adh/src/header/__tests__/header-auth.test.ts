@@ -13,27 +13,31 @@ function at(path: string): void {
 
 afterEach(() => at('/'))
 
+// The worked site here is `cookbook` — any site with a /home would do, and the rule
+// under test is the family's, not that site's. It used to be `personaregistry`, which
+// no longer declares one: that site spends its root segment on public persona handles,
+// so it has no `[workspace]` and no /home, and it now belongs to the ROOT case below.
 describe('defaultReturnTo', () => {
   it("sends a login started on the landing to that site's own /home", () => {
     at('/')
-    expect(defaultReturnTo('personaregistry')).toBe('/home')
+    expect(defaultReturnTo('cookbook')).toBe('/home')
   })
 
   it('brings a login started anywhere else back to that page', () => {
     at('/bob')
-    expect(defaultReturnTo('personaregistry')).toBe('/bob')
+    expect(defaultReturnTo('cookbook')).toBe('/bob')
   })
 
   it('keeps the query, so a deep link survives the SSO round-trip', () => {
     at('/bob?tab=chat')
-    expect(defaultReturnTo('personaregistry')).toBe('/bob?tab=chat')
+    expect(defaultReturnTo('cookbook')).toBe('/bob?tab=chat')
   })
 
   it('treats only the landing itself as the landing', () => {
     at('/bob/settings')
-    expect(defaultReturnTo('personaregistry')).toBe('/bob/settings')
+    expect(defaultReturnTo('cookbook')).toBe('/bob/settings')
     at('/home')
-    expect(defaultReturnTo('personaregistry')).toBe('/home')
+    expect(defaultReturnTo('cookbook')).toBe('/home')
   })
 
   // home-or-ROOT: a site with no gated landing has nowhere else to go, so its root
@@ -45,6 +49,12 @@ describe('defaultReturnTo', () => {
   it("resolves to the site's ROOT when it declares no /home", () => {
     at('/')
     expect(defaultReturnTo('status')).toBe('/')
+    // personaregistry is the other shape of the same case, and the one that matters
+    // most here: a visitor who signs in from a persona page must come back to THAT
+    // persona, and does — the rule reads the path, so `/<handle>` is "anywhere else".
+    expect(defaultReturnTo('personaregistry')).toBe('/')
+    at('/bob')
+    expect(defaultReturnTo('personaregistry')).toBe('/bob')
   })
 
   // A source built outside SiteHeader gets no siteId; guessing a landing there could

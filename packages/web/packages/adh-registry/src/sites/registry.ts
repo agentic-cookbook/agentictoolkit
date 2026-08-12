@@ -112,10 +112,16 @@ export interface SiteDef {
    *  to its landing.
    *
    *  ⚠️ This is NOT derivable from `hasHome`, and must not be re-derived from it: `bitbag`,
-   *  `status` and `admin` are workspace-less, while `hub-help` has neither — a `/home` and a
-   *  `[workspace]` are separate facts about a site's route tree, and keying one off the other
-   *  would send a workspace switch to a 404. The values are stamped from the actual route
-   *  tree and held to it by `registry.test.ts` ("workspaceRoute matches the route tree"). */
+   *  `status` and `admin` are workspace-less, while `hub-help` and `personaregistry` have
+   *  neither — a `/home` and a `[workspace]` are separate facts about a site's route tree, and
+   *  keying one off the other would send a workspace switch to a 404. The values are stamped
+   *  from the actual route tree and held to it by `registry.test.ts` ("workspaceRoute matches
+   *  the route tree").
+   *
+   *  `personaregistry` is the one site in the landing family without one, and its reason is
+   *  worth knowing because it is structural rather than a rollout leftover: its root segment
+   *  is a PUBLIC persona/user handle, and Next permits one dynamic name per level. See the
+   *  comment on its entry below. */
   workspaceRoute?: 'root' | 'hub'
   /** Part of the derived family roster ({@link LISTED_SITES}, and the footer
    *  interlinks under it). Defaults to true; set false to keep a site in the registry
@@ -187,7 +193,13 @@ export const SITES: SiteDef[] = [
   // real description rather than its own host — it is a footer interlink like
   // every other content site.
   { id: 'narratives', label: 'Narratives', fullLabel: 'Agentic Developer Narratives', description: 'Ecosystem stories', prodHost: 'agenticdevelopernarratives.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
-  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  // personaregistry spends its root segment on PUBLIC handles — `/<persona>` and
+  // `/<owner>/<persona>` are the addresses the whole site exists to publish — so it has no
+  // `app/[workspace]` and no `/home`. Next allows one dynamic name per level, so the root is
+  // the family's workspace or the registry's handles, and here it is the handles. Nothing was
+  // lost with them: personas are configured on agenticdeveloperpersonas.com and accounts on
+  // the hub, so the signed-in surface this site used to mount rendered a placeholder.
+  { id: 'personaregistry', label: 'Persona Registry', fullLabel: 'Agentic Persona Registry', description: 'Browse agentic personas', prodHost: 'agenticpersonaregistry.com', hasStaging: true, hasTesting: true, hasHome: false },
   { id: 'devteam', label: 'Team', fullLabel: 'Agentic Developer Team', description: 'Your agentic dev team', prodHost: 'agenticdeveloperteam.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'toolkit', label: 'Toolkit', fullLabel: 'Agentic Developer Toolkit', description: 'The developer toolkit', prodHost: 'agenticdevelopertoolkit.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // myagenticteams: off-pattern consumer brand (not agenticdeveloper<x>.com), so
@@ -633,10 +645,11 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'forum',
   'people',
   'topics',
-  // personaregistry — the two public namespaces beside the workspace, plus profiles.
-  'org',
-  'persona',
-  'user',
+  // personaregistry used to contribute `org`, `persona` and `user` here. It has no workspace
+  // route at all now — its root segment IS the public handle — so it is outside this union,
+  // and a word only it serves would make the lockstep case fail. The three stay reserved
+  // family-wide by `SITE_ROUTE_SEGMENTS` in `@agentic-toolkit/adh/site`, which is a different
+  // question: this set says "not a slug", that one says "nobody may claim it".
   // research — public papers and the search page.
   'papers',
   'search',
@@ -748,25 +761,30 @@ export function siteWorkspaceSlug(site: SiteDef, pathname: string): string | nul
  *  pages that live on the hub. Unlike buildSiteHref this carries the exact path
  *  rather than route-matching, so it suits fixed destinations like `/login`. */
 /**
- * The persona registry's three public namespaces, as paths.
+ * The persona registry's public namespaces, as paths.
  *
  * All four hosts that link into that site mint these — the registry's own pages, the hub's
  * persona surfaces, personabuilder, and the registry's smoke test — so the rule lives here,
  * where `personaProfileUrl` already had to live for the same reason: two copies of it drifted
  * once already, and that showed up as a review finding rather than a broken page.
  *
- * Each is a STATIC prefix over a handle, and that is the whole point. The registry's root
- * segment is `/<workspace>` now, the signed-in surface every site in the family puts there,
- * so a bare `/<handle>` no longer names a persona on any host — it names a workspace, and it
- * is gated. A link minted the old way does not 404; it reaches an auth wall.
+ * A persona's address is its handle at the ROOT — `agenticpersonaregistry.com/<handle>` — and
+ * that is the address the site exists to publish. It is why this site alone has no
+ * `app/[workspace]`: Next allows one dynamic name per level, so the root is either the
+ * family's workspace segment or the registry's handles, and here it is the handles.
+ *
+ * A user's slug shares that root namespace (the page resolves a persona first, then a user),
+ * so `/<owner>/<persona>` is the owner-scoped form of the same persona. Only `/org/<slug>` is
+ * still a static prefix.
  */
 export function personaProfilePath(slug: string): string {
-  return `/persona/${encodeURIComponent(slug)}`
+  return `/${encodeURIComponent(slug)}`
 }
 
-/** A registry user's public profile — their personas, their creator sheet. */
+/** A registry user's public profile — their personas, their creator sheet. Shares the root
+ *  namespace with personas, which the root page resolves in that order. */
 export function registryUserPath(slug: string): string {
-  return `/user/${encodeURIComponent(slug)}`
+  return `/${encodeURIComponent(slug)}`
 }
 
 /** A persona addressed through its OWNER. The same persona also has a global handle at
