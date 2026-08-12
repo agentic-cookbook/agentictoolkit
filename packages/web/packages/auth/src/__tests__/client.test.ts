@@ -2,7 +2,14 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { configureAuth } from '../config'
 import { writeTokens } from '../tokens'
 import { invalidateRefresh } from '../refresh'
-import { authedFetch, authedJson, exchangeSsoCode, extractErrorMessage, AuthHttpError } from '../client'
+import {
+  authedFetch,
+  authedJson,
+  exchangeSsoCode,
+  extractErrorMessage,
+  linkProvider,
+  AuthHttpError,
+} from '../client'
 
 beforeEach(() => {
   localStorage.clear()
@@ -151,5 +158,65 @@ describe('authedJson', () => {
     } as Response))
 
     await expect(authedJson('/api/x')).rejects.toThrow('boom')
+  })
+})
+
+// The `code` here was minted BY the authorization server, for the provider
+// redirect_uri the AS registered, and the identity rows it links live in the AS's
+// database. Which host receives it is therefore not a routing detail: the site's own
+// `/api` proxy reaches the DATA backend, the same host as the AS in every deployed
+// tier today but a DIFFERENT one in the local suite (this worktree's backend vs the
+// shared auth service). `.shipr` declares `auth_url` and `backend_url` separately for
+// exactly this reason, so the destination is asserted rather than left to coincidence.
+describe('linkProvider', () => {
+  const input = {
+    clientSlug: 'adh',
+    providerSlug: 'github',
+    code: 'provider-code',
+    redirectUri: 'https://as.example.com/oauth/signin/callback',
+  }
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_AUTH_API_URL
+  })
+
+  function stubOk(): ReturnType<typeof vi.fn> {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, status: 204 } as Response)
+    vi.stubGlobal('fetch', fetchMock)
+    return fetchMock
+  }
+
+  it('posts the code to the AS host, not to this site’s /api proxy', async () => {
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://api.example.com'
+    writeTokens({ accessToken: 'TOK', refreshToken: '' })
+    const fetchMock = stubOk()
+
+    await linkProvider(input)
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://api.example.com/auth/link-provider')
+    // The body is the wire contract and carries no base — a base folded into it
+    // would be POSTed to the server as an unknown field.
+    expect(JSON.parse((fetchMock.mock.calls[0]?.[1] as RequestInit).body as string)).toEqual(input)
+  })
+
+  it('prefers an explicit base over the env one', async () => {
+    process.env.NEXT_PUBLIC_AUTH_API_URL = 'https://env.example.com'
+    writeTokens({ accessToken: 'TOK', refreshToken: '' })
+    const fetchMock = stubOk()
+
+    await linkProvider(input, { authApiBase: 'https://explicit.example.com/' })
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://explicit.example.com/auth/link-provider')
+  })
+
+  // The historical shape, kept so an unconfigured build behaves exactly as it did
+  // rather than posting to a host it cannot name.
+  it('falls back to the same-origin proxy path with no base configured', async () => {
+    writeTokens({ accessToken: 'TOK', refreshToken: '' })
+    const fetchMock = stubOk()
+
+    await linkProvider(input)
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/api/auth/link-provider')
   })
 })

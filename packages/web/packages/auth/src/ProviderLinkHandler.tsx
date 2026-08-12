@@ -29,6 +29,11 @@ type Status =
 export interface ProviderLinkHandlerProps {
   /** OAuth client id used when linking (default 'adh'). */
   clientId?: string
+  /** AS base for BOTH legs; defaults to `NEXT_PUBLIC_AUTH_API_URL`. The forward leg
+   *  navigates there and the return leg redeems the code there, so one value feeds
+   *  both — a base that applied to only one of them would start a link at one server
+   *  and finish it at another. */
+  authApiBase?: string
 }
 
 /** Read the pending "link this provider after login" intent, if any. */
@@ -65,7 +70,10 @@ function clearPendingLink(): void {
  *  since a credential login navigates away to the callback rather than returning to
  *  the card. Here it fires for all of them, and the confirm still gates the link on
  *  the visitor explicitly continuing. */
-export function ProviderLinkHandler({ clientId = 'adh' }: ProviderLinkHandlerProps): ReactElement | null {
+export function ProviderLinkHandler({
+  clientId = 'adh',
+  authApiBase,
+}: ProviderLinkHandlerProps): ReactElement | null {
   const { isAuthenticated } = useAuth()
   const [status, setStatus] = useState<Status>({ kind: 'idle' })
   const startedRef = useRef(false)
@@ -114,7 +122,10 @@ export function ProviderLinkHandler({ clientId = 'adh' }: ProviderLinkHandlerPro
     setStatus({ kind: 'linking', provider })
     void (async () => {
       try {
-        await linkProvider({ clientSlug: clientId, providerSlug: provider, code, redirectUri })
+        await linkProvider(
+          { clientSlug: clientId, providerSlug: provider, code, redirectUri },
+          { authApiBase },
+        )
         setStatus({ kind: 'success', provider, already: false })
       } catch (err) {
         // A 409 with the self code means it's already linked to THIS account —
@@ -130,7 +141,7 @@ export function ProviderLinkHandler({ clientId = 'adh' }: ProviderLinkHandlerPro
         }
       }
     })()
-  }, [isAuthenticated, clientId])
+  }, [isAuthenticated, clientId, authApiBase])
 
   /** "Not now": drop the pending intent so it can't re-ask, and show nothing. */
   function declineLink(): void {
@@ -149,6 +160,7 @@ export function ProviderLinkHandler({ clientId = 'adh' }: ProviderLinkHandlerPro
         providerId: provider,
         returnTo: window.location.pathname + window.location.search,
         clientId,
+        authApiBase,
       })
       // false => the CSRF nonce couldn't be stashed, so it did NOT navigate.
       if (!started) setStatus({ kind: 'error', message: linkStartFailedBody(provider) })

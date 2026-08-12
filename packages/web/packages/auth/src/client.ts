@@ -1,5 +1,6 @@
 'use client'
 
+import { asEndpoint } from './asBase'
 import { refreshAccessToken } from './refresh'
 import { readAccessToken, tokensFromResponse, type BackendTokenFields } from './tokens'
 import type { AuthTokens, AuthUser } from './types'
@@ -216,7 +217,26 @@ export interface LinkProviderInput {
 
 /** Attach an OAuth identity (obtained via the link-mode redirect) to the
  *  authenticated user. POSTs to the JWT-gated /auth/link-provider; resolves on
- *  success, throws AuthHttpError (carrying the backend message) on conflict. */
-export async function linkProvider(input: LinkProviderInput): Promise<void> {
-  await authedRequest('/api/auth/link-provider', { method: 'POST', body: JSON.stringify(input) })
+ *  success, throws AuthHttpError (carrying the backend message) on conflict.
+ *
+ *  It goes to the AUTHORIZATION SERVER, not to this site's `/api` proxy, and that is
+ *  not interchangeable: the `code` being redeemed was minted for the AS, against the
+ *  provider redirect_uri the AS registered, and the account rows it links live in the
+ *  AS's database. `.shipr` points `auth_url` and `backend_url` at the same host in
+ *  every deployed tier today — which is exactly why a hard-coded `/api/…` looked
+ *  correct — but it declares them separately, and the local dev suite ALREADY splits
+ *  them: the site's proxy reaches this worktree's own backend while the AS is the
+ *  shared auth service. Sent there, the link is written into the wrong database.
+ *  `asEndpoint` keeps the historical `/api/auth/link-provider` shape when no AS base
+ *  is configured, so an unconfigured build behaves exactly as before. */
+export async function linkProvider(
+  input: LinkProviderInput,
+  /** AS base; defaults to `NEXT_PUBLIC_AUTH_API_URL`. Separate from the wire body,
+   *  which is sent verbatim — a base in `input` would be POSTed to the server. */
+  opts: { authApiBase?: string } = {},
+): Promise<void> {
+  await authedRequest(asEndpoint('/auth/link-provider', opts.authApiBase), {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
 }

@@ -1,5 +1,6 @@
 'use client'
 
+import { asEndpoint, authApiBaseOrEnv } from './asBase'
 import { AuthHttpError, extractErrorMessage, extractErrorCode } from './client'
 import {
   assertPasswordlessPasskey,
@@ -47,12 +48,6 @@ export interface BeginLoginOptions {
   callbackPath?: string
 }
 
-/** The configured AS base, trimmed of trailing slashes, or undefined. */
-function authApiBaseOrEnv(explicit?: string): string | undefined {
-  const base = explicit ?? process.env.NEXT_PUBLIC_AUTH_API_URL
-  return base ? base.replace(/\/+$/, '') : undefined
-}
-
 let warnedNoAsBase = false
 
 /**
@@ -90,14 +85,6 @@ function asBaseConfigured(explicit?: string): boolean {
     )
   }
   return false
-}
-
-/** Resolve an AS endpoint path against the configured AS base, falling back to
- *  the same-origin BFF proxy (`/api…`) when no base is set (local dev). The one
- *  place the base-vs-proxy choice for `/oauth/signin/*` is made. */
-function asEndpoint(path: string, authApiBase?: string): string {
-  const base = authApiBaseOrEnv(authApiBase)
-  return base ? `${base}${path}` : `/api${path}`
 }
 
 /**
@@ -274,10 +261,10 @@ const PREFLIGHT_PATH = '/oauth/signin/preflight'
  * than tidiness — `*` with credentials is refused by browsers outright.
  *
  * Anything other than an explicit `allowed: true` — a network error, a non-200, a
- * body of the wrong shape, a CORS refusal — means NO. The probe is then skipped
- * and the page stays anonymous, which is exactly where it would have been had it
- * never asked. Failing closed here costs an avatar; failing open costs the visitor
- * the page they asked for.
+ * body of the wrong shape, a CORS refusal, a wedged server — means NO. The probe is
+ * then skipped and the page stays anonymous, which is exactly where it would have
+ * been had it never asked. Failing closed here costs an avatar; failing open costs
+ * the visitor the page they asked for.
  */
 export async function preflightSsoReturn(opts: {
   clientId: string
@@ -297,6 +284,7 @@ export async function preflightSsoReturn(opts: {
       // look like an authenticated call to every proxy and log in between.
       credentials: 'omit',
       headers: { Accept: 'application/json' },
+      signal: preflightTimeoutSignal(),
     })
     if (!res.ok) return false
     const body = (await res.json()) as { allowed?: unknown }
@@ -304,6 +292,31 @@ export async function preflightSsoReturn(opts: {
   } catch {
     return false
   }
+}
+
+/** How long the preflight may take before it counts as a NO.
+ *
+ *  The AuthProvider AWAITS this on cold load and only calls `setIsLoading(false)`
+ *  after it settles, so an unbounded wait is not a slow answer — it is a header that
+ *  never resolves for the rest of the page's life, on a page the visitor asked for
+ *  by name. A hung TCP connection (a wedged AS, a captive-portal DNS answer, a
+ *  dropped route) does not fail fast on its own: the platform default is tens of
+ *  seconds to minutes, and `fetch` has none of its own at all.
+ *
+ *  Two seconds because the answer is a small uncached JSON read that the AS serves
+ *  from one indexed row, and because the cost of being wrong is asymmetric and
+ *  small: a timed-out preflight leaves the visitor anonymous with a working Login
+ *  button, exactly as a `false` does, and the next navigation asks again. */
+const PREFLIGHT_TIMEOUT_MS = 2_000
+
+/** `AbortSignal.timeout` where the runtime has it, `undefined` where it does not —
+ *  an old browser (or a stubbed test global) then behaves exactly as before rather
+ *  than throwing here, which would turn a missing convenience into a failed login.
+ *  Not inlined so the version check has one home and one comment. */
+function preflightTimeoutSignal(): AbortSignal | undefined {
+  return typeof AbortSignal !== 'undefined' && typeof AbortSignal.timeout === 'function'
+    ? AbortSignal.timeout(PREFLIGHT_TIMEOUT_MS)
+    : undefined
 }
 
 /** Whether the AuthProvider should run a silent cold-load SSO check now. Never
@@ -647,12 +660,32 @@ export function centralLoginTarget(opts: {
  * `credentials: 'include'` is the load-bearing part: the central session cookie is
  * host-only on the AS host, so without it the response's Set-Cookie is dropped and
  * the login degrades to exactly the site-only session this whole path replaces.
+ *
+ * It REFUSES, loudly, when no AS host is configured. {@link asEndpoint} would
+ * otherwise fall back to this origin's own `/api` relay, and a relayed central login
+ * is not a slower central login: the AS's Set-Cookie comes back through THIS host, so
+ * the host-only central cookie lands on the brand site instead of the AS. The login
+ * then appears to succeed — a code is exchanged, this site's header fills in — while
+ * no central session exists, which is the site-only session that made a signed-in
+ * visitor anonymous on the other 40-odd sites. Failing outright is the lesser harm by
+ * a wide margin: a build that cannot log in gets fixed, and one that logs you in
+ * exactly once, on one site, is the bug that took weeks to find. It is also not a
+ * path any deploy takes — `frontend/src/next-config-base.mjs` fails a build with the
+ * variable unset, and the dev suite sets it — so this is the backstop for a build
+ * that slipped past the guard, not a supported mode.
  */
 async function centralLoginStep(
   path: string,
   target: CentralLoginTarget,
   body: Record<string, unknown>,
 ): Promise<MfaChallenge | null> {
+  if (!authApiBaseOrEnv(target.authApiBase)) {
+    throw new Error(
+      'Sign-in is misconfigured on this site: NEXT_PUBLIC_AUTH_API_URL was not set when ' +
+        'it was built, so there is no authorization server to sign in against. Set the ' +
+        'variable on the deploy (frontend/tools/set-backend-env.py) and rebuild.',
+    )
+  }
   const res = await fetch(asEndpoint(path, target.authApiBase), {
     method: 'POST',
     credentials: 'include',

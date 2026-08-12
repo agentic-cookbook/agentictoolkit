@@ -1,7 +1,7 @@
 // websites/shared/auth/src/__tests__/ProviderLinkHandler.test.tsx
 import type { ReactNode } from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 
 const linkProvider = vi.fn()
 const beginLinkProvider = vi.fn((..._args: unknown[]) => true)
@@ -74,7 +74,14 @@ describe('ProviderLinkHandler', () => {
     window.sessionStorage.setItem('adh_link_nonce', 'n1')
     setHash('#link_code=c1&link_provider=github&redirect_uri=https%3A%2F%2Fas%2Fcb&link_nonce=n1')
     render(<ProviderLinkHandler />)
-    await waitFor(() => expect(linkProvider).toHaveBeenCalledWith({ clientSlug: 'adh', providerSlug: 'github', code: 'c1', redirectUri: 'https://as/cb' }))
+    await waitFor(() =>
+      expect(linkProvider).toHaveBeenCalledWith(
+        { clientSlug: 'adh', providerSlug: 'github', code: 'c1', redirectUri: 'https://as/cb' },
+        // The AS base travels beside the body, never inside it: the body is POSTed
+        // verbatim, so a base folded into it would be sent to the server.
+        { authApiBase: undefined },
+      ),
+    )
     // Success modal: title + "added as a sign-in method" body.
     await screen.findByText(/GitHub connected/i)
     await screen.findByText(/added as a sign-in method/i)
@@ -125,7 +132,12 @@ describe('ProviderLinkHandler', () => {
     window.sessionStorage.setItem('adh_pending_link', 'github')
     setHash('#link_code=c2&link_provider=github&redirect_uri=https%3A%2F%2Fas%2Fcb&link_nonce=n2')
     render(<ProviderLinkHandler />)
-    await waitFor(() => expect(linkProvider).toHaveBeenCalledWith({ clientSlug: 'adh', providerSlug: 'github', code: 'c2', redirectUri: 'https://as/cb' }))
+    await waitFor(() =>
+      expect(linkProvider).toHaveBeenCalledWith(
+        { clientSlug: 'adh', providerSlug: 'github', code: 'c2', redirectUri: 'https://as/cb' },
+        { authApiBase: undefined },
+      ),
+    )
     await screen.findByText(/GitHub is already connected/i)
     expect(window.sessionStorage.getItem('adh_pending_link')).toBeNull()
   })
@@ -199,6 +211,29 @@ describe('ProviderLinkHandler forward leg (pending intent)', () => {
       clientId: 'adh',
     })
     expect(window.sessionStorage.getItem('adh_pending_link')).toBeNull()
+  })
+
+  // Both legs, in one test, because the failure mode is the two disagreeing: the
+  // forward leg starts the OAuth round-trip at one server and the return leg redeems
+  // its code at another, which owns neither the pending flow nor the account rows.
+  it('sends an explicit AS base to BOTH legs of the link', async () => {
+    window.sessionStorage.setItem('adh_pending_link', 'github')
+    render(<ProviderLinkHandler authApiBase="https://as.example.com" />)
+    await screen.findByRole('dialog', { name: /Add GitHub to your account/i })
+    fireEvent.click(screen.getByRole('button', { name: /Continue with GitHub/i }))
+    expect(beginLinkProvider).toHaveBeenCalledWith(
+      expect.objectContaining({ authApiBase: 'https://as.example.com' }),
+    )
+
+    cleanup()
+    window.sessionStorage.setItem('adh_link_nonce', 'n9')
+    setHash('#link_code=c9&link_provider=github&redirect_uri=https%3A%2F%2Fas%2Fcb&link_nonce=n9')
+    render(<ProviderLinkHandler authApiBase="https://as.example.com" />)
+    await waitFor(() =>
+      expect(linkProvider).toHaveBeenCalledWith(expect.anything(), {
+        authApiBase: 'https://as.example.com',
+      }),
+    )
   })
 
   it('"Not now" clears the intent and dismisses without linking', async () => {

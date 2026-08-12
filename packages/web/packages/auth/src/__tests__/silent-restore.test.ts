@@ -278,6 +278,35 @@ describe('preflightSsoReturn', () => {
     expect(await preflightSsoReturn({ ...args, fetchImpl })).toBe(false)
   })
 
+  // A hung request is NOT the same failure as a refused one, which is why the two
+  // cases below exist alongside the throwing one. The AuthProvider awaits this call
+  // before it clears `isLoading`, so "never answers" is not a slow avatar — it is a
+  // header stuck in its loading state for the life of the page, on every site, with
+  // no Login button to click. `fetch` has no timeout of its own and a wedged TCP
+  // connection does not fail fast, so the bound has to be passed in.
+  it('passes an abort signal, so a wedged AS cannot answer never', async () => {
+    const fetchImpl = preflightFetch(true)
+    await preflightSsoReturn({ ...args, fetchImpl })
+    const [, init] = preflightCall(fetchImpl)
+    expect(init.signal).toBeInstanceOf(AbortSignal)
+    // Not already aborted: a signal that starts aborted would refuse every preflight
+    // and look exactly like a correctly-configured refusal.
+    expect(init.signal?.aborted).toBe(false)
+  })
+
+  // Real time, deliberately: `AbortSignal.timeout` is implemented inside the runtime
+  // and does not go through the `setTimeout` vi.useFakeTimers replaces, so a faked
+  // clock would hang here rather than prove anything. The wait is the timeout itself.
+  it('resolves false when the AS never answers at all', async () => {
+    const fetchImpl = vi.fn(
+      (_url: string, init?: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => reject(new Error('aborted')))
+        }),
+    ) as unknown as typeof fetch
+    await expect(preflightSsoReturn({ ...args, fetchImpl })).resolves.toBe(false)
+  }, 10_000)
+
   it('false on a body of the wrong shape', async () => {
     // A misrouted proxy that answers 200 with someone else's JSON (or HTML) must not
     // read as permission.

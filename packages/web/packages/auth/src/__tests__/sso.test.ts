@@ -302,19 +302,30 @@ describe('centralEmailLogin', () => {
     expect(JSON.parse(calls[0]!.init!.body as string).clientId).toBe('admin')
   })
 
-  it('falls back to the same-origin BFF proxy when no AS base is configured', async () => {
+  // This route does NOT take the same-origin `/api` fallback the rest of asEndpoint's
+  // callers take, and the difference is the whole point. A relayed central login sends
+  // the AS's Set-Cookie back through THIS host, so the host-only central cookie is
+  // stored for the brand site instead of the AS: the login looks like it worked — a
+  // code is exchanged, this header fills in — while no central session exists, which
+  // is a signed-in visitor reading as anonymous on the other 40-odd sites. So the
+  // unconfigured build must refuse and say so, not half-succeed.
+  it('refuses, rather than posting credentials to the same-origin proxy, with no AS base', async () => {
     const loc = stubLocation('https://hub.example.com')
     const calls = stubFetch({ redirectUrl: 'https://x.example.com/cb#code=1' })
 
-    await centralEmailLogin({
-      clientId: 'adh',
-      returnUrl: 'https://x.example.com/cb',
-      identifier: 'a',
-      password: 'b',
-    })
+    await expect(
+      centralEmailLogin({
+        clientId: 'adh',
+        returnUrl: 'https://x.example.com/cb',
+        identifier: 'a',
+        password: 'b',
+      }),
+    ).rejects.toThrow(/NEXT_PUBLIC_AUTH_API_URL/)
 
-    expect(calls[0]!.url).toBe('/api/oauth/signin/login')
-    expect(loc.href).toBe('https://x.example.com/cb#code=1')
+    // The credentials never left the page, and nothing navigated: a thrown message is
+    // what LoginCard renders, so the visitor is told instead of silently half-logged-in.
+    expect(calls).toHaveLength(0)
+    expect(loc.href).toBe('')
   })
 
   it('throws the server message and does NOT navigate on failure', async () => {

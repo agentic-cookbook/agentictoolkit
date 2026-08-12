@@ -19,6 +19,9 @@
     "submitButton": "Create account",
     "loadingLabel": "Creating your account…",
     "submitError": "Sign-up failed — please try again.",
+    "finishSigninButton": "Finish signing in",
+    "finishSigninLoadingLabel": "Signing you in…",
+    "createdNotSignedIn": "Your account was created — press Finish signing in to try again.",
     "legalPrefix": "By joining, you agree to our ",
     "legalTerms": "Terms of Service",
     "legalConjunction": " and ",
@@ -40,6 +43,7 @@
     "passkeyEmailRequired": "Enter your email, user ID, or phone to sign in with a passkey.",
     "passkeyFailed": "Passkey sign-in failed.",
     "accountLinkNotice": "You already have an account — sign in with your password to connect {provider}.",
+    "accountCreatedMfaNotice": "Your account was created, but signing in needs a second factor. Log in here to finish.",
     "signupPrompt": "Don't have an account?",
     "signupLink": "Sign up"
   },
