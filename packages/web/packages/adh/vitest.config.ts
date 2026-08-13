@@ -52,6 +52,17 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: true,
+    // The gate runs `pnpm -r --if-present test`, which starts a vitest worker POOL PER PACKAGE
+    // across the whole workspace at once, so a worker here can be starved of CPU for seconds at a
+    // stretch. That is not a slow test, it is a descheduled one, and the default 5 s budget is
+    // narrow enough to lose the race: `siteHomeShell.test.tsx`'s "selecting a workspace pushes the
+    // URL, and the settled effect writes the cache and the server" measures 61 ms run on its own
+    // and timed out at 5 000 ms under the full run — an 80x blowup with the package's code
+    // unchanged, having passed the identical step 40 minutes earlier. A ceiling costs nothing when
+    // it is not hit, so raise it for the package rather than for the one test that happened to be
+    // descheduled this time; the next one would otherwise be a fresh flake with the same cause.
+    // Same reason and same number as packages/markdown.
+    testTimeout: 30_000,
     // Two setups. The root one for its deterministic localStorage shim (above); the data
     // package's for the toolkit query cache, which lives at MODULE scope — one per browser tab
     // by design — and therefore outlives `cleanup()`. Any test here that exercises a real
