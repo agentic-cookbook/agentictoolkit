@@ -61848,7 +61848,7 @@ export interface components {
                 boundSiteId: string | null;
             };
             entry: components["schemas"]["PublicRegistryEntryDetail"];
-            /** @description schema.org markup from entryJsonLd, including a resolved url — the route derives the entry's canonical origin from the backend's vendored sites registry (publicOriginFor) before building this object, so the page only needs to place it verbatim in a <script type="application/ld+json"> tag. */
+            /** @description schema.org markup from entryJsonLd, including a resolved url — the route derives the entry's canonical base (host AND path prefix) from the backend's vendored sites registry (publicEntryBaseFor) before building this object, so the page only needs to place it verbatim in a <script type="application/ld+json"> tag. */
             jsonLd: {
                 [key: string]: unknown;
             };

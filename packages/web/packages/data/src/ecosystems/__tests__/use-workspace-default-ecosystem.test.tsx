@@ -4,13 +4,15 @@
 //
 // `isPending` answers "is there an answer yet", so it is false on every mount after the first —
 // the resolution is cached. A host wired to it reports the very first visit and then goes quiet
-// forever, even though every later mount still re-reads behind the copy already on screen.
+// forever, even on the mounts that DO re-read behind the copy already on screen: the ones whose
+// cached entry has gone stale, which is every mount after a write or after the client's freshness
+// window passes.
 // `isFetching` is the wider flag, and the second mount below is the case that separates them: an
 // id and a read in flight at the same moment.
 import type { ReactElement } from "react";
 import { render, screen, cleanup, act } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { QueryClient, QueryClientProvider, notifyManager } from "@tanstack/react-query";
+import { QueryClientProvider, notifyManager } from "@tanstack/react-query";
 
 // Only the transport, so the hook, its key and its cache are all the real ones.
 vi.mock("../../http", async (importOriginal) => ({
@@ -19,6 +21,7 @@ vi.mock("../../http", async (importOriginal) => ({
 }));
 
 import { useWorkspaceDefaultEcosystemId } from "../use-workspace-default-ecosystem";
+import { getToolkitQueryClient } from "../../query";
 import { authedJson } from "../../http";
 
 // Notify observers SYNCHRONOUSLY. react-query's default scheduler is a real `setTimeout(fn, 0)`,
@@ -32,9 +35,12 @@ const mockedJson = vi.mocked(authedJson);
 /** The one infrastructure row the resolver reads `id` and `canManage` off. */
 const ROW = [{ id: "eco-1", canManage: true }];
 
-/** One client for the whole file: what makes the second mount a CACHED visit is the cache
- *  outliving the first one, exactly as the app's single toolkit client does. */
-const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+/** The app's own client, not one made here: the hook passes `getToolkitQueryClient()` to
+ *  `useQuery` explicitly, so a client handed down through a provider is never the one it reads —
+ *  a local client would leave these assertions describing a cache the hook does not use. It is a
+ *  module-scope singleton, which is also what makes the second mount below a CACHED visit: the
+ *  entry outlives the first one, exactly as it does in a tab. */
+const qc = getToolkitQueryClient();
 
 function Probe(): ReactElement {
   const { ecosystemId, isPending, isFetching } = useWorkspaceDefaultEcosystemId("acme");
@@ -87,6 +93,14 @@ describe("useWorkspaceDefaultEcosystemId", () => {
     expect(probe().textContent).toBe("eco-1");
     expect(probe().dataset.fetching).toBe("false");
     cleanup();
+
+    // Age the entry. The toolkit client holds a resolution FRESH for five minutes, so a remount
+    // inside that window is served from cache and starts no read at all — which is the caching
+    // working, not a case worth asserting. Invalidating with nothing mounted marks the entry
+    // stale without fetching (`refetchType: "active"`, and there is no active observer), so the
+    // mount below is the real case: a cached answer AND a re-read, the way it looks after a write
+    // or once the window has passed.
+    await qc.invalidateQueries({ queryKey: ["workspace-default-ecosystem"] });
 
     // The second visit. The id is served from cache with no gap, and the re-read behind it is
     // the whole reason `isFetching` exists here: `isPending` is false throughout.

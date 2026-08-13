@@ -20,6 +20,7 @@
  * utilities. Chained HERE rather than from a host because under pnpm's isolated
  * node_modules only a declaring package can resolve the specifier. */
 @import "@agentic-toolkit/api-explorer/sources.css";
+@import "@agentic-toolkit/resource/sources.css";
 
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";

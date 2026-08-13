@@ -44,9 +44,9 @@ export function useWorkspaceDefaultEcosystemId(workspaceSlug: string | undefined
   isPending: boolean;
   /** A read is in flight, whether or not there is already an answer on screen. Wider than
    *  {@link isPending} on purpose: after the first visit the resolution is cached, so `isPending`
-   *  is false on every subsequent mount while a re-read runs behind the copy being shown. A host
-   *  that reports progress — a topic list's spinner — wants this one, or the only visit it ever
-   *  admits to reading is the first. */
+   *  is false on every subsequent mount — including the ones that re-read behind the copy being
+   *  shown, once the entry has gone stale. A host that reports progress — a topic list's spinner —
+   *  wants this one, or the only visit it ever admits to reading is the first. */
   isFetching: boolean;
 } {
   // The TENANT is a key segment, exactly as it is for every resource list and item. The answer is

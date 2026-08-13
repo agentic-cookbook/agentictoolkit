@@ -81,6 +81,10 @@ var SITE_ROUTE_SEGMENTS = [
   "forum",
   "people",
   "topics",
+  // consultants — app/consultant/[entry], the public profile of one directory entry. The site is
+  // named in the plural and the route in the singular, so the reserved word is the one the URL
+  // spends, not the one on the tin.
+  "consultant",
   // cookbook — the corpus IS these nine words. Each is a real directory,
   // `app/(reader)/<section>/[[...slug]]`, so `/guidelines/testing/test-pyramid` is a document's
   // own address with nothing in front of it; the route group contributes no segment. They are
@@ -128,9 +132,19 @@ var SITE_ROUTE_SEGMENTS = [
   "mcp",
   "applications",
   "projects",
-  // personaregistry — app/{org,persona}. (`user` is below.)
+  // personaregistry — `org` and `persona`, both REDIRECT sources in that site's `next.config.ts`
+  // for the same reason the hub's eight above are: a redirect source claims its segment as
+  // surely as a directory does. Neither is a directory there any more. `app/persona/[slug]`
+  // existed only while the family's `[workspace]` sat at that site's root; `app/org/[slug]` was
+  // older and outlived that window. Personas, users and organizations all address off the ROOT
+  // now (`app/[slug]`) — an org is shown the way a user is, so it needs no prefix — and the old
+  // prefixes stayed behind pointing at it. (`user` is the hub's public profile prefix, listed
+  // above, and is a redirect source on this site too.)
   "org",
   "persona",
+  // registries — app/registry/[registry] and app/registry/[registry]/[entry]: one owner-built
+  // directory, and one entry within it. Singular for the same reason `consultant` is.
+  "registry",
   // research — app/{papers,search}.
   "papers",
   "search",
@@ -196,6 +210,7 @@ var RESERVED_HANDLE_WORDS = [
   "persona-services",
   "personas",
   "products",
+  "registries",
   "research",
   "server-bags",
   "signin-apps",

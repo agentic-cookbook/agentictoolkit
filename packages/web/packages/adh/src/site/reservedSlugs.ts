@@ -82,6 +82,10 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
   'forum',
   'people',
   'topics',
+  // consultants — app/consultant/[entry], the public profile of one directory entry. The site is
+  // named in the plural and the route in the singular, so the reserved word is the one the URL
+  // spends, not the one on the tin.
+  'consultant',
   // cookbook — the corpus IS these nine words. Each is a real directory,
   // `app/(reader)/<section>/[[...slug]]`, so `/guidelines/testing/test-pyramid` is a document's
   // own address with nothing in front of it; the route group contributes no segment. They are
@@ -139,6 +143,9 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
   // above, and is a redirect source on this site too.)
   'org',
   'persona',
+  // registries — app/registry/[registry] and app/registry/[registry]/[entry]: one owner-built
+  // directory, and one entry within it. Singular for the same reason `consultant` is.
+  'registry',
   // research — app/{papers,search}.
   'papers',
   'search',
@@ -245,6 +252,7 @@ export const RESERVED_HANDLE_WORDS: readonly string[] = [
   'persona-services',
   'personas',
   'products',
+  'registries',
   'research',
   'server-bags',
   'signin-apps',

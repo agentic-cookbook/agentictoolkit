@@ -4,16 +4,24 @@ import type { SiteRoute, SiteSeo } from '@agentic-toolkit/adh-registry/seo';
 import type { MarketingRootHtmlProps } from '@agentic-toolkit/adh/marketing';
 /** The paths every site in the family keeps out of its production index.
  *
- *  Measured, not assumed: all but two of the sites in content/landing/manifest.json want
- *  exactly this list. The two that differ say so by passing `robotsDisallow`, which is the
- *  only way to disagree — `help` allows its whole surface (`['/api/', '/auth/']`), and `hub`
- *  adds `/settings` to it. A site that ADDS spreads this constant rather than restating it:
- *  a hand-copied list is a list that stops tracking this one, and hub's did — it dropped
- *  `/home` on the grounds that its `/home` is the signed-in app itself, which is a reason to
- *  keep a crawler out rather than a reason to let one in.
+ *  Measured, not assumed: all but three of the sites in content/landing/manifest.json want
+ *  exactly this list. The three that differ say so by passing `robotsDisallow`, which is the
+ *  only way to disagree — `help` allows its whole surface (`['/api/', '/auth/']`), `hub`
+ *  adds `/settings` to it, and `personaregistry` takes the same two `help` keeps. A site
+ *  that ADDS spreads this constant rather than restating it: a hand-copied list is a list
+ *  that stops tracking this one, and hub's did — it dropped `/home` on the grounds that its
+ *  `/home` is the signed-in app itself, which is a reason to keep a crawler out rather than
+ *  a reason to let one in.
+ *
+ *  A site whose ROOT SEGMENT is user content has to subtract, and that is personaregistry's
+ *  reason. `Disallow:` is a PREFIX match, not a path segment: on a site where `/<slug>` is a
+ *  published handle, `/home` also excludes `/homelab` and `/login` excludes `/loginbot`.
+ *  Three of these five lines are page paths, and a page path is only safe to list when the
+ *  root segment is a fixed route table — which it is on 41 of the 42 sites.
  *
  *  `/api/` is the same-origin BFF proxy and `/auth/` the SSO callback: neither is a page,
- *  so neither is a crawl target on any tier. */
+ *  so neither is a crawl target on any tier — and both carry a trailing slash, so neither
+ *  can swallow a handle the way the bare page paths do. */
 export declare const FAMILY_ROBOTS_DISALLOW: readonly string[];
 /** The sitemap's route list, or a function that goes and gets it.
  *
