@@ -25,6 +25,13 @@ function Pane({ busy }: { busy: boolean }) {
 // stack renders — and `busy` is now one of them. Left out, a level that flips ONLY its busy flag
 // keeps the old key, never re-registers, and the spinner never appears: the flag would look wired
 // (it typechecks, it renders in isolation) and do nothing in the host.
+// The read is announced by ONE always-mounted live region whose TEXT changes, so the assertion is
+// on what that region CONTAINS rather than on its presence: a region inserted at the same instant
+// it fills announces nothing, since assistive tech reads a live region's mutations and not its
+// arrival. `role="status"` also takes its name from the author and never from its content, so
+// there is no accessible name to match on either.
+const region = () => screen.getByRole('status')
+
 describe('a published level re-registers when only `busy` changes', () => {
   it('shows the spinner after a busy-only flip', () => {
     const { rerender } = render(
@@ -32,13 +39,13 @@ describe('a published level re-registers when only `busy` changes', () => {
         <Pane busy={false} />
       </StandaloneRailHost>,
     )
-    expect(screen.queryByRole('status', { name: 'Loading' })).not.toBeInTheDocument()
+    expect(region()).toBeEmptyDOMElement()
 
     rerender(
       <StandaloneRailHost>
         <Pane busy />
       </StandaloneRailHost>,
     )
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
+    expect(region()).toHaveTextContent('Loading')
   })
 })

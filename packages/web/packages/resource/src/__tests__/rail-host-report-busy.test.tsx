@@ -44,8 +44,13 @@ const listNamed = (title: string): HTMLElement => {
   return found
 }
 
+/** Whether that list is announcing a read. The announcement is ONE always-mounted live region per
+ *  list whose TEXT changes — a region that arrives with its message announces nothing, because
+ *  assistive tech reads a live region's mutations rather than its insertion — so the question is
+ *  what the region CONTAINS. It has no accessible name to ask for: `role="status"` takes its name
+ *  from the author, never from its content. */
 const spinning = (title: string): boolean =>
-  within(listNamed(title)).queryByRole('status', { name: 'Loading' }) !== null
+  within(listNamed(title)).getByRole('status').textContent === 'Loading'
 
 describe('a reading pane lights the list it sits under', () => {
   it('spins the enclosing list while the pane reports, and stops when it stops', () => {

@@ -13,5 +13,17 @@
  * so HMR sees source edits); `dist` covers prod builds, where `files` ships only
  * `dist` + this file and the `src` glob simply matches nothing.
  * Mirrors @agentic-toolkit/ecosystem-config's self-registration. */
+/* The markup these panes MOUNT from other packages, which Tailwind reaches only if
+ * something registers it — an unregistered utility is never written, and neither
+ * `next build` nor a typecheck says a word (see tools/tailwind_registration.py).
+ *
+ * - `adh` for MessagingSurface, the whole body of the Messaging pane.
+ * - `ecosystem-config` for StorageTokensPanel, the Tokens row on the Storage rail.
+ *
+ * A site that already rides adh's own chain would get these anyway; a site that mounts
+ * a pane without riding it did not, which is the case these two lines are for. */
+@import "@agentic-toolkit/adh/sources.css";
+@import "@agentic-toolkit/ecosystem-config/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";
