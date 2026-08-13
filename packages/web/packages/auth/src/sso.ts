@@ -801,7 +801,10 @@ export interface BeginLinkProviderOptions {
 }
 
 /** sessionStorage key holding the reactive "link this provider after login"
- *  intent. The OAuth callback writes the provider slug here on `account_exists`;
+ *  intent. The OAuth callback writes the provider slug here when the visitor
+ *  ACKNOWLEDGES its `account_exists` notice — never before, because every reader
+ *  below takes the key's presence to mean the visitor already agreed, and one of
+ *  them (ProviderLinkHandler) is mounted on the callback page too;
  *  the login page reads it for a notice; LoginCard reads it after a successful
  *  password login to prompt the link-confirm modal; ProviderLinkHandler clears it
  *  when it completes the returning `#link_code`. Single source of truth so a

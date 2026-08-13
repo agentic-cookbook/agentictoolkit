@@ -1,17 +1,23 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const replace = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
 vi.mock('@agentic-toolkit/ui/components/alert-modal', () => ({
-  AlertModal: ({ title }: { title: string }) => <div role="dialog" aria-label={title}>{title}</div>,
+  AlertModal: ({ title, confirmLabel, onConfirm }: { title: string; confirmLabel?: string; onConfirm?: () => void }) => (
+    <div role="dialog" aria-label={title}>
+      {title}
+      {confirmLabel ? <button onClick={onConfirm}>{confirmLabel}</button> : null}
+    </div>
+  ),
 }));
 vi.mock('../client', () => ({ exchangeSsoCode: vi.fn() }));
 vi.mock('../report', () => ({ reportUnexpectedAuthError: vi.fn() }));
 
 import { SsoCallback } from '../ui/SsoCallback';
-import { loginDisabledTitle } from '../labels';
+import { loginDisabledTitle, accountExistsTitle } from '../labels';
+import { PENDING_LINK_KEY } from '../sso';
 import { exchangeSsoCode } from '../client';
 
 // Mirror of the private key in sso.ts — the stash centralLoginTarget writes and
@@ -79,6 +85,23 @@ describe('SsoCallback gate codes', () => {
     renderAt('#error=login_disabled', { isAuthenticated: true });
     await waitFor(() => expect(screen.getByRole('dialog', { name: loginDisabledTitle })).toBeTruthy());
     expect(replace).not.toHaveBeenCalledWith('/home');
+  });
+
+  it('does not stash the pending link until the account_exists notice is acknowledged', async () => {
+    // ProviderLinkHandler is mounted at the app root — this page included — and reads
+    // a stashed intent as "the visitor agreed to connect this provider", opening its
+    // own confirm the moment it sees one alongside a session. Writing the key while
+    // this notice is still up therefore put two modals on one page and let whichever
+    // effect ran last decide which the visitor saw. Nothing may be stashed before
+    // Continue; Continue must stash it and go to /login, in that order.
+    renderAt('#error=account_exists&link_provider=github', { isAuthenticated: true });
+    await waitFor(() => expect(screen.getByRole('dialog', { name: accountExistsTitle })).toBeTruthy());
+    expect(window.sessionStorage.getItem(PENDING_LINK_KEY)).toBeNull();
+    expect(replace).not.toHaveBeenCalledWith('/home');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(window.sessionStorage.getItem(PENDING_LINK_KEY)).toBe('github');
+    expect(replace).toHaveBeenCalledWith('/login');
   });
 
   it('redirects to signupBlockedHref with the email on #error=signups_closed', async () => {

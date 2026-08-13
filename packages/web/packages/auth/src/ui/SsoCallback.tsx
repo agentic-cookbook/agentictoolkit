@@ -31,8 +31,9 @@ export interface SsoCallbackProps<U extends AuthUser = AuthUser> {
  * root (hub, admin) — they pass their own `loginWithTokens`/`isAuthenticated` rather
  * than wrapping a fresh {@link AuthProvider} the way the standalone {@link AuthCallback}
  * does. Parses the AS result fragment and: relays `login_required` home; on
- * `account_exists` stashes the pending link + shows the themed acknowledge modal →
- * `/login`; surfaces any other `#error`; otherwise exchanges the `#code`. A successful
+ * `account_exists` shows the themed acknowledge modal, which on Continue stashes the
+ * pending link and goes to `/login`; surfaces any other `#error`; otherwise exchanges
+ * the `#code`. A successful
  * sign-in redirects to `homeHref` — but NOT out from under the (async) account_exists
  * modal.
  */
@@ -94,14 +95,13 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
       router.replace(destination())
       return
     }
-    // account_exists + link_provider: stash the intent FIRST so it survives the
-    // acknowledgement, strip the fragment, then show a themed modal disclosing that
-    // signing in will connect this provider. The /login redirect waits for the
-    // acknowledgement (modal onConfirm).
+    // account_exists + link_provider: strip the fragment, then show a themed modal
+    // disclosing that signing in will connect this provider. The /login redirect AND
+    // the stash both wait for the acknowledgement (modal onConfirm) — see the modal
+    // below for why the intent must not be written before the visitor answers.
     if (oauthError === 'account_exists') {
       const provider = params.get('link_provider')
       if (provider) {
-        try { window.sessionStorage.setItem(PENDING_LINK_KEY, provider) } catch { /* ignore */ }
         stripFragment()
         holdHomeRedirectRef.current = true // hold before the redirect effect can fire
         // adh-ui-allow: react-hooks/set-state-in-effect — one-shot reaction to the parsed OAuth callback fragment (a client-only window.location read, guarded by startedRef); opens the modal, it does not sync state; approved by Mike Fullerton 2026-06-22
@@ -202,7 +202,22 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
           title={accountExistsTitle}
           description={accountExistsLinkBody(accountExistsProvider)}
           confirmLabel="Continue"
-          onConfirm={() => router.replace(loginHref)}
+          onConfirm={() => {
+            // The intent is written HERE, on the acknowledgement, and not when the
+            // fragment was parsed. `ProviderLinkHandler` is mounted at the app root
+            // — this page included — and treats a stashed intent as "the visitor
+            // agreed to connect this provider", opening its own "Add <provider> to
+            // your account?" confirm as soon as it sees one alongside a session.
+            // Writing at parse time made that true before the visitor had answered
+            // anything, so on an already-authenticated session the two modals raced
+            // for the same page: whichever ran its effect after the write won, and
+            // which one that was came down to when the auth state settled.
+            // Writing on Continue keeps the key meaning exactly what its reader
+            // assumes, and it still survives the navigation below — the two run in
+            // the same tick.
+            try { window.sessionStorage.setItem(PENDING_LINK_KEY, accountExistsProvider) } catch { /* ignore */ }
+            router.replace(loginHref)
+          }}
         />
       )}
       {loginDisabled && (
