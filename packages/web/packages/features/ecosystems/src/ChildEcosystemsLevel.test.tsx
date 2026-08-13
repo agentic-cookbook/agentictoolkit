@@ -142,14 +142,19 @@ describe("the Child Ecosystems rail's busy flag tracks the children query's isFe
 
     // BUSY: the read is still the held-open promise, so the rail's title-bar spinner is up and its
     // list is still in the "nothing has ever landed" empty state.
-    expect(within(childRail()).getByRole("status", { name: "Loading" })).not.toBeNull();
+    // The read is announced by ONE always-mounted live region whose TEXT changes, so the
+    // assertion is on what that region CONTAINS: a region inserted at the same instant it fills
+    // announces nothing, since assistive tech reads a live region's mutations and not its arrival.
+    // `role="status"` also takes its name from the author and never from its content, so there is
+    // no accessible name to match on either.
+    expect(within(childRail()).getByRole("status").textContent).toBe("Loading");
     expect(within(childRail()).getByText("Loading…")).not.toBeNull();
 
     land([WIDGETS]);
 
     // SETTLED: the spinner clears and the real row paints, in the same rail.
     await waitFor(() => {
-      expect(within(childRail()).queryByRole("status", { name: "Loading" })).toBeNull();
+      expect(within(childRail()).getByRole("status").textContent).toBe("");
     });
     expect(within(childRail()).getByText("Widgets")).not.toBeNull();
   });

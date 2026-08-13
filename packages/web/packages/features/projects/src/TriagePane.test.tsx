@@ -368,14 +368,19 @@ describe("TriagePane", () => {
     render(<Harness />);
 
     const rail = await screen.findByRole("complementary", { name: "Topic list" });
-    expect(within(rail).getByRole("status", { name: "Loading" })).not.toBeNull();
+    // The read is announced by ONE always-mounted live region whose TEXT changes, so the
+    // assertion is on what that region CONTAINS: a region inserted at the same instant it fills
+    // announces nothing, since assistive tech reads a live region's mutations and not its arrival.
+    // `role="status"` also takes its name from the author and never from its content, so there is
+    // no accessible name to match on either.
+    expect(within(rail).getByRole("status").textContent).toBe("Loading");
 
     // The point of the spinner on THIS column: the queue read is the only read it makes, and it
     // runs again after every accept and decline — the moment the rows on screen are one decision
     // out of date and the column is catching up.
     land([structuredClone(ANCIENT)]);
     await waitFor(() =>
-      expect(within(rail).queryByRole("status", { name: "Loading" })).toBeNull(),
+      expect(within(rail).getByRole("status").textContent).toBe(""),
     );
     expect(within(rail).getByRole("button", { name: /Login is broken on Safari/ })).not.toBeNull();
   });

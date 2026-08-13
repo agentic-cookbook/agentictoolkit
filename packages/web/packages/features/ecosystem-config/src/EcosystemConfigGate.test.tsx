@@ -65,8 +65,13 @@ function renderGate() {
 }
 
 const list = (): HTMLElement => screen.getByRole("complementary", { name: "Topic list" });
-const spinner = (): HTMLElement | null =>
-  within(list()).queryByRole("status", { name: "Loading" });
+/** Whether the list is announcing a read. The announcement is ONE always-mounted live region whose
+ *  TEXT changes — a region that arrives together with its message announces nothing, because
+ *  assistive tech reads a live region's mutations rather than its insertion — so the question is
+ *  what the region CONTAINS. There is no accessible name to ask for: `role="status"` takes its name
+ *  from the author, never from its content. */
+const spinning = (): boolean =>
+  within(list()).getByRole("status").textContent === "Loading";
 
 // This vitest config has no `globals: true` / auto-cleanup setup file, so each render must be
 // torn down explicitly or the next test's queries see BOTH mounted trees.
@@ -83,7 +88,7 @@ describe("the topic list above the gate reports its scope resolution", () => {
     // The rows are listed already — they are static — and the spinner is the only thing saying
     // the pane below them is not yet scoped to anything.
     expect(within(list()).getByText("Server bags")).not.toBeNull();
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
   });
 
   it("stops once the scope has landed", () => {
@@ -91,7 +96,7 @@ describe("the topic list above the gate reports its scope resolution", () => {
     renderGate();
 
     expect(screen.getByText("pane for eco-1")).not.toBeNull();
-    expect(spinner()).toBeNull();
+    expect(spinning()).toBe(false);
   });
 
   it("spins again on a cached re-read, where nothing is pending", () => {
@@ -100,6 +105,6 @@ describe("the topic list above the gate reports its scope resolution", () => {
     resolves({ ecosystemId: "eco-1", isPending: false, isFetching: true });
     renderGate();
 
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
   });
 });

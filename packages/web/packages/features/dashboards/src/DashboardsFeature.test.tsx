@@ -281,11 +281,16 @@ describe("the Dashboards list says when it is reading", () => {
   // The stack renders ONE topic list per level, and each carries the same accessible name — so the
   // query has to say which one. This is the top level, the one titled "Dashboards"; a deeper
   // section's list publishes its own `busy` and is not what these tests are about.
-  const spinner = () => {
+  /** Whether that list is announcing a read. The announcement is ONE always-mounted live region
+   *  whose TEXT changes — a region that arrives together with its message announces nothing,
+   *  because assistive tech reads a live region's mutations rather than its insertion — so the
+   *  question is what the region CONTAINS. There is no accessible name to ask for:
+   *  `role="status"` takes its name from the author, never from its content. */
+  const spinning = (): boolean => {
     const lists = screen.getAllByRole("complementary", { name: "Topic list" });
     const top = lists.find((el) => within(el).queryByText("Dashboards"));
     if (!top) throw new Error("no topic list titled Dashboards");
-    return within(top).queryByRole("status", { name: "Loading" });
+    return within(top).getByRole("status").textContent === "Loading";
   };
 
   it("spins in front of the title while the lists are read, and stops when they land", async () => {
@@ -302,9 +307,9 @@ describe("the Dashboards list says when it is reading", () => {
       </RailHostBoundary>,
     );
 
-    await waitFor(() => expect(spinner()).not.toBeNull());
+    await waitFor(() => expect(spinning()).toBe(true));
     landGroups([structuredClone(GROUP)]);
-    await waitFor(() => expect(spinner()).toBeNull());
+    await waitFor(() => expect(spinning()).toBe(false));
   });
 
   // Both reads start together, before either row is picked, and Sites renders each site's group
@@ -324,10 +329,10 @@ describe("the Dashboards list says when it is reading", () => {
     // The groups read resolves immediately; the section it fills is on screen and the spinner is
     // still up, because the other list has not landed.
     expect(await screen.findByText("Select a group to edit, or create a new one.")).not.toBeNull();
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
 
     landSites([structuredClone(SITE)]);
-    await waitFor(() => expect(spinner()).toBeNull());
+    await waitFor(() => expect(spinning()).toBe(false));
   });
 });
 

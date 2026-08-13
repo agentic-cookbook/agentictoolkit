@@ -204,8 +204,11 @@ describe('useCrudResource fetching', () => {
   })
 
   it('goes true again when the table SWITCHES under a live hook', async () => {
-    // The most visible case: the browser is still showing the previous table's rows, because
-    // `hasLoadedRef` is already set, so nothing on screen says the new table is on its way.
+    // The switch is the case `loading` is keyed per-list FOR: `loadedFor` holds which list the
+    // rows on screen came from, so a different table has loaded nothing and the skeleton is right
+    // to come back. (A mount-scoped `hasLoaded` boolean was what left the PREVIOUS table's rows
+    // sitting under the new table's header.) `fetching` is true here too — it is true for BOTH
+    // this and the re-list above, which is why it is the flag a pane reports upward with.
     authedJson.mockResolvedValueOnce([{ id: '1' }])
     const { result, rerender } = renderHook(({ meta }) => useCrudResource(meta), {
       initialProps: { meta: tiers },
@@ -214,7 +217,7 @@ describe('useCrudResource fetching', () => {
 
     const switched = deferredList()
     rerender({ meta: links })
-    expect(result.current.loading).toBe(false)
+    expect(result.current.loading).toBe(true)
     expect(result.current.fetching).toBe(true)
 
     await act(async () => { switched.resolve([]) })

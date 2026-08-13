@@ -465,14 +465,19 @@ describe("WorkItemsSurface", () => {
     // that is selected, which is the same cards for every one of them. That is why one flag
     // covers five rows rather than needing five.
     const rail = await screen.findByRole("complementary", { name: "Topic list" });
-    expect(within(rail).getByRole("status", { name: "Loading" })).not.toBeNull();
+    // The read is announced by ONE always-mounted live region whose TEXT changes, so the
+    // assertion is on what that region CONTAINS: a region inserted at the same instant it fills
+    // announces nothing, since assistive tech reads a live region's mutations and not its arrival.
+    // `role="status"` also takes its name from the author and never from its content, so there is
+    // no accessible name to match on either.
+    expect(within(rail).getByRole("status").textContent).toBe("Loading");
     for (const label of ["List", "Board", "Table", "Timeline", "Calendar"]) {
       expect(within(rail).getByRole("button", { name: label })).not.toBeNull();
     }
 
     land([structuredClone(W1), structuredClone(W2)]);
     await listLoaded();
-    expect(within(rail).queryByRole("status", { name: "Loading" })).toBeNull();
+    expect(within(rail).getByRole("status").textContent).toBe("");
   });
 
   // The three PLANNING values the surface loads for its views: the WORKSPACE's cycles (one list

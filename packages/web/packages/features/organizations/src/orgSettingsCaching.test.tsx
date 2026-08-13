@@ -101,8 +101,12 @@ function warmOrgRecord(id: string) {
 }
 
 const rail = (): HTMLElement => screen.getByRole("complementary", { name: "Topic list" });
-const spinner = (): HTMLElement | null =>
-  within(rail()).queryByRole("status", { name: "Loading" });
+/** Whether that list is announcing a read. The announcement is ONE always-mounted live region
+   *  whose TEXT changes — a region that arrives together with its message announces nothing,
+   *  because assistive tech reads a live region's mutations rather than its insertion — so the
+   *  question is what the region CONTAINS. There is no accessible name to ask for:
+   *  `role="status"` takes its name from the author, never from its content. */
+const spinning = (): boolean => within(rail()).getByRole("status").textContent === "Loading";
 const nameField = (): HTMLInputElement => screen.getByLabelText("name") as HTMLInputElement;
 
 beforeEach(() => {
@@ -131,12 +135,12 @@ describe("the organization's own record", () => {
 
     // The group's four rows are static, so the spinner is reporting the BODY behind the selected
     // one — the only read this group makes.
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
     expect(within(rail()).getByRole("button", { name: "Profile" })).not.toBeNull();
     expect(screen.getByText("Loading…")).not.toBeNull();
 
     land(ACME);
-    await waitFor(() => expect(spinner()).toBeNull());
+    await waitFor(() => expect(spinning()).toBe(false));
     expect(nameField().value).toBe("Acme");
   });
 
@@ -152,7 +156,7 @@ describe("the organization's own record", () => {
     // that went back to the server, which is the behaviour this replaced.
     renderSettings();
     expect(nameField().value).toBe("Acme");
-    expect(spinner()).toBeNull();
+    expect(spinning()).toBe(false);
     expect(resolve).toHaveBeenCalledTimes(1);
   });
 
@@ -171,7 +175,7 @@ describe("the organization's own record", () => {
 
     renderSettings();
     expect(nameField().value).toBe("Acme");
-    expect(spinner()).toBeNull();
+    expect(spinning()).toBe(false);
     expect(resolve).toHaveBeenCalledTimes(1);
   });
 
@@ -201,11 +205,11 @@ describe("the organization's own record", () => {
     // "Acme" here and Save it over whatever the server is about to hand back.
     expect(nameField().value).toBe("Acme");
     expect(nameField().disabled).toBe(true);
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
 
     land(RENAMED);
     await waitFor(() => expect(nameField().disabled).toBe(false));
     expect(nameField().value).toBe("Acme Inc");
-    expect(spinner()).toBeNull();
+    expect(spinning()).toBe(false);
   });
 });

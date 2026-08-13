@@ -120,10 +120,16 @@ describe("SubjectProjectPane", () => {
 // the "Loading…" branch above stops appearing on re-entry, and if nothing else reports the re-read
 // then the second visit is silent about the fact that what is on screen is unconfirmed.
 describe("the subject's project rail says when it is being re-read", () => {
-  const spinner = () =>
-    within(screen.getByRole("complementary", { name: "Topic list" })).queryByRole("status", {
-      name: "Loading",
-    });
+  const rail = (): HTMLElement => screen.getByRole("complementary", { name: "Topic list" });
+  /** Whether that list is announcing a read. The announcement is ONE always-mounted live region
+   *  whose TEXT changes — a region that arrives together with its message announces nothing,
+   *  because assistive tech reads a live region's mutations rather than its insertion — so the
+   *  question is what the region CONTAINS. There is no accessible name to ask for:
+   *  `role="status"` takes its name from the author, never from its content. */
+  const spinning = (): boolean => within(rail()).getByRole("status").textContent === "Loading";
+  /** The project's name where this test means it: the ROW in the rail. The host paints the same
+   *  title again as the current breadcrumb crumb, so an unscoped `getByText` now matches two. */
+  const railRow = (): HTMLElement => within(rail()).getByText("Bitbag");
 
   it("spins in front of the project's name while the cached copy is revalidated", async () => {
     subjectProject.mockResolvedValue(PROJECT);
@@ -132,8 +138,8 @@ describe("the subject's project rail says when it is being re-read", () => {
         <SubjectProjectPane subjectKind="persona" subjectId="p-2" />
       </RailHostBoundary>,
     );
-    expect(await screen.findByText("Bitbag")).not.toBeNull();
-    await waitFor(() => expect(spinner()).toBeNull());
+    await waitFor(() => expect(railRow()).not.toBeNull());
+    await waitFor(() => expect(spinning()).toBe(false));
     cleanup();
 
     // What five minutes' `staleTime` does on its own, done deliberately: the copy is still good
@@ -151,11 +157,11 @@ describe("the subject's project rail says when it is being re-read", () => {
     );
     // Instant and unconfirmed at the same time: the name is already there, with no "Loading…"
     // anywhere, and the spinner is the only thing saying a read is out.
-    expect(screen.getByText("Bitbag")).not.toBeNull();
+    expect(railRow()).not.toBeNull();
     expect(screen.queryByText("Loading…")).toBeNull();
-    expect(spinner()).not.toBeNull();
+    expect(spinning()).toBe(true);
 
     land({ ...PROJECT, name: "Bitbag" });
-    await waitFor(() => expect(spinner()).toBeNull());
+    await waitFor(() => expect(spinning()).toBe(false));
   });
 });

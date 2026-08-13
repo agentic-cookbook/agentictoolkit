@@ -1,3 +1,4 @@
+// @vitest-environment-options { "url": "https://hub.dev.local/" }
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest'
 
 // Mock posthog-js (the real module is browser-oriented) and spy on captureEvent while
@@ -21,10 +22,7 @@ function lastProps(): Record<string, unknown> {
 }
 
 const wfetch = (input: unknown, init?: unknown): Promise<Response> =>
-  (globalThis as unknown as { window: { fetch: typeof fetch } }).window.fetch(
-    input as RequestInfo,
-    init as RequestInit,
-  )
+  window.fetch(input as RequestInfo, init as RequestInit)
 
 beforeAll(() => {
   process.env.NEXT_PUBLIC_POSTHOG_HOST = 'https://ph.example.com'
@@ -35,10 +33,12 @@ beforeAll(() => {
         headers: { 'Server-Timing': 'app;dur=12.5, db;dur=4;desc="2"' },
       }),
   )
-  ;(globalThis as unknown as { window: unknown }).window = {
-    fetch: originalFetch,
-    location: { href: 'https://hub.dev.local/' },
-  }
+  // jsdom's own window, with only `fetch` swapped: a hand-built stand-in stopped working the
+// moment a shared setup file reached for something else on it (`../data/vitest-setup.ts` clears
+// the toolkit query cache, and the client's session watcher reads `window.localStorage`). The
+// origin comes from the environment options above, so `location.href` and `location.host` are
+// jsdom's and stay consistent with each other.
+  window.fetch = originalFetch as unknown as typeof fetch
   instrumentFetch()
 })
 
