@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ReactElement } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactElement } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
 import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
@@ -50,6 +50,24 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
   const [accountExistsProvider, setAccountExistsProvider] = useState<string | null>(null)
   const [loginDisabled, setLoginDisabled] = useState(false)
   const startedRef = useRef(false)
+  // Where this callback hands the visitor when it is done. It is NOT `homeHref`:
+  // a credential login is central now, so the card that collected the password
+  // navigates away to the AS instead of routing anywhere itself, and the place the
+  // visitor was actually going is stashed (centralLoginTarget → stashReturnTo) for
+  // whoever redeems the code. That is this page — which makes it the only thing
+  // left in the flow that can honour a `?next=`, and reading only `homeHref` here
+  // silently dropped every one of them. The /join invitation handoff is the visible
+  // case: "log in to accept" landed the invitee on /home with the invitation gone.
+  //
+  // Resolved ONCE and kept, because takeReturnTo() clears the stash as it reads it
+  // and both call sites below can run more than once (the redirect effect re-runs
+  // on every isAuthenticated/router change). The standalone AuthCallback keeps the
+  // same value in the same shape, for the same reason.
+  const destRef = useRef<string | null>(null)
+  const destination = useCallback((): string => {
+    destRef.current ??= takeReturnTo() ?? homeHref
+    return destRef.current
+  }, [homeHref])
   // Set the instant the fragment-parsing effect decides to show a blocking modal
   // (account_exists or login_disabled). The redirect effect below reads it LIVE
   // (unlike the closure-captured `loginDisabled`/`accountExistsProvider` state),
@@ -73,7 +91,7 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
     // A silent prompt=none check that found no central session — NOT a failure.
     if (oauthError === 'login_required') {
       stripFragment()
-      router.replace(takeReturnTo() ?? homeHref)
+      router.replace(destination())
       return
     }
     // account_exists + link_provider: stash the intent FIRST so it survives the
@@ -150,7 +168,7 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
         setError(err instanceof Error ? err.message : 'Sign-in failed')
       }
     })()
-  }, [loginWithTokens, router, homeHref, clientId, signupBlockedHref])
+  }, [loginWithTokens, router, homeHref, clientId, signupBlockedHref, destination])
 
   useEffect(() => {
     // Don't redirect out from under the account_exists modal: it renders
@@ -163,9 +181,9 @@ export function SsoCallback<U extends AuthUser = AuthUser>({
     // still their initial `false` when this effect first runs (their setState in the
     // sibling effect hasn't re-rendered yet), but the ref is set synchronously there.
     if (isAuthenticated && !accountExistsProvider && !loginDisabled && !holdHomeRedirectRef.current) {
-      router.replace(homeHref)
+      router.replace(destination())
     }
-  }, [isAuthenticated, router, accountExistsProvider, homeHref, loginDisabled])
+  }, [isAuthenticated, router, accountExistsProvider, homeHref, loginDisabled, destination])
 
   return (
     <div className="flex-1 flex items-center justify-center bg-apt-bg text-apt-text-muted">
