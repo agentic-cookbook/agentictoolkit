@@ -1,0 +1,22 @@
+{
+  "name": "@agentic-toolkit/next-preflight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Fail-fast build assertions shared by every ADH site's next.config.ts. Catches conditions that are green in pnpm's symlink farm and red in Vercel's hoisted tree.",
+  "files": ["dist"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}
