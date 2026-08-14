@@ -59,12 +59,20 @@ public enum ProviderPickerFilter {
 
 /// Modal provider picker (presented via ``ProviderPicker/present(over:rows:onChoose:)``).
 ///
-/// A focused filter field on top; below it a draggable vertical split with a
-/// three-column table (Provider / LLM / Config Type, sized to fit content) on the
-/// left and a provider-details pane on the right; Cancel / Choose below. Fully
-/// keyboard-driven: up/down move the selection and mirror it into the filter
-/// field, Return chooses, Escape cancels. Themed via the toolkit palette; shown
-/// as an app-modal resizable window.
+/// One filter row on top — the filter field, then the "Good for" and "Type"
+/// pull-downs pushed to the trailing edge — over a draggable vertical split whose
+/// two halves each stack a table above its own description pane:
+///
+/// ```
+///          Providers            |          Models
+/// [Provider / LLM / Type table] | [Model + capability check marks]
+/// ------------------------------|-------------------------------
+/// [provider description]        | [model description]
+/// ```
+///
+/// Cancel / Choose sit below. Fully keyboard-driven: up/down move the provider
+/// selection and mirror it into the filter field, Return chooses, Escape cancels.
+/// Themed via the toolkit palette; shown as an app-modal resizable window.
 @MainActor
 public final class ProviderPickerViewController: NSViewController, Themeable {
 
@@ -73,12 +81,19 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     private let allRows: [ProviderPickerRow]
     private var filteredRows: [ProviderPickerRow]
+    /// The selected provider's models, resolved against the catalog once per
+    /// selection — the capability columns ask each row four questions, and the
+    /// table asks for a cell per column per visible row.
+    private var modelRows: [ModelRow] = []
 
     /// Column widths fitted to the content (measured once from `allRows`).
     private let columnWidths: [NSUserInterfaceItemIdentifier: CGFloat]
-    /// Natural width of the table (sum of fitted columns), used to size the window
-    /// and place the initial split divider.
+    /// Natural width of the provider table (sum of fitted columns), used to size the
+    /// window and place the initial split divider.
     private let tableWidth: CGFloat
+    /// Natural width of the models table — the Model column plus one check-mark
+    /// column per capability. Sizes the right half of the window.
+    private let modelTableWidth: CGFloat
     /// The window's initial content size. Not `preferredContentSize`: setting that on
     /// a window's contentViewController pins the window's min == max size, defeating
     /// `.resizable`.
@@ -92,16 +107,28 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         label: "Type",
         choices: ProviderTypeFacet.allCases.map { .init(id: $0.rawValue, title: $0.title, detail: $0.detail) })
     private let filterBar = NSStackView()
+
+    private let providerTitle = NSTextField(labelWithString: "Providers")
     private let tableView = ThemedTableView()
     private let tableScroll = NSScrollView()
     private let infoTextView = NSTextView()
     private let infoScroll = NSScrollView()
+    private let providerSplit = NSSplitView()
+
+    private let modelTitle = NSTextField(labelWithString: "Models")
+    private let modelTableView = ThemedTableView()
+    private let modelTableScroll = NSScrollView()
+    private let modelInfoTextView = NSTextView()
+    private let modelInfoScroll = NSScrollView()
+    private let modelSplit = NSSplitView()
+
     private let splitView = NSSplitView()
     private let cancelButton = NSButton()
     private let chooseButton = NSButton()
 
     private var themeObserver: ThemePaletteObserver?
     private var didSetInitialSplit = false
+    private var didSetInitialInnerSplits = false
     /// Is the field's text a mirrored selection (`moveSelection`) rather than a typed
     /// query? A mirrored name must never be filtered ON: arrowing to "Anthropic" and
     /// then picking a "Good for" facet would otherwise narrow the list to Anthropic,
@@ -115,7 +142,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// xAI, …) under one shared plugin identifier, each its own picker row;
     /// keying by plugin identifier alone would let one template's live models
     /// leak into every sibling template's row. Populated lazily on selection so
-    /// the details pane shows the provider's real, current models instead of
+    /// the models table shows the provider's real, current models instead of
     /// the static snapshot baked into the descriptor. Absent entries (remote
     /// providers, or a fetch still in flight / failed) fall back to
     /// `template.models` — see `resolvedModels(for:)`.
@@ -128,6 +155,23 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private static let providerColumnID = NSUserInterfaceItemIdentifier("provider.provider")
     private static let llmColumnID = NSUserInterfaceItemIdentifier("provider.llm")
     private static let typeColumnID = NSUserInterfaceItemIdentifier("provider.type")
+    private static let modelColumnID = NSUserInterfaceItemIdentifier("model.name")
+
+    /// A capability column's identifier, e.g. `model.capability.tools`.
+    private static func capabilityColumnID(_ capability: ModelCapability) -> NSUserInterfaceItemIdentifier {
+        NSUserInterfaceItemIdentifier("model.capability.\(capability.rawValue)")
+    }
+
+    /// The capability whose check-mark column carries `id`, or `nil` for any other
+    /// column.
+    private static func capability(for id: NSUserInterfaceItemIdentifier) -> ModelCapability? {
+        ModelCapability.allCases.first { capabilityColumnID($0) == id }
+    }
+
+    /// The glyph a capability column renders — check or nothing, never a cross: the
+    /// catalog reports what a model CAN do, so an absent capability is "not
+    /// reported", which a ✗ would overstate as "cannot".
+    private static let checkMark = "✓"
 
     public init(rows: [ProviderPickerRow]) {
         self.allRows = rows
@@ -139,22 +183,28 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             + (widths[Self.typeColumnID] ?? 120)
             + 6 /* intercell */ + 16 /* vertical scroller */ + 8 /* slack */
         self.tableWidth = tableW
+        let modelW = Self.modelNameColumnWidth
+            + ModelCapability.allCases.reduce(0) { $0 + (widths[Self.capabilityColumnID($1)] ?? 60) }
+            + CGFloat(ModelCapability.allCases.count) * 3 /* intercell */
+            + 16 /* vertical scroller */ + 8 /* slack */
+        self.modelTableWidth = modelW
 
-        let infoWidth: CGFloat = 400
-        // Height for the table to show every row without scrolling — the pane the
-        // window is sized around.
+        // Height for the provider table to show every row without scrolling — the
+        // pane the window is sized around.
         //
-        // The details pane is deliberately NOT measured: a provider serving a hundred
-        // models renders thousands of points of text, so fitting the tallest one asks
-        // for a window taller than any display (the screen clamps it, and the measured
-        // number is thrown away). Laying out every provider's full pane through Core
-        // Text just to compute that discarded number cost the whole catalog — decode,
-        // resolve and typeset — before the picker could open. The pane scrolls.
-        let paneHeight = CGFloat(max(rows.count, 1)) * 24 + 28 /* header */ + 4
+        // The description panes are deliberately NOT measured: a provider serving a
+        // hundred models renders thousands of points of text, so fitting the tallest
+        // one asks for a window taller than any display (the screen clamps it, and
+        // the measured number is thrown away). Laying out every provider's full pane
+        // through Core Text just to compute that discarded number cost the whole
+        // catalog — decode, resolve and typeset — before the picker could open. The
+        // panes scroll.
+        let listHeight = CGFloat(max(rows.count, 1)) * 24 + 28 /* header */ + 4
 
-        let width = 16 + tableW + 8 /* divider gap */ + infoWidth + 16
-        let height = 16 + 26 /* search */ + 8 + 26 /* filter bar */ + 8
-            + paneHeight + 10 + 32 /* buttons */ + 16
+        let width = 16 + tableW + 8 /* divider gap */ + modelW + 16
+        let height = 16 + 18 /* pane title */ + 4 + listHeight
+            + 8 /* inner divider */ + 140 /* description pane */
+            + 26 /* filter row */ + 8 + 10 + 32 /* buttons */ + 16
         self.initialContentSize = NSSize(width: width, height: height)
         super.init(nibName: nil, bundle: nil)
     }
@@ -165,7 +215,13 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// The font the table cells render in (must match `fittedColumnWidths`).
     private static let cellFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
 
+    /// The Model column's width. Fixed rather than fitted: the model list changes
+    /// with every selection (and again when a live fetch lands), so a width measured
+    /// from it would jitter as the user arrows down the provider list.
+    private static let modelNameColumnWidth: CGFloat = 220
+
     /// Measures each column's widest value (and its header) to fit content + padding.
+    /// The capability columns have no per-row text, so they fit their header alone.
     private static func fittedColumnWidths(for rows: [ProviderPickerRow])
         -> [NSUserInterfaceItemIdentifier: CGFloat] {
         let headerFont = NSFont.boldSystemFont(ofSize: 11)
@@ -178,11 +234,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             // vertical scroller appears and eats into the last column.
             return ceil(max(measure(title, headerFont), widest)) + 46
         }
-        return [
+        var widths: [NSUserInterfaceItemIdentifier: CGFloat] = [
             providerColumnID: fit("Provider", rows.map(\.provider)),
             llmColumnID: fit("LLM", rows.map(\.llm)),
             typeColumnID: fit("Config Type", rows.map(\.configType))
         ]
+        for capability in ModelCapability.allCases {
+            widths[capabilityColumnID(capability)] =
+                ceil(max(measure(capability.title, headerFont), measure(checkMark, cellFont))) + 20
+        }
+        return widths
     }
 
     // MARK: - View tree
@@ -191,26 +252,22 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         let root = NSView()
         root.wantsLayer = true
 
-        configureSearchField()
         configureFilterBar()
         configureTable()
+        configureModelTable()
         configureInfo()
         configureSplit()
         configureButtons()
 
-        [searchField, filterBar, splitView, cancelButton, chooseButton].forEach {
+        [filterBar, splitView, cancelButton, chooseButton].forEach {
             $0.translatesAutoresizingMaskIntoConstraints = false
             root.addSubview($0)
         }
 
         NSLayoutConstraint.activate([
-            searchField.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
-            searchField.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
-            searchField.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
-
-            filterBar.topAnchor.constraint(equalTo: searchField.bottomAnchor, constant: 8),
+            filterBar.topAnchor.constraint(equalTo: root.topAnchor, constant: 16),
             filterBar.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
-            filterBar.trailingAnchor.constraint(lessThanOrEqualTo: root.trailingAnchor, constant: -16),
+            filterBar.trailingAnchor.constraint(equalTo: root.trailingAnchor, constant: -16),
 
             splitView.topAnchor.constraint(equalTo: filterBar.bottomAnchor, constant: 8),
             splitView.leadingAnchor.constraint(equalTo: root.leadingAnchor, constant: 16),
@@ -240,11 +297,19 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     public override func viewDidLayout() {
         super.viewDidLayout()
-        // Wait until the split is actually wide enough before placing the divider,
-        // so an early layout pass (window not yet at full width) doesn't clamp it.
+        // Wait until each split is actually big enough before placing its divider,
+        // so an early layout pass (window not yet at full size) doesn't clamp it.
         if !didSetInitialSplit, splitView.bounds.width >= tableWidth + 240 {
             didSetInitialSplit = true
-            splitView.setPosition(tableWidth, ofDividerAt: 0)   // table fits its columns; info gets the rest
+            splitView.setPosition(tableWidth, ofDividerAt: 0)   // table fits its columns; models get the rest
+        }
+        if !didSetInitialInnerSplits, providerSplit.bounds.height >= 260 {
+            didSetInitialInnerSplits = true
+            // Lists get the top ~60%, descriptions the rest — enough prose to read
+            // without hiding the list that drives it.
+            for inner in [providerSplit, modelSplit] {
+                inner.setPosition(inner.bounds.height * 0.6, ofDividerAt: 0)
+            }
         }
     }
 
@@ -264,23 +329,30 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     // MARK: - Subview configuration
 
-    private func configureSearchField() {
+    /// The whole filter on one row: the field takes the slack, and the two
+    /// pull-downs are pushed to the trailing edge. They narrow the same list the
+    /// field does — what the provider's models are good for, and what it takes to
+    /// set the provider up.
+    private func configureFilterBar() {
         searchField.placeholderString = "Filter providers"
         searchField.delegate = self
         searchField.sendsWholeSearchString = false
         searchField.sendsSearchStringImmediately = true
-    }
 
-    /// The two pull-down filters, on one row under the search field. They narrow
-    /// the same list the search field does — what the provider's models are good
-    /// for, and what it takes to set the provider up.
-    private func configureFilterBar() {
         filterBar.orientation = .horizontal
         filterBar.spacing = 8
-        filterBar.addArrangedSubview(useFilter)
-        filterBar.addArrangedSubview(typeFilter)
-        useFilter.onChange = { [weak self] _ in self?.applyFilter() }
-        typeFilter.onChange = { [weak self] _ in self?.applyFilter() }
+        filterBar.addView(searchField, in: .leading)
+        filterBar.addView(useFilter, in: .trailing)
+        filterBar.addView(typeFilter, in: .trailing)
+        // Only the field grows; the pull-downs stay at their intrinsic width so the
+        // gap between the two groups is the flexible space.
+        filterBar.setHuggingPriority(.defaultLow, for: .horizontal)
+        searchField.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        for button in [useFilter, typeFilter] {
+            button.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+            button.setContentCompressionResistancePriority(.required, for: .horizontal)
+        }
+        searchField.widthAnchor.constraint(greaterThanOrEqualToConstant: 160).isActive = true
     }
 
     private func configureTable() {
@@ -319,34 +391,108 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         tableView.addTableColumn(llmColumn)
         tableView.addTableColumn(typeColumn)
 
-        tableScroll.documentView = tableView
-        tableScroll.hasVerticalScroller = true
-        tableScroll.autohidesScrollers = true
-        tableScroll.borderType = .noBorder
-        tableScroll.drawsBackground = true
+        configureScroll(tableScroll, documentView: tableView)
+    }
+
+    /// The models the selected provider serves: the model name plus one check-mark
+    /// column per ``ModelCapability``, so "which of these can call tools" is a
+    /// glance down a column rather than a read through every blurb.
+    private func configureModelTable() {
+        modelTableView.headerView = NSTableHeaderView()
+        modelTableView.rowHeight = 24
+        modelTableView.allowsEmptySelection = true
+        modelTableView.allowsMultipleSelection = false
+        modelTableView.selectionHighlightStyle = .regular
+        modelTableView.dataSource = self
+        modelTableView.delegate = self
+        modelTableView.columnAutoresizingStyle = .noColumnAutoresizing
+
+        let nameColumn = NSTableColumn(identifier: Self.modelColumnID)
+        nameColumn.title = "Model"
+        nameColumn.width = Self.modelNameColumnWidth
+        nameColumn.minWidth = 100
+        nameColumn.resizingMask = .userResizingMask
+        modelTableView.addTableColumn(nameColumn)
+
+        for capability in ModelCapability.allCases {
+            let column = NSTableColumn(identifier: Self.capabilityColumnID(capability))
+            column.title = capability.title
+            column.headerToolTip = capability.detail
+            column.width = columnWidths[Self.capabilityColumnID(capability)] ?? 60
+            column.minWidth = 40
+            column.resizingMask = .userResizingMask
+            modelTableView.addTableColumn(column)
+        }
+
+        configureScroll(modelTableScroll, documentView: modelTableView)
     }
 
     private func configureInfo() {
-        infoTextView.isEditable = false
-        infoTextView.isSelectable = true
-        infoTextView.drawsBackground = true
-        infoTextView.textContainerInset = NSSize(width: 8, height: 8)
-        infoTextView.isVerticallyResizable = true
-        infoTextView.textContainer?.widthTracksTextView = true
-
-        infoScroll.documentView = infoTextView
-        infoScroll.hasVerticalScroller = true
-        infoScroll.autohidesScrollers = true
-        infoScroll.borderType = .noBorder
-        infoScroll.drawsBackground = true
+        for textView in [infoTextView, modelInfoTextView] {
+            textView.isEditable = false
+            textView.isSelectable = true
+            textView.drawsBackground = true
+            textView.textContainerInset = NSSize(width: 8, height: 8)
+            textView.isVerticallyResizable = true
+            textView.textContainer?.widthTracksTextView = true
+        }
+        configureScroll(infoScroll, documentView: infoTextView)
+        configureScroll(modelInfoScroll, documentView: modelInfoTextView)
     }
 
+    private func configureScroll(_ scroll: NSScrollView, documentView: NSView) {
+        scroll.documentView = documentView
+        scroll.hasVerticalScroller = true
+        scroll.autohidesScrollers = true
+        scroll.borderType = .noBorder
+        scroll.drawsBackground = true
+    }
+
+    /// The outer vertical divider splits providers from models; each half is itself
+    /// a horizontal split of a table over the description of whatever is selected in
+    /// it. All three dividers are user-draggable.
     private func configureSplit() {
-        splitView.isVertical = true           // vertical divider → left/right panes
+        for title in [providerTitle, modelTitle] {
+            title.font = NSFont.boldSystemFont(ofSize: 11)
+            title.alignment = .center
+        }
+
+        providerSplit.isVertical = false          // horizontal divider → table over details
+        providerSplit.dividerStyle = .thin
+        providerSplit.delegate = self
+        providerSplit.addArrangedSubview(tableScroll)
+        providerSplit.addArrangedSubview(infoScroll)
+
+        modelSplit.isVertical = false
+        modelSplit.dividerStyle = .thin
+        modelSplit.delegate = self
+        modelSplit.addArrangedSubview(modelTableScroll)
+        modelSplit.addArrangedSubview(modelInfoScroll)
+
+        splitView.isVertical = true               // vertical divider → left/right halves
         splitView.dividerStyle = .thin
         splitView.delegate = self
-        splitView.addArrangedSubview(tableScroll)   // left: provider table
-        splitView.addArrangedSubview(infoScroll)    // right: details
+        splitView.addArrangedSubview(titled(providerTitle, over: providerSplit))
+        splitView.addArrangedSubview(titled(modelTitle, over: modelSplit))
+    }
+
+    /// A split-view half: its column heading over the pane it names.
+    private func titled(_ title: NSTextField, over pane: NSView) -> NSView {
+        let container = NSView()
+        for subview in [title, pane] {
+            subview.translatesAutoresizingMaskIntoConstraints = false
+            container.addSubview(subview)
+        }
+        NSLayoutConstraint.activate([
+            title.topAnchor.constraint(equalTo: container.topAnchor),
+            title.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            title.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            pane.topAnchor.constraint(equalTo: title.bottomAnchor, constant: 4),
+            pane.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            pane.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            pane.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+        return container
     }
 
     private func configureButtons() {
@@ -410,16 +556,48 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         selectRow(0)
     }
 
+    /// Repaints both description panes and refills the models table for `row`.
     private func updateInfo(for row: ProviderPickerRow?) {
         let palette = ThemePaletteObserver.currentPalette
-        infoTextView.linkTextAttributes = [
-            .foregroundColor: palette.accentColor,
-            .underlineStyle: NSUnderlineStyle.single.rawValue,
-            .cursor: NSCursor.pointingHand
-        ]
-        let content = row.map { Self.attributedInfo(for: $0, models: resolvedModels(for: $0), palette: palette) }
+        for textView in [infoTextView, modelInfoTextView] {
+            textView.linkTextAttributes = [
+                .foregroundColor: palette.accentColor,
+                .underlineStyle: NSUnderlineStyle.single.rawValue,
+                .cursor: NSCursor.pointingHand
+            ]
+        }
+        let content = row.map { Self.attributedInfo(for: $0, palette: palette) }
             ?? NSAttributedString(string: "")
         infoTextView.textStorage?.setAttributedString(content)
+        reloadModels(for: row)
+    }
+
+    /// Rebuilds the models table for `row` (empty when nothing is selected) and
+    /// lands on its first model so the model description pane is never blank while
+    /// a provider with models is selected.
+    private func reloadModels(for row: ProviderPickerRow?) {
+        if let row {
+            let template = row.available.template
+            modelRows = resolvedModels(for: row).map { model in
+                ModelRow(name: model, info: AIModelCatalog.shared.resolve(model: model, template: template))
+            }
+        } else {
+            modelRows = []
+        }
+        modelTableView.reloadData()
+        if modelRows.isEmpty {
+            updateModelInfo(for: nil)
+        } else {
+            modelTableView.selectRowIndexes([0], byExtendingSelection: false)
+            modelTableView.scrollRowToVisible(0)
+            updateModelInfo(for: modelRows[0])
+        }
+    }
+
+    private func updateModelInfo(for model: ModelRow?) {
+        let content = model.map { Self.attributedModelInfo(for: $0, palette: ThemePaletteObserver.currentPalette) }
+            ?? NSAttributedString(string: "")
+        modelInfoTextView.textStorage?.setAttributedString(content)
     }
 
     /// Per-template cache key: plugin identifier + template id. The
@@ -438,11 +616,11 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 
     /// Kicks an async fetch of the real, live model list for OpenAI-shaped
-    /// providers (e.g. Ollama) so the details pane stops showing the stale
+    /// providers (e.g. Ollama) so the models table stops showing the stale
     /// static snapshot baked into the descriptor. No-op for remote providers
     /// (`ModelChooserContent.supportsLiveModels` false), providers already
     /// cached, or providers with no configured base URL yet. On success,
-    /// re-renders the info pane only if the fetched row is still selected.
+    /// re-renders only if the fetched row is still selected.
     private func fetchLiveModelsIfNeeded(for row: ProviderPickerRow) {
         let id = row.available.pluginIdentifier
         let key = cacheKey(for: row)
@@ -475,34 +653,18 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         return style
     }()
 
-    /// Wrapping, hung off the model name it belongs to, so a long catalog blurb
-    /// stays visibly attached to its model instead of running back to the margin.
-    private static let modelDetailStyle: NSParagraphStyle = {
-        let style = NSMutableParagraphStyle()
-        style.firstLineHeadIndent = 24
-        style.headIndent = 24
-        style.paragraphSpacing = 2
-        return style
-    }()
-
     /// Builds the structured details pane for a provider: header, provider/LLM
-    /// blurbs, an aligned label/value block (with a clickable base URL), and one
-    /// line per model with its description / tool support / strengths when known.
+    /// blurbs, and an aligned label/value block (with a clickable base URL).
     ///
-    /// `models` is the RESOLVED model list to render — the caller's
-    /// `resolvedModels(for:)` for a live-fetched list on local/OpenAI-compatible
-    /// providers, else `row.available.template.models`. Kept as a parameter
-    /// (rather than read from `row` here) because this method is `static` and
-    /// has no access to the instance's live-model cache.
+    /// The provider's models are NOT listed here any more — they are the models
+    /// table beside this pane, and its own description pane below that.
     private static func attributedInfo(
-        for row: ProviderPickerRow, models: [String], palette: SemanticPalette
+        for row: ProviderPickerRow, palette: SemanticPalette
     ) -> NSAttributedString {
         let primary = palette.primaryTextColor
         let secondary = palette.secondaryTextColor
-        let tertiary = palette.nsColor(.tertiaryText)
         let accent = palette.accentColor
         let body = NSFont.systemFont(ofSize: 12)
-        let caption = NSFont.systemFont(ofSize: 11)
 
         let out = NSMutableAttributedString()
         func add(_ string: String, _ font: NSFont, _ color: NSColor, _ paragraph: NSParagraphStyle? = nil) {
@@ -538,28 +700,42 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         if !template.resolvedDefaultModel.isEmpty { labelRow("Default model", template.resolvedDefaultModel) }
         labelRow("API key", template.secretRequired ? "Required" : "Not required")
 
-        if !models.isEmpty {
-            add("\nModels\n", NSFont.boldSystemFont(ofSize: 12), primary)
-            for model in models {
-                add("  \(model)\n", NSFont.systemFont(ofSize: 12, weight: .semibold), primary)
-                // Curated `modelDetails` where the descriptor has them, else the
-                // shared catalog — so every model gets a blurb, not just the
-                // handful anyone hand-wrote.
-                let info = AIModelCatalog.shared.resolve(model: model, template: template)
-                if let text = info.description, !text.isEmpty {
-                    add(text + "\n", caption, secondary, modelDetailStyle)
-                }
-                let badges = ModelChooserContent.capabilityBadges(info).map { "\($0) ✓" }
-                let facts = badges + [ModelChooserContent.factsLine(info)].compactMap { $0 }
-                if !facts.isEmpty {
-                    add(facts.joined(separator: " · ") + "\n", caption, tertiary, modelDetailStyle)
-                }
-                if let goodFor = info.goodFor, !goodFor.isEmpty {
-                    add("Good for: \(goodFor)\n", caption, tertiary, modelDetailStyle)
-                }
-            }
+        return out
+    }
+
+    /// The pane under the models table: the selected model's name, its blurb, the
+    /// numbers this provider serves it under, and what it's good for.
+    private static func attributedModelInfo(
+        for model: ModelRow, palette: SemanticPalette
+    ) -> NSAttributedString {
+        let primary = palette.primaryTextColor
+        let secondary = palette.secondaryTextColor
+        let tertiary = palette.nsColor(.tertiaryText)
+        let body = NSFont.systemFont(ofSize: 12)
+
+        let out = NSMutableAttributedString()
+        func add(_ string: String, _ font: NSFont, _ color: NSColor, _ paragraph: NSParagraphStyle? = nil) {
+            var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
+            if let paragraph { attrs[.paragraphStyle] = paragraph }
+            out.append(NSAttributedString(string: string, attributes: attrs))
         }
 
+        add(model.name + "\n", NSFont.boldSystemFont(ofSize: 13), primary)
+        if let text = model.info.description, !text.isEmpty {
+            add(text + "\n", body, secondary, wrapStyle)
+        }
+        // The capability columns already say WHICH capabilities; this spells out what
+        // each one means, which a column of check marks can't.
+        let capabilities = ModelCapability.capabilities(of: model.info)
+        if !capabilities.isEmpty {
+            add(capabilities.map(\.title).joined(separator: " · ") + "\n", body, tertiary, wrapStyle)
+        }
+        if let facts = ModelChooserContent.factsLine(model.info) {
+            add(facts + "\n", body, tertiary, wrapStyle)
+        }
+        if let goodFor = model.info.goodFor, !goodFor.isEmpty {
+            add("Good for: \(goodFor)\n", body, tertiary, wrapStyle)
+        }
         return out
     }
 
@@ -585,12 +761,17 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public func applyTheme(_ palette: SemanticPalette) {
         view.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
 
-        // The table is a `ThemedTableView` and paints its own `.surface`; only
-        // its scroll host needs matching here.
-        tableScroll.backgroundColor = palette.surfaceColor
-
-        infoTextView.backgroundColor = palette.surfaceColor
-        infoScroll.backgroundColor = palette.surfaceColor
+        // The tables are `ThemedTableView`s and paint their own `.surface`; only
+        // their scroll hosts need matching here.
+        for scroll in [tableScroll, modelTableScroll, infoScroll, modelInfoScroll] {
+            scroll.backgroundColor = palette.surfaceColor
+        }
+        for textView in [infoTextView, modelInfoTextView] {
+            textView.backgroundColor = palette.surfaceColor
+        }
+        for title in [providerTitle, modelTitle] {
+            title.textColor = palette.secondaryTextColor
+        }
 
         // The same explicit Cancel styling the chooser uses, so the two dialogs
         // agree — AppKit's stock bezel does not (see `applySecondaryActionTheme`).
@@ -607,16 +788,42 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 }
 
+// MARK: - Nested types
+
+extension ProviderPickerViewController {
+
+    /// One row of the models table: the model's name plus the catalog metadata the
+    /// capability columns and the description pane read.
+    fileprivate struct ModelRow {
+        let name: String
+        let info: AIModelCatalog.ResolvedModel
+    }
+}
+
 // MARK: - Table data source / delegate
 
 extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelegate {
 
-    public func numberOfRows(in tableView: NSTableView) -> Int { filteredRows.count }
+    public func numberOfRows(in tableView: NSTableView) -> Int {
+        tableView === modelTableView ? modelRows.count : filteredRows.count
+    }
 
     public func tableView(_ tableView: NSTableView,
                           viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
-        guard row >= 0, row < filteredRows.count, let column = tableColumn else { return nil }
+        guard let column = tableColumn else { return nil }
         let palette = ThemePaletteObserver.currentPalette
+        if tableView === modelTableView {
+            guard row >= 0, row < modelRows.count else { return nil }
+            let entry = modelRows[row]
+            if let capability = Self.capability(for: column.identifier) {
+                return cell(in: tableView, for: column.identifier,
+                            text: ModelCapability.has(capability, entry.info) ? Self.checkMark : "",
+                            color: palette.accentColor, alignment: .center)
+            }
+            return cell(in: tableView, for: column.identifier,
+                        text: entry.name, color: palette.primaryTextColor)
+        }
+        guard row >= 0, row < filteredRows.count else { return nil }
         let entry = filteredRows[row]
         let text: String
         let color: NSColor
@@ -628,7 +835,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
         default:
             text = entry.configType; color = palette.secondaryTextColor
         }
-        return cell(for: column.identifier, text: text, color: color)
+        return cell(in: tableView, for: column.identifier, text: text, color: color)
     }
 
     public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
@@ -636,11 +843,21 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
     }
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
+        guard let table = notification.object as? NSTableView else { return }
+        if table === modelTableView {
+            let row = modelTableView.selectedRow
+            updateModelInfo(for: row >= 0 && row < modelRows.count ? modelRows[row] : nil)
+            return
+        }
         updateInfo(for: currentRow())
         if let row = currentRow() { fetchLiveModelsIfNeeded(for: row) }
     }
 
-    private func cell(for id: NSUserInterfaceItemIdentifier, text: String, color: NSColor) -> NSTableCellView {
+    /// A reusable label cell. `identifier` doubles as the reuse key, so a check-mark
+    /// column never recycles a left-aligned name cell.
+    private func cell(in tableView: NSTableView, for id: NSUserInterfaceItemIdentifier,
+                      text: String, color: NSColor,
+                      alignment: NSTextAlignment = .left) -> NSTableCellView {
         let cell = tableView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView ?? {
             let view = NSTableCellView()
             view.identifier = id
@@ -648,6 +865,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
             field.translatesAutoresizingMaskIntoConstraints = false
             field.lineBreakMode = .byTruncatingTail
             field.font = Self.cellFont
+            field.alignment = alignment
             view.addSubview(field)
             view.textField = field
             NSLayoutConstraint.activate([
@@ -685,13 +903,17 @@ extension ProviderPickerViewController: NSSplitViewDelegate {
     public func splitView(_ splitView: NSSplitView,
                           constrainMinCoordinate proposedMin: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
-        tableWidth   // never shrink the table narrower than its fitted columns
+        // Outer: never shrink the provider table narrower than its fitted columns.
+        // Inner: always leave a couple of rows plus the header visible.
+        splitView === self.splitView ? tableWidth : 80
     }
 
     public func splitView(_ splitView: NSSplitView,
                           constrainMaxCoordinate proposedMax: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
-        max(200, splitView.bounds.width - 240)   // keep at least 240pt for the details pane
+        splitView === self.splitView
+            ? max(200, splitView.bounds.width - 240)   // keep at least 240pt for the models half
+            : max(100, splitView.bounds.height - 60)   // keep a readable sliver of description
     }
 }
 
@@ -737,7 +959,7 @@ public enum ProviderPicker {
         let background = ThemePaletteObserver.currentPalette.windowBackgroundColor
         let isDark = (background.usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5) < 0.5
         window.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
-        window.contentMinSize = NSSize(width: 520, height: 320)
+        window.contentMinSize = NSSize(width: 640, height: 380)
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
         window.setContentSize(controller.initialContentSize)
 

@@ -20,6 +20,11 @@ final class LLMProvidersListViewModel: ObservableObject {
     /// present the AppKit sheet itself).
     var onRequestAddProvider: (() -> Void)?
 
+    /// Invoked when a configuration's "Chat" button is tapped. The hosting AppKit
+    /// controller sets this to open the LLM Chat window pointed at that
+    /// configuration (SwiftUI can't reach the window manager itself).
+    var onRequestChat: ((AIProviderConfiguration) -> Void)?
+
     init(pluginManager: AIPluginManager) {
         self.pluginManager = pluginManager
         self.configurations = UserSettings.aiProviderConfigurations.value

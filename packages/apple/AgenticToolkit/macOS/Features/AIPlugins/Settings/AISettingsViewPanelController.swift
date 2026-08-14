@@ -54,6 +54,11 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
             }
         }
 
+        viewModel.onRequestChat = { [weak self] config in
+            guard let self else { return }
+            LLMChatWindowController.present(pluginManager: self.pluginManager, configuration: config)
+        }
+
         rebuildPanels(selecting: viewModel.selectedId ?? viewModel.configurations.first?.id)
 
         // Enable the remove(−) segment only when a configuration is selected.
@@ -66,9 +71,8 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     /// `selectID`. Called on load and after any structural change (add / remove).
     ///
     /// Existing panels are REUSED by configuration id — only genuinely new
-    /// configurations get a fresh panel. Rebuilding every panel would recreate each
-    /// one's `ChatTestSession`, silently wiping the live test-chat transcript of
-    /// configurations that weren't even touched by the add/remove.
+    /// configurations get a fresh panel, so an add/remove doesn't discard the
+    /// in-progress edits of configurations it never touched.
     private func rebuildPanels(selecting selectID: UUID?) {
         let configs = viewModel.configurations
         let existing = Dictionary(
@@ -113,28 +117,34 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         return true
     }
 
-    /// The test-chat view model of the currently-selected configuration (nil if
-    /// none is selected). Lets automation drive the embedded chat, whose text
-    /// field — nested in a hosted SwiftUI view — doesn't take synthetic input.
-    var selectedChatViewModel: ChatViewModel? {
-        guard let id = viewModel.selectedId else { return nil }
-        return panels.compactMap { $0 as? ProviderConfigPanelViewController }
-            .first { $0.config.id == id }?.chatSession.viewModel
+    /// Opens the LLM Chat window on the selected configuration and hands back its
+    /// view model, so automation can drive a chat whose text field doesn't take
+    /// synthetic input. Returns nil when no configuration is selected.
+    ///
+    /// The chat left this panel (see `LLMProviderEditorView`), so the scripted
+    /// "test chat" verbs now reach it through its own window — the surface a user
+    /// would drive by hand.
+    @discardableResult
+    public func presentChat() -> ChatViewModel? {
+        guard let id = viewModel.selectedId,
+              let config = viewModel.configuration(for: id) else { return nil }
+        LLMChatWindowController.present(pluginManager: pluginManager, configuration: config)
+        return LLMChatWindowController.current?.chatViewModel
     }
 
-    /// Sends a message through the selected configuration's test chat. Returns
-    /// false when no configuration is selected.
+    /// Sends a message through the selected configuration's chat. Returns false
+    /// when no configuration is selected.
     @discardableResult
     public func sendTestMessage(_ text: String) -> Bool {
-        guard let viewModel = selectedChatViewModel else { return false }
+        guard let viewModel = presentChat() else { return false }
         viewModel.sendMessage(text)
         return true
     }
 
-    /// The selected configuration's test-chat transcript as newline-separated
+    /// The selected configuration's chat transcript as newline-separated
     /// `role: text` lines (empty when nothing is selected).
     public func testChatTranscript() -> String {
-        guard let viewModel = selectedChatViewModel else { return "" }
+        guard let viewModel = presentChat() else { return "" }
         return viewModel.messages.map { "\($0.role.scriptingLabel): \($0.text)" }.joined(separator: "\n")
     }
 
@@ -233,20 +243,12 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
 private final class ProviderConfigPanelViewController: ComposableSettings.SettingsPanelViewController {
 
     let config: AIProviderConfiguration
-    /// The chat test session for this configuration, owned here so it's reachable
-    /// for scripted tests (see `AIPanelViewController.selectedChatViewModel`).
-    let chatSession: ChatTestSession
     private let viewModel: LLMProvidersListViewModel
     private let onRenamed: () -> Void
     private var nameObserver: AnyCancellable?
 
-    /// The editor scrolls its own chat area, so host it directly rather than
-    /// wrapping it in the framework's scroll view.
-    var hostsOwnScroll: Bool { true }
-
     init(config: AIProviderConfiguration, viewModel: LLMProvidersListViewModel, onRenamed: @escaping () -> Void) {
         self.config = config
-        self.chatSession = ChatTestSession(configuration: config, pluginManager: viewModel.pluginManager)
         self.viewModel = viewModel
         self.onRenamed = onRenamed
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
@@ -270,7 +272,7 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
     }
 
     override func loadView() {
-        let editor = LLMProviderEditorView(configuration: config, viewModel: viewModel, chat: chatSession)
+        let editor = LLMProviderEditorView(configuration: config, viewModel: viewModel)
         let hosting = NSHostingView(rootView: editor)
         hosting.translatesAutoresizingMaskIntoConstraints = false
         self.view = hosting
