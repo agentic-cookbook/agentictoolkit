@@ -1941,6 +1941,37 @@ importers:
         specifier: ^4.1.4
         version: 4.1.6(@types/node@24.13.2)(jsdom@29.1.1)(vite@7.3.6(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0))
 
+  packages/next-config:
+    dependencies:
+      '@agentic-toolkit/adh-registry':
+        specifier: workspace:*
+        version: link:../adh-registry
+      '@agentic-toolkit/next-env':
+        specifier: workspace:*
+        version: link:../next-env
+      '@agentic-toolkit/next-headers':
+        specifier: workspace:*
+        version: link:../next-headers
+      '@agentic-toolkit/next-preflight':
+        specifier: workspace:*
+        version: link:../next-preflight
+    devDependencies:
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.2
+      next:
+        specifier: ^16.2.9
+        version: 16.2.10(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.4
+        version: 4.1.6(@types/node@24.13.2)(jsdom@29.1.1)(vite@7.3.6(@types/node@24.13.2)(jiti@2.7.0)(lightningcss@1.32.0))
+
   packages/next-env:
     devDependencies:
       '@types/node':
