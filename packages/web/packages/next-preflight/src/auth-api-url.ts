@@ -9,9 +9,15 @@
  * without reaching into `process.env` itself. Only the calling convention
  * moved — the message text and the conditions under which it throws are
  * unchanged.
+ *
+ * The return type is `string | undefined`, not `string`: outside a hosted
+ * build (no `VERCEL_ENV`) nothing is asserted at all, so the function hands
+ * back exactly the caller's own value, unvalidated — which may itself be
+ * `undefined`. Only the hosted-build path is guaranteed non-empty, and it
+ * gets there by throwing rather than by narrowing the type.
  */
-export function assertAuthApiUrl(url: string | undefined, siteId: string): string {
-  if (!process.env.VERCEL_ENV) return url!;
+export function assertAuthApiUrl(url: string | undefined, siteId: string): string | undefined {
+  if (!process.env.VERCEL_ENV) return url;
   if (url?.trim()) return url;
   throw new Error(
     "NEXT_PUBLIC_AUTH_API_URL is not set. This is a hosted build (VERCEL_ENV=" +

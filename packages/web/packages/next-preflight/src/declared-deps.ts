@@ -1,6 +1,6 @@
 import { readFileSync, realpathSync, existsSync } from "node:fs";
 import { join } from "node:path";
-import { resolvesFrom } from "./resolve.js";
+import { resolveDirFrom, resolvesFrom } from "./resolve.js";
 
 export { resolvesFrom };
 
@@ -17,20 +17,21 @@ function readManifest(dir: string): Manifest | undefined {
   if (!existsSync(p)) return undefined;
   try {
     return JSON.parse(readFileSync(p, "utf8")) as Manifest;
-  } catch {
+  } catch (err) {
+    // Swallowing this drops the node from the closure walk silently — exactly
+    // the malformed input the gate should be loudest about — so warn instead
+    // of going quiet.
+    console.warn(`next-preflight: failed to parse ${p}: ${(err as Error).message}`);
     return undefined;
   }
 }
 
-/** Resolve a package name to its real directory, as seen from `fromDir`. */
-function realDirOf(fromDir: string, pkgName: string): string | undefined {
-  let dir = realpathSync(fromDir);
-  for (;;) {
-    const candidate = join(dir, "node_modules", pkgName);
-    if (existsSync(join(candidate, "package.json"))) return realpathSync(candidate);
-    const parent = join(dir, "..");
-    if (realpathSync(parent) === dir) return undefined;
-    dir = realpathSync(parent);
+/** Realpath `dir`, or `undefined` if it does not exist (or is unreadable). */
+function realpathOrUndefined(dir: string): string | undefined {
+  try {
+    return realpathSync(dir);
+  } catch {
+    return undefined;
   }
 }
 
@@ -62,7 +63,7 @@ export function linkClosure(siteDir: string): Map<string, string> {
   while (queue.length > 0) {
     const [name, fromDir] = queue.shift()!;
     if (out.has(name)) continue;
-    const dir = realDirOf(fromDir, name);
+    const dir = resolveDirFrom(fromDir, name);
     if (!dir) continue;
     out.set(name, dir);
     const m = readManifest(dir);
@@ -86,7 +87,13 @@ export function linkClosure(siteDir: string): Map<string, string> {
  * only the site's view predicts production. See the design spec, section 6.1.
  */
 export function assertDeclaredDeps(siteDir: string): void {
-  const site = realpathSync(siteDir);
+  // A siteDir that doesn't exist at all (as opposed to one with a missing or
+  // unreadable package.json, which readManifest already treats as a no-op)
+  // must be a silent no-op too — realpathSync throws ENOENT on it, and this
+  // is called with process.cwd() by consumers that shouldn't need to prove
+  // the directory exists first.
+  const site = realpathOrUndefined(siteDir);
+  if (!site) return;
   const manifest = readManifest(site);
   if (!manifest) return;
 

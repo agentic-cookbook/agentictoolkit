@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -115,6 +115,32 @@ describe("assertDeclaredDeps", () => {
       expect(msg).toContain("@agenticdevelopertoolkit/chat");
       // The message must tell the reader what to DO.
       expect(msg).toMatch(/package\.json/);
+    }
+  });
+
+  it("returns without throwing when siteDir does not exist", () => {
+    const site = join(root, "sites", "does-not-exist");
+    expect(() => assertDeclaredDeps(site)).not.toThrow();
+  });
+
+  it("warns but does not throw when a linked package's package.json is malformed", () => {
+    const site = join(root, "sites", "b");
+    const broken = join(root, "packages", "broken");
+
+    pkg(site, { name: "b", dependencies: { broken: "link:../../packages/broken" } });
+    mkdirSync(broken, { recursive: true });
+    writeFileSync(join(broken, "package.json"), "{ not valid json");
+
+    mkdirSync(join(site, "node_modules"), { recursive: true });
+    symlinkSync(broken, join(site, "node_modules", "broken"), "dir");
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      expect(() => assertDeclaredDeps(site)).not.toThrow();
+      expect(warn).toHaveBeenCalled();
+      expect(String(warn.mock.calls[0]?.[0])).toContain("package.json");
+    } finally {
+      warn.mockRestore();
     }
   });
 });
