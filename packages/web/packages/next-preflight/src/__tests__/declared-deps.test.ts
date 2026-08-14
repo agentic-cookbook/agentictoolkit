@@ -1,146 +1,100 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, rmSync, realpathSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { assertDeclaredDeps, resolvesFrom } from "../declared-deps.js";
+import { spawnSync } from "node:child_process";
+
+vi.mock("node:child_process", () => ({ spawnSync: vi.fn() }));
+
+// `existsSync` is left real by default (a plain pass-through), and overridden
+// per-test below — `findIsolateScript`'s own ancestor walk over a fresh tmpdir
+// already exercises the "not found" path without any mocking at all.
+const { mockExistsSync, realExistsSyncBox } = vi.hoisted(() => ({
+  mockExistsSync: vi.fn(),
+  realExistsSyncBox: { fn: undefined as ((p: unknown) => boolean) | undefined },
+}));
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  realExistsSyncBox.fn = actual.existsSync as (p: unknown) => boolean;
+  mockExistsSync.mockImplementation(realExistsSyncBox.fn);
+  return { ...actual, existsSync: mockExistsSync };
+});
+
+import { assertHoistableDeps } from "../declared-deps.js";
+
+const mockSpawnSync = vi.mocked(spawnSync);
 
 let root: string;
-
-function pkg(dir: string, manifest: Record<string, unknown>) {
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "package.json"), JSON.stringify(manifest, null, 2));
-}
+let site: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "preflight-"));
+  // realpathSync'd: `assertHoistableDeps` resolves the site through realpathSync
+  // before walking for the isolate script, and on macOS tmpdir sits under a
+  // symlink (/var -> /private/var) — comparing against an unresolved `root`
+  // would build a `script` path that never matches what the walk actually sees.
+  root = realpathSync(mkdtempSync(join(tmpdir(), "preflight-")));
+  site = join(root, "sites", "registries");
+  mkdirSync(site, { recursive: true });
+  mockSpawnSync.mockReset();
+  mockExistsSync.mockReset();
+  mockExistsSync.mockImplementation(realExistsSyncBox.fn);
 });
 afterEach(() => {
+  vi.restoreAllMocks();
   rmSync(root, { recursive: true, force: true });
 });
 
-describe("assertDeclaredDeps", () => {
-  // This is the exact shape of the production failure: the site links a package
-  // that declares a peer, the peer resolves from the LINK TARGET's own
-  // node_modules (pnpm symlink farm), but the site never declared it. The
-  // hoisted Vercel tree copies only the site's graph, so the peer vanishes.
-  it("throws when a linked package's peerDependency is not declared by the site", () => {
-    const site = join(root, "sites", "registries");
-    const feature = join(root, "packages", "registry");
-    const peer = join(root, "packages", "registry-types");
+// `assertHoistableDeps` delegates the actual worklist walk to
+// `vercel-isolate-deps.py --check` — see that script's own tests for the
+// property being asserted. What belongs here is the TypeScript wrapper's own
+// behaviour: finding (or not finding) the script, and turning its exit code
+// into a thrown Error (or not).
+describe("assertHoistableDeps", () => {
+  it("returns without throwing when siteDir does not exist, and does not spawn", () => {
+    const missing = join(root, "sites", "does-not-exist");
 
-    pkg(site, {
-      name: "registries",
-      dependencies: { "@agentic-toolkit/registry": "link:../../packages/registry" },
-    });
-    pkg(feature, {
-      name: "@agentic-toolkit/registry",
-      peerDependencies: { "@agenticdevelopertoolkit/registry-types": "*" },
-    });
-    pkg(peer, { name: "@agenticdevelopertoolkit/registry-types" });
-
-    // The symlink farm: the peer IS resolvable from the feature's own directory.
-    mkdirSync(join(feature, "node_modules", "@agenticdevelopertoolkit"), { recursive: true });
-    symlinkSync(peer, join(feature, "node_modules", "@agenticdevelopertoolkit", "registry-types"), "dir");
-
-    // The site's link into the feature.
-    mkdirSync(join(site, "node_modules", "@agentic-toolkit"), { recursive: true });
-    symlinkSync(feature, join(site, "node_modules", "@agentic-toolkit", "registry"), "dir");
-
-    // Guard: today's (wrong) predicate passes here. That is why it shipped.
-    expect(resolvesFrom(feature, "@agenticdevelopertoolkit/registry-types")).toBe(true);
-
-    expect(() => assertDeclaredDeps(site)).toThrowError(
-      /@agenticdevelopertoolkit\/registry-types/,
-    );
+    expect(() => assertHoistableDeps(missing)).not.toThrow();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
-  it("passes once the site declares the peer itself", () => {
-    const site = join(root, "sites", "registries");
-    const feature = join(root, "packages", "registry");
-    const peer = join(root, "packages", "registry-types");
-
-    pkg(site, {
-      name: "registries",
-      dependencies: {
-        "@agentic-toolkit/registry": "link:../../packages/registry",
-        "@agenticdevelopertoolkit/registry-types": "link:../../packages/registry-types",
-      },
-    });
-    pkg(feature, {
-      name: "@agentic-toolkit/registry",
-      peerDependencies: { "@agenticdevelopertoolkit/registry-types": "*" },
-    });
-    pkg(peer, { name: "@agenticdevelopertoolkit/registry-types" });
-
-    mkdirSync(join(site, "node_modules", "@agentic-toolkit"), { recursive: true });
-    symlinkSync(feature, join(site, "node_modules", "@agentic-toolkit", "registry"), "dir");
-    mkdirSync(join(site, "node_modules", "@agenticdevelopertoolkit"), { recursive: true });
-    symlinkSync(peer, join(site, "node_modules", "@agenticdevelopertoolkit", "registry-types"), "dir");
-
-    expect(() => assertDeclaredDeps(site)).not.toThrow();
+  it("returns without throwing when no isolate script is found on any ancestor, and does not spawn", () => {
+    // `root` is a fresh tmpdir with no `frontend/src/tools/vercel-isolate-deps.py`
+    // anywhere above it (up to the real filesystem root), so the ancestor walk
+    // in `findIsolateScript` exhausts without a hit.
+    expect(() => assertHoistableDeps(site)).not.toThrow();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
-  it("walks the closure transitively, not one level", () => {
-    const site = join(root, "sites", "a");
-    const mid = join(root, "packages", "mid");
-    const leaf = join(root, "packages", "leaf");
+  it("throws, with the script's stdout in the message, when --check exits non-zero", () => {
+    const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+    mockExistsSync.mockImplementation((p) => String(p) === script);
+    mockSpawnSync.mockReturnValue({
+      status: 1,
+      signal: null,
+      stdout: "boom",
+      stderr: "",
+      pid: 0,
+      output: [null, "boom", ""],
+    } as ReturnType<typeof spawnSync>);
 
-    pkg(site, { name: "a", dependencies: { mid: "link:../../packages/mid" } });
-    pkg(mid, { name: "mid", dependencies: { leaf: "link:../leaf" } });
-    pkg(leaf, { name: "leaf", peerDependencies: { "missing-pkg": "*" } });
-
-    mkdirSync(join(site, "node_modules"), { recursive: true });
-    symlinkSync(mid, join(site, "node_modules", "mid"), "dir");
-    mkdirSync(join(mid, "node_modules"), { recursive: true });
-    symlinkSync(leaf, join(mid, "node_modules", "leaf"), "dir");
-
-    expect(() => assertDeclaredDeps(site)).toThrowError(/missing-pkg/);
+    expect(() => assertHoistableDeps(site)).toThrowError(/boom/);
   });
 
-  it("names the site, the owning package, and the missing package in the message", () => {
-    const site = join(root, "sites", "hub");
-    const feature = join(root, "packages", "persona");
-    pkg(site, { name: "hub", dependencies: { "@agentic-toolkit/persona": "link:../../packages/persona" } });
-    pkg(feature, { name: "@agentic-toolkit/persona", peerDependencies: { "@agenticdevelopertoolkit/chat": "*" } });
-    mkdirSync(join(site, "node_modules", "@agentic-toolkit"), { recursive: true });
-    symlinkSync(feature, join(site, "node_modules", "@agentic-toolkit", "persona"), "dir");
+  it("returns without throwing when spawnSync reports an error (e.g. no python3)", () => {
+    const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+    mockExistsSync.mockImplementation((p) => String(p) === script);
+    mockSpawnSync.mockReturnValue({
+      error: new Error("ENOENT"),
+      status: null,
+      signal: null,
+      stdout: "",
+      stderr: "",
+      pid: 0,
+      output: [null, "", ""],
+    } as ReturnType<typeof spawnSync>);
 
-    try {
-      assertDeclaredDeps(site);
-      throw new Error("expected assertDeclaredDeps to throw");
-    } catch (err) {
-      const msg = (err as Error).message;
-      expect(msg).toContain("hub");
-      expect(msg).toContain("@agentic-toolkit/persona");
-      expect(msg).toContain("@agenticdevelopertoolkit/chat");
-      // The message must tell the reader what to DO.
-      expect(msg).toMatch(/package\.json/);
-    }
-  });
-
-  it("returns without throwing when siteDir does not exist", () => {
-    const site = join(root, "sites", "does-not-exist");
-    expect(() => assertDeclaredDeps(site)).not.toThrow();
-  });
-
-  it("warns but does not throw when a linked package's package.json is malformed", () => {
-    const site = join(root, "sites", "b");
-    const broken = join(root, "packages", "broken");
-
-    pkg(site, { name: "b", dependencies: { broken: "link:../../packages/broken" } });
-    mkdirSync(broken, { recursive: true });
-    writeFileSync(join(broken, "package.json"), "{ not valid json");
-
-    mkdirSync(join(site, "node_modules"), { recursive: true });
-    symlinkSync(broken, join(site, "node_modules", "broken"), "dir");
-
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-    try {
-      expect(() => assertDeclaredDeps(site)).not.toThrow();
-      expect(warn).toHaveBeenCalled();
-      expect(String(warn.mock.calls[0]?.[0])).toContain("package.json");
-    } finally {
-      warn.mockRestore();
-    }
+    expect(() => assertHoistableDeps(site)).not.toThrow();
   });
 });
