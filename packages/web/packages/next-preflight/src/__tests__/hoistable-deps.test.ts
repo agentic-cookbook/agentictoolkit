@@ -20,7 +20,7 @@ vi.mock("node:fs", async (importOriginal) => {
   return { ...actual, existsSync: mockExistsSync };
 });
 
-import { assertHoistableDeps } from "../declared-deps.js";
+import { assertHoistableDeps } from "../hoistable-deps.js";
 
 const mockSpawnSync = vi.mocked(spawnSync);
 
@@ -50,10 +50,17 @@ afterEach(() => {
 // behaviour: finding (or not finding) the script, and turning its exit code
 // into a thrown Error (or not).
 describe("assertHoistableDeps", () => {
-  it("returns without throwing when siteDir does not exist, and does not spawn", () => {
+  it("throws, naming the path, when siteDir does not exist", () => {
+    // realpathSync throwing can only mean the CALLER passed a path that does not
+    // exist — a bug in the caller's siteDir derivation (Task 5's concern). Silently
+    // disabling the gate here is the worst response: a mis-derived siteDir would
+    // leave the gate permanently and invisibly off, exactly the "green locally, red
+    // on Vercel" failure class this whole check exists to catch.
     const missing = join(root, "sites", "does-not-exist");
 
-    expect(() => assertHoistableDeps(missing)).not.toThrow();
+    expect(() => assertHoistableDeps(missing)).toThrowError(
+      new RegExp(missing.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
+    );
     expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
@@ -96,5 +103,28 @@ describe("assertHoistableDeps", () => {
     } as ReturnType<typeof spawnSync>);
 
     expect(() => assertHoistableDeps(site)).not.toThrow();
+  });
+
+  it("does not throw but warns, naming the signal, when python3 is signal-killed", () => {
+    // status: null with a signal (e.g. SIGKILL under an OOM'd parallel build) used to
+    // read as indistinguishable from a clean pass. Keeping it non-fatal is right — a
+    // signal-killed interpreter must not fail a build — but it must be VISIBLE in the
+    // build log instead of silently identical to success.
+    const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+    mockExistsSync.mockImplementation((p) => String(p) === script);
+    mockSpawnSync.mockReturnValue({
+      error: undefined,
+      status: null,
+      signal: "SIGKILL",
+      stdout: "",
+      stderr: "",
+      pid: 0,
+      output: [null, "", ""],
+    } as ReturnType<typeof spawnSync>);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(() => assertHoistableDeps(site)).not.toThrow();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("SIGKILL"));
   });
 });
