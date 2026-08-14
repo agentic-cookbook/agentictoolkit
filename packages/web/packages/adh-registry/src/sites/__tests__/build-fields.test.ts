@@ -1,53 +1,82 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { SITES, isSiteId, type SiteDef } from "../registry.js";
+import { SITE_BUILD, isSiteId } from "../registry.js";
 
-// `SITES` is a `SiteDef[]`, not a `Record<SiteId, SiteDef>` — the earlier probe that
-// staged this test assumed a keyed record and did not confirm it, so the assertions
-// below read the array by `.id` rather than through `Object.entries`/index access.
-// The substance (which sites carry which flag, and what value) is unchanged from the
-// brief; only the access mechanics differ from the record-shaped draft.
-
-// The 9 sites that set `legacyHomePaths: true` today, MINUS cookbook, which keeps its
-// hand-written config (Ruling T4-a) and therefore keeps setting the flag at its call site.
-const LEGACY_HOME_PATH_SITES = [
-  "dashboards", "ecosystems", "knowledgebases", "narratives",
-  "projects", "personabuilder", "teamregistry", "research",
-];
-
-function findSite(id: string): SiteDef | undefined {
-  return SITES.find((s) => s.id === id);
-}
+// The three build fields live in `SITE_BUILD`, a side table below the `</gen:sites>`
+// close marker in `registry.ts` — NOT on `SiteDef`/`SITES`. `frontend/tools/scaffold-sites.py`'s
+// `patch_registry()` regenerates the `<gen:sites>` region wholesale from a fixed template that
+// has no notion of these fields, so a field written on a `SITES` entry inside that region is
+// silently dropped on the next scaffold run. Deriving the flagged sets from `SITE_BUILD` (rather
+// than hand-listing them again) is what keeps these assertions from drifting out of step with
+// the source of truth.
 
 describe("site build fields", () => {
+  it("keeps build fields out of the scaffold-managed region", () => {
+    const src = readFileSync(
+      fileURLToPath(new URL("../registry.ts", import.meta.url)),
+      "utf8",
+    );
+    const open = src.indexOf("<gen:sites>");
+    const close = src.indexOf("</gen:sites>");
+    expect(open).toBeGreaterThan(-1);
+    expect(close).toBeGreaterThan(open);
+    const managed = src.slice(open, close);
+    for (const field of ["legacyHomePaths", "extraRedirects", "requiresBackendUrl"]) {
+      expect(managed).not.toContain(field);
+    }
+  });
+
   it("marks exactly the eight registry-owned legacy-home-path sites", () => {
-    const flagged = SITES.filter((s) => s.legacyHomePaths)
-      .map((s) => s.id)
+    const flagged = Object.entries(SITE_BUILD)
+      .filter(([, cfg]) => cfg?.legacyHomePaths)
+      .map(([id]) => id)
       .sort();
-    expect(flagged).toEqual([...LEGACY_HOME_PATH_SITES].sort());
+    expect(flagged).toEqual(
+      ["dashboards", "ecosystems", "knowledgebases", "narratives", "personabuilder", "projects", "research", "teamregistry"].sort(),
+    );
   });
 
   // cookbook and hub must NOT appear: they are the exempt pair, and a well-meaning
   // implementer materializing their derived redirects into static data is the specific
   // regression this pins.
   it("gives extraRedirects to exactly help and personaregistry", () => {
-    const withRedirects = SITES.filter((s) => (s.extraRedirects ?? []).length > 0)
-      .map((s) => s.id)
+    const withRedirects = Object.entries(SITE_BUILD)
+      .filter(([, cfg]) => (cfg?.extraRedirects ?? []).length > 0)
+      .map(([id]) => id)
       .sort();
     expect(withRedirects).toEqual(["help", "personaregistry"]);
   });
 
-  // `permanent` is NOT uniform, and the difference is deliberate. help's 10 are 308s
-  // because the destination is final; personaregistry's 3 are 307s because — in its own
-  // words — a 308 is cached by the browser indefinitely and would outlive any later change
-  // to that URL grammar. Asserting the flag per site is what keeps a "tidy up, make them
-  // all permanent" edit from silently burning three URLs into every visitor's cache.
-  it("keeps help permanent and personaregistry temporary", () => {
-    const help = findSite("help");
-    const personaregistry = findSite("personaregistry");
-    expect(help?.extraRedirects).toHaveLength(10);
-    expect(help?.extraRedirects?.every((r) => r.permanent)).toBe(true);
-    expect(personaregistry?.extraRedirects).toHaveLength(3);
-    expect(personaregistry?.extraRedirects?.every((r) => !r.permanent)).toBe(true);
+  // Hand-copied out of `frontend/src/sites/help/next.config.ts:14-27` (10 entries, all
+  // `permanent: true` — the destinations are template literals over
+  // `const HELP = "https://help.agenticdeveloperhub.com"` there, spelled out as plain
+  // strings here). Read off the source file rather than the registry, so this test is an
+  // independent statement of the truth rather than an echo of what was written, and pins
+  // the actual source/destination strings rather than just their count.
+  it("pins help's exact redirect entries", () => {
+    expect(SITE_BUILD.help?.extraRedirects).toEqual([
+      { source: "/api", destination: "https://help.agenticdeveloperhub.com/rest-api", permanent: true },
+      { source: "/docs", destination: "https://help.agenticdeveloperhub.com/quickstart", permanent: true },
+      { source: "/docs/quickstart", destination: "https://help.agenticdeveloperhub.com/quickstart", permanent: true },
+      { source: "/docs/hub-features", destination: "https://help.agenticdeveloperhub.com/hub", permanent: true },
+      { source: "/docs/api", destination: "https://help.agenticdeveloperhub.com/rest-api", permanent: true },
+      { source: "/docs/mcp", destination: "https://help.agenticdeveloperhub.com/mcp", permanent: true },
+      { source: "/docs/errors", destination: "https://help.agenticdeveloperhub.com/reference/errors", permanent: true },
+      { source: "/docs/webhooks", destination: "https://help.agenticdeveloperhub.com/reference/webhooks", permanent: true },
+      { source: "/docs/changelog", destination: "https://help.agenticdeveloperhub.com/reference/changelog", permanent: true },
+      { source: "/docs/oauth/:step*", destination: "https://help.agenticdeveloperhub.com/quickstart/oauth/:step*", permanent: true },
+    ]);
+  });
+
+  // Hand-copied out of `frontend/src/sites/personaregistry/next.config.ts` (3 entries, all
+  // `permanent: false` — a 308 would outlive a later change to that URL grammar).
+  it("pins personaregistry's exact redirect entries", () => {
+    expect(SITE_BUILD.personaregistry?.extraRedirects).toEqual([
+      { source: "/persona/:path+", destination: "/:path+", permanent: false },
+      { source: "/user/:path+", destination: "/:path+", permanent: false },
+      { source: "/org/:path+", destination: "/:path+", permanent: false },
+    ]);
   });
 
   // The two sites that fail a hosted build with no API_BACKEND_URL. Asserting the exact
@@ -55,8 +84,9 @@ describe("site build fields", () => {
   // third site quietly gaining the flag fails its own deploy, and a site quietly losing it
   // deploys a proxy that 502s on every call.
   it("marks exactly bitbag and personaregistry as requiring a backend url", () => {
-    const flagged = SITES.filter((s) => s.requiresBackendUrl)
-      .map((s) => s.id)
+    const flagged = Object.entries(SITE_BUILD)
+      .filter(([, cfg]) => cfg?.requiresBackendUrl)
+      .map(([id]) => id)
       .sort();
     expect(flagged).toEqual(["bitbag", "personaregistry"]);
   });
