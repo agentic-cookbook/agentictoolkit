@@ -1,0 +1,22 @@
+{
+  "name": "@agentic-toolkit/next-headers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Baseline HTTP security + font-cache headers, and the mergeHeaders() Next `headers()` wrapper that lets a site's own rules override them, shared by every ADH site's next.config.ts.",
+  "files": ["dist"],
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

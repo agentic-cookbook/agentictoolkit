@@ -18,6 +18,8 @@ packages:
   - './packages/adh-api-types'
   - './packages/deploy-platform'
   - './packages/next-preflight'
+  - './packages/next-headers'
+  - './packages/next-env'
   - './packages/landing'
   - './packages/messaging'
   - './packages/features/*'
