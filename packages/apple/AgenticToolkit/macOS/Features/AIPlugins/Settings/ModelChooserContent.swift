@@ -113,9 +113,9 @@ public enum ModelChooserContent {
     /// model that can't be used at all.
     public static func factsLine(_ info: AIModelCatalog.ResolvedModel) -> String? {
         var parts: [String] = []
-        if let context = info.contextWindow, context > 0 { parts.append("\(compact(context)) context") }
-        if let output = info.maxOutput, output > 0 { parts.append("\(compact(output)) max output") }
-        if let price = priceText(input: info.inputCostPerM, output: info.outputCostPerM) {
+        if let context = info.contextWindow, context > 0 { parts.append("\(tokenCount(context)) context") }
+        if let output = info.maxOutput, output > 0 { parts.append("\(tokenCount(output)) max output") }
+        if let price = priceLine(input: info.inputCostPerM, output: info.outputCostPerM) {
             parts.append(price)
         }
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
@@ -134,7 +134,7 @@ public enum ModelChooserContent {
     /// numbers are asked FIRST, because a limit can be an exact multiple of both:
     /// 128000 is 125 × 1024, and dividing it in binary prints "125K" for the window
     /// every vendor quotes as 128K.
-    private static func compact(_ value: Int) -> String {
+    public static func tokenCount(_ value: Int) -> String {
         let unit = value % 1000 == 0 || value % 1024 != 0 ? 1000.0 : 1024.0
         if Double(value) >= unit * unit { return "\(Int((Double(value) / (unit * unit)).rounded()))M" }
         if Double(value) >= unit { return "\(Int((Double(value) / unit).rounded()))K" }
@@ -143,7 +143,7 @@ public enum ModelChooserContent {
 
     /// Prices are per million tokens, input first. A provider that publishes only
     /// one of the two says which one it is rather than implying both.
-    private static func priceText(input: Double?, output: Double?) -> String? {
+    public static func priceLine(input: Double?, output: Double?) -> String? {
         switch (input, output) {
         case let (input?, output?): return "$\(money(input))/$\(money(output)) per M tokens"
         case let (input?, nil): return "$\(money(input)) per M input tokens"

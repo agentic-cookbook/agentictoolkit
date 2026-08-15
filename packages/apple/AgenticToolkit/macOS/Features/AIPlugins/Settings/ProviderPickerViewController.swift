@@ -432,7 +432,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             textView.isEditable = false
             textView.isSelectable = true
             textView.drawsBackground = true
-            textView.textContainerInset = NSSize(width: 8, height: 8)
+            // Roomier than a table cell's padding: this is prose, and it reads as a
+            // card rather than as a fourth column of the list above it.
+            textView.textContainerInset = NSSize(width: 14, height: 12)
             textView.isVerticallyResizable = true
             textView.textContainer?.widthTracksTextView = true
         }
@@ -566,8 +568,8 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
                 .cursor: NSCursor.pointingHand
             ]
         }
-        let content = row.map { Self.attributedInfo(for: $0, palette: palette) }
-            ?? NSAttributedString(string: "")
+        let content = row.map { ProviderPickerInfo.provider($0, palette: palette) }
+            ?? ProviderPickerInfo.placeholder("No provider matches these filters.", palette: palette)
         infoTextView.textStorage?.setAttributedString(content)
         reloadModels(for: row)
     }
@@ -595,9 +597,20 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 
     private func updateModelInfo(for model: ModelRow?) {
-        let content = model.map { Self.attributedModelInfo(for: $0, palette: ThemePaletteObserver.currentPalette) }
-            ?? NSAttributedString(string: "")
+        let palette = ThemePaletteObserver.currentPalette
+        let content = model.map { ProviderPickerInfo.model(name: $0.name, info: $0.info, palette: palette) }
+            ?? ProviderPickerInfo.placeholder(emptyModelsText, palette: palette)
         modelInfoTextView.textStorage?.setAttributedString(content)
+    }
+
+    /// Why the models table is empty: a local server publishes its models only once
+    /// it's running and configured, which is a different thing to say than "this
+    /// provider has no models".
+    private var emptyModelsText: String {
+        guard let row = currentRow() else { return "Select a provider to see the models it serves." }
+        return ModelChooserContent.supportsLiveModels(pluginIdentifier: row.available.pluginIdentifier)
+            ? "This provider lists its models once it's configured and reachable."
+            : "This provider doesn't publish a model list."
     }
 
     /// Per-template cache key: plugin identifier + template id. The
@@ -634,109 +647,6 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             liveModelsByTemplate[key] = models
             if let cur = currentRow(), cacheKey(for: cur) == key { updateInfo(for: cur) }
         }
-    }
-
-    /// A `location`-based tab stop so every label row's value starts at the same x,
-    /// giving the details pane a fixed-width label column.
-    private static let labelStyle: NSParagraphStyle = {
-        let style = NSMutableParagraphStyle()
-        style.tabStops = [NSTextTab(textAlignment: .left, location: 120)]
-        style.defaultTabInterval = 120
-        style.headIndent = 120
-        style.paragraphSpacing = 2
-        return style
-    }()
-
-    private static let wrapStyle: NSParagraphStyle = {
-        let style = NSMutableParagraphStyle()
-        style.paragraphSpacing = 4
-        return style
-    }()
-
-    /// Builds the structured details pane for a provider: header, provider/LLM
-    /// blurbs, and an aligned label/value block (with a clickable base URL).
-    ///
-    /// The provider's models are NOT listed here any more — they are the models
-    /// table beside this pane, and its own description pane below that.
-    private static func attributedInfo(
-        for row: ProviderPickerRow, palette: SemanticPalette
-    ) -> NSAttributedString {
-        let primary = palette.primaryTextColor
-        let secondary = palette.secondaryTextColor
-        let accent = palette.accentColor
-        let body = NSFont.systemFont(ofSize: 12)
-
-        let out = NSMutableAttributedString()
-        func add(_ string: String, _ font: NSFont, _ color: NSColor, _ paragraph: NSParagraphStyle? = nil) {
-            var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
-            if let paragraph { attrs[.paragraphStyle] = paragraph }
-            out.append(NSAttributedString(string: string, attributes: attrs))
-        }
-        func labelRow(_ label: String, _ value: String) {
-            add("\(label)\t", body, secondary, labelStyle)
-            add("\(value)\n", body, primary, labelStyle)
-        }
-
-        let template = row.available.template
-
-        add((row.llm.isEmpty ? row.provider : "\(row.provider) · \(row.llm)") + "\n",
-            NSFont.boldSystemFont(ofSize: 14), primary)
-        if let text = template.providerDescription, !text.isEmpty { add(text + "\n", body, secondary, wrapStyle) }
-        if let text = template.llmDescription, !text.isEmpty { add(text + "\n", body, secondary, wrapStyle) }
-        add("\n", body, secondary)
-
-        labelRow("Provider", row.provider)
-        if !row.llm.isEmpty { labelRow("LLM", row.llm) }
-        labelRow("Config Type", row.configType)
-        if let url = template.defaultValues["baseURL"], !url.isEmpty {
-            add("Base URL\t", body, secondary, labelStyle)
-            var attrs: [NSAttributedString.Key: Any] = [
-                .font: body, .foregroundColor: accent, .paragraphStyle: labelStyle,
-                .underlineStyle: NSUnderlineStyle.single.rawValue
-            ]
-            if let link = URL(string: url) { attrs[.link] = link }
-            out.append(NSAttributedString(string: url + "\n", attributes: attrs))
-        }
-        if !template.resolvedDefaultModel.isEmpty { labelRow("Default model", template.resolvedDefaultModel) }
-        labelRow("API key", template.secretRequired ? "Required" : "Not required")
-
-        return out
-    }
-
-    /// The pane under the models table: the selected model's name, its blurb, the
-    /// numbers this provider serves it under, and what it's good for.
-    private static func attributedModelInfo(
-        for model: ModelRow, palette: SemanticPalette
-    ) -> NSAttributedString {
-        let primary = palette.primaryTextColor
-        let secondary = palette.secondaryTextColor
-        let tertiary = palette.nsColor(.tertiaryText)
-        let body = NSFont.systemFont(ofSize: 12)
-
-        let out = NSMutableAttributedString()
-        func add(_ string: String, _ font: NSFont, _ color: NSColor, _ paragraph: NSParagraphStyle? = nil) {
-            var attrs: [NSAttributedString.Key: Any] = [.font: font, .foregroundColor: color]
-            if let paragraph { attrs[.paragraphStyle] = paragraph }
-            out.append(NSAttributedString(string: string, attributes: attrs))
-        }
-
-        add(model.name + "\n", NSFont.boldSystemFont(ofSize: 13), primary)
-        if let text = model.info.description, !text.isEmpty {
-            add(text + "\n", body, secondary, wrapStyle)
-        }
-        // The capability columns already say WHICH capabilities; this spells out what
-        // each one means, which a column of check marks can't.
-        let capabilities = ModelCapability.capabilities(of: model.info)
-        if !capabilities.isEmpty {
-            add(capabilities.map(\.title).joined(separator: " · ") + "\n", body, tertiary, wrapStyle)
-        }
-        if let facts = ModelChooserContent.factsLine(model.info) {
-            add(facts + "\n", body, tertiary, wrapStyle)
-        }
-        if let goodFor = model.info.goodFor, !goodFor.isEmpty {
-            add("Good for: \(goodFor)\n", body, tertiary, wrapStyle)
-        }
-        return out
     }
 
     // MARK: - Actions

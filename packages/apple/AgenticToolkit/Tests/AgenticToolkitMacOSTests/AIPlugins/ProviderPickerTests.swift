@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import AIPluginKit
@@ -137,5 +138,86 @@ struct ProviderPickerTests {
         #expect(rows.map(\.provider) == ["Anthropic", "Anthropic", "Google"])
         // Within Anthropic, config type sorts "API Key" before "Subscription Token".
         #expect(rows.map(\.configType) == ["API Key", "Subscription Token", "API Key"])
+    }
+
+    // MARK: - Preview panes
+
+    @Test("The provider pane names the provider, its blurbs, and what connecting takes")
+    func providerPane() {
+        let template = AIPluginDescriptor.ProviderTemplate(
+            id: "anthropic-api", displayName: "Anthropic Claude",
+            defaultValues: ["baseURL": "https://api.anthropic.com"],
+            secretRequired: true, provider: "Anthropic", llm: "Claude", configType: "API Key",
+            providerDescription: "Anthropic builds Claude.", llmDescription: "Claude reasons over long context.")
+        let row = ProviderPickerRow(available: .init(pluginIdentifier: "com.x", template: template))
+
+        let text = ProviderPickerInfo.provider(row, palette: ThemePaletteObserver.currentPalette)
+        let string = text.string
+        #expect(string.hasPrefix("ANTHROPIC · CLAUDE\nAnthropic Claude\n"))
+        #expect(string.contains("Anthropic builds Claude."))
+        #expect(string.contains("Claude reasons over long context."))
+        #expect(string.contains("CONNECTION\n"))
+        #expect(string.contains("Config Type\tAPI Key\n"))
+        #expect(string.contains("API key\tRequired\n"))
+
+        // The base URL is a real link, so clicking it opens the provider's docs.
+        let urlRange = (string as NSString).range(of: "https://api.anthropic.com")
+        let link = text.attribute(.link, at: urlRange.location, effectiveRange: nil) as? URL
+        #expect(link == URL(string: "https://api.anthropic.com"))
+    }
+
+    @Test("The provider pane omits rows it has nothing to say in")
+    func providerPaneOmitsEmptyRows() {
+        let bare = ProviderPickerRow(available: .init(
+            pluginIdentifier: "com.x",
+            template: .init(id: "ollama", displayName: "Ollama", secretRequired: false,
+                            provider: "Ollama", llm: "", configType: "Local")))
+        let string = ProviderPickerInfo.provider(bare, palette: ThemePaletteObserver.currentPalette).string
+        #expect(string.hasPrefix("OLLAMA\n"))     // no " · " separator without an LLM
+        #expect(!string.contains("LLM\t"))
+        #expect(!string.contains("Base URL\t"))
+        #expect(!string.contains("Default model\t"))
+        #expect(string.contains("API key\tNot required\n"))
+    }
+
+    @Test("The model pane chips every capability and spells out the specs")
+    func modelPane() {
+        let info = AIModelCatalog.ResolvedModel(
+            id: "claude-opus-4", description: "The most capable Claude model.",
+            capabilities: ["tools", "reasoning", "vision"], goodFor: "Agentic coding",
+            tools: true, contextWindow: 200_000, maxOutput: 64_000,
+            inputCostPerM: 15, outputCostPerM: 75)
+
+        let string = ProviderPickerInfo.model(
+            name: "claude-opus-4", info: info, palette: ThemePaletteObserver.currentPalette).string
+        #expect(string.hasPrefix("MODEL\nclaude-opus-4\n"))
+        for capability in ModelCapability.capabilities(of: info) {
+            #expect(string.contains(capability.title))
+        }
+        #expect(string.contains("The most capable Claude model."))
+        #expect(string.contains("SPECS\n"))
+        #expect(string.contains("Context\t200K\n"))
+        #expect(string.contains("Max output\t64K\n"))
+        #expect(string.contains("Price\t$15/$75 per M tokens\n"))
+        #expect(string.contains("Good for\tAgentic coding\n"))
+    }
+
+    @Test("A model the catalog knows nothing about is still titled, with no empty SPECS block")
+    func modelPaneWithoutFacts() {
+        let string = ProviderPickerInfo.model(
+            name: "mystery-7b", info: .init(id: "mystery-7b"),
+            palette: ThemePaletteObserver.currentPalette).string
+        #expect(string == "MODEL\nmystery-7b\n")
+    }
+
+    @Test("Label values hang under themselves rather than under their label")
+    func valuesShareOneColumn() {
+        let info = AIModelCatalog.ResolvedModel(id: "m", goodFor: "A long sentence that will wrap")
+        let text = ProviderPickerInfo.model(
+            name: "m", info: info, palette: ThemePaletteObserver.currentPalette)
+        let range = (text.string as NSString).range(of: "A long sentence that will wrap")
+        let style = text.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+        #expect(style?.headIndent == style?.tabStops.first?.location)
+        #expect((style?.headIndent ?? 0) > 0)
     }
 }

@@ -200,6 +200,7 @@
 		411232E3A56BD1FD8B201869 /* SliderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 93E5BDE4C30A4CBC805A5B01 /* SliderView.swift */; };
 		4237EBFC96489B0B2F53744F /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = F84D9B120CFDF76CB1E7B98D /* GRDB */; };
 		4309FE28C9A1B19B47425ED6 /* WindowDiscoveryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66D3943517FC3C4B5DF4BBF6 /* WindowDiscoveryViewModel.swift */; };
+		4345E97716EE9DB61E631898 /* ProviderPickerInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = B34A549A9DB4762084ACA258 /* ProviderPickerInfo.swift */; };
 		444EFB4D09F8D7A761C43743 /* TerminalTextInjectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 708757CD4B853F7A93EB857F /* TerminalTextInjectorTests.swift */; };
 		44A57C73AD49D4B30AA8482A /* SystemWindowShortcutManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C48F7CD91D0F1AE1F9CB1C72 /* SystemWindowShortcutManager.swift */; };
 		450F94C2448538A9F7EDA245 /* AgenticToolkitPermissionsUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FB251437E922B5A8689625BF /* AgenticToolkitPermissionsUI.framework */; };
@@ -1551,6 +1552,7 @@
 		B244EC19F79775430B3CCBA1 /* SQLiteHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteHelpers.swift; sourceTree = "<group>"; };
 		B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopoverTests.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
+		B34A549A9DB4762084ACA258 /* ProviderPickerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderPickerInfo.swift; sourceTree = "<group>"; };
 		B3D112853E30CE786A73B192 /* UserSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSetting.swift; sourceTree = "<group>"; };
 		B4C87939516A070CC66803F4 /* Placeholder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Placeholder.swift; sourceTree = "<group>"; };
 		B5BB28294B4FC8F45F42DBEF /* WindowFrameManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowFrameManager.swift; sourceTree = "<group>"; };
@@ -2756,6 +2758,7 @@
 				9F3F290E11EDE126F6A99DD9 /* ModelPickerItem.swift */,
 				B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */,
 				5F2D8CD502813330AE5AEC77 /* PluginLoadFailuresPanel.swift */,
+				B34A549A9DB4762084ACA258 /* ProviderPickerInfo.swift */,
 				7B7939675F83E77AF61D9C68 /* ProviderPickerViewController.swift */,
 			);
 			path = Settings;
@@ -4428,6 +4431,7 @@
 				ECE0B184E02424624A2B739E /* ProgressViewModel.swift in Sources */,
 				6D8381DDE965C718F595FEDD /* Project.swift in Sources */,
 				A90C41BDF8FFD1BD7DD2A1D9 /* ProjectHost.swift in Sources */,
+				4345E97716EE9DB61E631898 /* ProviderPickerInfo.swift in Sources */,
 				1A581A42A5CF674ACA0F59BE /* ProviderPickerViewController.swift in Sources */,
 				F6E48919E0295C5D264F471A /* QuickNoteWindowController.swift in Sources */,
 				9FCD2ABDE5A5AE4E51402734 /* RadioButtonChoiceView.swift in Sources */,
