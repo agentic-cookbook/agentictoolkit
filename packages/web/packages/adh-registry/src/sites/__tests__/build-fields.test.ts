@@ -97,18 +97,19 @@ describe("site build fields", () => {
     expect(flagged).toEqual(["bitbag", "narratives", "personaregistry", "projects"]);
   });
 
-  // The seven sites that keep a hand-written next.config.ts (Task 6a / A1, A3). Asserting
-  // the exact set — not just "bitbag is true" — is what catches an eighth site quietly
+  // The six sites that keep a hand-written next.config.ts (Task 6a / A1, A3). Asserting
+  // the exact set — not just "bitbag is true" — is what catches a seventh site quietly
   // gaining the flag (probe-auth-fleet's A4 re-point would stop checking its BFF) or one of
-  // the seven quietly losing it (the probe would wrongly demand the uniform rewrite text).
-  it("marks exactly the seven hand-rolled sites", () => {
+  // the six quietly losing it (the probe would wrongly demand the uniform rewrite text).
+  // `learntruefacts` was a seventh until it left the fleet on 2026-08-14; `bitbag` stays
+  // on the list even though its source moved to its own repo on 2026-08-15, because the
+  // flag describes the config that site's build uses, not which checkout holds it.
+  it("marks exactly the six hand-rolled sites", () => {
     const flagged = Object.entries(SITE_BUILD)
       .filter(([, cfg]) => cfg?.handRolledConfig)
       .map(([id]) => id)
       .sort();
-    expect(flagged).toEqual(
-      ["admin", "bitbag", "cookbook", "hub", "hub-help", "learntruefacts", "status"].sort(),
-    );
+    expect(flagged).toEqual(["admin", "bitbag", "cookbook", "hub", "hub-help", "status"].sort());
   });
 
   it("isSiteId accepts a real id and rejects a directory that is not a site", () => {

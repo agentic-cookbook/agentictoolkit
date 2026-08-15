@@ -276,8 +276,9 @@ export type SiteBuildConfig = {
   readonly extraRedirects?: readonly SiteRedirect[]
   readonly requiresBackendUrl?: boolean
   /**
-   * True for the seven sites that keep a hand-written `next.config.ts` (Task 6a):
-   * `admin`, `bitbag`, `hub-help`, `learntruefacts`, `status`, `cookbook`, `hub`. Each
+   * True for the six sites that keep a hand-written `next.config.ts` (Task 6a):
+   * `admin`, `bitbag`, `hub-help`, `status`, `cookbook`, `hub` (`learntruefacts` was a
+   * seventh until it left the fleet on 2026-08-14). Each
    * still calls `adhNextConfig()` for the shared dependency gate, headers and env, but
    * layers its own `rewrites`/`redirects`/`env`/`transpilePackages` on top rather than
    * taking the uniform three-line template. Consumed by Task 7 and by
@@ -347,13 +348,14 @@ export const SITE_BUILD: Partial<Record<SiteId, SiteBuildConfig>> = {
   teamregistry: { legacyHomePaths: true },
   personabuilder: { legacyHomePaths: true },
   research: { legacyHomePaths: true },
-  // The seven hand-rolled sites (Ruling T4-a / Task 6a). `cookbook` and `hub` carry no
+  // The hand-rolled sites (Ruling T4-a / Task 6a) — six here plus `bitbag` above.
+  // `learntruefacts` was a seventh until it left the fleet on 2026-08-14. `cookbook`
+  // and `hub` carry no
   // other fields here on purpose — their redirects derive from site-local modules
   // (`OVERVIEW_PATH`, `featureIds`) this package cannot import; freezing those values
   // here would re-create the drift their own comments exist to prevent.
   admin: { handRolledConfig: true },
   'hub-help': { handRolledConfig: true },
-  learntruefacts: { handRolledConfig: true },
   status: { handRolledConfig: true },
   cookbook: { handRolledConfig: true },
   hub: { handRolledConfig: true },
@@ -391,12 +393,17 @@ export function isSiteId(value: string): value is SiteId {
  *  `websites/main/` and `websites/marketing/`. The dev-only site-menu submenus
  *  ("Main sites" / "Marketing sites", shown only in staging/testing/local — see
  *  {@link ../header/debugSiteGroups}) link every one to its deployment in the
- *  CURRENT env, so a developer can jump straight to any site's build. The folders
- *  are the source of truth; a registry test asserts these arrays match them
- *  exactly, so a newly-scaffolded site can't silently drop out of the menu.
- *  Alphabetical, mirroring the directory listing. `mcp` / `builds` / `messaging`
- *  have no site folder (an endpoint / a backend / an in-hub feature), so they're
- *  in neither list. */
+ *  CURRENT env, so a developer can jump straight to any site's build. A registry
+ *  test asserts these arrays against adh's directory listing, so a newly-scaffolded
+ *  site can't silently drop out of the menu. Alphabetical, mirroring that listing.
+ *
+ *  Membership here means "this id HAS a Next app", not "its app is checked out
+ *  beside this file": `bitbag` and `myagenticteams` are built from their own repos
+ *  since 2026-08-15 and are full members regardless, which is why the test names
+ *  them rather than the registry doing it — where a site's source sits is a fact
+ *  about one checkout, and this file is shared by all of them. `mcp` / `builds` /
+ *  `messaging` have no site folder ANYWHERE (an endpoint / a backend / an in-hub
+ *  feature), so they're in neither list. */
 export const MAIN_SITE_IDS: SiteId[] = [
   'admin', 'bitbag', 'community', 'cookbook', 'devteam', 'help', 'hub', 'hub-help',
   'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',

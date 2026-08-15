@@ -422,13 +422,35 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     )
   }
 
+  // Family sites whose Next app is in ITS OWN REPO rather than under adh's
+  // `frontend/src/sites/`. Both left on 2026-08-15 and neither left the fleet: their
+  // registry rows, `MAIN_SITE_IDS` membership, story tiers, menu rows and SSO are all
+  // unchanged, and only the source tree moved (agentic-cookbook/bitbag,
+  // agentic-cookbook/myagenticteams).
+  //
+  // Listed HERE and not in registry.ts on purpose. "Where the source is checked out" is
+  // a fact about adh's directory layout, not about the fleet — from inside either of
+  // those two repos the same site IS local — so putting it in the registry would ship a
+  // claim that is false in two of the three repos that consume it. This constant exists
+  // only to keep the guard below honest, and it goes away with the guard on the day
+  // adh's last site folder leaves.
+  const SOURCE_IN_ITS_OWN_REPO = ['bitbag', 'myagenticteams']
+
   it.skipIf(STANDALONE)(
-    'MAIN_SITE_IDS + MARKETING_SITE_IDS cover the frontend/src/sites/ folders exactly',
+    'MAIN_SITE_IDS + MARKETING_SITE_IDS cover the frontend/src/sites/ folders, plus the sites built elsewhere',
     () => {
       // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly
       // how the sibling test passed while checking nothing.
       expect(siteFolders().length).toBeGreaterThan(0)
-      expect([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS].sort()).toEqual(siteFolders())
+      // Still both directions, which is the whole value of the guard: a folder with no
+      // registry entry fails (a scaffolded site that never joined the menu), and a
+      // registry entry with neither a folder nor a line above fails (a site that
+      // silently stopped being built anywhere). A stale line fails too, and for free —
+      // a name whose folder came back is CONCATENATED, so the right-hand side carries it
+      // twice and no deduped registry array can equal that.
+      expect([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS].sort()).toEqual(
+        [...siteFolders(), ...SOURCE_IN_ITS_OWN_REPO].sort(),
+      )
     },
   )
   it('every family id is a real registry site, with no dupes or cross-family overlap', () => {

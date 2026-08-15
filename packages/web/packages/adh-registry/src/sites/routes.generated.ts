@@ -61,11 +61,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/terms',
     '/tour',
   ],
-  bitbag: [
-    '/',
-    '/privacy',
-    '/terms',
-  ],
   codereviews: [
     '/',
     '/[workspace]/[[...path]]',
@@ -325,15 +320,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/auth/callback',
     '/details',
     '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  myagenticteams: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/auth/callback',
     '/home',
     '/privacy',
     '/terms',
