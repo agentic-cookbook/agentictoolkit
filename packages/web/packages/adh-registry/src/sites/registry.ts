@@ -57,7 +57,6 @@ export type SiteId =
   | 'integrations'
   | 'gamification'
   // </gen:union>
-  | 'learntruefacts'
   | 'narratives'
   // fishlamp / fishlampdesign: FishLamp Design, the studio that publishes the whole
   // family (the brand that replaced Agentic Developer Studio). Both domains serve the
@@ -169,8 +168,6 @@ export interface SiteDef {
 //      `featured`, currently unrendered), followed by its second domain.
 //   5. admin + status + builds — the operational consoles, set apart at the end.
 // `dividerBefore` on the first entry of a section draws the separator above it.
-// learntruefacts stays in the registry (so its own header resolves a label) but
-// is hidden from the switcher + footer via `listed: false`.
 // There is no `studio` entry: FishLamp Design replaced Agentic Developer Studio
 // and the studio app was deleted from the repo, so agenticdeveloper.studio and
 // agenticdevelopmentstudio.com are no longer sites this family knows about. Both
@@ -261,10 +258,9 @@ export const SITES: SiteDef[] = [
   { id: 'status', label: 'Status', fullLabel: 'Agentic Developer Status', description: 'System status', prodHost: 'status.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false },
   { id: 'builds', label: 'Builds', fullLabel: 'Agentic Developer Builds', description: 'Build status', prodHost: 'builder.agenticdeveloperhub.com', hasStaging: false, hasTesting: true, hasHome: false },
   // --- Registered but hidden from the switcher list ---
-  { id: 'learntruefacts', label: 'Learn True Facts', description: 'learntruefacts.ai', prodHost: 'learntruefacts.ai', hasStaging: true, hasTesting: true, hasHome: false, listed: false },
   // messaging: an in-hub-only workspace feature (DMs + notifications), not a deployed
   // marketing site — no staging/testing/home tiers, hidden from the switcher + footer
-  // (listed:false, like learntruefacts). Exists so the `messaging` feature's siteId and
+  // (listed:false). Exists so the `messaging` feature's siteId and
   // HUB_FEATURE_SEGMENT entry resolve to a real registry site.
   { id: 'messaging', label: 'Messaging', fullLabel: 'Agentic Developer Messaging', description: 'Direct messages & notifications', prodHost: 'agenticdevelopermessaging.com', hasStaging: false, hasTesting: false, hasHome: false, listed: false },
 ]
@@ -296,7 +292,7 @@ export function getSite(id: SiteId): SiteDef | undefined {
  *  in neither list. */
 export const MAIN_SITE_IDS: SiteId[] = [
   'admin', 'bitbag', 'community', 'cookbook', 'devteam', 'help', 'hub', 'hub-help',
-  'learntruefacts', 'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',
+  'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',
 ]
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',

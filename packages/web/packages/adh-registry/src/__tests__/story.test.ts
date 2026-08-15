@@ -26,7 +26,7 @@ describe('SITE_STORIES', () => {
       .filter(([, s]) => s.tier === 'proof')
       .map(([id]) => id)
       .sort()
-    expect(proofs).toEqual(['bitbag', 'learntruefacts', 'myagenticteams'])
+    expect(proofs).toEqual(['bitbag', 'myagenticteams'])
   })
 
   it('pins the endorsed satellites', () => {

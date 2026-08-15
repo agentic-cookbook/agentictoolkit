@@ -190,7 +190,6 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   admin: ShieldCheck, // operations console
   api: Code,
   docs: BookText, // guides & API reference
-  learntruefacts: BadgeCheck, // "true facts"
   status: Activity, // system status / pulse
   support: LifeBuoy,
 
