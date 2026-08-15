@@ -12,8 +12,9 @@
  * serves them all as subdomains of one `*.dev.local` / `*.localhost` host), which
  * is the platform's precondition for cross-origin prerendering — paired with the
  * `Supports-Loading-Mode: credentialed-prerender` response header the apps send
- * (see `websites/marketing/marketing.next-config.mjs`). Every DEPLOYED env puts
- * each site on its OWN registrable domain (cross-site), where the platform
+ * (see `PRERENDER_HEADERS` in `@agentic-toolkit/next-headers`, merged into every
+ * site's config by `@agentic-toolkit/next-config`'s `adhNextConfig`). Every DEPLOYED
+ * env puts each site on its OWN registrable domain (cross-site), where the platform
  * disallows prerender, so this is a deliberate no-op there — not a regression.
  *
  * Rendered once by {@link SiteMenuSwitcher}; returns no UI.
