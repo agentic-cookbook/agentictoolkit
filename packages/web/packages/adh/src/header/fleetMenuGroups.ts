@@ -86,9 +86,6 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       // effect is to repeat its own parent. So Hub ▸ Help and Learn ▸ Help are one
       // destination reached from two groups, which is why they read the same.
       { site: 'hub-help' },
-      // The registry's description for this one is its own domain (it has no other
-      // blurb), which reads as a stray URL in a menu row.
-      { site: 'learntruefacts', description: 'Facts, checked' },
     ],
   }),
   topic({

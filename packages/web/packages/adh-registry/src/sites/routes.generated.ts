@@ -330,10 +330,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/terms',
     '/tour',
   ],
-  learntruefacts: [
-    '/',
-    '/auth/callback',
-  ],
   myagenticteams: [
     '/',
     '/[workspace]/[[...path]]',

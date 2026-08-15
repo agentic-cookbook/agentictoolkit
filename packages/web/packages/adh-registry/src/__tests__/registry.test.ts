@@ -140,7 +140,6 @@ describe('ssoReturnOrigins (central adh SSO client allowlist, per env)', () => {
     expect(origins).toContain('https://agenticdeveloperhub.com')
     expect(origins).toContain('https://agenticdevelopercookbook.com')
     expect(origins).toContain('https://bitbag.ai')
-    expect(origins).toContain('https://learntruefacts.ai')
     expect(origins.every((o) => /^https:\/\/[^/]+$/.test(o))).toBe(true)
     expect(origins.some((o) => o.includes('staging.') || o.includes('testing.'))).toBe(false)
   })
@@ -249,11 +248,11 @@ describe('LISTED_SITES (the family roster)', () => {
       'builds',
     ])
   })
-  it('lists admin + status but still hides learntruefacts', () => {
+  it('lists admin + status but still hides the unlisted registry entries', () => {
     const ids = LISTED_SITES.map((s) => s.id)
     expect(ids).toContain('admin')
     expect(ids).toContain('status')
-    expect(ids).not.toContain('learntruefacts')
+    expect(ids).not.toContain('messaging')
   })
   it('includes the new mcp entry', () => {
     expect(LISTED_SITES.map((s) => s.id)).toContain('mcp')

@@ -122,7 +122,6 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   status: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
   builds: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'status' },
   // --- registered but unlisted ---
-  learntruefacts: { tier: 'proof', pillar: 'identity', funnelStage: 'discover', nextStep: 'hub' },
   messaging: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
 }
 
