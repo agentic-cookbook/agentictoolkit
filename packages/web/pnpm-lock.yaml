@@ -1955,6 +1955,9 @@ importers:
       '@agentic-toolkit/next-preflight':
         specifier: workspace:*
         version: link:../next-preflight
+      '@agentic-toolkit/themes':
+        specifier: workspace:*
+        version: link:../themes
     devDependencies:
       '@types/node':
         specifier: ^24.0.0

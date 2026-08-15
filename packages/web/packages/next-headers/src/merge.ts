@@ -1,4 +1,5 @@
 import { FONT_CACHE_HEADERS } from "./font-cache.js";
+import { PRERENDER_HEADERS } from "./prerender.js";
 import { SECURITY_HEADERS } from "./security.js";
 
 /** A single Next `headers()` rule: a path pattern plus the header entries applied to it. */
@@ -23,6 +24,11 @@ export interface NextConfig {
  * `Content-Security-Policy` keeps it instead of having it clobbered by this baseline.
  *
  * Ported unchanged (renamed from `mergedHeaders`) from `frontend/src/next-config-base.mjs:64`.
+ * The third baseline rule, {@link PRERENDER_HEADERS}, was promoted here from
+ * `marketing.next-config.mjs:82-89` in the Task 5 fix round — it used to be a
+ * marketing-site-only `headers()` merged as `existing`, which is why it sits after the
+ * two original baseline rules rather than before them; nothing about its own
+ * precedence changed.
  */
 export function mergeHeaders(config: NextConfig): () => Promise<HeaderRule[]> {
   const appHeaders = config?.headers;
@@ -31,6 +37,7 @@ export function mergeHeaders(config: NextConfig): () => Promise<HeaderRule[]> {
     return [
       { source: "/(.*)", headers: SECURITY_HEADERS },
       { source: "/fonts/:path*", headers: FONT_CACHE_HEADERS },
+      { source: "/:path*", headers: PRERENDER_HEADERS },
       ...existing,
     ];
   };

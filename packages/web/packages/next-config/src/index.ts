@@ -4,6 +4,16 @@ import { assertAuthApiUrl, assertHoistableDeps } from "@agentic-toolkit/next-pre
 import { mergeHeaders } from "@agentic-toolkit/next-headers";
 import { commitSha, readSiteVersion, resolveBackendUrl } from "@agentic-toolkit/next-env";
 import { siteBuildConfig, type SiteRedirect } from "@agentic-toolkit/adh-registry";
+// By NAME, not by relative path — the point of this package existing at all. The old
+// `next-config-base.mjs:13` had to reach across the filesystem
+// (`./external/agentictoolkit/packages/web/packages/themes/src/materialize-fonts.mjs`)
+// because it sat at the pnpm-workspace root, which declared no dependencies and so
+// could not resolve the bare specifier. This package CAN declare
+// `@agentic-toolkit/themes` (see package.json), which is what makes the relative path
+// obsolete. Kept EXTERNAL in tsup.config.ts, unlike the other four siblings — see the
+// comment there — because the module locates its own font files relative to its own
+// `import.meta.url` and must not move.
+import { materializeThemeFonts } from "@agentic-toolkit/themes/materialize-fonts";
 import { currentSiteId } from "./site-id.js";
 
 export { currentSiteId };
@@ -59,10 +69,30 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
   // data, so there is no undefined case to handle here.
   const site = siteBuildConfig(id);
 
+  // Before anything else: restored to this order (auth check FIRST) in the Task 5 fix
+  // round — `next-config-base.mjs:429-431` ran it first deliberately, with the comment
+  // this one carries: a hosted build with no AS host produces a site whose header can
+  // never show a signed-in visitor, and says nothing about it at build or run time. An
+  // earlier draft of this file ran the dependency gate first instead, which only
+  // changes which error surfaces when both would fail — but the original order was a
+  // documented choice, not an accident, so it is restored rather than left reversed.
+  // Validate AND pass through the AS host in one step: Task 2's `assertAuthApiUrl`
+  // takes the value and hands it back unchanged (or throws on a hosted build with
+  // none), so computing it here both performs the assertion and gives `env` below an
+  // explicit value to wire in.
+  const authApiUrl = assertAuthApiUrl(process.env.NEXT_PUBLIC_AUTH_API_URL, id);
+
   // Fail fast, before Next does any work. This is the whole point of the
   // package: an undeclared dependency is caught here, in dev, rather than in a
   // Vercel build twenty minutes later.
   assertHoistableDeps(siteDir);
+
+  // Put the theme's self-hosted webfont faces under this site's public/ before Next
+  // collects it (see the import comment above, and materialize-fonts.mjs's own header)
+  // — the theme css names those faces by absolute path, so they must exist on disk
+  // before the build proceeds. `withAdhConfig` ran this in this same slot, after the
+  // two assertions above and before the config is assembled.
+  materializeThemeFonts();
 
   // `requiresBackendUrl` (Task 4) is set for TWO sites — bitbag and personaregistry.
   // Passing it from the registry rather than hardcoding `false` is what keeps this
@@ -99,25 +129,22 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
       // NEXT_PUBLIC_DEPLOYMENT_ENV (the local dev suite sets that ambiently). Ported from
       // next-config-base.mjs:428.
       NEXT_PUBLIC_DEPLOYMENT_ENV: process.env.DEPLOYMENT_ENV ?? process.env.NEXT_PUBLIC_DEPLOYMENT_ENV,
-      // Validate AND pass through the AS host in one step. Ported from
-      // next-config-base.mjs:133's assertAuthApiUrl(), which only validated
-      // `process.env.NEXT_PUBLIC_AUTH_API_URL` and threw; Task 2's version takes the value
-      // and hands it back unchanged (or throws on a hosted build with none), so wiring the
-      // return value here both performs the assertion and makes the inlined value explicit
-      // rather than relying on Next's automatic NEXT_PUBLIC_ inlining alone.
-      NEXT_PUBLIC_AUTH_API_URL: assertAuthApiUrl(process.env.NEXT_PUBLIC_AUTH_API_URL, id),
+      // Computed above (before the dependency gate — see the "Before anything else"
+      // comment), not called here, so the assertion runs in the restored original
+      // order rather than lazily as part of assembling this object.
+      NEXT_PUBLIC_AUTH_API_URL: authApiUrl,
       // The footer's two build-identity fields (readSiteVersion/commitSha above) so the
       // footer can show both and the shared telemetry can tag every GlitchTip error with a
       // `release`. Ported from next-config-base.mjs:428.
       NEXT_PUBLIC_ADH_SITE_VERSION: version,
       NEXT_PUBLIC_ADH_RELEASE: sha,
     },
-    // `mergeHeaders` already emits the SECURITY_HEADERS and FONT_CACHE_HEADERS
-    // baseline rules itself — do not re-list them here, that emits each twice.
-    // It takes a NextConfig and appends that config's own `headers()` AFTER the
-    // baseline (last-wins, so a site could override). No site defines one today
-    // (`grep -rn "headers" frontend/src/sites/*/next.config.ts` is empty), hence
-    // `{}`; the parameter stays because it is where a future override goes.
+    // `mergeHeaders` already emits the SECURITY_HEADERS, FONT_CACHE_HEADERS, and
+    // (Task 5 fix round) PRERENDER_HEADERS baseline rules itself — do not re-list them
+    // here, that emits each twice. It takes a NextConfig and appends that config's own
+    // `headers()` AFTER the baseline (last-wins, so a site could override). No site
+    // defines one today (`grep -rn "headers" frontend/src/sites/*/next.config.ts` is
+    // empty), hence `{}`; the parameter stays because it is where a future override goes.
     headers: mergeHeaders({}),
     async redirects() {
       // Registry data first, then the call site's. No site supplies both today — the
@@ -139,16 +166,14 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
     async rewrites() {
       // Same-origin BFF proxy, ported from `marketing.next-config.mjs:49-51` — every site
       // funnels through this uniform config now, so this rule (previously marketing-only)
-      // applies fleet-wide. Followed by the narrower `/api/system/*` baseline from
-      // `next-config-base.mjs:164`'s `mergedRewrites`: the general rule above already
-      // covers it (`/api/:path*` matches `/api/system/foo` too), so this second entry is
-      // redundant for every site once the general rule is universal — it is kept anyway so
-      // the two ported rules stay literally traceable to their sources rather than one
-      // being silently dropped as "implied" by the other.
-      return [
-        { source: "/api/:path*", destination: `${backendUrl}/:path*` },
-        { source: "/api/system/:path*", destination: `${backendUrl}/system/:path*` },
-      ];
+      // applies fleet-wide.
+      //
+      // `next-config-base.mjs:164`'s narrower `/api/system/*` baseline is NOT ported: it
+      // is unreachable dead code, not merely redundant — this rule is listed FIRST and
+      // already matches every `/api/system/*` request, producing a byte-identical
+      // destination, and Next matches rewrites in array order, so the second rule could
+      // never fire. Removed in the Task 5 fix round.
+      return [{ source: "/api/:path*", destination: `${backendUrl}/:path*` }];
     },
     experimental: {
       // Next's client router cache for DYNAMIC segments defaults to 0 seconds, so navigating

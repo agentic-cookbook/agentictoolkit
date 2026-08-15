@@ -15,7 +15,8 @@
     "@agentic-toolkit/adh-registry": "workspace:*",
     "@agentic-toolkit/next-env": "workspace:*",
     "@agentic-toolkit/next-headers": "workspace:*",
-    "@agentic-toolkit/next-preflight": "workspace:*"
+    "@agentic-toolkit/next-preflight": "workspace:*",
+    "@agentic-toolkit/themes": "workspace:*"
   },
   "peerDependencies": { "next": "^16.0.0" },
   "devDependencies": {
