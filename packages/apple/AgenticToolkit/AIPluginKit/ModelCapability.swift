@@ -39,15 +39,40 @@ public enum ModelCapability: String, CaseIterable, Sendable, Codable {
         }
     }
 
-    /// The gateway-reported capability string this case corresponds to, when there
-    /// is one. `conversation` has none — see the type's note.
-    private var reportedName: String? {
+    /// Every capability string a gateway might report for this case. More than one
+    /// spelling because the string is whatever the serving gateway chose to call it
+    /// and no two agree: OpenAI-shaped servers report `function_calling`, Google
+    /// reports `functionCalling`, and reasoning arrives as `thinking` about as often
+    /// as `reasoning`. Matching only the toolkit's own spelling silently blanked the
+    /// column for every provider that spells it differently.
+    ///
+    /// `conversation` answers to none of them — see the type's note.
+    private var reportedNames: [String] {
         switch self {
-        case .tools: return "tools"
-        case .reasoning: return "reasoning"
-        case .vision: return "vision"
-        case .conversation: return nil
+        case .tools: return ["tools", "tool_use", "tool-use", "function_calling", "functioncalling",
+                             "function-calling", "functions"]
+        case .reasoning: return ["reasoning", "thinking", "extended_thinking", "extended-thinking"]
+        case .vision: return ["vision", "image", "images", "image_input", "multimodal"]
+        case .conversation: return []
         }
+    }
+
+    /// Is this capability among the strings a gateway reported? Case-insensitive,
+    /// because the spelling is the gateway's, not ours.
+    ///
+    /// Public so the one vocabulary serves every reader of a reported capability
+    /// list — `ModelUseFacet.impliedByCapability` included, which used to carry its
+    /// own literal `"tools"` / `"vision"` / `"reasoning"` and so disagreed with this
+    /// table for any gateway that spells them differently.
+    public static func reports(_ capability: ModelCapability, in capabilities: [String]) -> Bool {
+        let names = Set(capability.reportedNames)
+        return capabilities.contains { names.contains($0.lowercased()) }
+    }
+
+    /// Did the gateway report this capability for `info`?
+    public static func reports(_ capability: ModelCapability,
+                               _ info: AIModelCatalog.ResolvedModel) -> Bool {
+        reports(capability, in: info.capabilities)
     }
 
     /// Does `info` have this capability?
@@ -56,17 +81,27 @@ public enum ModelCapability: String, CaseIterable, Sendable, Codable {
     /// no capability list at all — that flag is the only evidence most curated
     /// `modelDetails` entries carry, and dropping it would blank the column for
     /// every provider that ships its own model copy.
-    public static func has(_ capability: ModelCapability, _ info: AIModelCatalog.ResolvedModel) -> Bool {
-        if let name = capability.reportedName, info.capabilities.contains(name) { return true }
+    ///
+    /// `extraText` carries description text the catalog doesn't have — a local
+    /// server's fetched blurb, say — and is the only evidence `.conversation` can
+    /// have for a model no catalog has heard of. `.reasoning` and `.vision` stay
+    /// hard-false without a gateway report on purpose: prose saying a model "reasons
+    /// well" is marketing, not the asserted capability the check-mark column claims.
+    public static func has(_ capability: ModelCapability,
+                           _ info: AIModelCatalog.ResolvedModel,
+                           extraText: String? = nil) -> Bool {
+        if reports(capability, info) { return true }
         switch capability {
         case .tools: return info.tools == true
-        case .conversation: return ModelUseFacet.facets(for: info).contains(.conversation)
+        case .conversation:
+            return ModelUseFacet.facets(for: info, extraText: extraText).contains(.conversation)
         case .reasoning, .vision: return false
         }
     }
 
     /// Every capability `info` has, in `allCases` order.
-    public static func capabilities(of info: AIModelCatalog.ResolvedModel) -> [ModelCapability] {
-        allCases.filter { has($0, info) }
+    public static func capabilities(of info: AIModelCatalog.ResolvedModel,
+                                    extraText: String? = nil) -> [ModelCapability] {
+        allCases.filter { has($0, info, extraText: extraText) }
     }
 }

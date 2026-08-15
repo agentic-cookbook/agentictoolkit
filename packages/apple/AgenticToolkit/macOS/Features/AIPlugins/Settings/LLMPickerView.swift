@@ -7,8 +7,13 @@ import AIPluginKit
 ///
 /// ```
 /// Provider: [ Ollama            ⌄ ]
-///    Model: llama3.2:3b          [ Choose… ]
+///    Model: llama3.2:3b   [ Choose… ] [ Try… ]
 /// ```
+///
+/// Two ways to answer "which model?": *Choose* lists them, *Try* opens a real
+/// conversation (``LLMChatPicker``) and hands back the one that answered well.
+/// A list is enough when you already know the name; it is no help at all when the
+/// question is whether a model can do the job.
 ///
 /// One picker serves every feature that needs a provider + model (session
 /// summaries, oversight, and whatever comes next): it is parameterized by which
@@ -52,6 +57,7 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     private let providerPopup = NSPopUpButton(frame: .zero, pullsDown: false)
     private let modelNameLabel = NSTextField(labelWithString: "")
     private let chooseButton = NSButton(title: "Choose…", target: nil, action: nil)
+    private let tryButton = NSButton(title: "Try…", target: nil, action: nil)
 
     private let pluginManager: AIPluginManager?
     private let selectedSetting: UserSetting<String>
@@ -92,6 +98,8 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
         providerPopup.action = #selector(providerChanged(_:))
         chooseButton.target = self
         chooseButton.action = #selector(chooseTapped)
+        tryButton.target = self
+        tryButton.action = #selector(tryTapped)
 
         selectionObserver = UserSettingObserver(selectedSetting) { [weak self] _ in
             self?.syncProviderSelection()
@@ -136,6 +144,10 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     public var modelNameText: String { modelNameLabel.stringValue }
     /// Whether a model can be chosen for the current selection.
     public var isChooseEnabled: Bool { chooseButton.isEnabled }
+    /// Whether the current selection can be tried out in a chat. Distinct from
+    /// ``isChooseEnabled``: a chat needs a plugin host to build a backend, so a
+    /// picker built without one can still list models but cannot talk to any.
+    public var isTryEnabled: Bool { tryButton.isEnabled }
 
     // MARK: - Layout
 
@@ -159,16 +171,19 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
             label.setContentCompressionResistancePriority(.required, for: .horizontal)
         }
         modelNameLabel.lineBreakMode = .byTruncatingMiddle
-        chooseButton.bezelStyle = .rounded
-        chooseButton.setButtonType(.momentaryPushIn)
+        for button in [chooseButton, tryButton] {
+            button.bezelStyle = .rounded
+            button.setButtonType(.momentaryPushIn)
+            button.setContentHuggingPriority(.required, for: .horizontal)
+        }
+        tryButton.toolTip = "Chat with this provider, then pick the model that answered best"
 
-        // The name takes the slack and the button hugs the trailing edge, so the
-        // button lands in the same place whatever the model is called.
+        // The name takes the slack and the buttons hug the trailing edge, so they
+        // land in the same place whatever the model is called.
         modelNameLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
         modelNameLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        chooseButton.setContentHuggingPriority(.required, for: .horizontal)
 
-        let modelRow = NSStackView(views: [modelNameLabel, chooseButton])
+        let modelRow = NSStackView(views: [modelNameLabel, chooseButton, tryButton])
         modelRow.orientation = .horizontal
         modelRow.spacing = 8
         modelRow.alignment = .centerY
@@ -199,9 +214,10 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
         ])
 
         // The visible labels sit beside their controls but AppKit doesn't associate
-        // them, so VoiceOver would announce both with no name.
+        // them, so VoiceOver would announce each with no name.
         providerPopup.setAccessibilityTitleUIElement(providerLabel)
         chooseButton.setAccessibilityTitleUIElement(modelLabel)
+        tryButton.setAccessibilityTitleUIElement(modelLabel)
     }
 
     // MARK: - Provider popup
@@ -267,12 +283,16 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
             modelNameLabel.stringValue = Self.noProviderModelText
             modelNameLabel.textColor = .secondaryLabelColor
             chooseButton.isEnabled = false
+            tryButton.isEnabled = false
             return
         }
         let stored = modelSetting(config.id, template).value
         modelNameLabel.stringValue = stored.isEmpty ? Self.noProviderModelText : stored
         modelNameLabel.textColor = stored.isEmpty ? .secondaryLabelColor : .labelColor
         chooseButton.isEnabled = true
+        // Chatting needs a plugin host to build a backend from; listing models
+        // doesn't, so Try is the only one of the two that can be unavailable here.
+        tryButton.isEnabled = pluginManager != nil
     }
 
     @objc private func chooseTapped() {
@@ -284,6 +304,35 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
         ModelChooser.present(over: window, context: context) { [weak self] chosen in
             setting.value = chosen
             self?.refreshModelRow()
+        }
+    }
+
+    /// Open the modal chat picker on the current selection: a real conversation
+    /// against the provider, with its own model popup, ending in "use this one".
+    ///
+    /// The picker can be steered onto a *different* provider mid-try, so its answer
+    /// is a pair. Writing only the model would land it on the provider the user
+    /// walked away from, so the model goes to whichever configuration they settled
+    /// on and the selection follows it.
+    @objc private func tryTapped() {
+        guard let window, let pluginManager,
+              let (config, template) = resolvedSelection() else { return }
+        let setting = modelSetting(config.id, template)
+        LLMChatPicker.present(
+            over: window, pluginManager: pluginManager, configuration: config,
+            model: setting.value.isEmpty ? template.resolvedDefaultModel : setting.value
+        ) { [weak self] selection in
+            guard let self else { return }
+            let chosen = selection.configuration
+            if chosen.id == config.id {
+                setting.value = selection.model
+            } else if let template = pluginManager.template(
+                pluginIdentifier: chosen.pluginIdentifier, templateId: chosen.templateId) {
+                self.modelSetting(chosen.id, template).value = selection.model
+            }
+            // Last, so the observer's refresh reads a settled model.
+            self.selectedSetting.value = chosen.id.uuidString
+            self.refreshModelRow()
         }
     }
 

@@ -129,6 +129,17 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private var themeObserver: ThemePaletteObserver?
     private var didSetInitialSplit = false
     private var didSetInitialInnerSplits = false
+    /// Set while this controller drives a table's selection itself, so the resulting
+    /// `tableViewSelectionDidChange` doesn't redo the work the setter already did.
+    /// The explicit calls stay (AppKit posts nothing when the selection is unchanged
+    /// — `applyFilter` re-selecting row 0 while already on row 0), so without this
+    /// flag every programmatic selection did its work twice, including a second
+    /// rebuild of the models table.
+    private var isSelectingProgrammatically = false
+    /// `cacheKey(for:)` of the provider the models table was last built for, so
+    /// `reloadModels` can tell "same provider, list refreshed" (keep the user's
+    /// model selection) from "different provider" (land on the first model).
+    private var modelsKey: String?
     /// Is the field's text a mirrored selection (`moveSelection`) rather than a typed
     /// query? A mirrored name must never be filtered ON: arrowing to "Anthropic" and
     /// then picking a "Good for" facet would otherwise narrow the list to Anthropic,
@@ -151,6 +162,51 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// Frame-persistence key, shared with the presenter, so the picker window's
     /// size + location go through the app's `WindowManager` like every other window.
     static let windowID = "provider-picker"
+
+    /// Divider-position autosave names. `WindowManager` persists the window's
+    /// frame, but AppKit owns divider positions — without these, every reopen threw
+    /// away whatever pane layout the user had dragged out.
+    private static let outerSplitAutosave = "provider-picker.outer"
+    private static let providerSplitAutosave = "provider-picker.providers"
+    private static let modelSplitAutosave = "provider-picker.models"
+
+    /// The narrowest either half of the outer split may be squeezed to.
+    private static let minPaneWidth: CGFloat = 200
+
+    /// Has AppKit already restored autosaved divider positions for `name`?
+    ///
+    /// Probing the defaults key AppKit writes is the only way to ask — a restored
+    /// split is indistinguishable from an unplaced one by the time `viewDidLayout`
+    /// runs. If that key's format ever changes this reads false and the initial
+    /// placement runs, which is the behavior from before autosave rather than a
+    /// broken window.
+    private static func hasAutosavedPositions(_ name: String) -> Bool {
+        UserDefaults.standard.object(forKey: "NSSplitView Subview Frames \(name)") != nil
+    }
+
+    /// Where the outer divider may sit in a split of `width`: no narrower than the
+    /// provider table's fitted columns, unless the window itself is too narrow to
+    /// afford that plus a usable models half — and never so far right that the
+    /// models half loses its own minimum.
+    ///
+    /// One computation because the two `constrain*Coordinate` callbacks have to
+    /// agree. The pair they replace didn't: a fixed `tableWidth` minimum against a
+    /// width-derived maximum handed AppKit a minimum above its maximum for any
+    /// window narrower than `tableWidth + 240`, which the picker's own
+    /// `contentMinSize` allows.
+    ///
+    /// A pure function of the three widths, so the ordering it promises can be
+    /// tested without a window.
+    static func outerDividerLimits(width: CGFloat, tableWidth: CGFloat,
+                                   modelTableWidth: CGFloat) -> (min: CGFloat, max: CGFloat) {
+        let upper = max(minPaneWidth, width - minPaneWidth)
+        let lower = min(tableWidth, max(minPaneWidth, width - modelTableWidth))
+        return (min(lower, upper), upper)
+    }
+
+    private func outerDividerLimits(width: CGFloat) -> (min: CGFloat, max: CGFloat) {
+        Self.outerDividerLimits(width: width, tableWidth: tableWidth, modelTableWidth: modelTableWidth)
+    }
 
     private static let providerColumnID = NSUserInterfaceItemIdentifier("provider.provider")
     private static let llmColumnID = NSUserInterfaceItemIdentifier("provider.llm")
@@ -297,17 +353,27 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     public override func viewDidLayout() {
         super.viewDidLayout()
-        // Wait until each split is actually big enough before placing its divider,
-        // so an early layout pass (window not yet at full size) doesn't clamp it.
-        if !didSetInitialSplit, splitView.bounds.width >= tableWidth + 240 {
+        // Place each divider once, on the first layout pass that has a real size.
+        // Latching on "has a size" rather than on a minimum size: a size gate stays
+        // armed until the window happens to grow that big, which can be long after
+        // the user has dragged the divider themselves — and firing then throws that
+        // drag away. A first pass that is small merely places the divider inside a
+        // small window, which is what the constraints are for.
+        if !didSetInitialSplit, splitView.bounds.width > 0 {
             didSetInitialSplit = true
-            splitView.setPosition(tableWidth, ofDividerAt: 0)   // table fits its columns; models get the rest
+            if !Self.hasAutosavedPositions(Self.outerSplitAutosave) {
+                // The table fits its columns; the models half gets the rest.
+                let limits = outerDividerLimits(width: splitView.bounds.width)
+                splitView.setPosition(min(max(tableWidth, limits.min), limits.max), ofDividerAt: 0)
+            }
         }
-        if !didSetInitialInnerSplits, providerSplit.bounds.height >= 260 {
+        if !didSetInitialInnerSplits, providerSplit.bounds.height > 0, modelSplit.bounds.height > 0 {
             didSetInitialInnerSplits = true
             // Lists get the top ~60%, descriptions the rest — enough prose to read
             // without hiding the list that drives it.
-            for inner in [providerSplit, modelSplit] {
+            for (inner, name) in [(providerSplit, Self.providerSplitAutosave),
+                                  (modelSplit, Self.modelSplitAutosave)]
+            where !Self.hasAutosavedPositions(name) {
                 inner.setPosition(inner.bounds.height * 0.6, ofDividerAt: 0)
             }
         }
@@ -435,8 +501,19 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             // Roomier than a table cell's padding: this is prose, and it reads as a
             // card rather than as a fourth column of the list above it.
             textView.textContainerInset = NSSize(width: 14, height: 12)
+            // The full width-tracking recipe. `widthTracksTextView` alone is not
+            // enough inside a scroll view: without the autoresizing mask the text
+            // view keeps the width it was first laid out at, so dragging the split
+            // wider left the prose wrapped to the old, narrower column — and the
+            // unbounded container height is what lets it grow instead of clipping.
+            textView.autoresizingMask = [.width]
             textView.isVerticallyResizable = true
+            textView.isHorizontallyResizable = false
+            textView.minSize = NSSize(width: 0, height: 0)
+            textView.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
+                                      height: CGFloat.greatestFiniteMagnitude)
             textView.textContainer?.widthTracksTextView = true
+            textView.textContainer?.containerSize = NSSize(width: 0, height: CGFloat.greatestFiniteMagnitude)
         }
         configureScroll(infoScroll, documentView: infoTextView)
         configureScroll(modelInfoScroll, documentView: modelInfoTextView)
@@ -462,18 +539,21 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         providerSplit.isVertical = false          // horizontal divider → table over details
         providerSplit.dividerStyle = .thin
         providerSplit.delegate = self
+        providerSplit.autosaveName = Self.providerSplitAutosave
         providerSplit.addArrangedSubview(tableScroll)
         providerSplit.addArrangedSubview(infoScroll)
 
         modelSplit.isVertical = false
         modelSplit.dividerStyle = .thin
         modelSplit.delegate = self
+        modelSplit.autosaveName = Self.modelSplitAutosave
         modelSplit.addArrangedSubview(modelTableScroll)
         modelSplit.addArrangedSubview(modelInfoScroll)
 
         splitView.isVertical = true               // vertical divider → left/right halves
         splitView.dividerStyle = .thin
         splitView.delegate = self
+        splitView.autosaveName = Self.outerSplitAutosave
         splitView.addArrangedSubview(titled(providerTitle, over: providerSplit))
         splitView.addArrangedSubview(titled(modelTitle, over: modelSplit))
     }
@@ -527,7 +607,14 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
             return
         }
         let clamped = max(0, min(filteredRows.count - 1, index))
+        // Drive the repaint from here rather than from the notification: AppKit
+        // posts nothing when the selection doesn't actually move, and `applyFilter`
+        // re-selecting row 0 while already on row 0 has to repaint a list that now
+        // holds different providers. The flag stops the notification from doing the
+        // same work a second time in the cases where it *is* posted.
+        isSelectingProgrammatically = true
         tableView.selectRowIndexes([clamped], byExtendingSelection: false)
+        isSelectingProgrammatically = false
         tableView.scrollRowToVisible(clamped)
         updateInfo(for: filteredRows[clamped])
         fetchLiveModelsIfNeeded(for: filteredRows[clamped])
@@ -577,37 +664,63 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// Rebuilds the models table for `row` (empty when nothing is selected) and
     /// lands on its first model so the model description pane is never blank while
     /// a provider with models is selected.
+    ///
+    /// A rebuild for the *same* provider keeps whichever model was selected. This is
+    /// not cosmetic: a live model fetch landing (`fetchLiveModelsIfNeeded`) and a
+    /// theme change both re-enter here, and either one used to yank the user back to
+    /// the first model while they were reading the fifth.
     private func reloadModels(for row: ProviderPickerRow?) {
+        let previousKey = modelsKey
+        let previousModel = selectedModelName()
         if let row {
             let template = row.available.template
+            modelsKey = cacheKey(for: row)
             modelRows = resolvedModels(for: row).map { model in
                 ModelRow(name: model, info: AIModelCatalog.shared.resolve(model: model, template: template))
             }
         } else {
+            modelsKey = nil
             modelRows = []
         }
         modelTableView.reloadData()
-        if modelRows.isEmpty {
+        guard !modelRows.isEmpty else {
             updateModelInfo(for: nil)
-        } else {
-            modelTableView.selectRowIndexes([0], byExtendingSelection: false)
-            modelTableView.scrollRowToVisible(0)
-            updateModelInfo(for: modelRows[0])
+            return
         }
+        // Same provider → keep the user's model if it survived the rebuild;
+        // a different provider carries its own models, so land on the first.
+        let keep = modelsKey == previousKey ? previousModel : nil
+        let index = keep.flatMap { name in modelRows.firstIndex { $0.name == name } } ?? 0
+        isSelectingProgrammatically = true
+        modelTableView.selectRowIndexes([index], byExtendingSelection: false)
+        isSelectingProgrammatically = false
+        modelTableView.scrollRowToVisible(index)
+        updateModelInfo(for: modelRows[index])
+    }
+
+    /// The name of the model highlighted in the models table, if any.
+    private func selectedModelName() -> String? {
+        let row = modelTableView.selectedRow
+        guard row >= 0, row < modelRows.count else { return nil }
+        return modelRows[row].name
     }
 
     private func updateModelInfo(for model: ModelRow?) {
         let palette = ThemePaletteObserver.currentPalette
         let content = model.map { ProviderPickerInfo.model(name: $0.name, info: $0.info, palette: palette) }
-            ?? ProviderPickerInfo.placeholder(emptyModelsText, palette: palette)
+            ?? ProviderPickerInfo.placeholder(noModelText, palette: palette)
         modelInfoTextView.textStorage?.setAttributedString(content)
     }
 
-    /// Why the models table is empty: a local server publishes its models only once
-    /// it's running and configured, which is a different thing to say than "this
-    /// provider has no models".
-    private var emptyModelsText: String {
+    /// Why the model pane has nothing to describe. Three different reasons, and
+    /// saying the wrong one is worse than saying nothing: a local server publishes
+    /// its models only once it's running and configured, which is a different claim
+    /// from "this provider has no models" — and neither is true when the table is
+    /// full and the user has merely deselected (⌘-click clears the selection, since
+    /// this table allows an empty one).
+    private var noModelText: String {
         guard let row = currentRow() else { return "Select a provider to see the models it serves." }
+        guard modelRows.isEmpty else { return "Select a model to see what it can do." }
         return ModelChooserContent.supportsLiveModels(pluginIdentifier: row.available.pluginIdentifier)
             ? "This provider lists its models once it's configured and reachable."
             : "This provider doesn't publish a model list."
@@ -753,7 +866,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
     }
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
-        guard let table = notification.object as? NSTableView else { return }
+        guard let table = notification.object as? NSTableView, !isSelectingProgrammatically else { return }
         if table === modelTableView {
             let row = modelTableView.selectedRow
             updateModelInfo(for: row >= 0 && row < modelRows.count ? modelRows[row] : nil)
@@ -813,16 +926,19 @@ extension ProviderPickerViewController: NSSplitViewDelegate {
     public func splitView(_ splitView: NSSplitView,
                           constrainMinCoordinate proposedMin: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
-        // Outer: never shrink the provider table narrower than its fitted columns.
+        // Outer: keep both halves usable — see `outerDividerLimits`, which is where
+        // the two bounds are computed together so they can't contradict each other.
         // Inner: always leave a couple of rows plus the header visible.
-        splitView === self.splitView ? tableWidth : 80
+        splitView === self.splitView
+            ? outerDividerLimits(width: splitView.bounds.width).min
+            : 80
     }
 
     public func splitView(_ splitView: NSSplitView,
                           constrainMaxCoordinate proposedMax: CGFloat,
                           ofSubviewAt dividerIndex: Int) -> CGFloat {
         splitView === self.splitView
-            ? max(200, splitView.bounds.width - 240)   // keep at least 240pt for the models half
+            ? outerDividerLimits(width: splitView.bounds.width).max
             : max(100, splitView.bounds.height - 60)   // keep a readable sliver of description
     }
 }

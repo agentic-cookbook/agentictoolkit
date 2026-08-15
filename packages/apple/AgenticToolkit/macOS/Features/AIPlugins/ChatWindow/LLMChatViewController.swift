@@ -39,9 +39,10 @@ public final class LLMChatViewController: NSViewController, Themeable {
     private let pluginManager: AIPluginManager
     private var configurations: [AIProviderConfiguration]
     private var selectedIndex: Int
-    /// The model the chat is currently pointed at. Mirrors the store, which stays
-    /// the source of truth — this is the display/selection copy.
-    private var currentModel: String = ""
+    /// A model handed in by the presenter (`init(model:)` / `refresh(model:)`) that
+    /// is deliberately NOT written to the store — it only points this window at a
+    /// model. Cleared the moment the provider changes or a real choice is made.
+    private var overrideModel: String = ""
     /// Rebuilt whenever the provider changes; nil when nothing is configured.
     private var chatSession: AIProviderChatSession?
 
@@ -83,7 +84,7 @@ public final class LLMChatViewController: NSViewController, Themeable {
             configs.firstIndex { $0.id == wanted.id }
         } ?? (configs.isEmpty ? -1 : 0)
         super.init(nibName: nil, bundle: nil)
-        if let model, !model.isEmpty { self.currentModel = model }
+        if let model, !model.isEmpty { self.overrideModel = model }
     }
 
     @available(*, unavailable)
@@ -102,6 +103,20 @@ public final class LLMChatViewController: NSViewController, Themeable {
     private var selectedConfiguration: AIProviderConfiguration? {
         guard selectedIndex >= 0, selectedIndex < configurations.count else { return nil }
         return configurations[selectedIndex]
+    }
+
+    /// The model the chat is pointed at: the presenter's override if there is one,
+    /// else whatever the store says right now.
+    ///
+    /// Read live rather than mirrored in a stored property. The same store key is
+    /// written from two places — the model chooser here, and the host app's own
+    /// feature settings — and the chat backend resolves the model afresh on every
+    /// turn, so a cached copy went on labelling the window with a model that
+    /// messages were no longer being sent to.
+    private var currentModel: String {
+        guard overrideModel.isEmpty else { return overrideModel }
+        guard let config = selectedConfiguration, let template = selectedTemplate else { return "" }
+        return AIProviderConfigStore.selectedModel(config: config, template: template)
     }
 
     private var selectedTemplate: AIPluginDescriptor.ProviderTemplate? {
@@ -250,10 +265,10 @@ public final class LLMChatViewController: NSViewController, Themeable {
         selectedIndex = wanted.flatMap { id in configurations.firstIndex { $0.id == id } }
             ?? (configurations.isEmpty ? -1 : 0)
         let sameProvider = previous != nil && selectedConfiguration?.id == previous
-        // A different provider carries its own model, so drop the old one and let
-        // `rebuildChat` resolve that provider's stored default; an explicit `model`
-        // overrides either way.
-        currentModel = model ?? (sameProvider ? currentModel : "")
+        // A different provider carries its own model, so drop any override and let
+        // `currentModel` fall through to that provider's stored one; an explicit
+        // `model` overrides either way.
+        overrideModel = model ?? (sameProvider ? overrideModel : "")
         guard isViewLoaded else { return }
         if sameProvider, chatSession != nil {
             syncPopUpTitles()
@@ -292,7 +307,7 @@ public final class LLMChatViewController: NSViewController, Themeable {
         guard index != selectedIndex, index >= 0, index < configurations.count else { return }
         selectedIndex = index
         // A provider carries its own model; keep nothing from the previous one.
-        currentModel = ""
+        overrideModel = ""
         rebuildChat()
     }
 
@@ -314,9 +329,6 @@ public final class LLMChatViewController: NSViewController, Themeable {
         }
 
         emptyLabel.isHidden = true
-        if currentModel.isEmpty, let template = selectedTemplate {
-            currentModel = AIProviderConfigStore.selectedModel(config: config, template: template)
-        }
         updateModelRow()
 
         let session = AIProviderChatSession(configuration: config, pluginManager: pluginManager)
@@ -361,7 +373,15 @@ public final class LLMChatViewController: NSViewController, Themeable {
             baseURL: values["baseURL"] ?? "", apiKey: values["apiKey"],
             currentModel: currentModel.isEmpty ? template.resolvedDefaultModel : currentModel)
         ModelChooser.present(over: window, context: context) { [weak self] model in
-            self?.selectModel(model, template: template, config: config)
+            guard let self else { return }
+            // The chooser runs its own modal session, and the window it sits over can
+            // be pointed somewhere else while it is up — a scripted `send test
+            // message` on another provider, or a `refresh` from Settings. Persisting
+            // then would write this model against the provider that was showing when
+            // the chooser opened, while the label and the transcript describe the one
+            // showing now.
+            guard self.selectedConfiguration?.id == config.id else { return }
+            self.selectModel(model, template: template, config: config)
         }
     }
 
@@ -373,7 +393,9 @@ public final class LLMChatViewController: NSViewController, Themeable {
                              config: AIProviderConfiguration) {
         let previous = currentModel.isEmpty ? template.resolvedDefaultModel : currentModel
         AIProviderConfigStore.modelSetting(config: config.id, template: template).value = model
-        currentModel = model
+        // The store now holds the answer, so the presenter's override has to go —
+        // leaving it would make the window ignore the choice just made.
+        overrideModel = ""
         updateModelRow()
         if model != previous { chatSession?.viewModel.noteModelChanged(to: model) }
     }

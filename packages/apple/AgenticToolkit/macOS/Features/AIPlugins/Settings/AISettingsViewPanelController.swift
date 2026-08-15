@@ -141,10 +141,27 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         return true
     }
 
+    /// The chat already open on the selected configuration, or `nil` when there is
+    /// no chat window, nothing is selected, or the open window is pointed at a
+    /// different provider. Never opens or switches one — this is the read side.
+    private func openChatViewModel() -> ChatViewModel? {
+        guard let id = viewModel.selectedId,
+              let controller = LLMChatWindowController.current,
+              controller.window?.isVisible == true,
+              controller.selection?.configuration.id == id else { return nil }
+        return controller.chatViewModel
+    }
+
     /// The selected configuration's chat transcript as newline-separated
-    /// `role: text` lines (empty when nothing is selected).
+    /// `role: text` lines. Empty when no chat is open on that configuration.
+    ///
+    /// Reads the open window rather than presenting one. Presenting is what
+    /// `sendTestMessage` does, and it rebuilds the transcript whenever the window
+    /// was showing a different provider — so a *getter* that presented could
+    /// destroy the very conversation it was asked to report, and always answered
+    /// "" when it did.
     public func testChatTranscript() -> String {
-        guard let viewModel = presentChat() else { return "" }
+        guard let viewModel = openChatViewModel() else { return "" }
         return viewModel.messages.map { "\($0.role.scriptingLabel): \($0.text)" }.joined(separator: "\n")
     }
 

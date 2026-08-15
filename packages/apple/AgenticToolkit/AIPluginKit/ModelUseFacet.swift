@@ -102,11 +102,15 @@ public enum ModelUseFacet: String, CaseIterable, Sendable, Codable {
 
     /// The hard capability a gateway can report that is direct evidence for this
     /// facet — stronger than any wording, since the serving gateway asserts it.
-    private var impliedByCapability: String? {
+    ///
+    /// Named as a ``ModelCapability`` rather than as a literal string so the many
+    /// spellings gateways actually use (`function_calling`, `thinking`, …) are
+    /// recognised here too; that vocabulary lives in one place.
+    private var impliedByCapability: ModelCapability? {
         switch self {
-        case .agents: return "tools"
-        case .vision: return "vision"
-        case .problemSolving: return "reasoning"
+        case .agents: return .tools
+        case .vision: return .vision
+        case .problemSolving: return .reasoning
         default: return nil
         }
     }
@@ -136,7 +140,8 @@ public enum ModelUseFacet: String, CaseIterable, Sendable, Codable {
         let words = lowered.split(whereSeparator: { !$0.isLetter && !$0.isNumber })
         var found: Set<ModelUseFacet> = []
         for facet in ModelUseFacet.allCases {
-            if let capability = facet.impliedByCapability, capabilities.contains(capability) {
+            if let capability = facet.impliedByCapability,
+               ModelCapability.reports(capability, in: capabilities) {
                 found.insert(facet)
                 continue
             }

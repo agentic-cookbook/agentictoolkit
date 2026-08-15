@@ -140,6 +140,28 @@ struct ProviderPickerTests {
         #expect(rows.map(\.configType) == ["API Key", "Subscription Token", "API Key"])
     }
 
+    // MARK: - Split constraints
+
+    @Test("The outer divider's minimum never exceeds its maximum, however narrow the window")
+    func dividerLimitsNeverContradict() {
+        // Both halves want their natural width; the window may be narrower than the
+        // sum. AppKit asks for the two bounds separately and does not reconcile them,
+        // so a minimum above the maximum pins the divider at the wrong end.
+        for width in stride(from: 200.0, through: 1600.0, by: 37.0) {
+            let limits = ProviderPickerViewController.outerDividerLimits(
+                width: width, tableWidth: 443, modelTableWidth: 487)
+            #expect(limits.min <= limits.max, "min > max at width \(width)")
+        }
+    }
+
+    @Test("A window wide enough gives the provider table its fitted columns")
+    func dividerLimitsAtFullWidth() {
+        let limits = ProviderPickerViewController.outerDividerLimits(
+            width: 1000, tableWidth: 443, modelTableWidth: 487)
+        #expect(limits.min == 443)      // the table's own width is affordable here
+        #expect(limits.max == 800)      // …and the models half keeps its minimum
+    }
+
     // MARK: - Preview panes
 
     @Test("The provider pane names the provider, its blurbs, and what connecting takes")
@@ -191,8 +213,12 @@ struct ProviderPickerTests {
         let string = ProviderPickerInfo.model(
             name: "claude-opus-4", info: info, palette: ThemePaletteObserver.currentPalette).string
         #expect(string.hasPrefix("MODEL\nclaude-opus-4\n"))
-        for capability in ModelCapability.capabilities(of: info) {
-            #expect(string.contains(capability.title))
+        // Spelled out rather than derived from `capabilities(of:)`: driving the
+        // expectation from the same function the pane calls asserts only that the
+        // pane agrees with itself, and passes just as happily when it chips nothing.
+        #expect(ModelCapability.capabilities(of: info).map(\.title) == ["Tools", "Reasoning", "Vision"])
+        for title in ["Tools", "Reasoning", "Vision"] {
+            #expect(string.contains(title))
         }
         #expect(string.contains("The most capable Claude model."))
         #expect(string.contains("SPECS\n"))

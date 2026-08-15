@@ -97,8 +97,17 @@ public enum ModelChooserContent {
     /// Capability badges for a resolved model, with no live server to ask —
     /// the provider picker's per-model lines and the chooser's fallback.
     public static func capabilityBadges(_ info: AIModelCatalog.ResolvedModel) -> [String] {
-        if !info.capabilities.isEmpty { return info.capabilities.map(titleCased) }
-        return info.tools == true ? ["Tools"] : []
+        var badges = info.capabilities.map(titleCased)
+        // A curated `tools == true` is evidence in its own right, not a fallback for
+        // an empty list. Treating it as one dropped the badge for every model whose
+        // gateway reported some *other* capability — "vision" and nothing else is
+        // not a denial of the tool support the template's own model copy asserts.
+        // `ModelCapability.reports` rather than a literal: the gateway's spelling
+        // may be `function_calling`, and a second "Tools" badge is worse than none.
+        if info.tools == true, !ModelCapability.reports(.tools, info) {
+            badges.append(ModelCapability.tools.title)
+        }
+        return badges
     }
 
     /// "131K context · 65K max output · $0.15/$0.60 per M tokens" — the numbers
