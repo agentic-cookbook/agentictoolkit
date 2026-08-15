@@ -511,6 +511,22 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     // that forces it, and re-adding a workspace here is a route the framework refuses.
     expect(getSite('personaregistry')!.workspaceRoute).toBeUndefined()
     expect(getSite('personaregistry')!.hasHome).toBe(false)
+
+    // The two sites the walk above cannot reach. It enumerates FOLDERS, so when bitbag
+    // and myagenticteams moved to their own repos they stopped being subjects of this
+    // test — silently, with no failure and no note, which is the same shrink the
+    // constant 35 lines up was added to prevent. Their `workspaceRoute` values are still
+    // shipped by this registry and still consumed by hub and fleet routing, so a wrong
+    // one would ship green from here and surface as a broken route on the other repo's
+    // deploy. Asserted LITERALLY, like `hub` above and for the same reason: the tree
+    // that would otherwise decide is not in this checkout.
+    for (const id of SOURCE_IN_ITS_OWN_REPO) {
+      expect(getSite(id as never), `${id} must still be a registry site`).toBeTruthy()
+    }
+    expect(getSite('myagenticteams')!.workspaceRoute).toBe('root')
+    expect(getSite('myagenticteams')!.hasHome).toBe(true)
+    expect(getSite('bitbag')!.workspaceRoute).toBeUndefined()
+    expect(getSite('bitbag')!.hasHome).toBe(false)
   })
 
 })
