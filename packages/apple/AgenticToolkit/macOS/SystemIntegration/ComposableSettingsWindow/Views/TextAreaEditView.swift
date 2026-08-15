@@ -18,6 +18,9 @@ extension ComposableSettings {
 
         private let viewModel: ViewModel<String>
         private let scrollView = NSScrollView()
+        /// Set while `commit` writes, so the setting's echo back through `onChange`
+        /// isn't mistaken for an external edit.
+        private var isCommitting = false
 
         /// - Parameters:
         ///   - viewModel: supplies the title and the backing setting.
@@ -84,11 +87,16 @@ extension ComposableSettings {
             viewModel.onChange = { [weak self] _ in
                 guard let self else { return }
                 self.label.stringValue = viewModel.title
-                // A reset (or another window) changed the setting underneath us.
-                // Don't stomp on text the user is in the middle of typing.
-                guard self.textView.string != viewModel.value else { return }
-                if self.window?.firstResponder !== self.textView {
-                    self.textView.string = viewModel.value
+                // Our own `commit` echoes back through here; adopting it would reset
+                // the caret mid-edit for no change in content.
+                guard !self.isCommitting, self.textView.string != viewModel.value else { return }
+                // Anything else is an external write — a "Reset to Defaults" press,
+                // another window, a daemon-side reconcile — and it wins even while
+                // this editor holds focus. Ignoring it left stale text on screen that
+                // `commit` then wrote back, silently undoing the reset.
+                self.textView.string = viewModel.value
+                if self.window?.firstResponder === self.textView {
+                    self.textView.setSelectedRange(NSRange(location: viewModel.value.count, length: 0))
                 }
             }
 
@@ -99,10 +107,43 @@ extension ComposableSettings {
 
         /// The enclosing stack aligns `.leading`, so claim the full width — a text
         /// area that is only as wide as its longest line is unusable for editing.
+        ///
+        /// One below required: a host that insets its hosted controls (a popover
+        /// pinning `width == stack.width - 32`) would otherwise have two required
+        /// width constraints in conflict, and AppKit breaks whichever it likes.
         public override func viewDidMoveToSuperview() {
             super.viewDidMoveToSuperview()
             guard let parent = self.superview else { return }
-            self.widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
+            let fullWidth = self.widthAnchor.constraint(equalTo: parent.widthAnchor)
+            fullWidth.priority = .required - 1
+            fullWidth.isActive = true
+        }
+
+        /// Editing here only ends on focus change, so a window closing (or the app
+        /// quitting) with the caret still in the editor would drop the edit entirely:
+        /// `textDidEndEditing` never fires for a view that is torn down.
+        public override func viewWillMove(toWindow newWindow: NSWindow?) {
+            super.viewWillMove(toWindow: newWindow)
+            NotificationCenter.default.removeObserver(
+                self, name: NSWindow.willCloseNotification, object: self.window)
+            NotificationCenter.default.removeObserver(
+                self, name: NSApplication.willTerminateNotification, object: nil)
+            if newWindow == nil { commit() }
+        }
+
+        public override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            guard let window = self.window else { return }
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(commitBeforeTeardown),
+                name: NSWindow.willCloseNotification, object: window)
+            NotificationCenter.default.addObserver(
+                self, selector: #selector(commitBeforeTeardown),
+                name: NSApplication.willTerminateNotification, object: nil)
+        }
+
+        @objc private func commitBeforeTeardown(_ notification: Notification) {
+            commit()
         }
 
         public func textDidEndEditing(_ notification: Notification) {
@@ -115,7 +156,9 @@ extension ComposableSettings {
         public func commit() {
             let newValue = self.textView.string
             if viewModel.settingObserver.value != newValue {
+                self.isCommitting = true
                 viewModel.settingObserver.value = newValue
+                self.isCommitting = false
             }
         }
 

@@ -113,10 +113,18 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     /// the enclosing stack aligns `.leading`, so without this the picker would be
     /// only as wide as its content and the Choose button would sit mid-panel
     /// instead of at the trailing edge.
+    ///
+    /// Deliberately *not* required: a host may pin its controls to a width of its
+    /// own — `WindowConfigPopover` uses the stack width minus its 32pt insets — and
+    /// two required width constraints on the same view is an unsatisfiable pair
+    /// AppKit resolves by dropping one arbitrarily. At 999 the host always wins and
+    /// nothing is logged; with no host constraint this still takes effect.
     public override func viewDidMoveToSuperview() {
         super.viewDidMoveToSuperview()
         guard let parent = superview else { return }
-        widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
+        let fullWidth = widthAnchor.constraint(equalTo: parent.widthAnchor)
+        fullWidth.priority = .required - 1
+        fullWidth.isActive = true
     }
 
     // MARK: - Scripted / testable surface
@@ -143,7 +151,11 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
             // together and their controls line up.
             label.alignment = .right
             label.translatesAutoresizingMaskIntoConstraints = false
-            label.setContentHuggingPriority(.required, for: .horizontal)
+            // Compression resistance is required so the column can't squeeze either
+            // label; hugging is only *high*, because the two labels are pinned to
+            // equal widths and required hugging on both would be unsatisfiable —
+            // the narrower one has to give.
+            label.setContentHuggingPriority(.defaultHigh, for: .horizontal)
             label.setContentCompressionResistancePriority(.required, for: .horizontal)
         }
         modelNameLabel.lineBreakMode = .byTruncatingMiddle
@@ -207,12 +219,26 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
         syncProviderSelection()
     }
 
+    /// Points the popup at the stored selection — and, when the stored value matches
+    /// no item, *rewrites the setting* to whatever the popup can actually show.
+    ///
+    /// Silently leaving the popup on item 0 while the pref kept a dead value (the
+    /// configuration it named was deleted in the LLM Providers panel) meant the
+    /// panel showed one provider while the daemon used another, with nothing short
+    /// of an explicit re-pick to reconcile them.
     private func syncProviderSelection() {
         let current = selectedSetting.value
         let index = providerPopup.itemArray.firstIndex {
             ($0.representedObject as? String) == current
         }
-        if let index { providerPopup.selectItem(at: index) }
+        if let index {
+            providerPopup.selectItem(at: index)
+        } else if let fallback = providerPopup.itemArray.first {
+            providerPopup.select(fallback)
+            if let value = fallback.representedObject as? String, value != current {
+                selectedSetting.value = value
+            }
+        }
     }
 
     @objc private func providerChanged(_ sender: NSPopUpButton) {
