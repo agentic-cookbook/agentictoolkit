@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { readdirSync, existsSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { RESERVED_SLUGS, isReservedSlug, isReservedSlugAnywhere } from '../reserved-slugs'
@@ -14,10 +14,25 @@ import type { SiteId } from '../registry'
 // web-tests.yml does. adh's ci.yml runs this suite from inside the adh checkout, where
 // frontend/src is present and the filesystem cases run — so the guard still fires in the
 // repository whose folders it is about.
+//
+// The marker is frontend/src's OWN manifest, identified by name. It was
+// `next-config-base.mjs` until that file was split into `@agentic-toolkit/next-config`
+// and deleted — at which point this walk returned null in an adh checkout too, and every
+// filesystem case below self-skipped GREEN in the one repository it is about. A sentinel
+// that can be deleted takes the test with it silently; `frontend/src/package.json` is the
+// pnpm workspace root every site installs from, and the `name` check is what stops the
+// walk at it rather than at the toolkit's own `packages/web/package.json` on the way up.
 const adhFrontendSrc = (): string | null => {
   let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
-    if (existsSync(resolve(dir, 'next-config-base.mjs'))) return dir
+    const manifest = resolve(dir, 'package.json')
+    if (existsSync(manifest)) {
+      try {
+        if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+      } catch {
+        // Unreadable or not JSON — not the marker; keep walking rather than throw.
+      }
+    }
     const up = dirname(dir)
     if (up === dir) return null
     dir = up

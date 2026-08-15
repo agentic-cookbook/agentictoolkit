@@ -311,8 +311,18 @@ export type SiteBuildConfig = {
  */
 export const SITE_BUILD: Partial<Record<SiteId, SiteBuildConfig>> = {
   bitbag: { requiresBackendUrl: true, handRolledConfig: true },
-  projects: { legacyHomePaths: true },
-  narratives: { legacyHomePaths: true },
+  // `requiresBackendUrl` on these two is not decoration: BOTH shipped a
+  // `src/lib/backend-url.ts` that threw UNCONDITIONALLY when `API_BACKEND_URL` was
+  // unset, and their old configs imported it. Taking the byte-exact template deleted
+  // that import, and without this flag a hosted build would resolve the fallback and
+  // deploy a site whose every `/api/*` call proxies to `http://localhost:3000`. The
+  // flag is weaker than what they had — `resolveBackendUrl` only throws under
+  // `VERCEL_ENV`, so local dev now falls back like the other 41 templated sites do —
+  // but it restores the half that was load-bearing, which is the hosted build. The two
+  // sites that keep the stricter unconditional throw (admin, hub) do it by staying
+  // hand-rolled; a templated site has no place to put it.
+  projects: { legacyHomePaths: true, requiresBackendUrl: true },
+  narratives: { legacyHomePaths: true, requiresBackendUrl: true },
   personaregistry: {
     requiresBackendUrl: true,
     extraRedirects: [

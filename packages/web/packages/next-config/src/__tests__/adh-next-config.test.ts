@@ -25,16 +25,24 @@ afterEach(() => {
 // `<cwd>/public/`, which does not exist for any of these fake site directories — it would
 // throw (or, worse, try to create directories outside the test sandbox) before the config
 // is ever assembled.
+//
+// `assertLinkedDepsInstalled` must be mocked in EVERY test too: it reads the site's
+// `package.json` off disk and walks its `link:` targets, none of which exist for these
+// fake site directories. Stubbing it here — rather than letting the real one run and
+// happen to be quiet — is what makes an omission a loud vitest error ("No export is
+// defined on the mock") instead of a real filesystem call inside a unit test.
 function mockDeps(
   overrides: {
     assertHoistableDeps?: () => void;
     assertAuthApiUrl?: (u: string | undefined, id: string) => string | undefined;
+    assertLinkedDepsInstalled?: () => void;
     materializeThemeFonts?: () => void;
   } = {},
 ) {
   vi.doMock("@agentic-toolkit/next-preflight", () => ({
     assertHoistableDeps: overrides.assertHoistableDeps ?? (() => {}),
     assertAuthApiUrl: overrides.assertAuthApiUrl ?? ((u: string | undefined) => u),
+    assertLinkedDepsInstalled: overrides.assertLinkedDepsInstalled ?? (() => {}),
   }));
   vi.doMock("@agentic-toolkit/themes/materialize-fonts", () => ({
     materializeThemeFonts: overrides.materializeThemeFonts ?? (() => {}),
@@ -83,12 +91,19 @@ describe("adhNextConfig", () => {
   // deliberately ("Before anything else: ..."), and a prior draft of this package
   // reversed it. Only the surfaced error changes when both would fail, but the order
   // was a documented choice — this pins it so a future edit can't silently re-reverse it.
-  it("asserts NEXT_PUBLIC_AUTH_API_URL, then the hoistable-deps gate, then materializes fonts, in that order", async () => {
+  //
+  // `linked` sits between them for two reasons, both recorded at the call site: it is a
+  // pure filesystem walk where the hoistable-deps gate forks python3, and a stale install
+  // is the cheaper explanation for a package that gate would then also fail to find.
+  it("asserts NEXT_PUBLIC_AUTH_API_URL, then linked deps, then the hoistable-deps gate, then materializes fonts, in that order", async () => {
     const calls: string[] = [];
     mockDeps({
       assertAuthApiUrl: (u) => {
         calls.push("auth");
         return u;
+      },
+      assertLinkedDepsInstalled: () => {
+        calls.push("linked");
       },
       assertHoistableDeps: () => {
         calls.push("deps");
@@ -100,7 +115,31 @@ describe("adhNextConfig", () => {
     vi.spyOn(process, "cwd").mockReturnValue("/repo/frontend/src/sites/help");
     const { adhNextConfig } = await import("../index.js");
     adhNextConfig();
-    expect(calls).toEqual(["auth", "deps", "fonts"]);
+    expect(calls).toEqual(["auth", "linked", "deps", "fonts"]);
+  });
+
+  // CI deleted its own stale-install guard on the grounds that the check "moved into
+  // @agentic-toolkit/next-preflight". That is only honest if something calls the moved
+  // code with the right argument — the site directory, not the repo root, not the
+  // workspace root. These two tests are what makes it honest.
+  it("runs the stale-install check against the site directory", async () => {
+    const spy = vi.fn();
+    mockDeps({ assertLinkedDepsInstalled: spy });
+    vi.spyOn(process, "cwd").mockReturnValue("/repo/frontend/src/sites/help");
+    const { adhNextConfig } = await import("../index.js");
+    adhNextConfig();
+    expect(spy).toHaveBeenCalledExactlyOnceWith("/repo/frontend/src/sites/help");
+  });
+
+  it("propagates a stale-install failure instead of returning a config", async () => {
+    mockDeps({
+      assertLinkedDepsInstalled: () => {
+        throw new Error("linked dep not installed — run `pnpm build:shared`");
+      },
+    });
+    vi.spyOn(process, "cwd").mockReturnValue("/repo/frontend/src/sites/help");
+    const { adhNextConfig } = await import("../index.js");
+    expect(() => adhNextConfig()).toThrowError(/build:shared/);
   });
 
   // EXACTLY ten, not "at least ten". `help` sets no `legacyHomePaths`, so ten is the whole
@@ -151,6 +190,9 @@ describe("adhNextConfig", () => {
   // round finding 1b), which the review found silently dropped.
   it("merges the security, font-cache, and prerender header baselines", async () => {
     mockDeps();
+    // The prerender baseline is emitted off-Vercel only (next-headers/prerender.ts), so
+    // this pins the branch it names rather than inheriting whatever the runner had set.
+    vi.stubEnv("VERCEL", "");
     vi.spyOn(process, "cwd").mockReturnValue("/repo/frontend/src/sites/help");
     const { adhNextConfig } = await import("../index.js");
     const rules = await adhNextConfig().headers!();
@@ -158,6 +200,21 @@ describe("adhNextConfig", () => {
       { source: "/(.*)", headers: SECURITY_HEADERS },
       { source: "/fonts/:path*", headers: FONT_CACHE_HEADERS },
       { source: "/:path*", headers: PRERENDER_HEADERS },
+    ]);
+  });
+
+  // The other branch, asserted through `adhNextConfig` rather than through `mergeHeaders`
+  // alone: the gate lives in next-headers, but this is the call every one of the 47 sites
+  // actually makes, and it is what a deployed site's response headers come from.
+  it("emits no credentialed-prerender opt-in on a hosted build", async () => {
+    mockDeps();
+    vi.stubEnv("VERCEL", "1");
+    vi.spyOn(process, "cwd").mockReturnValue("/repo/frontend/src/sites/help");
+    const { adhNextConfig } = await import("../index.js");
+    const rules = await adhNextConfig().headers!();
+    expect(rules).toEqual([
+      { source: "/(.*)", headers: SECURITY_HEADERS },
+      { source: "/fonts/:path*", headers: FONT_CACHE_HEADERS },
     ]);
   });
 

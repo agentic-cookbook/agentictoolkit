@@ -78,7 +78,7 @@ export function isDevDeploymentEnv(env: string | null | undefined): env is DevDe
 /**
  * Whether this BUILD carries dev-only client code: true in the three dev envs, false
  * in production. NEXT_PUBLIC_DEPLOYMENT_ENV is inlined per build (promoted from the
- * server-side DEPLOYMENT_ENV by `withAdhConfig`, see frontend/src/next-config-base.mjs),
+ * server-side DEPLOYMENT_ENV by `adhNextConfig()`, see @agentic-toolkit/next-config),
  * so this collapses to a literal boolean at build time. Evaluated once at module load.
  *
  * 🔑 It is written as three explicit `===` comparisons ON PURPOSE and must stay that

@@ -1,6 +1,10 @@
 import path from "node:path";
 import type { NextConfig } from "next";
-import { assertAuthApiUrl, assertHoistableDeps } from "@agentic-toolkit/next-preflight";
+import {
+  assertAuthApiUrl,
+  assertHoistableDeps,
+  assertLinkedDepsInstalled,
+} from "@agentic-toolkit/next-preflight";
 import { mergeHeaders } from "@agentic-toolkit/next-headers";
 import { commitSha, readSiteVersion, resolveBackendUrl } from "@agentic-toolkit/next-env";
 import { siteBuildConfig, type SiteRedirect } from "@agentic-toolkit/adh-registry";
@@ -17,6 +21,7 @@ import { materializeThemeFonts } from "@agentic-toolkit/themes/materialize-fonts
 import { currentSiteId } from "./site-id.js";
 
 export { currentSiteId };
+export { workbenchNextConfig, type WorkbenchNextConfigOptions } from "./workbench.js";
 
 /**
  * What a site may still pass at the call site.
@@ -31,6 +36,31 @@ export { currentSiteId };
 export type AdhNextConfigOptions = {
   readonly legacyHomePaths?: boolean;
   readonly extraRedirects?: readonly SiteRedirect[];
+  /**
+   * Extra Next `experimental` keys, MERGED over the baseline rather than replacing it —
+   * and `staleTimes` merged one level deeper still, so a caller tuning `static` keeps
+   * `dynamic: 30`.
+   *
+   * This exists because the base is now a plain object callers SPREAD (`{ ...base, … }`)
+   * instead of a wrapper they pass their config through. Spreading is last-wins per top
+   * level key, so a site that wrote its own `experimental` next to `...base` would drop
+   * `staleTimes` entirely — a caching regression with nothing in the config to show for
+   * it. `next-config-base.mjs:471-482` merged per key for exactly this reason and said
+   * so; routing the value through here is how that survives the shape change. Same for
+   * {@link workspaceRoot} below.
+   */
+  readonly experimental?: NextConfig["experimental"];
+  /**
+   * The directory Turbopack and output-file tracing are pinned to, off-Vercel.
+   *
+   * Defaults to the site's own pnpm workspace root (two levels up from the site dir),
+   * which is right for all 47 sites — they all live under `frontend/src/sites/`. It is
+   * an option because Turbopack REFUSES a root that is not an ancestor of the project
+   * being built, and the repo-root `local/` workbenches are not under `frontend/src`:
+   * `next-config-base.mjs:488-494` let a caller's own `turbopack.root` win for that
+   * reason, and its comment named those workbenches as the only callers that needed it.
+   */
+  readonly workspaceRoot?: string;
 };
 
 /**
@@ -82,6 +112,14 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
   // explicit value to wire in.
   const authApiUrl = assertAuthApiUrl(process.env.NEXT_PUBLIC_AUTH_API_URL, id);
 
+  // …and its local counterpart, which `withAdhConfig` ran in this same slot
+  // (`next-config-base.mjs:433`): a build whose toolkit workspace was never re-installed
+  // fails hundreds of lines later, naming a package rather than the un-run install. It
+  // runs BEFORE the gate below because it is a pure filesystem walk where that one forks
+  // python3, and because a stale install is the cheaper explanation for a package the
+  // other check would then also fail to find.
+  assertLinkedDepsInstalled(siteDir);
+
   // Fail fast, before Next does any work. This is the whole point of the
   // package: an undeclared dependency is caught here, in dev, rather than in a
   // Vercel build twenty minutes later.
@@ -94,7 +132,8 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
   // two assertions above and before the config is assembled.
   materializeThemeFonts();
 
-  // `requiresBackendUrl` (Task 4) is set for TWO sites — bitbag and personaregistry.
+  // `requiresBackendUrl` (Task 4) is set for FOUR sites — bitbag, personaregistry,
+  // projects and narratives.
   // Passing it from the registry rather than hardcoding `false` is what keeps this
   // uniform code able to express a per-site difference; dropping the argument would
   // silently downgrade both hosted builds from "fail with a named variable" to
@@ -176,11 +215,18 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
       return [{ source: "/api/:path*", destination: `${backendUrl}/:path*` }];
     },
     experimental: {
+      ...options.experimental,
       // Next's client router cache for DYNAMIC segments defaults to 0 seconds, so navigating
       // back to a topic re-renders it from the server even when every query behind it is
       // already cached. 30 seconds makes going back free and bounds how stale a re-entered
       // pane can be. Ported from next-config-base.mjs:428.
-      staleTimes: { dynamic: 30 },
+      //
+      // Merged PER KEY rather than spread whole, so a caller tuning one of Next's other
+      // stale times keeps this default for the one it did not mention — a bare
+      // `...options.experimental` after this line would replace the whole `staleTimes`
+      // object and a caller that set only `static` would silently lose `dynamic: 30`.
+      // next-config-base.mjs:471-482 did it this way and its comment says why.
+      staleTimes: { dynamic: 30, ...options.experimental?.staleTimes },
     },
     ...(process.env.VERCEL
       ? {}
@@ -192,8 +238,8 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
           // `frontend/src/sites/<site>` already, and pinning would mis-join `.next`'s
           // location one segment too shallow. Ported from next-config-base.mjs:428's
           // off-Vercel branch.
-          turbopack: { root: websitesRoot },
-          outputFileTracingRoot: websitesRoot,
+          turbopack: { root: options.workspaceRoot ?? websitesRoot },
+          outputFileTracingRoot: options.workspaceRoot ?? websitesRoot,
         }),
   };
 }

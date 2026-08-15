@@ -2,6 +2,27 @@ import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
 import { dirname, join } from "node:path";
 
+/**
+ * Sites already checked in THIS process, so a repeated config evaluation does not
+ * re-fork python3.
+ *
+ * The `--check` run is a blocking ~350ms `spawnSync`, and `next.config` is evaluated
+ * more than once per site: dev-server boot, every config reload `next dev` performs,
+ * and each build worker. Bringing up the local suite's 47 sites paid for 47 of these
+ * serially, for an answer that cannot change within a process — the isolate script
+ * reads manifests off disk, and a manifest edit is exactly the thing that triggers the
+ * config reload that re-runs it, so a stale cache within one process is only reachable
+ * by editing a DIFFERENT site's manifest. Memoized per resolved site path for the same
+ * reason `commitSha` memoizes its `git rev-parse` fork (`next-env/src/commit-sha.ts:40`).
+ *
+ * Keyed on the realpath, not the caller's string, so two spellings of one site share
+ * an entry. Only a CONCLUSIVE run is recorded: a run that failed to start, or was
+ * killed by a signal, leaves the key absent so the next evaluation retries it — the
+ * transient conditions those represent (a fork that hit EAGAIN, an OOM kill) are
+ * precisely the ones worth retrying.
+ */
+const checkedSites = new Set<string>();
+
 /** Walk up from `dir` looking for adh's isolate script; `undefined` outside adh. */
 function findIsolateScript(dir: string): string | undefined {
   let d = dir;
@@ -26,15 +47,24 @@ function findIsolateScript(dir: string): string | undefined {
  * Delegates to that script's `--check` rather than re-deriving the worklist here:
  * one implementation of the rule, checked from the dev loop.
  *
- * Four failure modes are silent no-ops, and only two of them are deliberate:
+ * Two failure modes are silent no-ops, and both are deliberate:
  *
  * - script not found (outside an adh checkout) — necessary; non-adh consumers and
  *   the toolkit's own tests must not break.
- * - `run.error` (no python3) — this gate is not the place to fail a build over a
- *   missing interpreter, and the same check runs again on Vercel where python3 is
- *   guaranteed.
+ * - `run.error` with `code === "ENOENT"` (no python3 on PATH) — this gate is not the
+ *   place to fail a build over a missing interpreter, and the same check runs again
+ *   on Vercel where python3 is guaranteed.
  *
- * The other two are NOT silent:
+ * The rest are NOT silent:
+ *
+ * - `run.error` with any OTHER code is a spawn that FAILED, not an interpreter that
+ *   is absent. `EAGAIN` (process/thread limit), `EMFILE`/`ENFILE` (fd exhaustion) and
+ *   `ENOBUFS` all arrive here, and all of them are most likely precisely when the
+ *   gate matters most: a parallel build of 47 sites is what exhausts those limits.
+ *   Treating them as "no python3" would disable the gate across the whole fleet at
+ *   exactly the moment an undeclared dependency is cheapest to ship. Warns naming the
+ *   code, and — like the signal case below — is left unmemoized so the next config
+ *   evaluation retries.
  *
  * - `realpathSync` throwing means the CALLER passed a `siteDir` that does not exist
  *   — a bug in the caller's derivation, not a legitimate "nothing to check" case.
@@ -56,18 +86,33 @@ export function assertHoistableDeps(siteDir: string): void {
       `assertHoistableDeps: siteDir does not exist: ${siteDir} (check its derivation)`,
     );
   }
+  if (checkedSites.has(site)) return; // see checkedSites — same answer, ~350ms cheaper
   const script = findIsolateScript(site);
   if (!script) return;
 
   const run = spawnSync("python3", [script, "--check", site], { encoding: "utf8" });
-  if (run.error) return; // no python3 — not this gate's job to fail a build over that
+  if (run.error) {
+    const code = (run.error as NodeJS.ErrnoException).code;
+    // ENOENT is the only one that means "no python3"; every other code is a spawn
+    // that failed for a reason the gate should not swallow (see the docblock).
+    if (code !== "ENOENT") {
+      console.warn(
+        `assertHoistableDeps: could not spawn python3 (${code ?? run.error.message}) — ` +
+          "--check did not run; the hoistable-dependency gate is OFF for this evaluation",
+      );
+    }
+    return;
+  }
   if (run.status === null) {
     console.warn(
       `assertHoistableDeps: python3 was killed by signal ${run.signal} — --check did not run`,
     );
     return;
   }
-  if (run.status === 0) return;
+  if (run.status === 0) {
+    checkedSites.add(site);
+    return;
+  }
 
   throw new Error("\n" + (run.stdout ?? "") + (run.stderr ?? "") + "\n");
 }

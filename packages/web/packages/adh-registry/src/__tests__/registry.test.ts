@@ -377,10 +377,27 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // own web-tests.yml does. adh's ci.yml runs this suite from inside the adh checkout
   // ("Toolkit unit tests"), where the families are present and both assertions run — so
   // the guard still fires in the repository whose folders it is about.
+  //
+  // The marker is frontend/src's OWN manifest, identified by name. It was
+  // `next-config-base.mjs` until that file was split into `@agentic-toolkit/next-config`
+  // and deleted — at which point this walk returned null in an adh checkout too, and the
+  // whole assertion self-skipped GREEN in the one repository it is about. That is the
+  // failure this marker has to be chosen against: a sentinel that is deleted takes the
+  // test with it silently. `frontend/src/package.json` is the pnpm workspace root every
+  // site installs from, so it cannot be deleted without the fleet ceasing to build, and
+  // the `name` check is what stops the walk stopping early at the toolkit's own
+  // `packages/web/package.json` on the way up.
   const adhFrontendSrc = (): string | null => {
     let dir = dirname(fileURLToPath(import.meta.url))
     for (;;) {
-      if (existsSync(resolve(dir, 'next-config-base.mjs'))) return dir
+      const manifest = resolve(dir, 'package.json')
+      if (existsSync(manifest)) {
+        try {
+          if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+        } catch {
+          // Unreadable or not JSON — not the marker; keep walking rather than throw.
+        }
+      }
       const up = dirname(dir)
       if (up === dir) return null
       dir = up

@@ -79,16 +79,22 @@ describe("site build fields", () => {
     ]);
   });
 
-  // The two sites that fail a hosted build with no API_BACKEND_URL. Asserting the exact
+  // The four sites that fail a hosted build with no API_BACKEND_URL. Asserting the exact
   // SET, not "bitbag is true", is what makes this catch the regression that matters — a
-  // third site quietly gaining the flag fails its own deploy, and a site quietly losing it
+  // fifth site quietly gaining the flag fails its own deploy, and a site quietly losing it
   // deploys a proxy that 502s on every call.
-  it("marks exactly bitbag and personaregistry as requiring a backend url", () => {
+  //
+  // `projects` and `narratives` joined the set as a fix, not as a widening: both used to
+  // carry a site-local `src/lib/backend-url.ts` that asserted the var unconditionally at
+  // config load. Moving them onto the shared template deleted that file, and with it the
+  // assertion — so both would have deployed exactly the 502-on-every-call proxy this test
+  // exists to prevent. The flag is where that assertion lives now.
+  it("marks exactly the four backend-fronting sites as requiring a backend url", () => {
     const flagged = Object.entries(SITE_BUILD)
       .filter(([, cfg]) => cfg?.requiresBackendUrl)
       .map(([id]) => id)
       .sort();
-    expect(flagged).toEqual(["bitbag", "personaregistry"]);
+    expect(flagged).toEqual(["bitbag", "narratives", "personaregistry", "projects"]);
   });
 
   // The seven sites that keep a hand-written next.config.ts (Task 6a / A1, A3). Asserting

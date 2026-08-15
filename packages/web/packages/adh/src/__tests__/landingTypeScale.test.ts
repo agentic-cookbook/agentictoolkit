@@ -158,10 +158,28 @@ function workspaceRoot(): string {
  * `no consumer of this scale has landed inside the toolkit itself` test — the skip is
  * allowed only for as long as there is provably nothing here to skip.
  */
+/**
+ * The marker is frontend/src's OWN manifest, identified by name. It was
+ * `next-config-base.mjs` until that file was split into `@agentic-toolkit/next-config`
+ * and deleted — at which point this walk returned null in an adh checkout too, so
+ * ADH_SRC was null everywhere and the scale check self-skipped GREEN in the one
+ * repository it is about. A sentinel that can be deleted takes the test with it
+ * silently. `frontend/src/package.json` is the pnpm workspace root every site installs
+ * from, so it cannot go without the fleet ceasing to build, and matching on `name` is
+ * what stops the walk there rather than at the toolkit's own `packages/web/package.json`
+ * on the way up.
+ */
 function adhFrontendSrc(): string | null {
   let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
-    if (existsSync(resolve(dir, 'next-config-base.mjs'))) return dir
+    const manifest = resolve(dir, 'package.json')
+    if (existsSync(manifest)) {
+      try {
+        if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+      } catch {
+        // Unreadable or not JSON — not the marker; keep walking rather than throw.
+      }
+    }
     const up = dirname(dir)
     if (up === dir) return null
     dir = up
