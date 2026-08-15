@@ -36,6 +36,33 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         fatalError("init(coder:) has not been implemented")
     }
 
+    open override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Providers",
+                body: "Each row is one configured way of reaching a model — a plugin "
+                    + "(Claude, OpenAI, Google, or any OpenAI-compatible endpoint) plus "
+                    + "the account details it needs. Add one with +, remove the selected "
+                    + "one with −. Other panels that use a model choose from this list, "
+                    + "so a provider configured once here is available everywhere."
+            ),
+            .init(
+                title: "Keys and Secrets",
+                body: "An API key you enter is stored in your login Keychain, never in a "
+                    + "settings file or a database. Removing a provider removes its key "
+                    + "along with it."
+            ),
+            .init(
+                title: "Trying It Out",
+                body: "The chat below a provider's settings talks to it directly, so you "
+                    + "can confirm the key and the endpoint work — and pick a model — "
+                    + "before anything else depends on them. A provider whose plugin "
+                    + "failed to load says so instead, and can't be used until that is "
+                    + "resolved."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         listViewController.setFooterView(makeFooter())

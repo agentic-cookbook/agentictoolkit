@@ -32,6 +32,31 @@ public final class ThemeSettingsPanelViewController: ComposableSettings.Settings
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Themes",
+                body: "Selecting a theme activates it immediately — there is no separate "
+                    + "apply step, so you can click down the list and watch every window "
+                    + "change as you go. The colors and fonts here drive the whole app, "
+                    + "not just this window."
+            ),
+            .init(
+                title: "Editing",
+                body: "Built-in and imported themes are locked, so the editor shows them "
+                    + "read-only. Duplicate one to get an editable copy — that is the "
+                    + "intended way to start from a theme you like rather than from "
+                    + "nothing."
+            ),
+            .init(
+                title: "Adding and Sharing",
+                body: "The controls under the list add, remove, duplicate, and import or "
+                    + "export a theme as JSON. An exported theme is a single file you can "
+                    + "keep in a dotfiles repo or hand to someone else."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         listViewController.setFooterView(makeFooter())

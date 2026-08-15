@@ -15,6 +15,19 @@ extension ComposableSettings {
 
         public let settingsView = PanelView()
 
+        /// Reference prose for the detail pane's help drawer; `nil` means this
+        /// panel offers none. See `ComposableSettingsPanel.helpContent`.
+        ///
+        /// Redeclared here (rather than left to the protocol's extension default)
+        /// so subclass overrides are actually reached: a protocol extension's
+        /// default is bound at the point of conformance — this class — and a
+        /// subclass property that merely shadows it is invisible through the
+        /// `any ComposableSettingsPanel` the split holds. `hostsOwnScroll` below
+        /// is redeclared for the same reason.
+        open var helpContent: PanelHelp? { nil }
+
+        open var hostsOwnScroll: Bool { false }
+
         open override func loadView() {
             self.view = settingsView
         }

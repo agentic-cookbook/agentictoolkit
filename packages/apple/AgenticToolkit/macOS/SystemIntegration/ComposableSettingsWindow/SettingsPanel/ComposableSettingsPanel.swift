@@ -16,8 +16,15 @@ public protocol ComposableSettingsPanel: NSViewController {
     /// When false, the split hosts the panel inside a scroll view so oversized
     /// content scrolls instead of resizing the settings window.
     var hostsOwnScroll: Bool { get }
+
+    /// Reference prose for this panel, shown in the detail pane's help drawer.
+    /// `nil` retires the help button for this panel entirely — better than an
+    /// empty drawer, which promises an explanation and then withholds it.
+    var helpContent: ComposableSettings.PanelHelp? { get }
 }
 
 public extension ComposableSettingsPanel {
     var hostsOwnScroll: Bool { false }
+
+    var helpContent: ComposableSettings.PanelHelp? { nil }
 }

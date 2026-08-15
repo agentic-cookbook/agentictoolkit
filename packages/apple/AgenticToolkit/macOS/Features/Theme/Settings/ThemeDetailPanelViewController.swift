@@ -64,7 +64,7 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
 
     /// The detail hosts its own scroll so a wide editor grid can overflow into a
     /// horizontal scroll rather than force the window wider.
-    var hostsOwnScroll: Bool { true }
+    override var hostsOwnScroll: Bool { true }
 
     // MARK: - View
 

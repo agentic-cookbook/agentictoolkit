@@ -33,6 +33,12 @@ extension ComposableSettings {
         /// "move around" as you switch between them.
         open var contentSizedSidebar: Bool { false }
 
+        /// Whether the detail pane carries the help button and its drawer. True
+        /// for the root settings split; nested topic/detail splits turn it off so
+        /// a panel's help opens once, at the window's right edge, instead of once
+        /// per level of nesting.
+        open var providesHelpDrawer: Bool { true }
+
         /// External floor for the sidebar thickness. A parent split sets this on
         /// its nested-split panels so their sibling topic lists share one width —
         /// switching between panels then never moves the inner divider. `nil`
@@ -56,6 +62,11 @@ extension ComposableSettings {
 
         private let detailContainer = NSViewController()
 
+        /// The detail pane's persistent chrome — panel content plus the help
+        /// button and drawer. Outlives every panel switch, so the drawer's
+        /// disclosure never re-animates just because the selection moved.
+        private let panelHost = PanelHostView()
+
         // Repaints the window chrome and detail pane on every theme change.
         private var themeObserver: ThemePaletteObserver?
 
@@ -75,6 +86,8 @@ extension ComposableSettings {
             let detailView = NSView()
             detailView.wantsLayer = true
             detailContainer.view = detailView
+            detailView.addSubview(panelHost)
+            NSView.pinToEdges(panelHost, of: detailView)
 
             let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
             // The topic list must never auto-hide — it's the only way to switch
@@ -107,6 +120,11 @@ extension ComposableSettings {
             listViewController.onSelectPanel = { [weak self] panel in
                 self?.show(panel)
             }
+
+            panelHost.onDisclosureChange = { [weak self] in
+                self?.applyDetailMinimumThickness()
+            }
+            applyDetailMinimumThickness()
 
             themeObserver = ThemePaletteObserver { [weak self] palette in
                 self?.applyTheme(palette)
@@ -166,8 +184,24 @@ extension ComposableSettings {
             // (its now-fixed sidebar + its own detail floor) can't be squeezed
             // below that floor at the window's minimum size; this lifts the
             // window's effective minimum width to fit the content instead.
-            let neededDetail = nested.map { widest + $0.detailMinimumThickness }.max() ?? 0
-            splitViewItems.last?.minimumThickness = max(detailMinimumThickness, neededDetail)
+            nestedDetailFloor = nested.map { widest + $0.detailMinimumThickness }.max() ?? 0
+            applyDetailMinimumThickness()
+        }
+
+        /// Floor the nested splits need, or 0 when this split hosts none. Kept
+        /// apart from the drawer's contribution so the two writers can't clobber
+        /// each other — `applyDetailMinimumThickness` is the only one that sets
+        /// the item's thickness.
+        private var nestedDetailFloor: CGFloat = 0
+
+        /// The detail item's floor: whatever the content needs, plus the drawer's
+        /// width while it is open. Adding it here is what makes disclosing help
+        /// push the window's minimum width out rather than crush the controls
+        /// into the leftover sliver.
+        private func applyDetailMinimumThickness() {
+            guard isViewLoaded else { return }
+            splitViewItems.last?.minimumThickness =
+                max(detailMinimumThickness, nestedDetailFloor) + panelHost.disclosedDrawerWidth
         }
 
         /// Upper bound on a content-sized sidebar, so one unusually long row
@@ -231,13 +265,16 @@ extension ComposableSettings {
             for child in detailContainer.children {
                 child.removeFromParent()
             }
-            // Remove every hosted view. A scroll-wrapped panel's view lives inside a
-            // wrapper NSScrollView (added below), so removing only the panel's own
-            // view would orphan that wrapper in the container on each switch.
-            detailContainer.view.subviews.forEach { $0.removeFromSuperview() }
-            guard let panel else { return }
+            // `setContent` drops every hosted view. A scroll-wrapped panel's view
+            // lives inside a wrapper NSScrollView (added below), so removing only
+            // the panel's own view would orphan that wrapper on each switch.
+            guard let panel else {
+                panelHost.setContent(nil)
+                panelHost.setHelp(nil)
+                applyDetailMinimumThickness()
+                return
+            }
             detailContainer.addChild(panel)
-            let container = detailContainer.view
             panel.view.translatesAutoresizingMaskIntoConstraints = false
 
             // Nested splits manage their own layout and self-scrolling panels
@@ -246,25 +283,15 @@ extension ComposableSettings {
             // wrapping labels wrap, tall content scrolls, and the content's
             // fitting size never drives the window — its size is the user's alone.
             if panel is SplitViewController || panel.hostsOwnScroll {
-                container.addSubview(panel.view)
-                NSLayoutConstraint.activate([
-                    panel.view.topAnchor.constraint(equalTo: container.topAnchor),
-                    panel.view.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                    panel.view.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                    panel.view.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-                ])
-                return
+                panelHost.setContent(panel.view)
+            } else {
+                let scroll = PanelScrollView()
+                scroll.setContent(panel.view)
+                panelHost.setContent(scroll)
             }
 
-            let scroll = PanelScrollView()
-            scroll.setContent(panel.view)
-            container.addSubview(scroll)
-            NSLayoutConstraint.activate([
-                scroll.topAnchor.constraint(equalTo: container.topAnchor),
-                scroll.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-                scroll.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-                scroll.bottomAnchor.constraint(equalTo: container.bottomAnchor)
-            ])
+            panelHost.setHelp(providesHelpDrawer ? panel.helpContent : nil)
+            applyDetailMinimumThickness()
         }
     }
 }
