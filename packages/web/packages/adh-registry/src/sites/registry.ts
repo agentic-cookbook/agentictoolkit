@@ -279,6 +279,17 @@ export type SiteBuildConfig = {
   readonly legacyHomePaths?: boolean
   readonly extraRedirects?: readonly SiteRedirect[]
   readonly requiresBackendUrl?: boolean
+  /**
+   * True for the seven sites that keep a hand-written `next.config.ts` (Task 6a):
+   * `admin`, `bitbag`, `hub-help`, `learntruefacts`, `status`, `cookbook`, `hub`. Each
+   * still calls `adhNextConfig()` for the shared dependency gate, headers and env, but
+   * layers its own `rewrites`/`redirects`/`env`/`transpilePackages` on top rather than
+   * taking the uniform three-line template. Consumed by Task 7 and by
+   * `frontend/testing/probe-auth-fleet.py`'s `applies_bff()` (Task 6b/A4): a site with
+   * `handRolledConfig` is checked by its own config text, not by "has a folder + calls
+   * `adhNextConfig()`".
+   */
+  readonly handRolledConfig?: boolean
 }
 
 /**
@@ -299,7 +310,7 @@ export type SiteBuildConfig = {
  * shared config's dependency gate.
  */
 export const SITE_BUILD: Partial<Record<SiteId, SiteBuildConfig>> = {
-  bitbag: { requiresBackendUrl: true },
+  bitbag: { requiresBackendUrl: true, handRolledConfig: true },
   projects: { legacyHomePaths: true },
   narratives: { legacyHomePaths: true },
   personaregistry: {
@@ -330,6 +341,16 @@ export const SITE_BUILD: Partial<Record<SiteId, SiteBuildConfig>> = {
   teamregistry: { legacyHomePaths: true },
   personabuilder: { legacyHomePaths: true },
   research: { legacyHomePaths: true },
+  // The seven hand-rolled sites (Ruling T4-a / Task 6a). `cookbook` and `hub` carry no
+  // other fields here on purpose — their redirects derive from site-local modules
+  // (`OVERVIEW_PATH`, `featureIds`) this package cannot import; freezing those values
+  // here would re-create the drift their own comments exist to prevent.
+  admin: { handRolledConfig: true },
+  'hub-help': { handRolledConfig: true },
+  learntruefacts: { handRolledConfig: true },
+  status: { handRolledConfig: true },
+  cookbook: { handRolledConfig: true },
+  hub: { handRolledConfig: true },
 }
 
 /** Build data for a site; `{}` for the sites that need no per-site build behaviour. */

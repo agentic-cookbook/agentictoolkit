@@ -22,7 +22,7 @@ describe("site build fields", () => {
     expect(open).toBeGreaterThan(-1);
     expect(close).toBeGreaterThan(open);
     const managed = src.slice(open, close);
-    for (const field of ["legacyHomePaths", "extraRedirects", "requiresBackendUrl"]) {
+    for (const field of ["legacyHomePaths", "extraRedirects", "requiresBackendUrl", "handRolledConfig"]) {
       expect(managed).not.toContain(field);
     }
   });
@@ -89,6 +89,20 @@ describe("site build fields", () => {
       .map(([id]) => id)
       .sort();
     expect(flagged).toEqual(["bitbag", "personaregistry"]);
+  });
+
+  // The seven sites that keep a hand-written next.config.ts (Task 6a / A1, A3). Asserting
+  // the exact set — not just "bitbag is true" — is what catches an eighth site quietly
+  // gaining the flag (probe-auth-fleet's A4 re-point would stop checking its BFF) or one of
+  // the seven quietly losing it (the probe would wrongly demand the uniform rewrite text).
+  it("marks exactly the seven hand-rolled sites", () => {
+    const flagged = Object.entries(SITE_BUILD)
+      .filter(([, cfg]) => cfg?.handRolledConfig)
+      .map(([id]) => id)
+      .sort();
+    expect(flagged).toEqual(
+      ["admin", "bitbag", "cookbook", "hub", "hub-help", "learntruefacts", "status"].sort(),
+    );
   });
 
   it("isSiteId accepts a real id and rejects a directory that is not a site", () => {
