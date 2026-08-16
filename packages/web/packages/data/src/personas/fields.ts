@@ -1,6 +1,7 @@
 import type { PersonaBody, PersonaDraft } from "./personas";
+import { chatStatusBlank } from "./chat-status";
 
-export type PersonaFieldKind = "text" | "longText" | "select" | "canned";
+export type PersonaFieldKind = "text" | "longText" | "select" | "canned" | "chatStatus";
 
 /** How a field is serialized onto the wire body. */
 export type PersonaFieldWire = "trimRequired" | "trimOptional" | "raw" | "omit";
@@ -12,7 +13,8 @@ export type PersonaFieldWire = "trimRequired" | "trimOptional" | "raw" | "omit";
  * here too. A literal union rather than `string` so a typo'd facet fails the build instead of
  * silently rendering the field nowhere.
  */
-export type PersonaFacetId = "identity" | "description" | "personality" | "purpose" | "demo" | "llm";
+export type PersonaFacetId =
+  | "identity" | "description" | "personality" | "purpose" | "demo" | "llm" | "chatStatus";
 
 /**
  * One editable field. Distributed over `keyof PersonaDraft` so `blank` is typed against the
@@ -61,6 +63,7 @@ export const PERSONA_FIELDS = [
   { key: "model", label: "Model", kind: "select", facet: "llm", blank: null, wire: "raw" },
   { key: "visibility", label: "Visibility", kind: "select", facet: "identity", blank: "private", wire: "raw" },
   { key: "cannedChat", label: "Demo chat", hint: "A scripted conversation visitors can hold without an LLM service.", kind: "canned", facet: "demo", blank: null, wire: "raw" },
+  { key: "chatStatus", label: "Chat status", hint: "The words and glyph shown while this persona works.", kind: "chatStatus", facet: "chatStatus", blank: chatStatusBlank(), wire: "raw" },
 ] as const satisfies readonly PersonaFieldDescriptor[];
 
 /** Compile-time exhaustiveness: every PersonaDraft key must be described above. */
@@ -72,6 +75,9 @@ void _exhaustive;
 export function personaBlank(): PersonaDraft {
   const out = {} as Record<string, unknown>;
   for (const f of PERSONA_FIELDS) out[f.key] = f.blank;
+  // The only non-primitive blank in the table: shared by reference, one editor session's
+  // rows would be every future draft's rows.
+  out.chatStatus = chatStatusBlank();
   return out as PersonaDraft;
 }
 

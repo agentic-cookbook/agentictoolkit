@@ -292,6 +292,8 @@ export interface ServiceRow {
   modelsFetchedAt?: string | null;
 }
 
+import type { ChatStatusConfig } from "./chat-status";
+
 /** Mirrors backend/src/adh/src/llm/canned/config.ts — the toolkit deliberately does not
  *  import backend or generated types, so this is a hand-kept, field-for-field copy. */
 export interface CannedPacing {
@@ -331,6 +333,7 @@ export interface PersonaRow {
    *  panes scope to that one, the interest-documents pane scopes to this one. */
   corpusEcosystemId?: string | null;
   cannedChat?: CannedChatConfig | null;
+  chatStatus?: ChatStatusConfig | null;
 }
 
 /** Backend row for `GET /public/personas/{slug}` and `GET
@@ -351,6 +354,7 @@ export interface PublicPersonaRow {
   createdAt: string;
   owner: PublicOwnerRow | null;
   demoEnabled: boolean;
+  chatStatus?: ChatStatusConfig | null;
 }
 
 /** A persona's declared special interest (`persona.special_interests`). Three levels, narrowing:

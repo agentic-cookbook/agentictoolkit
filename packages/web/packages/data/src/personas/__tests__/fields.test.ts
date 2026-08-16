@@ -2,6 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { PERSONA_FIELDS, personaBlank, personaToBody } from "../fields";
 import type { CannedChatConfig } from "../personas";
+import { CHAT_STATUS_DEFAULT } from "../chat-status";
 
 describe("persona field descriptors", () => {
   it("produces the same blank draft the editor used to hardcode", () => {
@@ -10,7 +11,27 @@ describe("persona field descriptors", () => {
       voice: null, character: null, examples: null, avatarAttachmentId: null,
       serviceId: null, serviceName: null, model: null, visibility: "private",
       cannedChat: null,
+      // NOT null: decision 1 — a new persona is created with the basics already in it,
+      // and `blank` being the prepopulated set is what implements that with no
+      // create-time special case anywhere.
+      chatStatus: CHAT_STATUS_DEFAULT,
     });
+  });
+
+  it("gives each new draft its own chat status rows", () => {
+    const a = personaBlank();
+    const b = personaBlank();
+    expect(a.chatStatus).not.toBe(b.chatStatus);
+    expect(a.chatStatus!.words).not.toBe(b.chatStatus!.words);
+  });
+
+  it("passes chatStatus through structurally", () => {
+    const cfg = {
+      words: [{ tags: ["think"], present: "fleeping", past: "fleeped" }],
+      icons: [{ tags: [], frames: ["o", "O"] }],
+      tint: { color: "#a78bfa", applies: "both" as const },
+    };
+    expect(personaToBody({ ...personaBlank(), chatStatus: cfg }).chatStatus).toEqual(cfg);
   });
 
   it("trims and drops blank optional strings, as toBody always did", () => {

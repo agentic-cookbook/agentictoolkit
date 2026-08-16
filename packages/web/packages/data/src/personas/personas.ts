@@ -23,6 +23,7 @@ import type {
   ConnectionSpec,
   CannedChatConfig,
 } from "./wire";
+import type { ChatStatusConfig } from "./chat-status";
 
 // The backend returns the /me payload UNWRAPPED (no `{ data }` envelope): GET and
 // PATCH both respond with the user object directly.
@@ -186,6 +187,23 @@ export type {
   CannedScript,
   CannedSeeded,
 } from "./wire";
+export {
+  CHAT_STATUS_DEFAULT,
+  CHAT_STATUS_KINDS,
+  CHAT_STATUS_WORD_PRESETS,
+  CHAT_STATUS_ICON_PRESETS,
+  chatStatusBlank,
+  parseChatStatus,
+  resolveChatStatus,
+} from "./chat-status";
+export type {
+  ChatStatusConfig,
+  ChatStatusKind,
+  ResolvedChatStatus,
+  StatusIconSet,
+  StatusTint,
+  StatusWordPair,
+} from "./chat-status";
 export type CreateServiceBody = {
   templateId?: string;
   name: string;
@@ -229,6 +247,7 @@ export type PersonaDraft = {
   visibility: PersonaVisibility;
   /** Demo-mode script. Owner-only — absent from every public payload. */
   cannedChat: CannedChatConfig | null;
+  chatStatus: ChatStatusConfig | null;
 };
 // Map a loaded persona (response) into an editable draft, narrowing the spec's
 // loose `visibility: string` back to the UI union.
@@ -250,6 +269,7 @@ export function toPersonaDraft(p: Persona): PersonaDraft {
     model: p.model,
     visibility,
     cannedChat: p.cannedChat ?? null,
+    chatStatus: p.chatStatus ?? null,
   };
 }
 export type PublicPersona = PublicPersonaRow;
@@ -266,4 +286,5 @@ export type PersonaBody = {
   model?: string | null;
   visibility?: PersonaVisibility;
   cannedChat?: CannedChatConfig | null;
+  chatStatus?: ChatStatusConfig | null;
 };
