@@ -24,15 +24,46 @@ export interface DirtyDraft<T extends object> {
 }
 
 /**
- * Field equality for dirty-checking. `Object.is` for scalars; arrays compare by CONTENT so a
- * multi-value field (examples, tags, model lists) does not read as dirty merely because the
- * setter handed back a fresh array. Without this, every editor with a list field would light
- * Save up permanently and the flag would mean nothing.
+ * A value this hook is willing to compare structurally: an object literal, not a `Date`, `Map`,
+ * `RegExp` or class instance. Those carry state their own keys do not describe, so walking their
+ * enumerable properties would call two different values equal; identity is the honest answer for
+ * them and `Object.is` above has already given it.
+ */
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  if (v === null || typeof v !== 'object') return false
+  const proto = Object.getPrototypeOf(v) as unknown
+  return proto === Object.prototype || proto === null
+}
+
+/**
+ * Field equality for dirty-checking. `Object.is` for scalars; arrays and object literals compare
+ * by CONTENT so a structured field does not read as dirty merely because the setter handed back a
+ * fresh value. Without this, every editor with a list or object field would light Save up
+ * permanently and the flag would mean nothing.
+ *
+ * The object case is not symmetry for its own sake. A facet that hands its whole config back per
+ * keystroke — `chatStatus` and `cannedChat` both do — produces a new object every time, so with
+ * only the array case an editor latched `dirty` on the first render and never let go: Save stayed
+ * lit with nothing to save, and the exit guard blocked navigation away from an untouched persona.
+ * Any future field whose value is a config object gets the same treatment for free, which is the
+ * point of fixing it here rather than at either call site.
  */
 function sameValue(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) return true
   if (Array.isArray(a) && Array.isArray(b)) {
     return a.length === b.length && a.every((v, i) => sameValue(v, b[i]))
+  }
+  // Array-vs-object must not fall through to the key walk: `[]` and `{}` both have zero keys.
+  if (Array.isArray(a) || Array.isArray(b)) return false
+  if (isPlainObject(a) && isPlainObject(b)) {
+    const ka = Object.keys(a)
+    const kb = Object.keys(b)
+    return (
+      ka.length === kb.length &&
+      ka.every(
+        (k) => Object.prototype.hasOwnProperty.call(b, k) && sameValue(a[k], b[k]),
+      )
+    )
   }
   return false
 }

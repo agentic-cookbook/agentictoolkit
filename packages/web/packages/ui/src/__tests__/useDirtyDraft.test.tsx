@@ -31,6 +31,53 @@ describe("useDirtyDraft", () => {
     expect(result.current.dirty).toBe(true)
   })
 
+  // A facet that hands its whole config back per keystroke (chatStatus, cannedChat) emits a fresh
+  // object every time. Without content comparison the editor latched `dirty` on the first render:
+  // Save stayed lit with nothing to save, and the exit guard blocked leaving an untouched persona.
+  it("compares object literals by content, not identity", () => {
+    const { result } = renderHook(() =>
+      useDirtyDraft({ chatStatus: { words: [{ tags: ["think"], present: "p", past: "q" }] } }),
+    )
+    act(() =>
+      result.current.set("chatStatus", {
+        words: [{ tags: ["think"], present: "p", past: "q" }],
+      }),
+    )
+    expect(result.current.dirty).toBe(false)
+    act(() =>
+      result.current.set("chatStatus", {
+        words: [{ tags: ["think"], present: "p", past: "CHANGED" }],
+      }),
+    )
+    expect(result.current.dirty).toBe(true)
+  })
+
+  it("treats a missing key and an extra key as a change", () => {
+    const { result } = renderHook(() => useDirtyDraft<{ cfg: Record<string, unknown> }>({
+      cfg: { a: 1 },
+    }))
+    act(() => result.current.set("cfg", { a: 1, b: 2 }))
+    expect(result.current.dirty).toBe(true)
+    act(() => result.current.set("cfg", { b: 1 }))
+    expect(result.current.dirty).toBe(true)
+  })
+
+  // `[]` and `{}` both walk to zero keys, so the array case has to be settled before the object
+  // one or an empty list would read as equal to an empty config.
+  it("never calls an empty array equal to an empty object", () => {
+    const { result } = renderHook(() => useDirtyDraft<{ v: unknown }>({ v: [] }))
+    act(() => result.current.set("v", {}))
+    expect(result.current.dirty).toBe(true)
+  })
+
+  // A Date's identity is its only honest comparison here: two Dates with different instants have
+  // the same (zero) enumerable keys, so a structural walk would call them equal.
+  it("does not structurally compare non-plain objects", () => {
+    const { result } = renderHook(() => useDirtyDraft({ at: new Date(0) }))
+    act(() => result.current.set("at", new Date(5000)))
+    expect(result.current.dirty).toBe(true)
+  })
+
   it("patch applies several keys at once", () => {
     const { result } = renderHook(() => useDirtyDraft({ a: 1, b: 2 }))
     act(() => result.current.patch({ a: 9, b: 8 }))

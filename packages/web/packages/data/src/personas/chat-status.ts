@@ -264,13 +264,11 @@ function firstNonEmpty<T>(...lists: T[][]): T[] {
 }
 
 /**
- * Total by construction: tagged rows, then untagged rows, then the built-in default. Words
- * and glyphs walk the chain independently, so a persona can have a special word for
- * searching without also needing a special glyph for it.
- *
- * Words vary WITHIN a turn (the caller draws from the returned list without replacement);
- * the glyph does not. When several icon sets match, the first wins — a glyph that swapped
- * alphabets mid-thought is exactly the continuity error this feature exists to avoid.
+ * Total by construction, but words and glyphs get DIFFERENT rules — see the two comments in
+ * the body. Words UNION this kind's rows with the untagged ones, because the whole point of a
+ * word list is that it varies within a turn; glyphs take the first matching set only, because
+ * the whole point of a glyph is that it does not. Each walks its own chain, so a persona can
+ * have a special word for searching without also needing a special glyph for it.
  */
 export function resolveChatStatus(raw: unknown, kind: string): ResolvedChatStatus {
   const cfg = parseChatStatus(raw);

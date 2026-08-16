@@ -54,6 +54,13 @@ export function RowsField<T>({
         <p className="text-sm text-apt-text-muted">None yet.</p>
       ) : (
         <List>
+          {/* Index keys, deliberately. Rows carry no stable id and `setAt` replaces the row
+              object wholesale on every keystroke, so keying by row identity would remount the
+              inputs per character and drop the caret. The cost of index keys — a stateful child
+              seeing the next row's value after a removal — is paid where the state lives:
+              `CommaListInput` shows its draft only while the draft still parses to the array it
+              was handed, so a swapped-in row resets it. Any stateful row control added here owes
+              the same self-check. */}
           {value.map((row, i) => (
             <ListItem key={i} className="items-start">
               <div className="min-w-0 flex-1">{renderRow(row, (next) => setAt(i, next), i)}</div>
