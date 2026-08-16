@@ -1464,6 +1464,9 @@ importers:
       '@agentic-toolkit/data':
         specifier: workspace:*
         version: link:../../data
+      '@agentic-toolkit/persona':
+        specifier: workspace:*
+        version: link:../../persona
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource

@@ -32,6 +32,7 @@ export {
   MockBackend,
   FetchBackend,
   useChatSession,
+  TypingIndicator,
 } from '@agenticdevelopertoolkit/chat'
 
 export type {
@@ -46,4 +47,7 @@ export type {
   ChatSizingBehavior,
   InactiveSizingBehavior,
   SizingTransition,
+  StatusWordPair,
+  StatusTintSpec,
+  TypingIndicatorProps,
 } from '@agenticdevelopertoolkit/chat'

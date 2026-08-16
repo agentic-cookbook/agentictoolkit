@@ -12,6 +12,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { useState } from "react";
+import { CommaListInput } from "./CommaListInput";
 import { RowsField } from "./RowsField";
 
 /** Mirrors the backend's CANNED_DEFAULT_PACING. */
@@ -71,36 +72,6 @@ function NumberField({
         }}
       />
     </Field>
-  );
-}
-
-/** The keywords for one seeded row, edited as a raw comma-separated string.
- *
- *  Splitting on every keystroke and re-joining for display is a round trip that erases its own
- *  separator: typing "matrix," splits to ["matrix", ""], the blank is dropped, and the join
- *  hands back "matrix" — the comma disappears from under the caret, and so does the space after
- *  it. The array is the stored form, not the edited one, so the raw text is what lives in state
- *  while the box is focused; the parse still runs on every keystroke so the row is saveable
- *  without blurring first. */
-function KeywordsInput({
-  value,
-  onChange,
-}: {
-  value: string[];
-  onChange: (next: string[]) => void;
-}) {
-  const [draft, setDraft] = useState<string | null>(null);
-  return (
-    <Input
-      aria-label="Keywords"
-      placeholder="matrix, rain"
-      value={draft ?? value.join(", ")}
-      onChange={(e) => {
-        setDraft(e.target.value);
-        onChange(e.target.value.split(",").map((s) => s.trim()).filter(Boolean));
-      }}
-      onBlur={() => setDraft(null)}
-    />
   );
 }
 
@@ -178,7 +149,7 @@ export function DemoFacet({
         addLabel="Add keyword reply"
         renderRow={(row, set) => (
           <div className="flex min-w-0 flex-col gap-1">
-            <KeywordsInput value={row.match} onChange={(match) => set({ ...row, match })} />
+            <CommaListInput label="Keywords" placeholder="matrix, rain" value={row.match} onChange={(match) => set({ ...row, match })} />
             <Input
               aria-label="Reply"
               value={row.reply}

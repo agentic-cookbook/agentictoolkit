@@ -12,6 +12,7 @@ import {
   MessageSquare,
   ShieldCheck,
   SlidersHorizontal,
+  Sparkles,
   Target,
   Wrench,
 } from "lucide-react";
@@ -39,6 +40,7 @@ import { PermissionsPanel } from "./PermissionsPanel";
 import { InterestsEditor } from "./InterestsEditor";
 import { KnowledgeFacet } from "./InterestDocumentsPane";
 import { DemoFacet } from "./DemoFacet";
+import { ChatStatusFacet } from "./ChatStatusFacet";
 import { ItemAccessPanel, workspaceSubjectsDirectory } from "@agentic-toolkit/teams";
 import {
   api,
@@ -648,6 +650,16 @@ export function PersonaEditor({
         "A scripted conversation anyone can hold with this persona — no LLM service required.",
       render: () => (
         <DemoFacet value={draft.cannedChat} onChange={(v) => set("cannedChat", v)} />
+      ),
+    },
+    {
+      id: "chatStatus",
+      label: "Chat Status",
+      icon: <Sparkles size={16} aria-hidden />,
+      description:
+        "The words and the animated glyph shown while this persona is working.",
+      render: () => (
+        <ChatStatusFacet value={draft.chatStatus} onChange={(v) => set("chatStatus", v)} />
       ),
     },
     {
