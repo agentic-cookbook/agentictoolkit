@@ -45,7 +45,7 @@ export const PRERENDER_HEADERS: Array<{ key: string; value: string }> = [
  *
  * `process.env.VERCEL` is set in every Vercel build environment and nowhere else —
  * `next dev`, `deployment/build`, the e2e dev servers and the local suite all leave it
- * unset — which is the same signal `@agentic-toolkit/next-config` already uses to
+ * unset — which is the same signal `@agentic-toolkit/adh-next-config` already uses to
  * decide whether to pin the Turbopack workspace root.
  */
 export function prerenderHeaderRules(): Array<{ source: string; headers: Array<{ key: string; value: string }> }> {

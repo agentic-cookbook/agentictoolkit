@@ -290,7 +290,7 @@ export type SiteBuildConfig = {
 }
 
 /**
- * Per-site build data, read by `@agentic-toolkit/next-config` so each site's
+ * Per-site build data, read by `@agentic-toolkit/adh-next-config` so each site's
  * `next.config.ts` can stay byte-exact: per-site DATA read by uniform CODE.
  *
  * DELIBERATELY NOT fields on `SiteDef`. Most `SITES` entries live inside the

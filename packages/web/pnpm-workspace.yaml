@@ -20,7 +20,7 @@ packages:
   - './packages/next-preflight'
   - './packages/next-headers'
   - './packages/next-env'
-  - './packages/next-config'
+  - './packages/adh-next-config'
   - './packages/landing'
   - './packages/messaging'
   - './packages/features/*'

@@ -16,7 +16,7 @@ import type { SiteId } from '../registry'
 // repository whose folders it is about.
 //
 // The marker is frontend/src's OWN manifest, identified by name. It was
-// `next-config-base.mjs` until that file was split into `@agentic-toolkit/next-config`
+// `next-config-base.mjs` until that file was split into `@agentic-toolkit/adh-next-config`
 // and deleted — at which point this walk returned null in an adh checkout too, and every
 // filesystem case below self-skipped GREEN in the one repository it is about. A sentinel
 // that can be deleted takes the test with it silently; `frontend/src/package.json` is the

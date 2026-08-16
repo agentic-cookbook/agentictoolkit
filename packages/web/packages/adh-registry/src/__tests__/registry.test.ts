@@ -378,7 +378,7 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // the guard still fires in the repository whose folders it is about.
   //
   // The marker is frontend/src's OWN manifest, identified by name. It was
-  // `next-config-base.mjs` until that file was split into `@agentic-toolkit/next-config`
+  // `next-config-base.mjs` until that file was split into `@agentic-toolkit/adh-next-config`
   // and deleted — at which point this walk returned null in an adh checkout too, and the
   // whole assertion self-skipped GREEN in the one repository it is about. That is the
   // failure this marker has to be chosen against: a sentinel that is deleted takes the

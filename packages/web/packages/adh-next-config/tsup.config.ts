@@ -13,7 +13,7 @@ export default defineConfig({
   // adds `next` on top of that default. Verified by building with `noExternal` absent:
   // `dist/index.js` still carried a bare `import ... from "@agentic-toolkit/next-preflight"`
   // (Step 8's grep found it), which is exactly the defect this package exists to prevent —
-  // a site resolving `@agentic-toolkit/next-config` alone would 500 on the un-hoisted
+  // a site resolving `@agentic-toolkit/adh-next-config` alone would 500 on the un-hoisted
   // siblings. `noExternal` overrides that default for these four so they land inside
   // `dist/index.js` as code rather than bare specifiers.
   // `@agentic-toolkit/themes` is a DECLARED dependency (see package.json) but is
