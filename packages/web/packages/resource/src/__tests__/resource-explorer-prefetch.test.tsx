@@ -55,12 +55,13 @@ function renderExplorer(activeId?: string, prefetchItem?: (id: string) => void) 
       nameSuffix="Project"
       topics={TOPICS}
       newLabel="New"
-      landing={{
+      // The card landing this used to configure is gone (see resource-explorer.tsx's own
+      // notes); `rail` is its replacement for the classic list-first arrangement's naming.
+      rail={{
         title: "All",
         help: "help",
         emptyLabel: "none",
         getSublabel: () => "",
-        renderMeta: () => null,
       }}
     />,
   );
