@@ -69,6 +69,46 @@ describe("ChatStatusFacet", () => {
     expect(next.words[1]).toEqual({ tags: [], present: "", past: "" });
   });
 
+  // FIX 3 regression guards — the previous three: a plain click-and-check-the-onChange-call
+  // test (above) is not enough, because `patch` hands the freshly appended row straight to
+  // `onChange` without re-parsing it. The bug only showed up on the ROUND TRIP every real
+  // caller performs: the parent stores what `onChange` gave it and feeds it back in as the
+  // next `value`, and `cfg` (`ChatStatusFacet.tsx`, the `useMemo` a few lines above the JSX)
+  // re-parses that value on every render. Before this fix that memo called `parseChatStatus`
+  // (`@agentic-toolkit/data/personas`'s STORAGE validator), which drops a word missing a
+  // half (`chat-status.ts`'s `parseWords`, "A pair with one half is not a pair"), drops a
+  // glyph set with no frames (`parseIcons`, "if (frames.length === 0) continue"), and trims
+  // every string through `textOf`'s `v.trim()`. Each of the three round trips below re-lands
+  // on exactly one of those rules and asserts the row/character it drops.
+  it("keeps an added word pair across a controlled round trip", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<ChatStatusFacet value={CFG} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add word pair" }));
+    const next = onChange.mock.calls[0]![0] as ChatStatusConfig;
+    rerender(<ChatStatusFacet value={next} onChange={onChange} />);
+    expect(screen.getAllByLabelText("Present tense")).toHaveLength(2);
+  });
+
+  it("keeps an added glyph set across a controlled round trip", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<ChatStatusFacet value={CFG} onChange={onChange} />);
+    fireEvent.click(screen.getByRole("button", { name: "Add glyph set" }));
+    const next = onChange.mock.calls[0]![0] as ChatStatusConfig;
+    rerender(<ChatStatusFacet value={next} onChange={onChange} />);
+    expect(screen.getAllByLabelText("Glyphs")).toHaveLength(2);
+  });
+
+  it("keeps a typed trailing space in Present tense across a controlled round trip", () => {
+    const onChange = vi.fn();
+    const { rerender } = render(<ChatStatusFacet value={CFG} onChange={onChange} />);
+    fireEvent.change(screen.getAllByLabelText("Present tense")[0]!, {
+      target: { value: "trying again " },
+    });
+    const next = onChange.mock.calls[0]![0] as ChatStatusConfig;
+    rerender(<ChatStatusFacet value={next} onChange={onChange} />);
+    expect(screen.getAllByLabelText("Present tense")[0]).toHaveValue("trying again ");
+  });
+
   it("removes the row the button names", () => {
     const two: ChatStatusConfig = {
       ...CFG,
@@ -113,6 +153,23 @@ describe("ChatStatusFacet", () => {
     expect((onChange.mock.calls[0]![0] as ChatStatusConfig).icons[0]!.frames).toEqual(["◐", "◓", "◑"]);
   });
 
+  // FIX 5 regression guard: `Array.from(text)` (the pre-fix `framesFromText`) splits by UTF-16
+  // CODE POINT, a smaller unit than a grapheme. `❤️` is heart + variation selector (2 code
+  // points), `👨‍💻` is man + ZWJ + laptop (3), `🇺🇸` is two regional-indicator letters (2) — so
+  // the old code split this three-emoji string into 7 frames, not 3, and the shipped animation
+  // stuttered through frames that render as nothing or as half a combined glyph while the field
+  // itself looked correct (`frames.join("")` re-glues them for display).
+  it("keeps each combined emoji as one frame, not one per code point", () => {
+    const onChange = vi.fn();
+    render(<ChatStatusFacet value={CFG} onChange={onChange} />);
+    fireEvent.change(screen.getByLabelText("Glyphs"), { target: { value: "❤️👨‍💻🇺🇸" } });
+    expect((onChange.mock.calls[0]![0] as ChatStatusConfig).icons[0]!.frames).toEqual([
+      "❤️",
+      "👨‍💻",
+      "🇺🇸",
+    ]);
+  });
+
   it("turns the tint on and off", () => {
     const onChange = vi.fn();
     const { rerender } = render(<ChatStatusFacet value={CFG} onChange={onChange} />);
@@ -124,6 +181,18 @@ describe("ChatStatusFacet", () => {
     rerender(<ChatStatusFacet value={tinted} onChange={onChange} />);
     fireEvent.click(screen.getByLabelText("Tint the status line"));
     expect((onChange.mock.calls[0]![0] as ChatStatusConfig).tint).toBeUndefined();
+  });
+
+  // FIX 4 regression guard: pre-fix, the ONLY colour control was `<Input type="color">`, and
+  // jsdom implements the same value-sanitization algorithm real browsers do
+  // (`sanitizeValueByType` in jsdom's `form-controls.js`): a value that is not a 6-digit
+  // `#rrggbb` hex string — `#fff` included, the branch's own shipped fixture at
+  // `chat-status.test.ts:52` — is coerced to `#000000` before it ever reaches the DOM. So a
+  // stored `#fff` displayed, and would have been written back, as black.
+  it("keeps a non-6-digit-hex tint colour in the text field rather than mangling it to black", () => {
+    const withTint: ChatStatusConfig = { ...CFG, tint: { color: "#fff", applies: "both" } };
+    render(<ChatStatusFacet value={withTint} onChange={vi.fn()} />);
+    expect(screen.getByLabelText("Tint colour")).toHaveValue("#fff");
   });
 
   it("falls back to the blank configuration when the persona has none", () => {
@@ -139,8 +208,8 @@ describe("ChatStatusFacet", () => {
   // permissive schema, so `{ words: "nope" }` or a garbage `tint` can genuinely be stored and
   // read back). Before this fix, `ChatStatusFacet` handed such a value straight to `RowsField`,
   // which threw (`"nope".length` passes the empty check, then `.map is not a function`) — the
-  // spec's rule is that this blob is narrowed exactly once, through `parseChatStatus`, and this
-  // asserts the facet actually does that rather than trusting the type annotation.
+  // spec's rule is that this blob is narrowed exactly once, through `parseChatStatusDraft`, and
+  // this asserts the facet actually does that rather than trusting the type annotation.
   it("renders instead of throwing when the stored value has a malformed shape", () => {
     const malformed = {
       words: "nope",
@@ -150,11 +219,13 @@ describe("ChatStatusFacet", () => {
     const onChange = vi.fn();
 
     expect(() => render(<ChatStatusFacet value={malformed} onChange={onChange} />)).not.toThrow();
-    // `words: "nope"` is not an array, so `parseChatStatus` drops it and falls back to the
-    // blank word list rather than propagating the malformed value.
-    expect(screen.getAllByLabelText("Present tense")[0]).toHaveValue(
-      chatStatusBlank().words[0]!.present,
-    );
+    // `words: "nope"` is not an array — a shape problem, not an in-progress row — so even the
+    // editor's lenient `parseChatStatusDraft` drops it to `[]`. Unlike `parseChatStatus`, it
+    // does NOT substitute the five built-in rows for the malformed field: an editor that
+    // silently swapped in defaults for a field the author never touched could save those
+    // defaults over data nobody asked to change. Nothing throws, and no "Present tense" field
+    // renders for the list that got dropped.
+    expect(screen.queryAllByLabelText("Present tense")).toHaveLength(0);
   });
 
   it("renders instead of throwing when icons is not an array", () => {

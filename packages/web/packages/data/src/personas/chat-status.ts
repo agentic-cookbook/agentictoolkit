@@ -176,6 +176,15 @@ function parseTint(v: unknown): StatusTint | undefined {
  * Lenient by contract, the way `canDemoChat` is: this reads a jsonb column written by an
  * older or newer client, so it takes `unknown` and never throws. A persona's status line is
  * decoration; it must not be able to take a chat down.
+ *
+ * Drops malformed rows but does NOT substitute defaults for an empty list: an author who
+ * deletes every word or every glyph set gets back `[]`, not `CHAT_STATUS_DEFAULT`'s rows.
+ * `resolveChatStatus` already totalizes through its own fallback chain at render time, so a
+ * parser-level substitution here would only make "this persona has no custom words"
+ * inexpressible — deleting the last row would jump straight back to five instead of staying
+ * at zero. The `raw === null` case just below is different in kind: a persona that never
+ * configured `chat_status` at all still starts from `chatStatusBlank()`, because there is no
+ * "the author deleted everything" to distinguish it from.
  */
 export function parseChatStatus(raw: unknown): ChatStatusConfig {
   if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return chatStatusBlank();
@@ -183,12 +192,70 @@ export function parseChatStatus(raw: unknown): ChatStatusConfig {
   const words = parseWords(r.words);
   const icons = parseIcons(r.icons);
   const tint = parseTint(r.tint);
-  const blank = chatStatusBlank();
-  return {
-    words: words.length > 0 ? words : blank.words,
-    icons: icons.length > 0 ? icons : blank.icons,
-    ...(tint ? { tint } : {}),
-  };
+  return { words, icons, ...(tint ? { tint } : {}) };
+}
+
+// `-Draft` twins of `tagsOf`/`textOf`: no trim, no empty-drop. A tag or a frame that is not a
+// string is still rejected (an editor's controlled arrays are built from strings; anything
+// else is a shape bug, not an in-progress edit), but an empty string or a bare space is one
+// of the states an author passes through while typing and must round-trip unchanged.
+function tagsOfDraft(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((t): t is string => typeof t === "string") : [];
+}
+
+function textOfDraft(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function parseWordsDraft(v: unknown): StatusWordPair[] {
+  if (!Array.isArray(v)) return [];
+  const out: StatusWordPair[] = [];
+  for (const row of v) {
+    if (row === null || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    // Unlike `parseWords`, a half-written pair is kept: "half-written" is exactly what a row
+    // looks like the instant it is added, or the instant its Past field is cleared to retype.
+    out.push({ tags: tagsOfDraft(r.tags), present: textOfDraft(r.present), past: textOfDraft(r.past) });
+  }
+  return out;
+}
+
+function parseIconsDraft(v: unknown): StatusIconSet[] {
+  if (!Array.isArray(v)) return [];
+  const out: StatusIconSet[] = [];
+  for (const row of v) {
+    if (row === null || typeof row !== "object") continue;
+    const r = row as Record<string, unknown>;
+    const frames = Array.isArray(r.frames)
+      ? r.frames.filter((f): f is string => typeof f === "string")
+      : [];
+    // Unlike `parseIcons`, a glyph set with zero frames is kept — that is what "Add glyph
+    // set" produces before the author has typed a single character into it.
+    out.push({ tags: tagsOfDraft(r.tags), frames });
+  }
+  return out;
+}
+
+/**
+ * The EDITOR's narrowing, and deliberately not `parseChatStatus`.
+ *
+ * `parseChatStatus` is a STORAGE validator: it drops a word missing a half, drops a glyph set
+ * with no frames, and trims. Those are the right rules for a blob arriving from the database
+ * and exactly the wrong ones for a form, because every intermediate authoring state is one of
+ * the rows it drops. Feeding a controlled editor through it makes "Add word pair" a no-op and
+ * makes a space untypeable.
+ *
+ * So this narrows the SHAPE and preserves the CONTENT: same `unknown` input, same never-throws
+ * contract, but incomplete rows survive and text passes through verbatim. Saving an incomplete
+ * row is harmless — `parseChatStatus` drops it on the way back out.
+ */
+export function parseChatStatusDraft(raw: unknown): ChatStatusConfig {
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) return chatStatusBlank();
+  const r = raw as Record<string, unknown>;
+  const words = parseWordsDraft(r.words);
+  const icons = parseIconsDraft(r.icons);
+  const tint = parseTint(r.tint);
+  return { words, icons, ...(tint ? { tint } : {}) };
 }
 
 function firstNonEmpty<T>(...lists: T[][]): T[] {
@@ -209,16 +276,28 @@ export function resolveChatStatus(raw: unknown, kind: string): ResolvedChatStatu
   const cfg = parseChatStatus(raw);
   const fallback = chatStatusBlank();
 
-  const words = firstNonEmpty(
-    cfg.words.filter((w) => w.tags.includes(kind)),
-    cfg.words.filter((w) => w.tags.length === 0),
-    fallback.words.filter((w) => w.tags.length === 0),
-  );
+  // A word is eligible when it names this kind OR names nothing — the editor's hint says an
+  // untagged word "fits anything", and an exclusive chain contradicted that. With one pair per
+  // tag in CHAT_STATUS_DEFAULT, every kind the engine emits resolved to a ONE-element list, so
+  // the shuffle bag redrew the same word forever and the status line never changed.
+  const eligible = (list: StatusWordPair[]) =>
+    list.filter((w) => w.tags.includes(kind) || w.tags.length === 0);
+  const words = firstNonEmpty(eligible(cfg.words), eligible(fallback.words));
+
+  // Icons stay EXCLUSIVE, unlike words just above — this asymmetry is deliberate, not a
+  // leftover of the bug words had. When several icon sets match, the first wins: a glyph that
+  // swapped alphabets mid-thought is exactly the continuity error this feature exists to
+  // avoid, and a union would let an untagged glyph set interleave with a tagged one frame by
+  // frame. Do not "fix" this to match the words chain above.
   const icons = firstNonEmpty(
     cfg.icons.filter((i) => i.tags.includes(kind)),
     cfg.icons.filter((i) => i.tags.length === 0),
     fallback.icons,
   );
 
+  // `icons[0]!` is safe even though `cfg.icons` can now be `[]` (parseChatStatus no longer
+  // substitutes defaults for an empty list — see its docstring): `fallback.icons` is
+  // `chatStatusBlank()`'s icons, which always holds the one built-in glyph set, so the last
+  // rung of the chain above is never empty and `firstNonEmpty` never returns `[]` here.
   return { words, frames: icons[0]!.frames, ...(cfg.tint ? { tint: cfg.tint } : {}) };
 }
