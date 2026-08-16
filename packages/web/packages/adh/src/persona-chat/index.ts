@@ -4,6 +4,10 @@ import type {
   ChatResponse,
   ChatStreamEvent,
 } from "./chat-types";
+// What the persona is doing, as a KIND rather than a phrase. The words shown for a kind are
+// the persona's own — resolved from its `chatStatus` config by the surface that renders the
+// chat — so this module no longer holds any user-visible copy. `null` ends the turn.
+import type { ChatStatusKind } from "@agentic-toolkit/data/personas";
 
 // Shared persona-chat backend + status vocabulary, consumed by every persona
 // chat surface (the persona-registry preview panel and the hub editor pane).
@@ -22,22 +26,6 @@ import type {
 // + src/llm/factory.ts. Auth rides on authedFetch/authedJson, which attach the
 // signed-in session's bearer token.
 const CONVERSATIONS = "/api/chat/conversations";
-
-// Status-line phrases shown above the input while a turn is in flight. Driven via
-// the optional `onStatus` sink: "thinking…" the moment we send, "responding…" on
-// the first reply token, "thinking more…" while the backend retries a transient
-// (rate-limit) failure, and null when the turn ends. The consumer feeds this into
-// the chat's `statusUtterance`.
-export const STATUS_THINKING = "thinking…";
-export const STATUS_RESPONDING = "responding…";
-export const STATUS_RETRYING = "thinking more…";
-
-// A non-empty label array unlocks the toolkit status bar's rich mode (a plain
-// dots indicator otherwise); the actual text is driven by `statusUtterance`, so
-// this value is never itself shown — it only needs to be present while a status
-// is set. Exported (referentially stable) so panels pass it straight to
-// InlineChat's `thinkingLabels` without re-declaring it.
-export const STATUS_LABELS = ["thinking"];
 
 /**
  * The payload of the backend's `award` SSE event (src/llm/service.ts's
@@ -143,8 +131,8 @@ export class PersonaChatBackend implements ChatBackend {
     private readonly opts: AuthedFetchers & {
       personaSlug: string;
       model: string | null;
-      /** Optional status sink for the "thinking…/responding…/thinking more…" line. */
-      onStatus?: (status: string | null) => void;
+      /** Optional sink for the persona's current activity kind; null ends the turn. */
+      onStatus?: (kind: ChatStatusKind | null) => void;
       /** Optional sink for the `award` SSE event — badges/XP/level-up earned this
        *  turn. Fires at most once per turn, before the terminal `done`. */
       onAward?: (award: ChatAward) => void;
@@ -187,13 +175,13 @@ export class PersonaChatBackend implements ChatBackend {
 
   /**
    * Drive one turn: ensure a conversation, POST the message, stream the reply.
-   * Emits status transitions along the way ("thinking…" on send, "responding…"
-   * on the first token, "thinking more…" on a backend retry) and always clears
-   * the status when the turn ends — normal completion, error, or abort.
+   * Emits status transitions along the way ("think" on send, "respond" on the
+   * first token, "retry" on a backend retry) and always clears the status when
+   * the turn ends — normal completion, error, or abort.
    */
   private async *run(text: string, signal?: AbortSignal): AsyncGenerator<ChatStreamEvent> {
     try {
-      this.opts.onStatus?.(STATUS_THINKING);
+      this.opts.onStatus?.("think");
 
       let id: string;
       try {
@@ -248,7 +236,7 @@ export class PersonaChatBackend implements ChatBackend {
             // line, it is NOT a transcript event, so consume it and move on.
             if (event === "status") {
               if (parseData<{ phase?: string }>(data)?.phase === "retrying") {
-                this.opts.onStatus?.(STATUS_RETRYING);
+                this.opts.onStatus?.("retry");
               }
               continue;
             }
@@ -264,7 +252,7 @@ export class PersonaChatBackend implements ChatBackend {
             if (!evt) continue;
             if (evt.type === "token" && !responded) {
               responded = true;
-              this.opts.onStatus?.(STATUS_RESPONDING);
+              this.opts.onStatus?.("respond");
             }
             yield evt;
           }
