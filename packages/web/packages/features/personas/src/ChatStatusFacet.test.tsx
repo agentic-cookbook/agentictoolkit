@@ -133,4 +133,34 @@ describe("ChatStatusFacet", () => {
       chatStatusBlank().words[0]!.present,
     );
   });
+
+  // Finding 1 regression guard: `value` is the untrusted stored `chat_status` jsonb blob, and
+  // the CRUD write side does not validate its shape (drizzle-zod maps any `json` column to its
+  // permissive schema, so `{ words: "nope" }` or a garbage `tint` can genuinely be stored and
+  // read back). Before this fix, `ChatStatusFacet` handed such a value straight to `RowsField`,
+  // which threw (`"nope".length` passes the empty check, then `.map is not a function`) — the
+  // spec's rule is that this blob is narrowed exactly once, through `parseChatStatus`, and this
+  // asserts the facet actually does that rather than trusting the type annotation.
+  it("renders instead of throwing when the stored value has a malformed shape", () => {
+    const malformed = {
+      words: "nope",
+      icons: [{ tags: [], frames: ["o"] }],
+      tint: "not an object",
+    } as unknown as ChatStatusConfig;
+    const onChange = vi.fn();
+
+    expect(() => render(<ChatStatusFacet value={malformed} onChange={onChange} />)).not.toThrow();
+    // `words: "nope"` is not an array, so `parseChatStatus` drops it and falls back to the
+    // blank word list rather than propagating the malformed value.
+    expect(screen.getAllByLabelText("Present tense")[0]).toHaveValue(
+      chatStatusBlank().words[0]!.present,
+    );
+  });
+
+  it("renders instead of throwing when icons is not an array", () => {
+    const malformed = { words: [{ tags: [], present: "x", past: "xed" }], icons: {} } as never;
+    const onChange = vi.fn();
+
+    expect(() => render(<ChatStatusFacet value={malformed} onChange={onChange} />)).not.toThrow();
+  });
 });

@@ -5,7 +5,7 @@ import {
   CHAT_STATUS_ICON_PRESETS,
   CHAT_STATUS_KINDS,
   CHAT_STATUS_WORD_PRESETS,
-  chatStatusBlank,
+  parseChatStatus,
   resolveChatStatus,
   type ChatStatusConfig,
   type StatusIconSet,
@@ -48,18 +48,28 @@ export function ChatStatusFacet({
   value,
   onChange,
 }: {
-  value: ChatStatusConfig | null;
+  // `unknown`, on purpose, not `ChatStatusConfig | null`: `value` is the stored `chat_status`
+  // jsonb blob, and per the spec's boundary rule it is untrusted at every client boundary and
+  // narrowed exactly once, through `parseChatStatus` below. A typed `ChatStatusConfig | null`
+  // here would let `tsc` believe the shape without anyone having checked it, which is exactly
+  // how this boundary got skipped once already.
+  value: unknown;
   onChange: (next: ChatStatusConfig | null) => void;
 }) {
-  // MEMOIZED, and it must stay that way. `chatStatusBlank()` deep-copies — it returns fresh
-  // arrays on every call — so a bare `value ?? chatStatusBlank()` produces a new object
-  // identity on EVERY render whenever `value` is null. That would silently defeat the
-  // `preview` memo below, which lists `cfg` as a dependency, and through it the renderer's
-  // shuffle bag: `TypingIndicator` keys its bag on the identity of the words array, and
-  // `usePreviewPulse` re-renders this component every 4 seconds. The visible symptom is the
-  // preview word jumping at random for exactly the persona that has no config yet — the
-  // "it looks random" failure this whole feature exists to avoid.
-  const cfg = useMemo(() => value ?? chatStatusBlank(), [value]);
+  // MEMOIZED, and it must stay that way. `parseChatStatus` builds fresh `words`/`icons` arrays
+  // on every call — including when `value` is already well-formed, not only when it is
+  // missing — so a bare `parseChatStatus(value)` written inline would produce a new object
+  // identity on EVERY render. That would silently defeat the `preview` memo below, which lists
+  // `cfg` as a dependency, and through it the renderer's shuffle bag: `TypingIndicator` keys
+  // its bag on the identity of the words array, and `usePreviewPulse` re-renders this
+  // component every 4 seconds. The visible symptom is the preview word jumping at random on
+  // every pulse — the "it looks random" failure this whole feature exists to avoid.
+  //
+  // `parseChatStatus` also does the narrowing itself: it is lenient and total (never throws,
+  // preserves every valid row, falls back to `chatStatusBlank()`'s rows when a shape is
+  // missing or malformed), so a stored blob that does not match `ChatStatusConfig` degrades
+  // instead of taking `RowsField`'s `cfg.words.map(...)` / `cfg.icons.map(...)` down with it.
+  const cfg = useMemo(() => parseChatStatus(value), [value]);
   const patch = (p: Partial<ChatStatusConfig>) => onChange({ ...cfg, ...p });
 
   const [previewKind, setPreviewKind] = useState<string>(CHAT_STATUS_KINDS[0]);
