@@ -1,9 +1,5 @@
 // src/persona-chat/index.ts
 var CONVERSATIONS = "/api/chat/conversations";
-var STATUS_THINKING = "thinking\u2026";
-var STATUS_RESPONDING = "responding\u2026";
-var STATUS_RETRYING = "thinking more\u2026";
-var STATUS_LABELS = ["thinking"];
 function parseData(data) {
   try {
     return JSON.parse(data);
@@ -79,13 +75,13 @@ var PersonaChatBackend = class {
   }
   /**
    * Drive one turn: ensure a conversation, POST the message, stream the reply.
-   * Emits status transitions along the way ("thinking…" on send, "responding…"
-   * on the first token, "thinking more…" on a backend retry) and always clears
-   * the status when the turn ends — normal completion, error, or abort.
+   * Emits status transitions along the way ("think" on send, "respond" on the
+   * first token, "retry" on a backend retry) and always clears the status when
+   * the turn ends — normal completion, error, or abort.
    */
   async *run(text, signal) {
     try {
-      this.opts.onStatus?.(STATUS_THINKING);
+      this.opts.onStatus?.("think");
       let id;
       try {
         id = await this.ensureConversation();
@@ -130,7 +126,7 @@ var PersonaChatBackend = class {
             buffer = buffer.slice(sep + 2);
             if (event === "status") {
               if (parseData(data)?.phase === "retrying") {
-                this.opts.onStatus?.(STATUS_RETRYING);
+                this.opts.onStatus?.("retry");
               }
               continue;
             }
@@ -143,7 +139,7 @@ var PersonaChatBackend = class {
             if (!evt) continue;
             if (evt.type === "token" && !responded) {
               responded = true;
-              this.opts.onStatus?.(STATUS_RESPONDING);
+              this.opts.onStatus?.("respond");
             }
             yield evt;
           }
@@ -160,10 +156,6 @@ var PersonaChatBackend = class {
   }
 };
 export {
-  PersonaChatBackend,
-  STATUS_LABELS,
-  STATUS_RESPONDING,
-  STATUS_RETRYING,
-  STATUS_THINKING
+  PersonaChatBackend
 };
 //# sourceMappingURL=index.js.map

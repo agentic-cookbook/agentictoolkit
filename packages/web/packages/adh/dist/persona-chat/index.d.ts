@@ -1,8 +1,5 @@
 import type { ChatBackend, ChatMessage, ChatResponse, ChatStreamEvent } from "./chat-types";
-export declare const STATUS_THINKING = "thinking\u2026";
-export declare const STATUS_RESPONDING = "responding\u2026";
-export declare const STATUS_RETRYING = "thinking more\u2026";
-export declare const STATUS_LABELS: string[];
+import type { ChatStatusKind } from "@agentic-toolkit/data/personas";
 /**
  * The payload of the backend's `award` SSE event (src/llm/service.ts's
  * `ChatStreamEvent` union) — badges/XP/level-up earned by the turn that just
@@ -52,8 +49,8 @@ export declare class PersonaChatBackend implements ChatBackend {
     constructor(opts: AuthedFetchers & {
         personaSlug: string;
         model: string | null;
-        /** Optional status sink for the "thinking…/responding…/thinking more…" line. */
-        onStatus?: (status: string | null) => void;
+        /** Optional sink for the persona's current activity kind; null ends the turn. */
+        onStatus?: (kind: ChatStatusKind | null) => void;
         /** Optional sink for the `award` SSE event — badges/XP/level-up earned this
          *  turn. Fires at most once per turn, before the terminal `done`. */
         onAward?: (award: ChatAward) => void;
@@ -65,9 +62,9 @@ export declare class PersonaChatBackend implements ChatBackend {
     sendMessageStream(text: string, _history: ChatMessage[], signal?: AbortSignal): AsyncIterable<ChatStreamEvent>;
     /**
      * Drive one turn: ensure a conversation, POST the message, stream the reply.
-     * Emits status transitions along the way ("thinking…" on send, "responding…"
-     * on the first token, "thinking more…" on a backend retry) and always clears
-     * the status when the turn ends — normal completion, error, or abort.
+     * Emits status transitions along the way ("think" on send, "respond" on the
+     * first token, "retry" on a backend retry) and always clears the status when
+     * the turn ends — normal completion, error, or abort.
      */
     private run;
     destroy(): void;
