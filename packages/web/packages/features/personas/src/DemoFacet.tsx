@@ -13,6 +13,7 @@ import { Select } from "@agentic-toolkit/ui/components/select";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { useState } from "react";
 import { CommaListInput } from "./CommaListInput";
+import { InkScriptEditor } from "./InkScriptEditor";
 import { RowsField } from "./RowsField";
 
 /** Mirrors the backend's CANNED_DEFAULT_PACING. */
@@ -90,6 +91,8 @@ export function DemoFacet({
   const patch = (p: Partial<CannedChatConfig>) => onChange({ ...cfg, ...p });
   const patchScript = (p: Partial<CannedChatConfig["script"]>) => patch({ script: { ...cfg.script, ...p } });
   const patchPacing = (p: Partial<CannedChatConfig["pacing"]>) => patch({ pacing: { ...cfg.pacing, ...p } });
+  // The server's own rule, not a preference: a non-blank source means the ink engine takes the turn.
+  const inkRuns = (cfg.ink?.source ?? "").trim() !== "";
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-5 overflow-y-auto px-6 py-4">
@@ -126,6 +129,25 @@ export function DemoFacet({
         <NumberField label="Think jitter (ms)" value={cfg.pacing.thinkJitterMs} max={DEMO_MAX_THINK_MS} onChange={(n) => patchPacing({ thinkJitterMs: n })} />
         <NumberField label="Token delay (ms)" value={cfg.pacing.tokenMinMs} max={DEMO_MAX_TOKEN_MS} onChange={(n) => patchPacing({ tokenMinMs: n })} />
         <NumberField label="Token jitter (ms)" value={cfg.pacing.tokenJitterMs} max={DEMO_MAX_TOKEN_MS} onChange={(n) => patchPacing({ tokenJitterMs: n })} />
+      </FieldGroup>
+
+      {/* Two engines, one flag. The server picks ink whenever the config carries a non-blank
+          source (`llm/facets/cannedChat.ts`), so that is the rule stated here rather than a
+          switch the author sets: a switch would be a second place the choice is recorded, and
+          the two could disagree. Both sets of fields stay editable either way — the unused
+          half is a draft being kept, not dead config. */}
+      <FieldGroup
+        title="Conversation"
+        trailing={
+          <span className="text-xs text-apt-text-muted">{inkRuns ? "Ink" : "Keywords"}</span>
+        }
+      >
+        <p className="text-xs text-apt-text-muted">
+          {inkRuns
+            ? "This persona demos on its ink script. The keyword fields below are kept but not used — clear the script to go back to them."
+            : "This persona demos on the keyword fields below. Write an ink script to run that instead."}
+        </p>
+        <InkScriptEditor value={cfg.ink ?? null} onChange={(ink) => patch({ ink })} />
       </FieldGroup>
 
       <RowsField
