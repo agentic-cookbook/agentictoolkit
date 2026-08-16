@@ -1568,6 +1568,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
       {"name": "character", "type": "string", "required": false, "nullable": true, "serverManaged": false},
       {"name": "examples", "type": "string", "required": false, "nullable": true, "serverManaged": false},
       {"name": "cannedChat", "type": "unknown", "required": false, "nullable": true, "serverManaged": false},
+      {"name": "chatStatus", "type": "unknown", "required": false, "nullable": true, "serverManaged": false},
       {"name": "createdAt", "type": "string", "required": false, "nullable": false, "serverManaged": true},
       {"name": "updatedAt", "type": "string", "required": false, "nullable": false, "serverManaged": true},
       {"name": "ownedEcosystemId", "type": "string", "required": false, "nullable": true, "serverManaged": true},
