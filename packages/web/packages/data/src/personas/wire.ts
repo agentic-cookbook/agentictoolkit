@@ -305,7 +305,22 @@ export interface CannedScript {
   intro: string[]; seeded: CannedSeeded[]; fallbacks: string[];
   onExhausted: "reshuffle" | "hold-last";
 }
-export interface CannedChatConfig { enabled: boolean; pacing: CannedPacing; script: CannedScript }
+/**
+ * The ink engine's slice of the demo config. Absent or blank `source` ⇒ this persona demos on
+ * the legacy keyword `script` instead; the two engines share one `enabled` flag.
+ *
+ * `signInLine` is what the persona says when a visitor goes off-script and there is no real
+ * model to escalate to — an anonymous visitor, or one on a persona with no model. It is the
+ * line most visitors will see, because a profile visit is usually anonymous.
+ */
+export interface CannedInk { source: string; signInLine: string }
+export interface CannedChatConfig {
+  enabled: boolean;
+  pacing: CannedPacing;
+  script: CannedScript;
+  /** Optional: rows written before ink existed have no such key. */
+  ink?: CannedInk | null;
+}
 
 /** Backend row for `GET /persona/personas` (and a single persona). */
 export interface PersonaRow {

@@ -183,6 +183,7 @@ export type {
 // into ./wire directly.
 export type {
   CannedChatConfig,
+  CannedInk,
   CannedPacing,
   CannedScript,
   CannedSeeded,

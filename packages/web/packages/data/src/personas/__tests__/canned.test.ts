@@ -49,7 +49,6 @@ describe("canDemoChat mirrors the backend's demo predicate", () => {
   });
 
   it("is false for malformed jsonb — a CRUD or import write the server would reject", () => {
-    expect(canDemoChat({ enabled: true })).toBe(false);
     expect(canDemoChat({ enabled: "yes", script: good.script })).toBe(false);
     expect(canDemoChat({ enabled: true, script: { intro: "oops" } })).toBe(false);
     expect(canDemoChat({ enabled: true, script: [] })).toBe(false);
@@ -64,5 +63,44 @@ describe("canDemoChat mirrors the backend's demo predicate", () => {
     expect(canDemoChat({ enabled: true, script: good.script })).toBe(true);
     // Over-ceiling pacing is CLAMPED server-side, not rejected: still a demo.
     expect(canDemoChat({ ...good, pacing: { ...good.pacing, thinkMinMs: 35_000 } })).toBe(true);
+  });
+
+  it("counts an ink script as a demo, with or without a keyword script", () => {
+    const ink = { source: "Hi — I'm Bob.\n", signInLine: "Sign in." };
+    expect(canDemoChat({ enabled: true, ink })).toBe(true);
+    expect(canDemoChat({ ...script({}), ink })).toBe(true);
+    expect(canDemoChat({ ...good, ink })).toBe(true);
+    // The one thing the flag still gates.
+    expect(canDemoChat({ enabled: false, ink })).toBe(false);
+  });
+
+  it("treats a blank ink source as a draft, not a demo", () => {
+    // The author has opened the editor and not written yet — absent, not broken, so the
+    // keyword script (if any) still decides.
+    expect(canDemoChat({ enabled: true, ink: { source: "  \n", signInLine: "x" } })).toBe(false);
+    expect(canDemoChat({ ...good, ink: { source: "", signInLine: "x" } })).toBe(true);
+  });
+
+  it("does not compile the ink — a syntax error still advertises a demo", () => {
+    // Deliberate: there is no compiler on this side, and the server's canClaim does not
+    // compile either, precisely so the two cannot disagree. A broken script says its
+    // sign-in line.
+    expect(canDemoChat({ enabled: true, ink: { source: "* [unclosed\n", signInLine: "x" } })).toBe(
+      true,
+    );
+  });
+
+  it("is false when the ink slice itself is malformed", () => {
+    // A row nothing can read must not demo off the half that happens to parse.
+    expect(canDemoChat({ ...good, ink: { source: 42 } })).toBe(false);
+    expect(canDemoChat({ ...good, ink: { source: "x", signInLine: 7 } })).toBe(false);
+    expect(canDemoChat({ ...good, ink: [] })).toBe(false);
+    expect(canDemoChat({ ...good, ink: "some ink" })).toBe(false);
+  });
+
+  it("is false when the KEYWORD script is malformed even though the ink is fine", () => {
+    const ink = { source: "Hi — I'm Bob.\n", signInLine: "Sign in." };
+    expect(canDemoChat({ enabled: true, script: { intro: "oops" }, ink })).toBe(false);
+    expect(canDemoChat({ enabled: true, script: [], ink })).toBe(false);
   });
 });
