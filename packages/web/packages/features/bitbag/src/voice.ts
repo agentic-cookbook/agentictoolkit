@@ -1,21 +1,68 @@
 import type { ThemeKey } from '@agenticdevelopertoolkit/themes'
+import type { StatusWordPair } from '@agenticdevelopertoolkit/chat'
 
-// Silly "thinking" words for the in-flight indicator (bitbag's own dialect).
-// Must end in "ing" — the spinner auto-derives the grey done form by swapping
-// "ing"→"ed" (zorping → zorped), so a non-"ing" word would read wrong when set.
-export const THINKING_WORDS = [
-  "zeeping", "zorping", "mooping", "glorping", "snorping",
-  "bweeping", "florping", "snarping", "zlorping", "quonking",
-  "blerping", "throoping", "vorping", "nurbling", "znerping",
-  "plimping", "droobling", "fweeping", "fnurping", "zreeping",
-  "zibbling", "wozzling", "frooping", "splorping", "spleeping",
-  "drimping", "flurping", "grimbling", "flooming", "squorping",
-  "skreeping", "blorping", "thronking", "plooning", "snorgling",
-  "snoofing", "plorking", "queeping", "floobling", "zrumping",
-  "frilping", "klooping", "zwomping", "myorping", "vluffing",
-  "zaffing", "skweeping", "gwibbing", "murping", "zeebling",
-  "ploozing", "threeping", "klimping", "kwomping", "vlooping",
-] as const;
+/**
+ * bitbag's nonsense vocabulary. Both forms are authored now, so a word no longer has to end
+ * in "ing" for the settled line to read: the past forms below are exactly what the old
+ * `slice(-3) + "ed"` derivation produced, so nothing bitbag renders changes today.
+ */
+export const THINKING_WORDS: StatusWordPair[] = [
+  { present: "zeeping", past: "zeeped" },
+  { present: "zorping", past: "zorped" },
+  { present: "mooping", past: "mooped" },
+  { present: "glorping", past: "glorped" },
+  { present: "snorping", past: "snorped" },
+  { present: "bweeping", past: "bweeped" },
+  { present: "florping", past: "florped" },
+  { present: "snarping", past: "snarped" },
+  { present: "zlorping", past: "zlorped" },
+  { present: "quonking", past: "quonked" },
+  { present: "blerping", past: "blerped" },
+  { present: "throoping", past: "throoped" },
+  { present: "vorping", past: "vorped" },
+  { present: "nurbling", past: "nurbled" },
+  { present: "znerping", past: "znerped" },
+  { present: "plimping", past: "plimped" },
+  { present: "droobling", past: "droobled" },
+  { present: "fweeping", past: "fweeped" },
+  { present: "fnurping", past: "fnurped" },
+  { present: "zreeping", past: "zreeped" },
+  { present: "zibbling", past: "zibbled" },
+  { present: "wozzling", past: "wozzled" },
+  { present: "frooping", past: "frooped" },
+  { present: "splorping", past: "splorped" },
+  { present: "spleeping", past: "spleeped" },
+  { present: "drimping", past: "drimped" },
+  { present: "flurping", past: "flurped" },
+  { present: "grimbling", past: "grimbled" },
+  { present: "flooming", past: "floomed" },
+  { present: "squorping", past: "squorped" },
+  { present: "skreeping", past: "skreeped" },
+  { present: "blorping", past: "blorped" },
+  { present: "thronking", past: "thronked" },
+  { present: "plooning", past: "plooned" },
+  { present: "snorgling", past: "snorgled" },
+  { present: "snoofing", past: "snoofed" },
+  { present: "plorking", past: "plorked" },
+  { present: "queeping", past: "queeped" },
+  { present: "floobling", past: "floobled" },
+  { present: "zrumping", past: "zrumped" },
+  { present: "frilping", past: "frilped" },
+  { present: "klooping", past: "klooped" },
+  { present: "zwomping", past: "zwomped" },
+  { present: "myorping", past: "myorped" },
+  { present: "vluffing", past: "vluffed" },
+  { present: "zaffing", past: "zaffed" },
+  { present: "skweeping", past: "skweeped" },
+  { present: "gwibbing", past: "gwibbed" },
+  { present: "murping", past: "murped" },
+  { present: "zeebling", past: "zeebled" },
+  { present: "ploozing", past: "ploozed" },
+  { present: "threeping", past: "threeped" },
+  { present: "klimping", past: "klimped" },
+  { present: "kwomping", past: "kwomped" },
+  { present: "vlooping", past: "vlooped" },
+];
 // Glyph morphs through bitbag's "eye" while thinking; settles to ⊙ when done.
 export const THINKING_GLYPH = ["o", "O", "⊙", "◉", "⊙", "O"] as const;
 export const THINKING_GLYPH_DONE = "⊙";
