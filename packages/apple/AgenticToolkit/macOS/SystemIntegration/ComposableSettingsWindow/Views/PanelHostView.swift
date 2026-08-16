@@ -4,14 +4,13 @@ import AgenticToolkitCoreMacOS
 
 extension ComposableSettings {
 
-    /// The detail pane's chrome: the selected panel on the left, a help button
-    /// pinned to the panel's top-right corner, and the `HelpDrawerView` that
-    /// button discloses on the right.
+    /// The detail pane's chrome: the selected panel, plus a help button pinned to
+    /// its top-right corner that opens the window's help drawer.
     ///
     /// One instance lives for the whole life of the split and only its *content*
-    /// is swapped, because disclosure is a property of the window rather than of
-    /// whichever panel happens to be showing — rebuilding the chrome per panel
-    /// would re-run the open/close animation on every sidebar click.
+    /// is swapped, because help is disclosed on the window — the drawer belongs
+    /// to `HelpDrawerController` and slides out beside it — rather than on
+    /// whichever panel happens to be showing.
     @MainActor
     public final class PanelHostView: NSView {
 
@@ -20,54 +19,41 @@ extension ComposableSettings {
         /// group's leading-aligned header rather than on top of any control.
         private static let buttonInset: CGFloat = 12
 
-        private static let disclosureDuration: TimeInterval = 0.18
-
         private let contentContainer = NSView()
-        private let drawer = HelpDrawerView()
         private let helpButton = NSButton()
 
-        private var drawerWidth: NSLayoutConstraint?
         private var themeObserver: ThemePaletteObserver?
-        private let disclosure: UserSettingObserver<Bool>
-
         private var help: PanelHelp?
 
-        /// Called whenever the drawer opens or closes. The split uses it to widen
-        /// the detail pane's floor by the drawer's width, so disclosing help
-        /// squeezes the window's minimum rather than the panel's controls.
-        public var onDisclosureChange: (() -> Void)?
-
-        /// The width the drawer is currently claiming — zero while collapsed.
-        public var disclosedDrawerWidth: CGFloat {
-            self.isDisclosed ? HelpDrawerView.disclosedWidth : 0
+        /// Where help is shown. Weak because the window owns the presenter — and
+        /// `nil` for a nested split, which is what retires its button: help opens
+        /// once, at the window's edge, not once per level of nesting.
+        public weak var helpPresenter: (any SettingsHelpPresenting)? {
+            didSet {
+                self.helpPresenter?.onVisibilityChange = { [weak self] in
+                    self?.updateHelpButton()
+                }
+                self.helpPresenter?.setHelp(self.help)
+                self.updateHelpButton()
+            }
         }
 
         public init() {
-            self.disclosure = UserSettingObserver(UserSettings.settingsHelpDrawerVisible)
-
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
             self.contentContainer.translatesAutoresizingMaskIntoConstraints = false
             self.addSubview(self.contentContainer)
-            self.addSubview(self.drawer)
             // Added last so it floats above the panel's own content; it is a child
             // of `self`, not of the content, so swapping panels never disturbs it.
             self.configureHelpButton()
             self.addSubview(self.helpButton)
 
-            let width = self.drawer.widthAnchor.constraint(equalToConstant: 0)
-            self.drawerWidth = width
             NSLayoutConstraint.activate([
                 self.contentContainer.topAnchor.constraint(equalTo: self.topAnchor),
                 self.contentContainer.leadingAnchor.constraint(equalTo: self.leadingAnchor),
                 self.contentContainer.bottomAnchor.constraint(equalTo: self.bottomAnchor),
-                self.contentContainer.trailingAnchor.constraint(equalTo: self.drawer.leadingAnchor),
-
-                self.drawer.topAnchor.constraint(equalTo: self.topAnchor),
-                self.drawer.trailingAnchor.constraint(equalTo: self.trailingAnchor),
-                self.drawer.bottomAnchor.constraint(equalTo: self.bottomAnchor),
-                width,
+                self.contentContainer.trailingAnchor.constraint(equalTo: self.trailingAnchor),
 
                 self.helpButton.topAnchor.constraint(
                     equalTo: self.contentContainer.topAnchor, constant: Self.buttonInset),
@@ -75,15 +61,11 @@ extension ComposableSettings {
                     equalTo: self.contentContainer.trailingAnchor, constant: -Self.buttonInset)
             ])
 
-            self.disclosure.onChange = { [weak self] _ in
-                self?.updateDisclosure(animated: true)
-            }
-
             self.themeObserver = ThemePaletteObserver { [weak self] _ in
                 self?.updateHelpButton()
             }
 
-            self.updateDisclosure(animated: false)
+            self.updateHelpButton()
         }
 
         @available(*, unavailable)
@@ -101,43 +83,14 @@ extension ComposableSettings {
             Self.pinToEdges(view, of: self.contentContainer)
         }
 
-        /// Sets the help for the panel now showing. `nil` retires the button and
-        /// collapses the drawer without touching the remembered preference, so a
-        /// panel that offers no help doesn't teach the window to stay shut.
+        /// Hands the panel's help to the presenter and restyles the button. `nil`
+        /// retires the button and closes the drawer without touching the
+        /// remembered preference, so a panel that offers no help doesn't teach the
+        /// window to stay shut.
         public func setHelp(_ help: PanelHelp?) {
             self.help = help
-            self.drawer.setHelp(help)
-            self.updateDisclosure(animated: false)
-        }
-
-        // MARK: - Disclosure
-
-        private var isDisclosed: Bool {
-            self.help != nil && self.disclosure.value
-        }
-
-        private func updateDisclosure(animated: Bool) {
-            let disclosed = self.isDisclosed
-            self.helpButton.isHidden = self.help == nil
+            self.helpPresenter?.setHelp(help)
             self.updateHelpButton()
-
-            // Hidden rather than merely zero-width: a wrapping label asked to lay
-            // out at zero width resolves to an absurd height, so leaving the
-            // collapsed drawer visible would cost real layout on every pass.
-            let target = disclosed ? HelpDrawerView.disclosedWidth : 0
-            self.drawer.isHidden = !disclosed
-            // Ahead of the animation: the pane's floor has to make room for the
-            // drawer before it slides in, not after.
-            self.onDisclosureChange?()
-
-            guard animated else {
-                self.drawerWidth?.constant = target
-                return
-            }
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = Self.disclosureDuration
-                self.drawerWidth?.animator().constant = target
-            }
         }
 
         // MARK: - Help button
@@ -153,12 +106,13 @@ extension ComposableSettings {
         }
 
         @objc private func toggleHelp() {
-            self.disclosure.value.toggle()
+            self.helpPresenter?.toggleHelp()
         }
 
         private func updateHelpButton() {
-            let disclosed = self.isDisclosed
+            let disclosed = self.helpPresenter?.isHelpVisible ?? false
             let palette = ThemePaletteObserver.currentPalette
+            self.helpButton.isHidden = self.help == nil || self.helpPresenter == nil
             // Filled while open, outlined while closed — the button reports the
             // drawer's state as well as toggling it, which matters because the
             // drawer is remembered across launches.

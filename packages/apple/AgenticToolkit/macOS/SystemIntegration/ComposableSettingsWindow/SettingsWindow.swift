@@ -43,6 +43,18 @@ extension ComposableSettings {
         /// `false`, so this isn't forced on every consumer.
         open var activatesOnShow: Bool { true }
 
+        /// Attaches the help drawer to the window and hands it to the root split.
+        ///
+        /// Deliberately deprecated: `HelpDrawerController` wraps `NSDrawer`, and
+        /// naming it inside a deprecated declaration is what keeps the wrapper's
+        /// deprecation from leaking outward. Nothing of ours calls this override —
+        /// `loadWindow()` calls the base method — so the annotation warns nobody.
+        @available(macOS, deprecated: 10.13, message: "Builds the NSDrawer-backed help presenter")
+        open override func configureWindow(_ window: NSWindow) {
+            super.configureWindow(window)
+            viewController?.helpPresenter = HelpDrawerController(parentWindow: window)
+        }
+
         open override func showWindow() {
             super.showWindow()
             guard activatesOnShow else { return }

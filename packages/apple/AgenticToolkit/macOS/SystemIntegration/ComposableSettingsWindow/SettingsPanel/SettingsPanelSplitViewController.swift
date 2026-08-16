@@ -17,15 +17,11 @@ extension ComposableSettings {
         /// panel offers none. Redeclared here for the same dispatch reason as on
         /// `SettingsPanelViewController` — see the note there.
         ///
-        /// The help shown is the *outer* panel's: a nested split hosts its own
-        /// sub-panels but never its own drawer (`providesHelpDrawer` is false
-        /// below), so one panel's worth of help sits beside the whole topic list
-        /// rather than a second drawer opening inside the first.
+        /// The help shown is the *outer* panel's: only the window's root split is
+        /// given a help presenter, so a nested split hosts its own sub-panels but
+        /// never its own drawer, and one panel's worth of help sits beside the
+        /// whole topic list.
         open var helpContent: PanelHelp? { nil }
-
-        /// Nested splits are already inside the root split's drawer chrome. A
-        /// second one here would put a drawer inside a drawer.
-        open override var providesHelpDrawer: Bool { false }
 
         public init(with descriptor: SettingsPanelDescriptor? = nil) {
             if let descriptor {

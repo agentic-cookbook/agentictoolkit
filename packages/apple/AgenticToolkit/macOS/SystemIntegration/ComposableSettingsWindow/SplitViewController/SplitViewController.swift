@@ -33,12 +33,6 @@ extension ComposableSettings {
         /// "move around" as you switch between them.
         open var contentSizedSidebar: Bool { false }
 
-        /// Whether the detail pane carries the help button and its drawer. True
-        /// for the root settings split; nested topic/detail splits turn it off so
-        /// a panel's help opens once, at the window's right edge, instead of once
-        /// per level of nesting.
-        open var providesHelpDrawer: Bool { true }
-
         /// External floor for the sidebar thickness. A parent split sets this on
         /// its nested-split panels so their sibling topic lists share one width —
         /// switching between panels then never moves the inner divider. `nil`
@@ -63,9 +57,17 @@ extension ComposableSettings {
         private let detailContainer = NSViewController()
 
         /// The detail pane's persistent chrome — panel content plus the help
-        /// button and drawer. Outlives every panel switch, so the drawer's
-        /// disclosure never re-animates just because the selection moved.
+        /// button. Outlives every panel switch, so the button never flickers just
+        /// because the selection moved.
         private let panelHost = PanelHostView()
+
+        /// Where this split's panels show their help. The settings window sets it
+        /// on its root split and nowhere else, which is what keeps a nested split
+        /// from opening a second drawer: with no presenter, its help button never
+        /// appears and the *outer* split shows the nested panel's help instead.
+        public var helpPresenter: (any SettingsHelpPresenting)? {
+            didSet { panelHost.helpPresenter = helpPresenter }
+        }
 
         // Repaints the window chrome and detail pane on every theme change.
         private var themeObserver: ThemePaletteObserver?
@@ -121,9 +123,6 @@ extension ComposableSettings {
                 self?.show(panel)
             }
 
-            panelHost.onDisclosureChange = { [weak self] in
-                self?.applyDetailMinimumThickness()
-            }
             applyDetailMinimumThickness()
 
             themeObserver = ThemePaletteObserver { [weak self] palette in
@@ -188,20 +187,17 @@ extension ComposableSettings {
             applyDetailMinimumThickness()
         }
 
-        /// Floor the nested splits need, or 0 when this split hosts none. Kept
-        /// apart from the drawer's contribution so the two writers can't clobber
-        /// each other — `applyDetailMinimumThickness` is the only one that sets
-        /// the item's thickness.
+        /// Floor the nested splits need, or 0 when this split hosts none. Held
+        /// separately from `detailMinimumThickness` so the nested-sidebar pass can
+        /// be re-run without overwriting the subclass's own floor.
         private var nestedDetailFloor: CGFloat = 0
 
-        /// The detail item's floor: whatever the content needs, plus the drawer's
-        /// width while it is open. Adding it here is what makes disclosing help
-        /// push the window's minimum width out rather than crush the controls
-        /// into the leftover sliver.
+        /// The detail item's floor: whichever of the two floors is larger. Help
+        /// contributes nothing — the drawer opens *outside* the window, so it
+        /// costs the panel no width at all.
         private func applyDetailMinimumThickness() {
             guard isViewLoaded else { return }
-            splitViewItems.last?.minimumThickness =
-                max(detailMinimumThickness, nestedDetailFloor) + panelHost.disclosedDrawerWidth
+            splitViewItems.last?.minimumThickness = max(detailMinimumThickness, nestedDetailFloor)
         }
 
         /// Upper bound on a content-sized sidebar, so one unusually long row
@@ -290,7 +286,7 @@ extension ComposableSettings {
                 panelHost.setContent(scroll)
             }
 
-            panelHost.setHelp(providesHelpDrawer ? panel.helpContent : nil)
+            panelHost.setHelp(panel.helpContent)
             applyDetailMinimumThickness()
         }
     }
