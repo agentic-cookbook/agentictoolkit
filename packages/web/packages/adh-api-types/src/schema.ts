@@ -53730,6 +53730,9 @@ export interface paths {
                             cannedChat: ((string | number | boolean | null) | {
                                 [key: string]: unknown;
                             } | unknown[]) | null;
+                            chatStatus: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
                             createdAt: string;
                             updatedAt: string;
                             ownedEcosystemId?: string | null;
@@ -53775,6 +53778,9 @@ export interface paths {
                         cannedChat?: ((string | number | boolean | null) | {
                             [key: string]: unknown;
                         } | unknown[]) | null;
+                        chatStatus?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
                         id?: string;
                     };
                 };
@@ -53804,6 +53810,9 @@ export interface paths {
                             character: string | null;
                             examples: string | null;
                             cannedChat: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            chatStatus: ((string | number | boolean | null) | {
                                 [key: string]: unknown;
                             } | unknown[]) | null;
                             createdAt: string;
@@ -53886,6 +53895,9 @@ export interface paths {
                             cannedChat: ((string | number | boolean | null) | {
                                 [key: string]: unknown;
                             } | unknown[]) | null;
+                            chatStatus: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
                             createdAt: string;
                             updatedAt: string;
                             ownedEcosystemId?: string | null;
@@ -53941,6 +53953,9 @@ export interface paths {
                         cannedChat?: ((string | number | boolean | null) | {
                             [key: string]: unknown;
                         } | unknown[]) | null;
+                        chatStatus?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
                     };
                 };
             };
@@ -53969,6 +53984,9 @@ export interface paths {
                             character: string | null;
                             examples: string | null;
                             cannedChat: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            chatStatus: ((string | number | boolean | null) | {
                                 [key: string]: unknown;
                             } | unknown[]) | null;
                             createdAt: string;
@@ -61532,6 +61550,10 @@ export interface components {
             createdAt: string;
             owner: components["schemas"]["PublicOwner"];
             demoEnabled: boolean;
+            /** @description Per-persona chat status configuration: word pairs, glyph sets and tint. Resolved and rendered client-side. */
+            chatStatus?: {
+                [key: string]: unknown;
+            } | null;
         };
         PersonaSheet: {
             /** @enum {string} */
