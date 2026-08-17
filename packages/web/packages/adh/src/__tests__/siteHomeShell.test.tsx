@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useState } from "react";
+import type { SiteId } from "@agentic-toolkit/adh-registry";
 import {
   render,
   screen,
@@ -317,10 +318,12 @@ function Shell({ workspaceSlug }: { workspaceSlug?: string }) {
  *  `[workspace]` layout mounts `SiteIdProvider` above `SiteHomeShell`, and that branch throws
  *  without one (see the shell's `siteId === null` guard). Used by the cases below that land on
  *  the profile, or that pin one of the rungs guarding it — never by `/home`, which the shell's own
- *  doc comment says mounts with no provider at all, and one of those cases asserts exactly that. */
-function renderReachable(props: { workspaceSlug?: string }) {
+ *  doc comment says mounts with no provider at all, and one of those cases asserts exactly that.
+ *  `siteId` defaults to the hub because that is what most cases here are about; the override lets
+ *  one case mount a different site so it can prove the id is READ off the provider, not assumed. */
+function renderReachable(props: { workspaceSlug?: string }, siteId: SiteId = "hub") {
   return render(
-    <SiteIdProvider siteId="hub">
+    <SiteIdProvider siteId={siteId}>
       <Shell {...props} />
     </SiteIdProvider>,
   );
@@ -1255,6 +1258,16 @@ describe("SiteHomeShell resolution", () => {
     expect(push).not.toHaveBeenCalled();
     expect(prefsPut).not.toHaveBeenCalled();
     expect(writeCached).not.toHaveBeenCalled();
+  });
+
+  it("hands the fallback the site it is MOUNTED on, not a hardcoded one", async () => {
+    // The one case that mounts a site other than the hub, and the only thing in this file that can
+    // fail if the shell stops reading `useSiteIdOrNull()` and hardcodes an id instead. "hub" is the
+    // literal such a bug would use — the hub's own WorkspaceGate hardcodes exactly that — so a case
+    // asserting "hub" would pass against the bug it is meant to catch. This one asserts "projects".
+    renderReachable({ workspaceSlug: "zzz" }, "projects");
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-site-id", "projects");
   });
 
   it("[round 2] back button from acme to mine — zero PUTs", async () => {
