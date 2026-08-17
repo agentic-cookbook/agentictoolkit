@@ -2,6 +2,7 @@ import { type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { NavLink } from '@agentic-toolkit/adh/header';
 import type { FooterLink } from '@agentic-toolkit/adh/footer';
+import { type SiteHelp } from '@agentic-toolkit/ui/components/help-content';
 /** The serializable half of a link: what a server layout can hand across the
  *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot
  *  cross it, and a site that needs either is not describing chrome any more.
@@ -74,6 +75,12 @@ export type MarketingRootHtmlProps = {
     providers?: ComponentType<{
         children: ReactNode;
     }>;
+    /** The site's help copy, published to the whole document.
+     *
+     *  A provider rather than a header prop: the `header` slot below lets a site
+     *  replace the shared header entirely (four do), and a prop would reach the
+     *  shared header and miss them. */
+    help?: SiteHelp;
     children: ReactNode;
 };
 /**
@@ -123,6 +130,6 @@ export type MarketingRootHtmlProps = {
  * paths (kept external by tsup) so their 'use client' boundaries survive bundling,
  * mirroring the graph subsystem.
  */
-export declare function MarketingRootHtml({ siteId, navLinks, trailingNavLinks, footerLinks, silentSso, header, providers, children, }: MarketingRootHtmlProps): ReactElement;
+export declare function MarketingRootHtml({ siteId, navLinks, trailingNavLinks, footerLinks, silentSso, header, providers, help, children, }: MarketingRootHtmlProps): ReactElement;
 export {};
 //# sourceMappingURL=MarketingRootHtml.d.ts.map

@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { SiteRoute, SiteSeo } from '@agentic-toolkit/adh-registry/seo';
+import type { SiteHelp } from '@agentic-toolkit/ui/components/help-content';
 import type { MarketingRootHtmlProps } from '@agentic-toolkit/adh/marketing';
 /** The paths every site in the family keeps out of its production index.
  *
@@ -54,6 +55,12 @@ export interface SiteDefinition {
     /** Title + description, and optionally a bespoke social card. Not derivable: the
      *  registry knows what a site is called, not what it is for. */
     seo: SiteSeo;
+    /** The site's help copy, keyed by the id a <HelpEnabled> names.
+     *
+     *  The site-title entry is DERIVED from `seo.description` below, so a site
+     *  gets the header's help without writing anything; declaring it here
+     *  overrides that. */
+    help?: SiteHelp;
     /** Paths to keep out of the production index, replacing (not extending)
      *  FAMILY_ROBOTS_DISALLOW. Omit unless the site genuinely differs. */
     robotsDisallow?: readonly string[];
@@ -160,9 +167,10 @@ export interface SiteConfig {
 /**
  * Assemble a site's configuration.
  *
- * The one per-site declaration in the family. It reads as data and it is data: no field is
- * inspected here beyond `id`, so the React values (`header`, `providers`) pass through
- * untouched and stay whatever the server graph made them.
+ * The one per-site declaration in the family. It reads as data and it is data: the React
+ * values (`header`, `providers`) pass through untouched and stay whatever the server graph
+ * made them. The one field READ rather than forwarded is `seo.description`, which seeds the
+ * header's help entry so no site has to write the same sentence twice.
  */
 export declare function defineSite(site: SiteDefinition): SiteConfig;
 /** The sitemap's routes, whether the site listed them or supplies a function.

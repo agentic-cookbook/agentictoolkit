@@ -211,6 +211,9 @@ import { AppShell } from "@agentic-toolkit/adh/layout";
 import { getLocale, htmlLang, localeDir } from "@agentic-toolkit/adh/concepts";
 import { AuthProvider } from "@agentic-toolkit/adh/auth";
 import { MarketingSiteHeader } from "@agentic-toolkit/adh/marketing/MarketingSiteHeader";
+import {
+  HelpContentProvider
+} from "@agentic-toolkit/ui/components/help-content";
 import { jsx as jsx4, jsxs as jsxs4 } from "react/jsx-runtime";
 function MarketingRootHtml({
   siteId,
@@ -220,6 +223,7 @@ function MarketingRootHtml({
   silentSso = true,
   header,
   providers,
+  help,
   children
 }) {
   const loc = getLocale();
@@ -230,7 +234,7 @@ function MarketingRootHtml({
     // differs from the server's here. Same contract next-themes has.
     /* @__PURE__ */ jsxs4("html", { lang: htmlLang(loc), dir: localeDir(loc), suppressHydrationWarning: true, children: [
       /* @__PURE__ */ jsx4("head", { children: /* @__PURE__ */ jsx4(AdhThemeStyle, {}) }),
-      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(SiteProviders, { children: /* @__PURE__ */ jsx4(
+      /* @__PURE__ */ jsx4("body", { children: /* @__PURE__ */ jsx4(HelpContentProvider, { help: help ?? {}, children: /* @__PURE__ */ jsx4(AuthProvider, { clientId: "adh", storageKey: "auth_tokens", silentSso, children: /* @__PURE__ */ jsx4(SiteProviders, { children: /* @__PURE__ */ jsx4(
         AppShell,
         {
           header: header ?? /* @__PURE__ */ jsx4(
@@ -244,7 +248,7 @@ function MarketingRootHtml({
           footer: { links: footerLinks ?? [] },
           children
         }
-      ) }) }) })
+      ) }) }) }) })
     ] })
   );
 }

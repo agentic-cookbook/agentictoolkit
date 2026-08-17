@@ -838,6 +838,7 @@ function PreviewNotice({
 
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { HelpEnabled } from "@agentic-toolkit/ui/components/help-enabled";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,
@@ -847,6 +848,7 @@ function AdhHeader({
   siteSwitcher,
   debugMenu,
   pageTitle,
+  pageTitleHelp,
   center,
   badges = [],
   leadingActions,
@@ -898,7 +900,21 @@ function AdhHeader({
           )
         )) })
       ] }),
-      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
+      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && (pageTitleHelp ? (
+        // The TRIGGER carries the title class, rather than wrapping a span that
+        // has it: `.adh-header__page-title` is absolutely centred and sets
+        // `pointer-events: none`, so a button around it would be both mispositioned
+        // and unclickable over the text. The inner span exists to keep the
+        // ellipsis, which a flex item cannot do for itself.
+        /* @__PURE__ */ jsx9(
+          HelpEnabled,
+          {
+            id: pageTitleHelp,
+            className: "adh-header__page-title adh-header__page-title--help",
+            children: /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title-text", children: pageTitle })
+          }
+        )
+      ) : /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle })),
       /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
         leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
         barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),

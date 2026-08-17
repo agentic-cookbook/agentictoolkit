@@ -73,6 +73,12 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     debugMenu?: ReactNode;
     /** Optional page/section title, shown centered in the bar. */
     pageTitle?: string;
+    /** Help id for `pageTitle`, making the title help-enabled.
+     *
+     *  Separate from `pageTitle` because that slot holds the SITE name only when a
+     *  page named nothing; when a page names itself, help about the site would be
+     *  help about the wrong thing. SiteHeader sets this only in the former case. */
+    pageTitleHelp?: string;
     /** Optional interactive content centered in the bar (e.g. a live status
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
      *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
@@ -133,5 +139,5 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, accountActions, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, pageTitleHelp, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, accountActions, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

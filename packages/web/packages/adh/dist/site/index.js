@@ -1,4 +1,5 @@
 // src/site/SiteConfig.ts
+import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
 var FAMILY_ROBOTS_DISALLOW = [
   "/login",
   "/signup",
@@ -22,7 +23,14 @@ function defineSite(site) {
       navLinks: site.navLinks,
       trailingNavLinks: site.trailingNavLinks,
       footerLinks: site.footerLinks,
-      silentSso: site.silentSso
+      silentSso: site.silentSso,
+      // Derived, not required: every site already describes its purpose in `seo.description`,
+      // and a fourth copy of that sentence is how the cookbook's sections.ts ended up warning
+      // that "Nothing reports a disagreement between the two". A site's own entry wins.
+      help: {
+        [SITE_TITLE_HELP_ID]: { body: site.seo.description, flavor: "info" },
+        ...site.help
+      }
     }
   };
 }
