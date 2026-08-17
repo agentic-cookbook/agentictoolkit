@@ -54,11 +54,8 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
   // reportErrors: false — a product that has not connected Stripe yet is the ORDINARY state, not
   // an auth incident, and reporting it would file a bug on every unconfigured ecosystem. `/prices`
   // is `requireAdmin` too, so a non-admin's 403 is just as ordinary and just as unworthy of a bug.
-  const { items: prices, errorStatus: pricesStatus } = useResourceList<PriceRow>(
-    `${key}:prices`,
-    loadPrices,
-    { reportErrors: false },
-  );
+  const { items: prices, error: pricesError, errorStatus: pricesStatus } =
+    useResourceList<PriceRow>(`${key}:prices`, loadPrices, { reportErrors: false });
 
   const priceById = new Map((prices ?? []).map((p) => [p.id, p]));
   const noPrices = prices === null || prices.length === 0;
@@ -75,15 +72,28 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
           <p className="text-sm text-apt-text-muted">
             Stripe details are visible to product admins only.
           </p>
-        ) : noPrices ? (
-          // Deliberately does NOT assert which of the remaining causes this is. `prices === null`
-          // covers the 409 from an ecosystem with no Stripe key AND any other read failure, and
-          // an empty array means the key works and the catalog is empty. The panel cannot tell
-          // those apart, so it states the observation and names both remedies rather than
-          // diagnosing.
+        ) : pricesStatus === 409 ? (
+          // The ONE cause this panel can name with certainty, and it earns its own branch for
+          // that reason: `routes/billing.ts` maps `StripeNotConfiguredError` to a 409 precisely so
+          // the setup step is distinguishable from a bug. Note it arrives as an ERROR, not as an
+          // empty list — `listPrices` throws on any non-ok response, so a missing key never
+          // reaches the empty state below.
           <p className="text-sm text-apt-text-muted">
-            No active Stripe prices are visible. Either no restricted Stripe key is connected
-            under Integrations, or the connected account has no active prices yet.
+            No Stripe account is connected. Add a restricted Stripe key under Integrations.
+          </p>
+        ) : pricesError ? (
+          // Every OTHER failure, ahead of the empty state for the same reason the 403 is: a read
+          // that failed is not an observation about Stripe. Without this branch a 500 falls into
+          // `noPrices` below and tells the reader to go connect a key — the identical defect the
+          // 403 branch above exists to prevent, arriving through a different status.
+          <p className="text-sm text-apt-text-muted">Stripe prices could not be loaded.</p>
+        ) : noPrices ? (
+          // Reached only when the read SUCCEEDED, which is what lets it speak about Stripe at all.
+          // The key works and the catalog is genuinely empty, so this asserts nothing it cannot
+          // see. (`prices === null` also lands here on the first paint, before the read settles —
+          // the whole panel shares that flash, and it self-corrects in one render.)
+          <p className="text-sm text-apt-text-muted">
+            The connected Stripe account has no active prices yet.
           </p>
         ) : (
           <p className="text-sm text-apt-text-muted">

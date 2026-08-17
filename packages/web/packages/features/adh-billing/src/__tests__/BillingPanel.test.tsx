@@ -87,9 +87,10 @@ describe("BillingPanel", () => {
   // customers and no Stripe prices. Asserting the ABSENCE of each false line too, because the
   // regression is not that the notice goes missing — it is that the falsehood comes back.
   //
-  // The rejection is a real `AuthHttpError`, not a plain Error with 403 in its message: the panel
-  // branches on `instanceof` + `.status`, so a stringly-typed stand-in would take the generic
-  // branch and this test would assert nothing about the code that ships.
+  // The rejection is a real `AuthHttpError`, not a plain Error with 403 in its message: the status
+  // reaches the panel as `useResourceList`'s `errorStatus`, read off the thrown error's numeric
+  // `.status`, so a stand-in carrying the code only in its message would take the generic branch
+  // and this test would assert nothing about the code that ships.
   it("says the admin-only reads are admin-only when refused, never that there is nothing there", async () => {
     authedJson.mockImplementation((path: string) =>
       path === "/api/billing/accounts" || path === "/api/billing/prices"
@@ -100,7 +101,27 @@ describe("BillingPanel", () => {
     await waitFor(() => expect(screen.getByText(/Payer details are visible/)).toBeTruthy());
     expect(screen.getByText(/Stripe details are visible/)).toBeTruthy();
     expect(screen.queryByText("Nobody has bought anything yet.")).toBeNull();
-    expect(screen.queryByText(/no restricted Stripe key is connected/)).toBeNull();
+    // Both of the Stripe section's non-403 lines, by their real current wording. A regex for copy
+    // no longer in the component would pass forever while asserting nothing.
+    expect(screen.queryByText(/No Stripe account is connected/)).toBeNull();
+    expect(screen.queryByText(/has no active prices yet/)).toBeNull();
+  });
+
+  // 409 is the ONE status this panel translates into a named cause, so it is the one most worth
+  // pinning: `routes/billing.ts` maps `StripeNotConfiguredError` to it precisely so an operator's
+  // setup step is distinguishable from a bug. It arrives as a thrown error, never as an empty
+  // list, which is why the empty-state copy must be absent here.
+  it("names the missing Stripe connection on a 409 instead of reporting an empty catalog", async () => {
+    authedJson.mockImplementation((path: string) =>
+      path === "/api/billing/prices"
+        ? Promise.reject(new AuthHttpError(409, "connect a Stripe account before listing prices"))
+        : Promise.resolve([]),
+    );
+    render(<BillingPanel workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByText(/No Stripe account is connected/)).toBeTruthy());
+    expect(screen.queryByText(/has no active prices yet/)).toBeNull();
+    expect(screen.queryByText("Stripe prices could not be loaded.")).toBeNull();
+    expect(screen.queryByText(/Stripe details are visible/)).toBeNull();
   });
 
   // The inversion of the test above, and the reason the panel checks the STATUS rather than merely

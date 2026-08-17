@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useQuery, type QueryKey } from "@tanstack/react-query";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { AuthHttpError } from "@agentic-toolkit/auth/client";
+import { httpStatus } from "./http";
 import { RESOURCE_GC_TIME, getToolkitQueryClient } from "./query";
 import { useTenantId } from "./tenant";
 import { readLastId, clearLastId } from "./ftd-storage";
@@ -62,8 +62,8 @@ export interface ResourceList<T> {
   reload: () => Promise<void>;
   /** The last load error, or null. */
   error: string | null;
-  /** The HTTP status of the last load error, when it was an `AuthHttpError` — otherwise null
-   *  (including for a transport or parse failure, which has no status).
+  /** The HTTP status the last load error carried, or null when it carried none — a transport or
+   *  parse failure genuinely has no status, and reads as null here.
    *
    *  It exists because `error` is a STRING, and the flattening happens here: a caller receives
    *  `err.message` and can no longer ask what kind of failure this was. For most callers that is
@@ -75,8 +75,13 @@ export interface ResourceList<T> {
    *  allowed to see it. Both state something false as settled fact.
    *
    *  A number rather than the error object: the question a caller has is "which kind of no was
-   *  this", and answering it with an opaque `unknown` would push an `instanceof` into every
-   *  consumer and re-export the auth package's class through the data package's surface. */
+   *  this", and answering it with an opaque `unknown` would push a status check into every
+   *  consumer and re-export the auth package's error class through this package's surface.
+   *
+   *  Read through {@link httpStatus}, NOT `instanceof AuthHttpError` — see its comment: a host may
+   *  layer its own auth client atop this package, so two distinct `AuthHttpError` classes can be
+   *  live at once and an `instanceof` against either would silently miss the other's errors. That
+   *  miss is invisible: it produces a well-typed branch that never runs. */
   errorStatus: number | null;
   /** True while a read is in flight, INCLUDING the very first one before `items` has ever been
    *  anything but null.
@@ -211,7 +216,7 @@ export function useResourceList<T>(
     items: query.data ?? null,
     reload,
     error: err == null ? null : err instanceof Error ? err.message : "Failed to load.",
-    errorStatus: err instanceof AuthHttpError ? err.status : null,
+    errorStatus: httpStatus(err) ?? null,
     // `isPending` covers the very first read — no data yet, so `isFetching` alone reads false for
     // the render between mounting and the fetch starting, which is the exact window a caller must
     // not mistake for "settled". `isFetching` covers every read after it.
