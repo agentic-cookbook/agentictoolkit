@@ -307,6 +307,10 @@ export type SiteBuildConfig = {
  * shared config's dependency gate.
  */
 export const SITE_BUILD: Partial<Record<SiteId, SiteBuildConfig>> = {
+  // Every panel on this site reads /api/billing/*, so a hosted build with no API_BACKEND_URL
+  // would deploy a site whose calls all proxy to localhost — green build, permanently empty
+  // panel. The flag makes that a build failure instead.
+  billing: { requiresBackendUrl: true },
   bitbag: { requiresBackendUrl: true, handRolledConfig: true },
   // `requiresBackendUrl` on these two is not decoration: BOTH shipped a
   // `src/lib/backend-url.ts` that threw UNCONDITIONALLY when `API_BACKEND_URL` was
