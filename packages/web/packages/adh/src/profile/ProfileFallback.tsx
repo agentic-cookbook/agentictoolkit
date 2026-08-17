@@ -42,6 +42,14 @@ export interface ProfileFallbackProps {
  * component would render "Profile not found" to exactly the audience the `hub` setting exists to
  * admit. The public 404 is only final for a viewer the authed twin also refuses.
  *
+ * That "only final" is why the render order below holds `missing` and `error` back with
+ * `viewerPending`: the anonymous pair and the authed pair are two independent requests racing
+ * each other, the authed one usually slower (it may need a token refresh first), so a `hub`
+ * profile's expected FIRST answer is the public miss — for exactly the viewers the setting exists
+ * to admit. Rendering that miss before the authed pair settles is the flash this component exists
+ * to avoid. A resolved `found` state does not wait: it is already a correct render, and holding it
+ * back for a widening that may only add fields would delay a page that is already right.
+ *
  * `ProfileView` runs the same hook internally (it is where the widening lives for all six
  * consumers), so a `hub` profile reached through here costs one duplicate GET to the authed twin.
  * That is the price of keeping the widening a property of the view rather than of every caller;
@@ -49,7 +57,7 @@ export interface ProfileFallbackProps {
  */
 export function ProfileFallback({ slug, siteId }: ProfileFallbackProps): ReactElement | null {
   const [state, setState] = useState<State>({ status: 'loading' })
-  const viewer = useViewerPrincipal(slug, null)
+  const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null)
 
   useEffect(() => {
     let cancelled = false
@@ -85,18 +93,22 @@ export function ProfileFallback({ slug, siteId }: ProfileFallbackProps): ReactEl
   }, [slug])
 
   // The entitled viewer's answer supersedes every anonymous outcome, including the error one:
-  // if the authed twin resolved the principal, the page is not broken for this visitor.
-  if (viewer) return <ProfileView principal={viewer} siteId={siteId} />
+  // if the authed twin resolved the principal, the page is not broken for this visitor. This
+  // component already ran useViewerPrincipal to decide THAT, so ProfileView is told not to run
+  // it again with upgrade={false} — a second identical lookup would be pure waste.
+  if (viewer) return <ProfileView principal={viewer} siteId={siteId} upgrade={false} />
   if (state.status === 'loading') return null
+  if (state.status === 'found') return <ProfileView principal={state.principal} siteId={siteId} upgrade={false} />
+  // Neither "not found" nor "we are down" is final while the viewer's own lookup is still
+  // running: a `hub` profile is a 404 on the anonymous route BY DESIGN, so the public miss
+  // is the expected first answer for the very viewers the setting exists to admit.
+  if (viewerPending) return null
   if (state.status === 'missing') return <ProfileNotFound />
-  if (state.status === 'error') {
-    return (
-      <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
-        <p className="text-apt-text-muted">
-          Couldn&apos;t load this profile. Reload the page to try again.
-        </p>
-      </main>
-    )
-  }
-  return <ProfileView principal={state.principal} siteId={siteId} />
+  return (
+    <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
+      <p className="text-apt-text-muted">
+        Couldn&apos;t load this profile. Reload the page to try again.
+      </p>
+    </main>
+  )
 }

@@ -27,6 +27,14 @@ export interface ProfileFallbackProps {
  * component would render "Profile not found" to exactly the audience the `hub` setting exists to
  * admit. The public 404 is only final for a viewer the authed twin also refuses.
  *
+ * That "only final" is why the render order below holds `missing` and `error` back with
+ * `viewerPending`: the anonymous pair and the authed pair are two independent requests racing
+ * each other, the authed one usually slower (it may need a token refresh first), so a `hub`
+ * profile's expected FIRST answer is the public miss — for exactly the viewers the setting exists
+ * to admit. Rendering that miss before the authed pair settles is the flash this component exists
+ * to avoid. A resolved `found` state does not wait: it is already a correct render, and holding it
+ * back for a widening that may only add fields would delay a page that is already right.
+ *
  * `ProfileView` runs the same hook internally (it is where the widening lives for all six
  * consumers), so a `hub` profile reached through here costs one duplicate GET to the authed twin.
  * That is the price of keeping the widening a property of the view rather than of every caller;

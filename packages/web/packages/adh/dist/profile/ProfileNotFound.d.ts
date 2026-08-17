@@ -1,3 +1,4 @@
+import { type ReactElement } from "react";
 /**
  * Shown when `/<slug>` or `/<slug>/profile` resolves to neither a feature nor a principal the
  * viewer may see. A principal is a user OR an organization — they share one slug namespace —
@@ -10,5 +11,5 @@
  * Lives in @agentic-toolkit/adh rather than in the hub: every site in the fleet renders a
  * profile now, so every site can miss one.
  */
-export declare function ProfileNotFound(): import("react").JSX.Element;
+export declare function ProfileNotFound(): ReactElement;
 //# sourceMappingURL=ProfileNotFound.d.ts.map

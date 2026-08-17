@@ -10,6 +10,11 @@ export interface ProfileViewProps {
     siteId: SiteId;
     /** This site's own public section, or nothing. */
     children?: ReactNode;
+    /** Whether this view runs the signed-in widening itself. Default true, which is what
+     *  every server-rendered consumer wants. `ProfileFallback` passes false because it
+     *  already ran the hook to decide WHICH principal to render, and a second identical
+     *  lookup would be pure waste. */
+    upgrade?: boolean;
 }
 /**
  * A principal's profile, in the arrangement every site in the fleet shares:
@@ -31,7 +36,9 @@ export interface ProfileViewProps {
  * the signed-in widening without an API change — the prop stays "the principal you resolved",
  * and whether the viewer is entitled to more is this component's business, not theirs. The seed
  * is always a valid render, so a failed or absent upgrade simply leaves the anonymous view
- * standing.
+ * standing. `upgrade={false}` is the one opt-out: `ProfileFallback` already ran the same hook to
+ * decide which principal to render in the first place, so it passes its answer straight through
+ * and tells this component not to duplicate the lookup.
  */
-export declare function ProfileView({ principal, siteId, children }: ProfileViewProps): ReactElement;
+export declare function ProfileView({ principal, siteId, children, upgrade, }: ProfileViewProps): ReactElement;
 //# sourceMappingURL=ProfileView.d.ts.map

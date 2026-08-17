@@ -20,7 +20,7 @@ function principalFromOrgCard(body) {
 
 // src/profile/server.ts
 async function fetchPublicPrincipal(slug) {
-  const backend = process.env.API_BACKEND_URL?.trim();
+  const backend = process.env.API_BACKEND_URL?.trim().replace(/\/+$/, "");
   if (!backend) {
     throw new Error(
       "API_BACKEND_URL is not set. Configure it in each Vercel project (and .env.local for local dev, e.g. http://localhost:8080)."

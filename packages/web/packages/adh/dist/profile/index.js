@@ -2,11 +2,19 @@
 "use client";
 
 // src/profile/ProfileView.tsx
-import { siteUrl } from "@agentic-toolkit/adh-registry";
+import { siteUrl, siteProdUrl } from "@agentic-toolkit/adh-registry";
 import { UserCard } from "@agentic-toolkit/ui/blocks/user-card";
 
-// src/profile/useViewerPrincipal.ts
+// src/header/useClientHost.ts
 import { useEffect, useState } from "react";
+function useClientHost() {
+  const [host, setHost] = useState(null);
+  useEffect(() => setHost(window.location.host), []);
+  return host;
+}
+
+// src/profile/useViewerPrincipal.ts
+import { useEffect as useEffect2, useState as useState2 } from "react";
 import { useOptionalAuth } from "@agentic-toolkit/auth";
 import { authedJson } from "@agentic-toolkit/auth/client";
 
@@ -31,55 +39,67 @@ function principalFromOrgCard(body) {
 }
 
 // src/profile/useViewerPrincipal.ts
-function useViewerPrincipal(slug, seed) {
+function useViewerPrincipal(slug, seed, enabled = true) {
   const auth = useOptionalAuth();
   const signedIn = auth?.isAuthenticated ?? false;
-  const [wider, setWider] = useState(null);
-  useEffect(() => {
-    if (!signedIn) {
+  const [wider, setWider] = useState2(null);
+  const [pending, setPending] = useState2(false);
+  useEffect2(() => {
+    if (!enabled || !signedIn) {
       setWider(null);
+      setPending(false);
       return;
     }
     let live = true;
+    setPending(true);
     void (async () => {
       const encoded = encodeURIComponent(slug);
       try {
         const dto = await authedJson(`/api/users/${encoded}`);
-        if (live) setWider(principalFromUserCard(dto));
+        if (live) {
+          setWider(principalFromUserCard(dto));
+          setPending(false);
+        }
         return;
       } catch (err) {
         if (err.status !== 404) {
           console.error(`Profile upgrade failed for ${slug}:`, err);
+          if (live) setPending(false);
           return;
         }
       }
       try {
         const dto = await authedJson(`/api/orgs/${encoded}`);
-        if (live) setWider(principalFromOrgCard(dto));
+        if (live) {
+          setWider(principalFromOrgCard(dto));
+          setPending(false);
+        }
       } catch (err) {
         if (err.status !== 404) {
           console.error(`Profile upgrade failed for ${slug}:`, err);
         }
+        if (live) setPending(false);
       }
     })();
     return () => {
       live = false;
     };
-  }, [slug, signedIn]);
-  return wider ?? seed;
+  }, [slug, signedIn, enabled]);
+  return { principal: wider ?? seed, pending };
 }
 
 // src/profile/ProfileView.tsx
 import { jsx, jsxs } from "react/jsx-runtime";
-function ProfileView({ principal, siteId, children }) {
-  const shown = useViewerPrincipal(principal.slug, principal) ?? principal;
-  const fullProfileHref = siteId === "hub" ? null : siteUrl(
-    "hub",
-    `/${encodeURIComponent(shown.slug)}`,
-    // globalThis, not `window`: this module is typechecked without the dom lib in some
-    // consumers, where a bare `window` is TS2304 even behind a typeof guard.
-    globalThis.location?.hostname ?? ""
-  );
+function ProfileView({
+  principal,
+  siteId,
+  children,
+  upgrade = true
+}) {
+  const { principal: shown0 } = useViewerPrincipal(principal.slug, principal, upgrade);
+  const shown = shown0 ?? principal;
+  const hostname = useClientHost();
+  const fullProfileHref = siteId === "hub" ? null : hostname ? siteUrl("hub", `/${encodeURIComponent(shown.slug)}`, hostname) : siteProdUrl("hub", `/${encodeURIComponent(shown.slug)}`);
   return /* @__PURE__ */ jsxs("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: [
     /* @__PURE__ */ jsx(UserCard, { user: shown }),
     shown.description && /* @__PURE__ */ jsx("p", { className: "mt-4 text-apt-text-muted", children: shown.description }),
@@ -96,7 +116,7 @@ function ProfileView({ principal, siteId, children }) {
 }
 
 // src/profile/ProfileNotFound.tsx
-import { useState as useState2, useCallback, useRef } from "react";
+import { useState as useState3, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
@@ -108,8 +128,8 @@ function initials(name) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 }
 function ProfileNotFound() {
-  const [query, setQuery] = useState2("");
-  const [search, setSearch] = useState2({ status: "idle" });
+  const [query, setQuery] = useState3("");
+  const [search, setSearch] = useState3({ status: "idle" });
   const abortRef = useRef(null);
   const handleSearch = useCallback(async (q) => {
     const trimmed = q.trim();
@@ -245,12 +265,12 @@ function ProfileNotFound() {
 }
 
 // src/profile/ProfileFallback.tsx
-import { useEffect as useEffect2, useState as useState3 } from "react";
+import { useEffect as useEffect3, useState as useState4 } from "react";
 import { jsx as jsx3 } from "react/jsx-runtime";
 function ProfileFallback({ slug, siteId }) {
-  const [state, setState] = useState3({ status: "loading" });
-  const viewer = useViewerPrincipal(slug, null);
-  useEffect2(() => {
+  const [state, setState] = useState4({ status: "loading" });
+  const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null);
+  useEffect3(() => {
     let cancelled = false;
     setState({ status: "loading" });
     void (async () => {
@@ -281,13 +301,12 @@ function ProfileFallback({ slug, siteId }) {
       cancelled = true;
     };
   }, [slug]);
-  if (viewer) return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId });
+  if (viewer) return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false });
   if (state.status === "loading") return null;
+  if (state.status === "found") return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId, upgrade: false });
+  if (viewerPending) return null;
   if (state.status === "missing") return /* @__PURE__ */ jsx3(ProfileNotFound, {});
-  if (state.status === "error") {
-    return /* @__PURE__ */ jsx3("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: /* @__PURE__ */ jsx3("p", { className: "text-apt-text-muted", children: "Couldn't load this profile. Reload the page to try again." }) });
-  }
-  return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId });
+  return /* @__PURE__ */ jsx3("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: /* @__PURE__ */ jsx3("p", { className: "text-apt-text-muted", children: "Couldn't load this profile. Reload the page to try again." }) });
 }
 export {
   ProfileFallback,

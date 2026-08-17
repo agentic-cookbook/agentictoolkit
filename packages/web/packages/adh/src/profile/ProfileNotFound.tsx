@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, type FormEvent } from "react";
+import { useState, useCallback, useRef, type FormEvent, type ReactElement } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
 import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
@@ -53,7 +53,7 @@ function initials(name: string): string {
  * Lives in @agentic-toolkit/adh rather than in the hub: every site in the fleet renders a
  * profile now, so every site can miss one.
  */
-export function ProfileNotFound() {
+export function ProfileNotFound(): ReactElement {
   const [query, setQuery] = useState("");
   const [search, setSearch] = useState<SearchState>({ status: "idle" });
   // Tracks the AbortController for the most recent in-flight request so that

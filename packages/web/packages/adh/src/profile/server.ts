@@ -37,7 +37,11 @@ import type { ProfilePrincipal } from './types'
  * rather than here because the two CLIENT fetchers need exactly the same mapping.
  */
 export async function fetchPublicPrincipal(slug: string): Promise<ProfilePrincipal | null> {
-  const backend = process.env.API_BACKEND_URL?.trim()
+  // Trim then strip a trailing slash (`@agentic-toolkit/next-env`'s `resolveBackendUrl` does the
+  // same with `.replace(/\/+$/, '')`; this package does not depend on that package — its fallback
+  // to `http://localhost:3000` is wrong here — so the one line is copied rather than the
+  // dependency). Without it, `API_BACKEND_URL=https://x/` doubles the slash before `public/...`.
+  const backend = process.env.API_BACKEND_URL?.trim().replace(/\/+$/, '')
   if (!backend) {
     throw new Error(
       'API_BACKEND_URL is not set. Configure it in each Vercel project (and .env.local for ' +

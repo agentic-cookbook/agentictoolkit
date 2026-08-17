@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { principalFromOrgCard, principalFromUserCard, type OrgCardBody, type UserCardBody } from '../normalize'
 import { ProfileView } from '../ProfileView'
 import type { ProfilePrincipal } from '../types'
 
@@ -68,5 +69,49 @@ describe('ProfileView', () => {
   it('renders NO Full Profile link on the hub, because that link would point at this page', () => {
     render(<ProfileView principal={principal()} siteId="hub" />)
     expect(screen.queryByRole('link', { name: 'Full Profile' })).toBeNull()
+  })
+})
+
+/**
+ * The other test in this file renders an organization, but its fixture (via `principal()`)
+ * supplies all five collections as `[]` already, so it never actually exercises
+ * `principalFromOrgCard` — it would pass unchanged if `normalize.ts` were deleted. These tests
+ * feed the normalizers the REAL wire shapes directly: `OrgCardBody` carries none of the five
+ * collections, which is exactly the defect `normalize.ts` fixes — those fields arriving
+ * `undefined` is what makes `UserCard` throw on `.length`.
+ */
+describe('normalize', () => {
+  it('principalFromOrgCard fills the five missing collections with [] and stamps organization', () => {
+    const body: OrgCardBody = {
+      slug: 'fishlamp',
+      displayName: 'Fish Lamp',
+      description: 'We make lamps for fish.',
+      createdAt: '2026-01-02T03:04:05.000Z',
+      personas: [],
+    }
+    const result = principalFromOrgCard(body)
+    expect(result.socialLinks).toEqual([])
+    expect(result.emails).toEqual([])
+    expect(result.phones).toEqual([])
+    expect(result.addresses).toEqual([])
+    expect(result.kind).toBe('organization')
+    expect(result.description).toBe('We make lamps for fish.')
+  })
+
+  it('principalFromUserCard stamps user and passes a populated collection through untouched', () => {
+    const body: UserCardBody = {
+      slug: 'fishlamp',
+      displayName: 'Fish Lamp',
+      avatarUrl: null,
+      createdAt: '2026-01-02T03:04:05.000Z',
+      socialLinks: [{ platform: 'bluesky', url: 'https://bsky.app/fishlamp', handle: '@fishlamp' }],
+      emails: [],
+      phones: [],
+      addresses: [],
+      personas: [],
+    }
+    const result = principalFromUserCard(body)
+    expect(result.kind).toBe('user')
+    expect(result.socialLinks).toBe(body.socialLinks)
   })
 })
