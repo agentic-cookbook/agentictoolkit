@@ -381,6 +381,45 @@ describe('DataTable selection checkboxes', () => {
     }
   })
 
+  it('select-all leaves ids the table is NOT showing alone', () => {
+    // "All" means the rows on screen. A list that paginates or filters above the table hands
+    // `rows` a slice, and `new Set(ids)` / `new Set()` would have made the header checkbox a
+    // silent editor of a selection made elsewhere: ticking it DROPPED the off-screen ids while
+    // claiming to add, and unticking cleared rows the user could not see.
+    const onSel = vi.fn()
+    render(
+      <DataTable
+        ariaLabel="People"
+        columns={columns}
+        rows={rows}
+        getRowId={(r) => r.id}
+        selectedIds={new Set(['off-page'])}
+        onSelectionChange={onSel}
+        showSelectionCheckboxes
+      />,
+    )
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect([...(onSel.mock.calls[0]![0] as Set<string>)].sort()).toEqual(['a', 'b', 'c', 'off-page'])
+  })
+
+  it('unticking select-all removes only the shown rows', () => {
+    const onSel = vi.fn()
+    render(
+      <DataTable
+        ariaLabel="People"
+        columns={columns}
+        rows={rows}
+        getRowId={(r) => r.id}
+        selectedIds={new Set(['a', 'b', 'c', 'off-page'])}
+        onSelectionChange={onSel}
+        showSelectionCheckboxes
+      />,
+    )
+    // Every shown row is selected, so the header reads checked and this click is the "clear" one.
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all' }))
+    expect([...(onSel.mock.calls[0]![0] as Set<string>)]).toEqual(['off-page'])
+  })
+
   it('the checkbox column is not resizable', () => {
     render(<Harness />)
     expect(screen.queryByRole('separator', { name: 'Resize column __select' })).toBeNull()

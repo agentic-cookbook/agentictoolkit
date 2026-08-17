@@ -17,6 +17,13 @@ import { Button } from "../components/button"
  * the next bulk action — a Delete, a Transfer — operates on rows the user can no longer see and
  * has every reason to believe they deselected. Every surface that re-derives this locally is a
  * surface that can forget that line.
+ *
+ * `resetKey` is the same line drawn for the OTHER way rows leave the screen. Toggling the mode is
+ * not the only thing that hides a selected row: paging, searching and filtering all do, and none
+ * of them touches `active`. A list that pages client-side can hold three ticked rows on page one,
+ * page to two, tick a fourth, and hand a bulk action four ids while showing one — which is the
+ * invisible selection this hook exists to prevent, arriving through a door the toggle does not
+ * cover.
  */
 export interface BatchSelect {
   /** True while the checkboxes are showing. */
@@ -30,9 +37,38 @@ export interface BatchSelect {
   count: number
 }
 
-export function useBatchSelect(): BatchSelect {
+export interface BatchSelectOptions {
+  /**
+   * A value describing WHICH ROWS the list is currently showing — a page number, a search string,
+   * the chosen filters, or all of them joined. Whenever it changes by `Object.is`, the selection
+   * is dropped, because the rows it named are no longer the rows on screen.
+   *
+   * Pass a PRIMITIVE. A `Set` or an object rebuilt each render is a new value every time, which
+   * would clear the selection on the very render that made it.
+   */
+  resetKey?: unknown
+}
+
+/** Shared because the reset below runs during render: a fresh Set there is a fresh identity every
+ *  render, and consumers key effects and memos off `selectedIds`. Never mutated — every writer
+ *  hands `setSelectedIds` a Set of its own. */
+const EMPTY_SELECTION: Set<string> = new Set()
+
+export function useBatchSelect(options: BatchSelectOptions = {}): BatchSelect {
+  const { resetKey } = options
   const [active, setActive] = React.useState(false)
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(() => new Set())
+
+  // Reset DURING RENDER rather than in an effect. An effect would let one commit through with the
+  // old selection against the new rows, and that commit is exactly when the Transfer button is
+  // enabled, labelled with a count, and clickable.
+  const lastResetKey = React.useRef(resetKey)
+  let visible = selectedIds
+  if (!Object.is(lastResetKey.current, resetKey)) {
+    lastResetKey.current = resetKey
+    visible = EMPTY_SELECTION
+    setSelectedIds(EMPTY_SELECTION)
+  }
 
   const clear = React.useCallback(() => setSelectedIds(new Set()), [])
   const toggleActive = React.useCallback(() => {
@@ -44,7 +80,7 @@ export function useBatchSelect(): BatchSelect {
     })
   }, [])
 
-  return { active, selectedIds, setSelectedIds, toggleActive, clear, count: selectedIds.size }
+  return { active, selectedIds: visible, setSelectedIds, toggleActive, clear, count: visible.size }
 }
 
 export interface BatchSelectButtonProps {

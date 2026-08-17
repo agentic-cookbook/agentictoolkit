@@ -173,7 +173,19 @@ export function DataTable<T>({
       <Checkbox
         aria-label="Select all"
         checked={allSelected}
-        onCheckedChange={() => onSelectionChange?.(allSelected ? new Set() : new Set(ids))}
+        // Adds and removes THE ROWS THIS TABLE IS SHOWING, leaving any other selected id alone.
+        // `new Set(ids)` and `new Set()` were symmetrical and both wrong the moment the list is
+        // paginated or filtered above the table: the first silently DROPPED a selection made on
+        // another page while the checkbox said "select all", and the second cleared rows the user
+        // could not see and had not asked about. What "all" means here is what is on screen.
+        onCheckedChange={() => {
+          const next = new Set(selectedIds)
+          for (const id of ids) {
+            if (allSelected) next.delete(id)
+            else next.add(id)
+          }
+          onSelectionChange?.(next)
+        }}
       />
     ),
     render: (row) => {

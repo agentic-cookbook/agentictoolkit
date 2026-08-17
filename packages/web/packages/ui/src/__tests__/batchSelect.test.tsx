@@ -53,6 +53,54 @@ describe('useBatchSelect', () => {
     expect(screen.getByTestId('count').textContent).toBe('0')
   })
 
+  it('a changed resetKey drops the selection, in the SAME render', () => {
+    // The other way a selected row leaves the screen: the list pages, searches or filters, and
+    // `active` never moves. The count must be zero on the commit that shows the new rows — an
+    // effect-based reset would let one paint through with a Transfer button enabled and a count
+    // describing rows nobody can see.
+    function PageHarness(): React.ReactElement {
+      const [page, setPage] = React.useState(1)
+      const batch = useBatchSelect({ resetKey: page })
+      return (
+        <div>
+          <span data-testid="count">{batch.count}</span>
+          <span data-testid="page">{page}</span>
+          <button type="button" onClick={() => batch.setSelectedIds(new Set(['a', 'b']))}>pick two</button>
+          <button type="button" onClick={() => setPage((p) => p + 1)}>next page</button>
+        </div>
+      )
+    }
+    render(<PageHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'pick two' }))
+    expect(screen.getByTestId('count').textContent).toBe('2')
+    fireEvent.click(screen.getByRole('button', { name: 'next page' }))
+    expect(screen.getByTestId('page').textContent).toBe('2')
+    expect(screen.getByTestId('count').textContent).toBe('0')
+  })
+
+  it('leaves the selection alone while the resetKey holds still', () => {
+    // The failure the ref guards: a resetKey compared by identity rather than remembered would
+    // clear on every render, and a selection could never be built at all.
+    function SteadyHarness(): React.ReactElement {
+      const [ticks, setTicks] = React.useState(0)
+      const batch = useBatchSelect({ resetKey: 'page-1' })
+      return (
+        <div>
+          <span data-testid="count">{batch.count}</span>
+          <span data-testid="ticks">{ticks}</span>
+          <button type="button" onClick={() => batch.setSelectedIds(new Set(['a']))}>pick</button>
+          <button type="button" onClick={() => setTicks((t) => t + 1)}>rerender</button>
+        </div>
+      )
+    }
+    render(<SteadyHarness />)
+    fireEvent.click(screen.getByRole('button', { name: 'pick' }))
+    fireEvent.click(screen.getByRole('button', { name: 'rerender' }))
+    fireEvent.click(screen.getByRole('button', { name: 'rerender' }))
+    expect(screen.getByTestId('ticks').textContent).toBe('2')
+    expect(screen.getByTestId('count').textContent).toBe('1')
+  })
+
   it('clear() empties the selection without leaving batch mode', () => {
     function ClearHarness(): React.ReactElement {
       const batch = useBatchSelect()
