@@ -153,7 +153,7 @@ public struct SystemPermissionChecker: PermissionChecking {
 @MainActor
 private final class LocationAuthorizationCoordinator: NSObject, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
-    private var pendingContinuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+    private var waiters: [CheckedContinuation<CLAuthorizationStatus, Never>] = []
     private var timeoutTask: Task<Void, Never>?
 
     override init() {
@@ -171,10 +171,15 @@ private final class LocationAuthorizationCoordinator: NSObject, CLLocationManage
     /// synchronously — only a genuinely undetermined first ask needs to wait.
     /// `requestAlwaysAuthorization()` itself is fire-and-forget; the user's
     /// decision arrives later through `locationManagerDidChangeAuthorization`,
-    /// which resumes the continuation this sets up. A 120-second timeout
-    /// guards against a prompt the user closes without deciding, or one that
-    /// never appears (Location Services off globally, missing usage-
-    /// description), so the caller's `await` cannot hang forever.
+    /// which resumes the waiters this sets up. Concurrent callers (a settings
+    /// UI and the daemon's trigger-arming path can both ask while the status
+    /// is still undetermined) share one system prompt and one timeout rather
+    /// than each triggering its own: `requestAlwaysAuthorization()` is a
+    /// no-op after the first call, and CoreLocation delivers exactly one
+    /// decision to all of them. A 120-second timeout guards against a prompt
+    /// the user closes without deciding, or one that never appears (Location
+    /// Services off globally, missing usage-description), so no caller's
+    /// `await` can hang forever.
     func requestAlways() async -> CLAuthorizationStatus {
         let before = manager.authorizationStatus
         manager.requestAlwaysAuthorization()
@@ -183,11 +188,25 @@ private final class LocationAuthorizationCoordinator: NSObject, CLLocationManage
         }
 
         return await withCheckedContinuation { continuation in
-            pendingContinuation = continuation
+            waiters.append(continuation)
+
+            // Re-read rather than trust `before`: the delegate can fire between
+            // `requestAlwaysAuthorization()` above and this closure, and a
+            // decision that landed in that window would otherwise wait out the
+            // full timeout for a status that is already settled.
+            let settled = manager.authorizationStatus
+            guard settled == .notDetermined else {
+                resumeAll(with: settled)
+                return
+            }
+
+            // The first waiter owns the timeout; later waiters join it rather
+            // than starting a second one that would outlive the first.
+            guard timeoutTask == nil else { return }
             timeoutTask = Task { [weak self] in
                 try? await Task.sleep(for: .seconds(120))
                 guard let self, !Task.isCancelled else { return }
-                self.resume(with: self.manager.authorizationStatus)
+                self.resumeAll(with: self.manager.authorizationStatus)
             }
         }
     }
@@ -196,19 +215,23 @@ private final class LocationAuthorizationCoordinator: NSObject, CLLocationManage
         let status = manager.authorizationStatus
         guard status != .notDetermined else { return }
         Task { @MainActor [weak self] in
-            self?.resume(with: status)
+            self?.resumeAll(with: status)
         }
     }
 
-    /// Resumes the pending continuation exactly once. Guards both against a
-    /// second delegate callback firing after the first already resumed, and
-    /// against a race between the delegate and the timeout — either would
-    /// crash `CheckedContinuation` if allowed to resume twice.
-    private func resume(with status: CLAuthorizationStatus) {
-        guard let continuation = pendingContinuation else { return }
-        pendingContinuation = nil
+    /// Resumes every waiter exactly once. The read-and-clear of `waiters` is a
+    /// single uninterruptible main-actor step with no `await` between the two
+    /// halves, so a second delegate callback or the timeout cannot observe a
+    /// non-empty list after this has taken it — either would trap
+    /// `CheckedContinuation` by resuming twice.
+    private func resumeAll(with status: CLAuthorizationStatus) {
+        guard !waiters.isEmpty else { return }
+        let pending = waiters
+        waiters = []
         timeoutTask?.cancel()
         timeoutTask = nil
-        continuation.resume(returning: status)
+        for continuation in pending {
+            continuation.resume(returning: status)
+        }
     }
 }
