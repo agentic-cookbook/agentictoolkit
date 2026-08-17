@@ -56,6 +56,16 @@
       "development": "./src/layout/index.ts",
       "import": "./dist/layout/index.js"
     },
+    "./profile": {
+      "types": "./dist/profile/index.d.ts",
+      "development": "./src/profile/index.ts",
+      "import": "./dist/profile/index.js"
+    },
+    "./profile-server": {
+      "types": "./dist/profile/server.d.ts",
+      "development": "./src/profile/server.ts",
+      "import": "./dist/profile/server.js"
+    },
     "./legal": {
       "types": "./dist/legal/index.d.ts",
       "development": "./src/legal/index.ts",

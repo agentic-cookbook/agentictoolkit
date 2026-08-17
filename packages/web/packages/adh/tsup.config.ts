@@ -24,6 +24,17 @@ export default defineConfig({
     // HomePlaceholder/SiteNotFound take as props here) merged into this same entry when
     // the app tier came across — see the vocabulary-tier block below.
     'layout/index': 'src/layout/index.ts',
+    // The fleet-wide profile page: the shared view, the not-found page with its union search,
+    // the client fallback, and the viewer-upgrade hook. Its own entry because every site's
+    // `/<slug>/profile` route imports it, and because the SERVER half below must not be
+    // reachable from it.
+    'profile/index': 'src/profile/index.ts',
+    // `fetchPublicPrincipal`, published as `./profile-server`. A separate entry rather than a
+    // member of the barrel above is the whole enforcement: this workspace does not install the
+    // `server-only` package, so the subpath split is what keeps a server fetch out of a client
+    // component's bundle. Named `profile/server` so it emits at dist/profile/server.js, which
+    // is where the exports map's `./profile-server` points.
+    'profile/server': 'src/profile/server.ts',
     'legal/index': 'src/legal/index.ts',
     'themes/index': 'src/themes/index.ts',
     // The two dev-only halves of theming, each its OWN entry so a production build can
