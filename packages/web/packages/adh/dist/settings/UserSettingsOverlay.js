@@ -73,6 +73,10 @@ var FAMILY_ROUTE_SEGMENTS = [
   "_next"
 ];
 var SITE_ROUTE_SEGMENTS = [
+  // billing — app/claim, the link a purchaser follows out of Stripe's receipt. One site's route,
+  // reserved on all 42 for the reason at the top of this list: the mint form's question is not
+  // "is this free HERE" but "is this free ANYWHERE".
+  "claim",
   // community — app/{categories,discussions,forum,people,topics}. (`admin` is below.) `forum` is
   // the board: it was this site's `/home` until `/home` became the family's workspace redirect,
   // and it is the one segment the convergence itself minted.

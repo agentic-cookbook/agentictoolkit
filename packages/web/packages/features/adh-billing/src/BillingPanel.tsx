@@ -2,6 +2,7 @@
 
 import { useCallback } from "react";
 import { useResourceList } from "@agentic-toolkit/data";
+import { AuthHttpError } from "@agentic-toolkit/auth/client";
 import {
   listAccounts,
   listOffers,
@@ -18,6 +19,14 @@ import {
  * a stored number — adh keeps no copy of Stripe's catalog (spec §1). An offer whose price no
  * longer resolves renders as "missing in Stripe" rather than as a stale figure, which is the
  * whole benefit of not caching it.
+ *
+ * All three reads follow one rule: a read that FAILED is never rendered as a fact about the
+ * world. Two of the three (`/prices`, `/accounts`) are `requireAdmin`, so for most members of a
+ * product a 403 is the ORDINARY response and not an incident — and the natural-looking
+ * "no rows, so show the empty state" collapses that into a confident falsehood ("nobody has
+ * bought anything", "no Stripe prices are visible") that the reader has no way to disprove
+ * from where they are standing. Hence a leading error branch on every section, and `isForbidden`
+ * to separate "you may not see this" from "this broke".
  */
 export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
   const key = `workspace:${workspaceSlug ?? ""}:billing`;
@@ -29,6 +38,11 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
     `${key}:offers`,
     loadOffers,
   );
+  // `/offers` is NOT admin-gated, but it still answers 403 for two different reasons: the
+  // `billing` ecosystem flag being off (crud/factory.ts's `requireEcosystemFlag`, which has no
+  // admin exemption — a kill switch an admin walks through is not a kill switch) and the roles
+  // gate refusing this caller. The copy below names both rather than picking one, because the
+  // status alone cannot tell them apart and guessing produces a confident wrong instruction.
   // reportErrors: false for the same reason as prices, and one more. `GET /billing/accounts` is
   // `requireAdmin` — every row carries a payer's email — so a non-admin member of the workspace
   // gets a 403 EVERY time this pane renders. That is the ordinary state for most of a product's
@@ -39,10 +53,13 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
     { reportErrors: false },
   );
   // reportErrors: false — a product that has not connected Stripe yet is the ORDINARY state, not
-  // an auth incident, and reporting it would file a bug on every unconfigured ecosystem.
-  const { items: prices } = useResourceList<PriceRow>(`${key}:prices`, loadPrices, {
-    reportErrors: false,
-  });
+  // an auth incident, and reporting it would file a bug on every unconfigured ecosystem. `/prices`
+  // is `requireAdmin` too, so a non-admin's 403 is just as ordinary and just as unworthy of a bug.
+  const { items: prices, error: pricesError } = useResourceList<PriceRow>(
+    `${key}:prices`,
+    loadPrices,
+    { reportErrors: false },
+  );
 
   const priceById = new Map((prices ?? []).map((p) => [p.id, p]));
   const noPrices = prices === null || prices.length === 0;
@@ -51,12 +68,20 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
     <div className="flex flex-col gap-6 p-4">
       <section>
         <h2 className="text-lg font-semibold">Stripe</h2>
-        {noPrices ? (
-          // Deliberately does NOT assert which of the two causes this is. `prices === null`
-          // covers both the 409 from an ecosystem with no Stripe key AND any other read
-          // failure, and an empty array means the key works and the catalog is empty. The
-          // panel cannot tell them apart, so it states the observation and names both
-          // remedies rather than diagnosing.
+        {isForbidden(pricesError) ? (
+          // Split out ahead of the empty state, because it is neither an empty catalog nor a
+          // missing key: `/prices` is `requireAdmin`, so this is what every non-admin member of
+          // the product sees, every render. Left in the branch below it, they would be told to go
+          // connect a Stripe key — an instruction that is false, and that they cannot act on.
+          <p className="text-sm text-apt-text-muted">
+            Stripe details are visible to product admins only.
+          </p>
+        ) : noPrices ? (
+          // Deliberately does NOT assert which of the remaining causes this is. `prices === null`
+          // covers the 409 from an ecosystem with no Stripe key AND any other read failure, and
+          // an empty array means the key works and the catalog is empty. The panel cannot tell
+          // those apart, so it states the observation and names both remedies rather than
+          // diagnosing.
           <p className="text-sm text-apt-text-muted">
             No active Stripe prices are visible. Either no restricted Stripe key is connected
             under Integrations, or the connected account has no active prices yet.
@@ -70,8 +95,13 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
 
       <section>
         <h2 className="text-lg font-semibold">Offers</h2>
-        {offersError ? (
-          <p className="text-sm text-apt-text-muted">Billing is not enabled for this product.</p>
+        {isForbidden(offersError) ? (
+          <p className="text-sm text-apt-text-muted">
+            Offers are not visible here. Either billing is not enabled for this product, or your
+            role does not include it.
+          </p>
+        ) : offersError ? (
+          <p className="text-sm text-apt-text-muted">Offers could not be loaded.</p>
         ) : (offers ?? []).length === 0 ? (
           <p className="text-sm text-apt-text-muted">Nothing is for sale yet.</p>
         ) : (
@@ -97,7 +127,7 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
 
       <section>
         <h2 className="text-lg font-semibold">Payers</h2>
-        {accountsError ? (
+        {isForbidden(accountsError) ? (
           // The failure is reported, never rendered as emptiness. This read is admin-only, so the
           // overwhelmingly common error here is a non-admin's 403 — and showing that as "nobody has
           // bought anything yet" tells a member of a selling product that it has no customers,
@@ -105,6 +135,11 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
           <p className="text-sm text-apt-text-muted">
             Payer details are visible to product admins only.
           </p>
+        ) : accountsError ? (
+          // An admin hitting a 500 must not be told they lack admin rights — that is the same
+          // defect as the empty state, just pointed the other way: a failed read dressed up as a
+          // settled fact, and one that sends the one person who CAN fix it looking at permissions.
+          <p className="text-sm text-apt-text-muted">Payer details could not be loaded.</p>
         ) : (accounts ?? []).length === 0 ? (
           <p className="text-sm text-apt-text-muted">Nobody has bought anything yet.</p>
         ) : (
@@ -123,6 +158,19 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
       </section>
     </div>
   );
+}
+
+/**
+ * "You may not see this" as distinct from "this broke".
+ *
+ * `instanceof AuthHttpError` rather than a `status` duck-check: every one of these errors comes
+ * from `authedFetch`, which throws that class on any non-ok response, so a plain `Error` reaching
+ * here is a transport or parse failure — exactly the case that must NOT be reported as a
+ * permission answer. Anything that is not a 403 falls through to the generic branch, including a
+ * 401: a dead session is the auth layer's to resolve, not a sentence in a billing pane.
+ */
+function isForbidden(e: unknown): boolean {
+  return e instanceof AuthHttpError && e.status === 403;
 }
 
 function formatPrice(p: PriceRow): string {
