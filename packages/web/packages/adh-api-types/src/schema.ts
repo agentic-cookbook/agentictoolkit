@@ -12523,6 +12523,1274 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a session, or resume the caller’s active one for a chat
+         * @description Reachable by a VISITOR principal (an opaque `tmp_` api token) as well as by an account — the four session routes are the only ones that are, because a visitor has no `game.players` row. A visitor’s session carries the empty-string owner, so these handlers scope on the visitor token id rather than on `customer_id`, which for an empty owner would match every other visitor’s rows. Passing `chat_id` resumes the caller’s own active session for that chat (200) instead of starting a second one; the owner predicate is part of that lookup, so a guessed `chat_id` resumes nothing.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GameSessionStart"];
+                };
+            };
+            responses: {
+                /** @description The caller’s existing active session for that chat */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameSession"];
+                    };
+                };
+                /** @description The session that was started */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameSession"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/sessions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One session the caller owns, with its subject artifact’s summary
+         * @description The `summary` is the SUBJECT ARTIFACT’s — `game.sessions` has no such column — and is read through the session’s own `subject_artifact_id`, never through anything the caller supplies, so this cannot become a way to read an arbitrary artifact’s summary. `null` when the session names no artifact. A session belonging to someone else is 404, not 403: a 403 would confirm the id names a real session.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The session */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameSessionDetail"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * End a session (idempotent; does NOT delete its artifact)
+         * @description Ending an already-ended session is a no-op rather than a 409 — the guarantee is about the end state, so a client retrying after a dropped response gets the same answer twice. The session’s artifact is untouched: §6.3 makes ending a session and withdrawing its content two separate decisions.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Session ended (or already was) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/sessions/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * The session’s own event log, oldest first
+         * @description `game.events` is in `SKIP_TABLES`, so generic CRUD serves no read of it — a client that posted an event and then reconnected would otherwise have no way to discover what it missed. The session is resolved through the same owner predicate FIRST, so this query never sees a session id the caller does not own.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: string;
+                    page_size?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the session’s events, ascending by `seq` */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["GameEvent"][];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Record one turn (idempotent on `client_event_id`)
+         * @description **This endpoint runs no engine.** The caller runs its own turn and posts the result; adh appends it and assigns the next `seq`. A repeat of the same `client_event_id` returns the STORED row with 200 and executes nothing — which is what makes a dropped SSE connection safe to retry. 409 when the session has ended: the caller still owns it and can still read it, but it cannot advance. Naming an `artifact_id` counts one exposure against that artifact, and only on a genuine insert — never on a replay, or the retry would double-count.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GameEventPost"];
+                };
+            };
+            responses: {
+                /** @description The already-recorded event for this `client_event_id` */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameEvent"];
+                    };
+                };
+                /** @description The recorded event */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameEvent"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/artifacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller’s own artifacts for one game */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                    kind?: string;
+                    page?: string;
+                    page_size?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the caller’s artifacts, most recently updated first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["GameArtifact"][];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/artifacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One artifact — anonymous when it is public, plus the caller’s own when signed in
+         * @description No `security` because an anonymous caller is a supported caller: without a bearer token this serves any PUBLIC, non-withdrawn artifact by id, in any ecosystem (the id is the scope on a by-id read). WITH a bearer token it additionally serves the caller’s own private artifacts. A token that is present but invalid is 401, not a silent downgrade to the anonymous path — otherwise a caller could not tell a revoked session from a working one. The `body` bytea is never serialised here.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The artifact */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameArtifact"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        /**
+         * Withdraw the caller’s own artifact (soft delete)
+         * @description The ownership term is inside the UPDATE itself rather than a preceding read, so there is no check-then-write window. 404 covers both "no such artifact" and "not yours". Soft, not hard: `game.holdings` references artifacts with `restrict`, so a withdrawn artifact keeps every holding row recoverable.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Artifact withdrawn */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/feed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One game’s public artifact feed (anonymous, read replica)
+         * @description The hot path, and it carries no `security`: it serves published artifacts to signed-out visitors and runs on the read replica so it does not contend with authenticated traffic. Three predicates are the entire boundary — `visibility = 'public'`, `deleted_at is null`, and `ecosystem_id`. The ecosystem is taken from the resolved game row, never from the query string. A retired game is 404.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                    page?: string;
+                    page_size?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of published artifacts, most recently published first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            game: components["schemas"]["GameRef"];
+                            items: components["schemas"]["GameFeedItem"][];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/holdings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the caller has acquired in one game
+         * @description Each row is joined to its artifact, because a holdings list renders as a list of THINGS and an id alone renders nothing. A holding whose artifact has been withdrawn is omitted rather than cascaded away, so it returns if the artifact is restored.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                    kind?: string;
+                    page?: string;
+                    page_size?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A page of the caller’s holdings, most recently acquired first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["GameHoldingWithArtifact"][];
+                            total: number;
+                            page: number;
+                            pageSize: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Acquire an artifact (idempotent by the unique, not by a caller-sent key)
+         * @description A toggle, not an append: `uq_holdings_customer_artifact` makes a repeat an update of the same row, so no `client_event_id` is involved — the row IS the key. `acquired_at` is deliberately NOT refreshed on a repeat, so re-tapping cannot reorder your own inventory. The artifact must belong to this game AND be one the caller may see; without that last test this route would be a read oracle over every other player’s private work. `customer_id` comes from the principal and is never read from the body, which is why this is not generic CRUD.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GameHoldingPut"];
+                };
+            };
+            responses: {
+                /** @description The holding */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameHolding"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Revoke a holding (no-op when not held)
+         * @description The selector is on the query string rather than in a body: a DELETE body is legal but is dropped by enough proxies that a route depending on one fails intermittently, in somebody else’s infrastructure. 204 whether or not a row was hit — a 404 would distinguish "you never held this" from "you did".
+         */
+        delete: {
+            parameters: {
+                query: {
+                    artifact_id: string;
+                    kind: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Not held (whether or not it was) */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/players/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller’s own per-game profile
+         * @description Only `/me`, and the absence of an id parameter is the security property: generic CRUD reads data-plane tables in OWNER mode, where `customer_id` is not a read filter, so a `GET /players/{id}` would be every profile in the ecosystem. 404 when the caller has never played this game — inventing a blank profile would make the PATCH below look like an update when it is the first write.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The caller’s profile for that game */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GamePlayer"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Create or edit the caller’s own per-game profile
+         * @description Omitting a key leaves the stored value alone; sending `null` clears it — without that distinction a character name could be replaced but never removed. Only the keys actually sent are written, so an avatar-only edit cannot reset `visibility` to the `private` default or rewrite `first_played_at`. A character name is SCREENED whenever it is set, not only when the profile is public, because visibility can be flipped later with no text change — a refused name is 422 and echoes nothing about the verdict. 422 also when the game’s `character_names` setting is `off`.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GamePlayerPatch"];
+                };
+            };
+            responses: {
+                /** @description The profile as stored */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GamePlayer"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/game/profiles/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ACCOUNT’s principal slug — never a per-game name */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A player’s public per-game profile, by account slug (anonymous)
+         * @description Addressed by the account’s own slug (§4.5.1: one account, one profile address) — a `character_name` is flavour and nothing is addressed by it. **Four independent gates, every failure the same 404**: the account exists and is not deleted; `customers.public_profile_enabled` (the account-wide opt-in, honoured here exactly as the sibling `/public/users/{slug}` routes honour it); the per-game `players.visibility` is `public` or `unlisted`; and the game is not retired. Distinguishing them would tell a caller that an account exists AND plays this game, which is the fact the setting exists to withhold. `characterName` is withheld when the game’s `character_names` is `off`, at read time — a name stored before the operator turned the feature off is still in the column.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                };
+                header?: never;
+                path: {
+                    /** @description The ACCOUNT’s principal slug — never a per-game name */
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The public profile */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GamePublicProfile"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/instances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller’s own instances, including what is inside what they hold
+         * @description A recursive containment walk: everything located on the player, plus everything located inside those, and so on — the chest in the inventory and the key in the chest. Two INDEPENDENT bounds, and neither substitutes for the other: a depth cap (default and maximum 32) cuts a containment cycle, and a hard row limit (2000) cuts breadth, because a cycle at depth 2 fanning out ten ways per level is still 10^32 rows inside the depth cap. `location_id` carries no FK, so nothing is read from the request: the player id comes from the caller’s own resolved profile. A caller who has never played gets an empty list, not a 404.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                    depth?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The caller’s instances, shallowest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["GameInstance"][];
+                            total: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller’s own scalars and lists, plus the game-wide ones
+         * @description Two sets with different owners, and they are NOT merged. The `player`-subject rows are the caller’s alone; the `game`-subject rows are shared configuration (limits, global settings). A flat map would let a player-owned key silently shadow a global of the same name — a per-player rules change nobody authored — and the two have different lifetimes, so a merged map has no coherent cache policy. Values are ARRAYS throughout, including for a key with one row: §4.11 stores a scalar as "one row at ordinal 0" and a one-element list as the same thing, so collapsing single values would invent a distinction the storage does not carry.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    game_id?: string;
+                    slug?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The caller’s state and the game’s */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameState"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Coin a term (screened; idempotent on the normalised key)
+         * @description The one route in this feature that exists for a safety reason rather than a data one. A term is minted by a player and then appears in every OTHER player’s composer, so it is screened BEFORE the insert — a refused value mints no row. §5.2 folded `terms` into `game.definitions`, and one table cannot carry two write settings, so the restriction that used to live on the table lives on this path. Write-only: reading the roster is a `kind=term` read of `game.definitions` through generic CRUD. The `key` is the name lowercased with runs of non-alphanumerics collapsed to one hyphen, which is what makes "Fire Ball", "fire ball" and "fire-ball" one term; a name that normalises to nothing is 422. A term already coined returns the EXISTING row with 200 — the first coiner keeps the authorship credit — rather than a 409, because two players reaching the same word is the ordinary case for a shared vocabulary. `artifact_id` is recorded as `data.coined_from_artifact_id`, written over any caller-supplied value.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["GameTermPost"];
+                };
+            };
+            responses: {
+                /** @description The term as already coined */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameDefinition"];
+                    };
+                };
+                /** @description The newly coined term */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameDefinition"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/customer/login": {
         parameters: {
             query?: never;
@@ -31242,6 +32510,95 @@ export interface paths {
         };
         trace?: never;
     };
+    "/persona/demo-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Play one turn of an unsaved demo-chat ink script */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description The draft ink source, exactly as it sits in the editor */
+                        source: string;
+                        /** @description What the persona says to an anonymous visitor it cannot answer. Blank ⇒ the platform default. */
+                        signInLine?: string;
+                        /** @description The visitor's message this turn. Omit it with an empty `history` to lint the script and see the opening block — the story plays its opening without consulting the message. */
+                        message?: string;
+                        /** @description The transcript BEFORE this message. The story is replayed over it. */
+                        history?: {
+                            /** @enum {string} */
+                            role: "user" | "assistant";
+                            content: string;
+                        }[];
+                        /**
+                         * @description Preview the SIGNED-IN visitor's demo, where an off-script message falls through to the real model (`text: null`). Default previews the anonymous one.
+                         * @default false
+                         */
+                        canEscalate?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description what the persona says this turn, and what the story would accept next */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description Null ⇒ the turn ESCALATES: the real model answers and the demo says nothing */
+                            text: string | null;
+                            /** @description False ⇒ the message matched no standing choice */
+                            onScript: boolean;
+                            /** @description The reply is the sign-in line, not the script */
+                            signInLine: boolean;
+                            /** @description The story does not terminate */
+                            budgetExhausted: boolean;
+                            choices: components["schemas"]["PersonaDemoPreviewChoice"][];
+                            diagnostics: components["schemas"]["PersonaDemoPreviewDiagnostic"][];
+                            /** @description The one sentence about where `# match:` and `# off_script` go */
+                            tagPlacementHint: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/persona/personas/{id}/tokens": {
         parameters: {
             query?: never;
@@ -48457,6 +49814,1659 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game/definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List definitions */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            authorCustomerId: string;
+                            gameId: string;
+                            kind: string;
+                            key: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            sortOrder: number;
+                            data: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create definitions */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        authorCustomerId?: string;
+                        gameId: string;
+                        kind: string;
+                        key: string;
+                        name: string;
+                        description?: string | null;
+                        status?: string;
+                        sortOrder?: number;
+                        data?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description definitions */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            authorCustomerId: string;
+                            gameId: string;
+                            kind: string;
+                            key: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            sortOrder: number;
+                            data: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/definitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get definitions by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description definitions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            authorCustomerId: string;
+                            gameId: string;
+                            kind: string;
+                            key: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            sortOrder: number;
+                            data: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update definitions */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        authorCustomerId?: string;
+                        gameId?: string;
+                        kind?: string;
+                        key?: string;
+                        name?: string;
+                        description?: string | null;
+                        status?: string;
+                        sortOrder?: number;
+                        data?: ((string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[]) | null;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description definitions */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            authorCustomerId: string;
+                            gameId: string;
+                            kind: string;
+                            key: string;
+                            name: string;
+                            description: string | null;
+                            status: string;
+                            sortOrder: number;
+                            data: ((string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[]) | null;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete definitions */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/effects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List effects */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            definitionId: string;
+                            key: string;
+                            trigger: string;
+                            target: string;
+                            operation: string;
+                            value: number;
+                            duration: number | null;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create effects */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId: string;
+                        definitionId: string;
+                        key: string;
+                        trigger: string;
+                        target: string;
+                        operation: string;
+                        value: number;
+                        duration?: number | null;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description effects */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            definitionId: string;
+                            key: string;
+                            trigger: string;
+                            target: string;
+                            operation: string;
+                            value: number;
+                            duration: number | null;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/effects/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get effects by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description effects */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            definitionId: string;
+                            key: string;
+                            trigger: string;
+                            target: string;
+                            operation: string;
+                            value: number;
+                            duration: number | null;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update effects */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId?: string;
+                        definitionId?: string;
+                        key?: string;
+                        trigger?: string;
+                        target?: string;
+                        operation?: string;
+                        value?: number;
+                        duration?: number | null;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description effects */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            definitionId: string;
+                            key: string;
+                            trigger: string;
+                            target: string;
+                            operation: string;
+                            value: number;
+                            duration: number | null;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete effects */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/games": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List games */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            engine: string;
+                            engineConfig: (string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[];
+                            characterNames: string;
+                            status: string;
+                            eventLog: string;
+                            eventRetentionDays: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create games */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        slug: string;
+                        name: string;
+                        description?: string | null;
+                        engine: string;
+                        engineConfig?: (string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[];
+                        characterNames?: string;
+                        status?: string;
+                        eventLog?: string;
+                        eventRetentionDays?: number;
+                        syncTxid?: number;
+                        id?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description games */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            engine: string;
+                            engineConfig: (string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[];
+                            characterNames: string;
+                            status: string;
+                            eventLog: string;
+                            eventRetentionDays: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/games/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get games by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description games */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            engine: string;
+                            engineConfig: (string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[];
+                            characterNames: string;
+                            status: string;
+                            eventLog: string;
+                            eventRetentionDays: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update games */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        slug?: string;
+                        name?: string;
+                        description?: string | null;
+                        engine?: string;
+                        engineConfig?: (string | number | boolean | null) | {
+                            [key: string]: unknown;
+                        } | unknown[];
+                        characterNames?: string;
+                        status?: string;
+                        eventLog?: string;
+                        eventRetentionDays?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description games */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            engine: string;
+                            engineConfig: (string | number | boolean | null) | {
+                                [key: string]: unknown;
+                            } | unknown[];
+                            characterNames: string;
+                            status: string;
+                            eventLog: string;
+                            eventRetentionDays: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete games */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/mappings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List mappings */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            fromId: string;
+                            kind: string;
+                            toId: string;
+                            amount: number;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create mappings */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId: string;
+                        fromId: string;
+                        kind: string;
+                        toId: string;
+                        amount?: number;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description mappings */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            fromId: string;
+                            kind: string;
+                            toId: string;
+                            amount: number;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/mappings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get mappings by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description mappings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            fromId: string;
+                            kind: string;
+                            toId: string;
+                            amount: number;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update mappings */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId?: string;
+                        fromId?: string;
+                        kind?: string;
+                        toId?: string;
+                        amount?: number;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description mappings */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            gameId: string;
+                            fromId: string;
+                            kind: string;
+                            toId: string;
+                            amount: number;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete mappings */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/players": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List players */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            gameId: string;
+                            characterName: string | null;
+                            characterAvatarUrl: string | null;
+                            visibility: string;
+                            firstPlayedAt: string;
+                            lastPlayedAt: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create players */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId: string;
+                        characterName?: string | null;
+                        characterAvatarUrl?: string | null;
+                        visibility?: string;
+                        firstPlayedAt: string;
+                        lastPlayedAt: string;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description players */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            gameId: string;
+                            characterName: string | null;
+                            characterAvatarUrl: string | null;
+                            visibility: string;
+                            firstPlayedAt: string;
+                            lastPlayedAt: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/game/players/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get players by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description players */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            gameId: string;
+                            characterName: string | null;
+                            characterAvatarUrl: string | null;
+                            visibility: string;
+                            firstPlayedAt: string;
+                            lastPlayedAt: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update players */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        gameId?: string;
+                        characterName?: string | null;
+                        characterAvatarUrl?: string | null;
+                        visibility?: string;
+                        firstPlayedAt?: string;
+                        lastPlayedAt?: string;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description players */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            gameId: string;
+                            characterName: string | null;
+                            characterAvatarUrl: string | null;
+                            visibility: string;
+                            firstPlayedAt: string;
+                            lastPlayedAt: string;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete players */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/integration/integration-audience-contacts": {
         parameters: {
             query?: never;
@@ -60372,6 +63382,246 @@ export interface components {
             /** @description Present only when enabling the realm triggered a retroactive replay */
             replayed?: components["schemas"]["GamificationReplayResult"];
         };
+        GameRef: {
+            id: string;
+            slug: string;
+        };
+        /** @description Exactly one of `game_id` / `slug` names the game. `chat_id` makes the call a resume. */
+        GameSessionStart: {
+            game_id?: string;
+            slug?: string;
+            kind: string;
+            chat_id?: string;
+            subject_artifact_id?: string;
+        };
+        GameSession: {
+            id: string;
+            gameId: string;
+            kind: string;
+            /** @enum {string} */
+            status: "active" | "ended" | "abandoned";
+            /** @enum {string} */
+            actorType: "user" | "visitor";
+            chatId?: string | null;
+            subjectArtifactId?: string | null;
+            payload?: {
+                [key: string]: unknown;
+            } | null;
+            startedAt: string;
+            endedAt?: string | null;
+        };
+        GameSessionDetail: components["schemas"]["GameSession"] & {
+            summary: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /** @description `client_event_id` is the caller’s idempotency key: reposting the same one returns the stored event and executes nothing. */
+        GameEventPost: {
+            kind: string;
+            client_event_id: string;
+            input?: {
+                [key: string]: unknown;
+            };
+            output?: {
+                [key: string]: unknown;
+            };
+            cost?: {
+                [key: string]: unknown;
+            };
+            artifact_id?: string;
+        };
+        GameEvent: {
+            id: string;
+            sessionId: string;
+            kind: string;
+            seq: number;
+            clientEventId: string;
+            input?: {
+                [key: string]: unknown;
+            } | null;
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            cost?: {
+                [key: string]: unknown;
+            } | null;
+            artifactId?: string | null;
+            occurredAt: string;
+        };
+        GameArtifact: {
+            id: string;
+            gameId: string;
+            kind: string;
+            role: string;
+            origin: string;
+            /** @enum {string} */
+            visibility: "public" | "unlisted" | "private";
+            slot?: string | null;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            text?: string | null;
+            contentFormat?: string | null;
+            engineVersion?: string | null;
+            status: string;
+            summary?: {
+                [key: string]: unknown;
+            } | null;
+            exposureCount?: number;
+            score?: number;
+            publishedAt?: string | null;
+            lastActiveAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        GameFeedItem: {
+            id: string;
+            gameId: string;
+            kind: string;
+            role: string;
+            slot?: string | null;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            text?: string | null;
+            contentFormat?: string | null;
+            summary?: {
+                [key: string]: unknown;
+            } | null;
+            score?: number;
+            exposureCount?: number;
+            publishedAt?: string | null;
+        };
+        GameHoldingPut: {
+            game_id?: string;
+            slug?: string;
+            artifact_id: string;
+            kind: string;
+            quantity?: number;
+            data?: {
+                [key: string]: unknown;
+            };
+        };
+        GameHolding: {
+            id: string;
+            gameId: string;
+            artifactId: string;
+            kind: string;
+            quantity: number;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            acquiredAt: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        GameHoldingWithArtifact: {
+            id: string;
+            gameId: string;
+            artifactId: string;
+            kind: string;
+            quantity: number;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            acquiredAt: string;
+            artifactKind?: string;
+            artifactSlot?: string | null;
+            artifactSummary?: {
+                [key: string]: unknown;
+            } | null;
+            artifactVisibility?: string;
+        };
+        /** @description Omit a key to leave it alone; send `null` to clear it. `character_name` is screened whenever it is set, whatever the profile’s visibility. */
+        GamePlayerPatch: {
+            game_id?: string;
+            slug?: string;
+            character_name?: string | null;
+            /** Format: uri */
+            character_avatar_url?: string | null;
+            /** @enum {string} */
+            visibility?: "public" | "unlisted" | "private";
+        };
+        GamePlayer: {
+            id: string;
+            gameId: string;
+            characterName?: string | null;
+            characterAvatarUrl?: string | null;
+            /** @enum {string} */
+            visibility: "public" | "unlisted" | "private";
+            firstPlayedAt: string;
+            lastPlayedAt?: string | null;
+            createdAt: string;
+            updatedAt: string;
+        };
+        GamePublicProfile: {
+            game: components["schemas"]["GameRef"];
+            slug: string;
+            name?: string | null;
+            characterName?: string | null;
+            characterAvatarUrl?: string | null;
+            /** @enum {string} */
+            visibility: "public" | "unlisted";
+            firstPlayedAt?: string;
+            lastPlayedAt?: string | null;
+            stats: components["schemas"]["GamePlayerStat"][];
+        };
+        GamePlayerStat: {
+            key: string;
+            value: number;
+            label?: string | null;
+            periodType?: string;
+            periodStart?: string;
+        };
+        GameInstance: {
+            id: string;
+            definition_id: string;
+            /** @enum {string} */
+            location_type: "player" | "session" | "instance" | "game";
+            location_id: string;
+            slot?: string | null;
+            quantity: number;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            depth: number;
+        };
+        GameState: {
+            game: components["schemas"]["GameRef"];
+            state: {
+                [key: string]: string[];
+            };
+            gameState: {
+                [key: string]: string[];
+            };
+            hasProfile: boolean;
+        };
+        GameTermPost: {
+            game_id?: string;
+            slug?: string;
+            name: string;
+            description?: string;
+            artifact_id?: string;
+            data?: {
+                [key: string]: unknown;
+            };
+        };
+        GameDefinition: {
+            id: string;
+            gameId: string;
+            kind: string;
+            key: string;
+            name: string;
+            description?: string | null;
+            /** @enum {string} */
+            status: "active" | "retired";
+            authorCustomerId?: string | null;
+            data?: {
+                [key: string]: unknown;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+        };
         CustomerAuthResult: {
             /** @description End-customer access token (typ='customer' JWT, short-lived) */
             token: string;
@@ -62188,6 +65438,21 @@ export interface components {
         RegistryContactResult: {
             /** @description the hub DM chat the opening message was sent into */
             chatId: string;
+        };
+        PersonaDemoPreviewChoice: {
+            /** @description The choice's own text, minus its tags */
+            text: string;
+            /** @description The words this choice ACTUALLY answers to — resolved from the story, not echoed back from the `# match:` tag. A tag written outside the choice's brackets attaches to something else, and this list is where that becomes visible. */
+            keywords: string[];
+            /** @description The author tagged this choice `# off_script` */
+            offScript: boolean;
+        };
+        PersonaDemoPreviewDiagnostic: {
+            /** @enum {string} */
+            severity: "error" | "warning" | "info";
+            /** @description 1-based source line, if the compiler gave one */
+            line: number | null;
+            message: string;
         };
         SearchDiscussionTopicResult: {
             id: string;
