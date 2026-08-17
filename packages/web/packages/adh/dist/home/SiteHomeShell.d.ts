@@ -16,9 +16,9 @@ import type { SiteHomeShellProps } from './SiteHomeModel';
  *   - Resolution, the URL-as-truth replace, and persistence of an explicit choice — all of it
  *     useWorkspaceRoute's, which the hub mounts too (it needs a different LIST — the fetch on the
  *     line above drops teams — but the behaviour behind the bar is the same one).
- *   - Refusing a workspace this caller cannot reach: a settled list without the URL's slug is a
- *     `notFound()`, not a redirect to some other workspace. See the check below the hook for the
- *     three states that are NOT that.
+ *   - A workspace this caller cannot reach: a settled list without the URL's slug renders that
+ *     slug's PROFILE (`ProfileFallback`) rather than the workspace. See the check below the hook
+ *     for the three states that are NOT that.
  *   - Holding `children` until resolution, so no feature mounts unscoped and fires a list
  *     request the backend would answer with the wrong reach. `children` is a FUNCTION for that
  *     reason: a node would be CONSTRUCTED on every render, including the ones before a workspace

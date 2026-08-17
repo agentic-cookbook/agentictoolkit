@@ -1,0 +1,1 @@
+{"version":3,"file":"site-id.d.ts","sourceRoot":"","sources":["../../src/site/site-id.tsx"],"names":[],"mappings":"AAEA,OAAO,EAA6B,KAAK,SAAS,EAAE,MAAM,OAAO,CAAA;AACjE,OAAO,KAAK,EAAE,MAAM,EAAE,MAAM,+BAA+B,CAAA;AAI3D;;;;;;;;;;;;;GAaG;AACH,wBAAgB,cAAc,CAAC,EAAE,MAAM,EAAE,QAAQ,EAAE,EAAE;IAAE,MAAM,EAAE,MAAM,CAAC;IAAC,QAAQ,EAAE,SAAS,CAAA;CAAE,+BAE3F;AAED,wBAAgB,SAAS,IAAI,MAAM,CAMlC"}

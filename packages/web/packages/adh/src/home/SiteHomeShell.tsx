@@ -1,9 +1,11 @@
 'use client'
 
 import { useCallback, type ReactElement } from 'react'
-import { notFound, usePathname } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
+import { ProfileFallback } from '../profile/ProfileFallback'
+import { useSiteId } from '../site/site-id'
 import { WorkspaceBar } from './WorkspaceBar'
 import { useWorkspaceRoute } from './useWorkspaceRoute'
 import { workspacePathTail } from './workspacePathTail'
@@ -29,9 +31,9 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  *   - Resolution, the URL-as-truth replace, and persistence of an explicit choice — all of it
  *     useWorkspaceRoute's, which the hub mounts too (it needs a different LIST — the fetch on the
  *     line above drops teams — but the behaviour behind the bar is the same one).
- *   - Refusing a workspace this caller cannot reach: a settled list without the URL's slug is a
- *     `notFound()`, not a redirect to some other workspace. See the check below the hook for the
- *     three states that are NOT that.
+ *   - A workspace this caller cannot reach: a settled list without the URL's slug renders that
+ *     slug's PROFILE (`ProfileFallback`) rather than the workspace. See the check below the hook
+ *     for the three states that are NOT that.
  *   - Holding `children` until resolution, so no feature mounts unscoped and fires a list
  *     request the backend would answer with the wrong reach. `children` is a FUNCTION for that
  *     reason: a node would be CONSTRUCTED on every render, including the ones before a workspace
@@ -96,45 +98,34 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // slug into a wrong ROW: a miss holds `children` exactly as an unresolved slug does, which is a
   // state this shell already renders (the bar, and nothing under it).
   const workspace = workspaces?.find((w) => w.slug === resolved) ?? null
+  const siteId = useSiteId()
 
-  // The URL names a workspace, and the list came back without it → 404. The same answer the hub's
-  // WorkspaceGate has always given (`MemberGate`: "settled success with no match → notFound()"),
-  // said here so the other 37 sites give it too.
+  // The URL names a slug the caller is not a member of → their PROFILE, not a 404.
   //
-  // Three of the four rungs BELOW this one are the reason it is expressed as a positive test on a
-  // settled list rather than as `resolved === undefined`:
-  //   - still loading — `workspaces` is null, so this is false and the page holds. Resolution is
-  //     `undefined` on that render too, which is why the two cannot be collapsed: they are the
-  //     same value meaning opposite things.
+  // This used to be `notFound()`, and the change is the point of the feature rather than a
+  // softening of it: `/<slug>` is one address serving two things, and which one a visitor gets
+  // is decided by what they can reach. A caller who cannot open the workspace is, by
+  // elimination, looking at somebody's page — the hub's own gate has encoded that idea since it
+  // was written, and merely encoded it at the wrong address (`router.replace('/user/<slug>')`).
+  //
+  // Every rung of the four-part condition below still earns its place, and for the SAME reasons
+  // it did when the answer was a refusal: a wrong profile is as wrong as a wrong 404.
+  //   - still loading — `workspaces` is null, so this is false and the page holds.
   //   - the list FAILED — `useResourceList` leaves `items` at null on a cold miss, so this is
-  //     false again and the error hint below is what renders. A retryable failure must not become
-  //     a permanent-looking 404; the hub's gate draws that line in the same place, with a Retry.
-  //   - no slug at all (`/home`) — nothing to refuse. The hook seeds one and replaces the URL,
-  //     which is what makes that route the family's redirect signal.
-  //
-  // The fourth rung is `!isFetching`, and it is not an optimization. `useResourceList`
-  // seeds from a module cache, so a non-null list can predate a workspace created since — and a
-  // seeded first render is EXACTLY the render on which a brand-new slug is absent. This used to
-  // read "no feature site can create one, so the seed is always current", with the hub's own gate
-  // named as the place that pays the extra rung; that premise was false when it was written. The
-  // `orgs` site mounts <OrganizationsFeature>, whose New Organization modal calls
-  // organizationsApi.create, so a feature site DOES mint workspaces. What kept it from 404ing is
-  // narrower than the claim: that flow navigates within its own base path rather than to
-  // `/<newSlug>`, so it never lands here mid-refetch. A guard resting on where one modal happens
-  // to navigate is a guard, not an argument — the flag says the same thing without depending on it.
-  //
-  // Only the 404 is gated, not the render: a stale seed still paints instantly, and the refetch
-  // settles behind it. What waits is the refusal, which is the one thing that cannot be taken back.
-  //
-  // Placed after every hook so the hook order is identical on the render that throws; a thrown
-  // render never commits, so the replace and persistence effects above cannot fire behind it.
+  //     false again and the error hint below renders. A retryable failure must not become a
+  //     profile page any more than it may become a permanent-looking 404.
+  //   - no slug at all (`/home`) — nothing to refuse and nobody to show.
+  //   - `!isFetching` — the module cache can seed a list that predates a workspace created
+  //     since, and a seeded first render is EXACTLY the render on which a brand-new slug is
+  //     absent. Showing the owner a PROFILE of their own new workspace would be a worse
+  //     misfire than the 404 was.
   if (
     workspaceSlug !== undefined &&
     workspaces !== null &&
     !isFetching &&
     !workspaces.some((w) => w.slug === workspaceSlug)
   ) {
-    notFound()
+    return <ProfileFallback slug={workspaceSlug} siteId={siteId} />
   }
 
   return (
