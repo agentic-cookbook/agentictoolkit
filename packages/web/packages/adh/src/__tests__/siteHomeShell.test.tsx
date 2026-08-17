@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Component, useState, type ReactNode } from "react";
+import { useState } from "react";
 import {
   render,
   screen,
@@ -85,17 +85,13 @@ const push = vi.fn((href: string) => {
 // const, so production returns the SAME object across every render, mount and route change —
 // exactly what this object does. Neither more nor less generous.
 const routerDouble = { replace, push, prefetch: vi.fn() };
-// `notFound` THROWS in Next — that is how the fallback boundary catches it and how the render that
-// calls it is abandoned before it can commit. A double that merely recorded the call would let the
-// shell keep rendering and its effects keep firing, so the "no replace was issued" half of every
-// refusal test would be asserting about a component the real Next had already torn down.
-const notFound = vi.fn(() => {
-  throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
-});
+// No `notFound` mock: `SiteHomeShell` no longer imports it (an unreachable workspace slug renders
+// `ProfileFallback` instead — see the guard comment in SiteHomeShell.tsx), so a double for it would
+// stand for nothing this file exercises. `SiteHomeModel.ts` still calls `notFound()` on its own
+// path-length check, but that module is only ever a type-only import from here.
 vi.mock("next/navigation", () => ({
   useRouter: () => routerDouble,
   usePathname: () => livePathname,
-  notFound: () => notFound(),
 }));
 
 const list = vi.fn();
@@ -150,8 +146,8 @@ vi.mock("@agentic-toolkit/data", async () => {
       // Starts TRUE and is cleared by whichever path settles, exactly as the real hook does
       // (use-resource-list.ts). It is the rung that keeps a SEEDED first render from reading as
       // the server's answer, so a stub that hardcoded `false` would make the one test that seeds
-      // rows pass for the wrong reason — and one that hardcoded `true` would disable the 404
-      // entirely, which is most of what this file asserts.
+      // rows pass for the wrong reason — and one that hardcoded `true` would disable the profile
+      // branch entirely, which a good part of this file asserts.
       const [isFetching, setIsFetching] = useState(true);
       // `_cacheKey` is a dependency here for the same reason it is one in the real hook
       // (use-resource-list.ts:133): a changed key is a different collection, and it refetches.
@@ -256,6 +252,19 @@ vi.mock("../home/WorkspacePicker", () => ({
   ),
 }));
 
+// Stubbed for the same reason the picker is: this file is about WHICH slug (and site) the shell
+// hands the fallback, not how a profile itself renders — that is ProfileFallback's own concern.
+// Captured via data attributes, matching the picker mock's convention above, rather than a
+// hoisted ref: this file has no other hoisted-capture mocks and there is no ordering reason to
+// start one here.
+vi.mock("../profile/ProfileFallback", () => ({
+  ProfileFallback: ({ slug, siteId }: { slug: string; siteId: string }) => (
+    <div data-testid="profile-fallback" data-slug={slug} data-site-id={siteId}>
+      profile fallback
+    </div>
+  ),
+}));
+
 const { SiteHomeShell } = await import("../home/SiteHomeShell");
 // The seed marker the shell's hook writes before redirecting is a MODULE variable — deliberately,
 // because the redirect it records crosses a route boundary and nothing inside the tree survives
@@ -264,6 +273,12 @@ const { SiteHomeShell } = await import("../home/SiteHomeShell");
 // deep-link case's one PUT into zero). `beforeEach` resets it, which is the same thing a browser
 // does on a full page load.
 const { __resetSeededWorkspace } = await import("../home/useWorkspaceRoute");
+// Real, unmocked: the profile branch throws without it (see SiteHomeShell.tsx's `siteId === null`
+// guard), because every real mount that can reach that branch is inside the `[workspace]` layout,
+// which mounts this provider. Used only by the cases below that reach the profile branch, or that
+// pin a rung guarding it — never by `/home`, which the shell's own doc comment says mounts with no
+// provider at all.
+const { SiteIdProvider } = await import("../site/site-id");
 
 const WORKSPACES = [
   { slug: "mine", name: "My Workspace", kind: "individual" as const },
@@ -298,38 +313,17 @@ function Shell({ workspaceSlug }: { workspaceSlug?: string }) {
   );
 }
 
-/**
- * Next's not-found boundary, in the one respect these tests need it: it CATCHES the throw, so the
- * refusal can be observed as a rendered state instead of as an exception escaping `render()`.
- *
- * A boundary rather than `expect(() => render(...)).toThrow()`, because the refusal is not
- * synchronous with the mount. The list arrives on a promise, so the render that refuses is the one
- * React schedules when `setItems` lands — outside the `render()` call entirely. Without a boundary
- * that throw is an unhandled error in a React commit, which is both flaky to assert on and silent
- * about which render produced it.
- */
-class NotFoundBoundary extends Component<{ children: ReactNode }, { caught: Error | null }> {
-  state: { caught: Error | null } = { caught: null };
-  static getDerivedStateFromError(caught: Error) {
-    return { caught };
-  }
-  render() {
-    if (this.state.caught) return <div data-testid="not-found">{this.state.caught.message}</div>;
-    return this.props.children;
-  }
-}
-
-/** `<Shell>` under that boundary. React logs an uncaught render error through console.error before
- *  the boundary swallows it, so the caller silences it for the duration — expected here, and only
- *  here, so the suite's own output still reads as passing. */
-function renderGated(props: { workspaceSlug?: string }) {
-  const quiet = vi.spyOn(console, "error").mockImplementation(() => {});
-  const result = render(
-    <NotFoundBoundary>
+/** `<Shell>` inside the provider every real mount that can reach the profile branch has: the
+ *  `[workspace]` layout mounts `SiteIdProvider` above `SiteHomeShell`, and that branch throws
+ *  without one (see the shell's `siteId === null` guard). Used by the cases below that land on
+ *  the profile, or that pin one of the rungs guarding it — never by `/home`, which the shell's own
+ *  doc comment says mounts with no provider at all, and one of those cases asserts exactly that. */
+function renderReachable(props: { workspaceSlug?: string }) {
+  return render(
+    <SiteIdProvider siteId="hub">
       <Shell {...props} />
-    </NotFoundBoundary>,
+    </SiteIdProvider>,
   );
-  return { ...result, restoreConsole: () => quiet.mockRestore() };
 }
 
 beforeEach(() => {
@@ -1247,20 +1241,16 @@ describe("SiteHomeShell resolution", () => {
     },
   );
 
-  it("REFUSES an unknown URL slug — 404, not a redirect to the stored preference", async () => {
+  it("renders the caller's own profile for an unreachable URL slug, not a redirect to the stored preference", async () => {
     // The behaviour this replaced: `/zzz` resolved to the stored preference and REPLACED the URL
     // with it, so a renamed or deleted workspace's links silently became someone's own workspace
-    // with the address bar rewritten to match. Because the workspace is the first path segment on
-    // all 38 sites, that also meant `not-found.tsx` could never fire for a one-segment path
-    // anywhere in the family. A stored preference is the strongest possible pull toward the old
-    // answer, which is why this case keeps one.
+    // with the address bar rewritten to match. A stored preference is the strongest possible pull
+    // toward that old answer, which is why this case keeps one — the shell must still land on
+    // `zzz`'s own profile rather than pulling toward "acme".
     readCached.mockReturnValue("acme");
-    const { restoreConsole } = renderGated({ workspaceSlug: "zzz" });
-    try {
-      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
-    } finally {
-      restoreConsole();
-    }
+    renderReachable({ workspaceSlug: "zzz" });
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-slug", "zzz");
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
     expect(prefsPut).not.toHaveBeenCalled();
@@ -1301,102 +1291,94 @@ describe("SiteHomeShell resolution", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/mine", { scroll: false }));
   });
 
-  it("REFUSES an unknown slug with nothing stored — the personal workspace is not a fallback", async () => {
+  it("renders the caller's own profile for an unknown slug with nothing stored — the personal workspace is not a fallback", async () => {
     // The other half of the old rewrite: with no preference to fall back to it used `workspaces[0]`,
     // the personal workspace. Pinned separately because the two arrived by different lines in the
     // resolution and a fix could plausibly have caught only one.
-    const { restoreConsole } = renderGated({ workspaceSlug: "nope" });
-    try {
-      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
-    } finally {
-      restoreConsole();
-    }
+    renderReachable({ workspaceSlug: "nope" });
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-slug", "nope");
     expect(replace).not.toHaveBeenCalled();
     expect(screen.queryByTestId("feature")).toBeNull();
   });
 
-  it("REFUSES a slug for a workspace the caller is not in, even with an empty list", async () => {
-    // A user with no workspaces at all. `/acme` is still a refusal and not the "No workspaces yet"
-    // hint: the hint answers "where should I go", which is `/home`'s question, and this URL asked a
-    // different one. Worth its own row because the empty list is the one case where there is no
-    // workspace to redirect TO, so a redirect-shaped bug here would look like a hold instead.
+  it("renders the caller's own profile for a slug they are not in, even with an empty list", async () => {
+    // A user with no workspaces at all. `/acme` still lands on the profile branch, not the
+    // "No workspaces yet" hint: the hint answers "where should I go", which is `/home`'s question,
+    // and this URL asked a different one. Worth its own row because the empty list is the one case
+    // where there is no workspace to redirect TO, so a hold-shaped bug here would look identical to
+    // the profile branch simply never firing.
     list.mockResolvedValue([]);
-    const { restoreConsole } = renderGated({ workspaceSlug: "acme" });
-    try {
-      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
-    } finally {
-      restoreConsole();
-    }
+    renderReachable({ workspaceSlug: "acme" });
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-slug", "acme");
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("does NOT refuse while the list is still loading", async () => {
-    // The rung directly below the refusal, and the one that makes it dangerous to express as
-    // `resolved === undefined`: resolution is `undefined` both while loading and on a slug that
-    // will be refused. Held here by the list never settling — if the shell read a null list as
-    // "settled without acme" it would 404 a workspace the caller genuinely has.
+  it("does NOT show the profile while the list is still loading", async () => {
+    // The rung directly below the profile branch, and the one that makes it dangerous to express
+    // as `resolved === undefined`: resolution is `undefined` both while loading and on a slug that
+    // will land on the profile. Held here by the list never settling — if the shell read a null
+    // list as "settled without acme" it would show a stranger's profile for a workspace the caller
+    // genuinely has.
     list.mockReturnValue(new Promise(() => {}));
-    const { restoreConsole } = renderGated({ workspaceSlug: "acme" });
+    renderReachable({ workspaceSlug: "acme" });
     await new Promise((r) => setTimeout(r, 0));
-    restoreConsole();
-    expect(screen.queryByTestId("not-found")).toBeNull();
+    expect(screen.queryByTestId("profile-fallback")).toBeNull();
     expect(screen.queryByTestId("feature")).toBeNull();
   });
 
-  it("does NOT refuse a slug missing from a STALE SEED while the refetch is still out", async () => {
+  it("does NOT show the profile for a slug missing from a STALE SEED while the refetch is still out", async () => {
     // The fourth rung. `useResourceList` seeds the first render from its module cache, so the list
     // can be non-null AND predate the workspace the URL names — which is exactly the render a
-    // freshly-created workspace is absent from. Read as "settled without newco", that is a 404 on
-    // a workspace the caller just made.
+    // freshly-created workspace is absent from. Read as "settled without newco", that would show
+    // the owner a stranger's profile in place of the workspace they just made.
     //
     // Held here by seeding rows that lack `newco` and never settling the refetch, so the only
-    // thing that could keep the shell from refusing is the in-flight flag: the list is non-null,
-    // it does not carry the slug, and no error has been recorded.
+    // thing that could keep the shell off the profile branch is the in-flight flag: the list is
+    // non-null, it does not carry the slug, and no error has been recorded.
     seedRows = WORKSPACES;
     list.mockReturnValue(new Promise(() => {}));
-    const { restoreConsole } = renderGated({ workspaceSlug: "newco" });
+    renderReachable({ workspaceSlug: "newco" });
     await new Promise((r) => setTimeout(r, 0));
-    restoreConsole();
-    expect(screen.queryByTestId("not-found")).toBeNull();
+    expect(screen.queryByTestId("profile-fallback")).toBeNull();
   });
 
-  it("...and DOES refuse it once that refetch lands without it", async () => {
+  it("...and DOES show the profile once that refetch lands without it", async () => {
     // The other half, so the rung above is a delay and not an exemption: the same seeded mount,
-    // with the read allowed to settle, still refuses. Without this a stuck `isFetching` would
-    // disable the refusal outright and every test in this group would keep passing.
+    // with the read allowed to settle, still lands on the profile. Without this a stuck
+    // `isFetching` would disable the profile branch outright and every test in this group would
+    // keep passing.
     seedRows = WORKSPACES;
     list.mockResolvedValue(WORKSPACES);
-    const { restoreConsole } = renderGated({ workspaceSlug: "newco" });
-    try {
-      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
-    } finally {
-      restoreConsole();
-    }
+    renderReachable({ workspaceSlug: "newco" });
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-slug", "newco");
   });
 
-  it("does NOT refuse when the list FAILED — a retryable error is not a 404", async () => {
+  it("does NOT show the profile when the list FAILED — a retryable error is not a verdict", async () => {
     // `useResourceList` leaves `items` null on a cold failure, so "the list says you are not a
-    // member" and "there is no list" are one value apart. Turning a transient 5xx into a permanent
-    // -looking 404 would strand a member on a page they can in fact reach; the hub's WorkspaceGate
-    // draws the same line, offering a Retry rather than refusing.
+    // member" and "there is no list" are one value apart. Turning a transient 5xx into someone's
+    // profile page would strand a member on the wrong page for a workspace they can in fact reach;
+    // the hub's WorkspaceGate draws the same line, offering a Retry rather than refusing.
     list.mockRejectedValue(new Error("boom"));
-    const { restoreConsole } = renderGated({ workspaceSlug: "acme" });
+    renderReachable({ workspaceSlug: "acme" });
     await waitFor(() =>
       expect(screen.getByText(/Couldn't load your workspaces/)).toBeInTheDocument(),
     );
-    restoreConsole();
-    expect(screen.queryByTestId("not-found")).toBeNull();
+    expect(screen.queryByTestId("profile-fallback")).toBeNull();
     expect(replace).not.toHaveBeenCalled();
   });
 
-  it("does NOT refuse at the bare /home, which names no workspace to refuse", async () => {
+  it("does NOT show the profile at the bare /home, which names no slug to show one for", async () => {
     // The redirect signal still works. This is the one URL the resolution is still allowed to
-    // repair, and the refusal is scoped by `workspaceSlug !== undefined` so it cannot reach here.
+    // repair, and the profile branch is scoped by `workspaceSlug !== undefined` so it cannot reach
+    // here. No `<SiteIdProvider>` either — this is the one case in the group that mirrors `/home`'s
+    // real mount, which sits outside the `[workspace]` layout that provides it.
     readCached.mockReturnValue("acme");
-    const { restoreConsole } = renderGated({});
+    render(<Shell />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
-    restoreConsole();
-    expect(screen.queryByTestId("not-found")).toBeNull();
+    expect(screen.queryByTestId("profile-fallback")).toBeNull();
   });
 
   it("mounts children once the URL matches the resolved workspace", async () => {
@@ -1626,21 +1608,19 @@ describe("SiteHomeShell workspace switch carries the selection", () => {
     expect(push).toHaveBeenCalledWith("/acme", { scroll: false });
   });
 
-  it("carries NOTHING off an unreachable workspace — the deep link is refused, not re-aimed", async () => {
+  it("carries NOTHING off an unreachable workspace — the deep link lands on the profile, not re-aimed", async () => {
     // This case used to assert the shape of a REPAIR: `/zzz/services/svc_1` replaced to `/acme`,
     // the tail dropped so the user was not deep-linked into a page they never asked for off a slug
-    // the list does not contain. There is no repair now — the whole URL is refused — but the harm
-    // it was written against is the same one and still worth a row, because a carry is exactly the
-    // bug that would reappear if the refusal were ever softened back into a redirect. So the
-    // assertion is that NOTHING navigates: not the workspace, and certainly not the tail.
+    // the list does not contain. There is no repair now — the whole URL lands on `zzz`'s own
+    // profile — but the harm it was written against is the same one and still worth a row, because
+    // a carry is exactly the bug that would reappear if the profile branch were ever softened back
+    // into a redirect. So the assertion is that NOTHING navigates: not the workspace, and
+    // certainly not the tail.
     readCached.mockReturnValue("acme");
     livePathname = "/zzz/services/svc_1";
-    const { restoreConsole } = renderGated({ workspaceSlug: "zzz" });
-    try {
-      await waitFor(() => expect(screen.getByTestId("not-found")).toBeInTheDocument());
-    } finally {
-      restoreConsole();
-    }
+    renderReachable({ workspaceSlug: "zzz" });
+    await waitFor(() => expect(screen.getByTestId("profile-fallback")).toBeInTheDocument());
+    expect(screen.getByTestId("profile-fallback")).toHaveAttribute("data-slug", "zzz");
     expect(replace).not.toHaveBeenCalled();
     expect(push).not.toHaveBeenCalled();
   });
