@@ -19,10 +19,16 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 8,
   align = "center",
+  arrow = false,
   children,
   ...props
 }: PopoverPrimitive.Popup.Props &
-  Pick<PopoverPrimitive.Positioner.Props, "side" | "sideOffset" | "align">) {
+  Pick<PopoverPrimitive.Positioner.Props, "side" | "sideOffset" | "align"> & {
+    /** Show the little pointer diamond. Default false: this component has consumers
+     *  that predate the arrow, and turning it on for them is a restyle nobody asked
+     *  for. Opt in per call site — HelpPopoverContent does. */
+    arrow?: boolean
+  }) {
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
@@ -40,6 +46,12 @@ function PopoverContent({
           {...props}
         >
           {children}
+          {arrow && (
+            <PopoverPrimitive.Arrow
+              data-slot="popover-arrow"
+              className="size-2 rotate-45 rounded-[2px] border-r border-b border-apt-border bg-apt-surface data-[side=bottom]:-top-1 data-[side=bottom]:rotate-[225deg] data-[side=top]:-bottom-1"
+            />
+          )}
         </PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
