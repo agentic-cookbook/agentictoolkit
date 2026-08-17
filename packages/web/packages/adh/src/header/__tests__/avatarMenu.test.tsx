@@ -3,6 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { AvatarMenu } from "../AvatarMenu";
 
 const user = { name: "Mike Fullerton", fullName: "Mike Fullerton" };
+// A slug is what turns the Profile row on — see AvatarMenuUser. Kept as a separate
+// fixture rather than added to `user` above, so the no-slug case below still proves
+// what it claims to prove.
+const userWithSlug = { ...user, slug: "mikefullerton" };
 
 describe("AvatarMenu", () => {
   it("names the settings row 'User Settings'", async () => {
@@ -18,12 +22,30 @@ describe("AvatarMenu", () => {
     expect(screen.queryByText("User Settings")).not.toBeInTheDocument();
   });
 
-  it("still shows exactly the four closed rows", async () => {
+  it("still shows exactly the five closed rows, when the account has a slug", async () => {
+    render(<AvatarMenu user={userWithSlug} onSettings={vi.fn()} onLogout={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Mike Fullerton menu" }));
+    expect(await screen.findByText("Welcome Mike!")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Profile")).toBeInTheDocument();
+    expect(screen.getByText("User Settings")).toBeInTheDocument();
+    expect(screen.getByText("Log out")).toBeInTheDocument();
+  });
+
+  it("shows four rows, with no Profile, when the account has no slug — there is no profile address to link to", async () => {
     render(<AvatarMenu user={user} onSettings={vi.fn()} onLogout={vi.fn()} />);
     fireEvent.click(screen.getByRole("button", { name: "Open Mike Fullerton menu" }));
     expect(await screen.findByText("Welcome Mike!")).toBeInTheDocument();
     expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.queryByText("Profile")).not.toBeInTheDocument();
     expect(screen.getByText("User Settings")).toBeInTheDocument();
     expect(screen.getByText("Log out")).toBeInTheDocument();
+  });
+
+  it("points the Profile row at /<slug>/profile on the site under test", async () => {
+    render(<AvatarMenu user={userWithSlug} onSettings={vi.fn()} onLogout={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Mike Fullerton menu" }));
+    const link = await screen.findByRole("link", { name: "Profile" });
+    expect(link.getAttribute("href")).toBe("/mikefullerton/profile");
   });
 });

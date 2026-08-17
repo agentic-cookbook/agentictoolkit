@@ -134,4 +134,21 @@ describe('toAvatarUser', () => {
       toAvatarUser({ email: 'mike@example.test', avatarUrl: 'https://img.test/a.png' }).imageUrl,
     ).toBe('https://img.test/a.png')
   })
+
+  it('carries the slug through, for the Profile row href', () => {
+    const u = toAvatarUser({
+      email: 'mike@example.test',
+      avatarUrl: '',
+      name: 'Mike Fullerton',
+      slug: 'mikefullerton',
+    })
+    expect(u.slug).toBe('mikefullerton')
+  })
+
+  it('omits the slug when it is blank, absent, or whitespace-only', () => {
+    expect(toAvatarUser({ email: 'mike@example.test', avatarUrl: '' }).slug).toBeUndefined()
+    expect(toAvatarUser({ email: 'mike@example.test', avatarUrl: '', slug: '' }).slug).toBeUndefined()
+    expect(toAvatarUser({ email: 'mike@example.test', avatarUrl: '', slug: '  ' }).slug).toBeUndefined()
+    expect(toAvatarUser({ email: 'mike@example.test', avatarUrl: '', slug: null }).slug).toBeUndefined()
+  })
 })

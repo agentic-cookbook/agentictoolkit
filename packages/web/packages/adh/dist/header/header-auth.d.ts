@@ -57,6 +57,10 @@ export declare function toAvatarUser(u: Pick<AuthUser, 'email' | 'avatarUrl'> & 
     name?: string | null;
     /** The handle to fall back to when there is no name — hub passes the slug. */
     label?: string | null;
+    /** The account's handle, carried through for the Profile row's href. Distinct from `label`,
+     *  which is a DISPLAY fallback and is absent whenever a real name exists — an account with a
+     *  name still has a profile. */
+    slug?: string | null;
 }, fallback?: string): AvatarMenuUser;
 /**
  * The cross-site switch resolver every adh-SSO source uses. Signed in: route a site

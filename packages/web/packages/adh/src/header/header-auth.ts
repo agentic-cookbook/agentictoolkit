@@ -81,6 +81,10 @@ export function toAvatarUser(
     name?: string | null
     /** The handle to fall back to when there is no name — hub passes the slug. */
     label?: string | null
+    /** The account's handle, carried through for the Profile row's href. Distinct from `label`,
+     *  which is a DISPLAY fallback and is absent whenever a real name exists — an account with a
+     *  name still has a profile. */
+    slug?: string | null
   },
   fallback = 'User',
 ): AvatarMenuUser {
@@ -88,6 +92,7 @@ export function toAvatarUser(
   return {
     name: fullName || u.label?.trim() || u.email?.split('@')[0] || fallback,
     fullName,
+    slug: u.slug?.trim() || undefined,
     imageUrl: u.avatarUrl || undefined,
   }
 }

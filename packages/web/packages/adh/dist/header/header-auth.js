@@ -10,6 +10,7 @@ function toAvatarUser(u, fallback = "User") {
   return {
     name: fullName || u.label?.trim() || u.email?.split("@")[0] || fallback,
     fullName,
+    slug: u.slug?.trim() || void 0,
     imageUrl: u.avatarUrl || void 0
   };
 }

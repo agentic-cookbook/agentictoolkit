@@ -60,6 +60,17 @@ function AvatarMenu({
         /* @__PURE__ */ jsx(Home, { className: "adh-avatar-menu__item-icon" }),
         /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Home" })
       ] }),
+      user.slug && /* @__PURE__ */ jsxs(
+        DropdownMenuLinkItem,
+        {
+          render: /* @__PURE__ */ jsx(Link, { href: `/${encodeURIComponent(user.slug)}/profile` }),
+          className: "adh-avatar-menu__item",
+          children: [
+            /* @__PURE__ */ jsx(UserIcon, { className: "adh-avatar-menu__item-icon" }),
+            /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Profile" })
+          ]
+        }
+      ),
       settingsItem && /* @__PURE__ */ jsxs(Fragment, { children: [
         /* @__PURE__ */ jsx(DropdownMenuSeparator, {}),
         settingsItem
