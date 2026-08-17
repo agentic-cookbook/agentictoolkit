@@ -221,6 +221,23 @@
 .adh-header__page-title--help {
   pointer-events: auto;
   cursor: pointer;
+  /* HelpEnabled's own `-mx-1 px-1` lets the hover highlight bleed 4px past the
+     text without moving it — true for text in normal flow, false here. This
+     element is centred by `left: 50%` + `translate(-50%, -50%)`, and a negative
+     inline margin shrinks the box the translate is measured against, so the
+     title sits 4px left of centre on every page in the fleet. The padding stays;
+     only the compensating margin is wrong in this positioning context. */
+  margin-inline: 0;
+}
+
+/* ...but not when there is nothing to open. HelpEnabled keeps the caller's class on
+   its unresolved-id fallback — the class is the title's LAYOUT, and dropping it moved
+   the title off centre — and marks that span `data-slot="help-enabled-plain"`. Here
+   that undoes the two lines above, so a plain span does not offer a pointer cursor
+   for a click that does nothing. */
+.adh-header__page-title--help[data-slot='help-enabled-plain'] {
+  pointer-events: none;
+  cursor: auto;
 }
 
 /* Truncation moves inward: the trigger is a flex container, and `text-overflow`

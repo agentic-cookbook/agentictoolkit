@@ -395,6 +395,30 @@ describe('site name help', () => {
     render(<SiteHeader siteId="cookbook" pageTitle="Billing settings" />)
     expect(headerProps.current?.pageTitleHelp).toBeUndefined()
   })
+
+  // The two props have to answer the SAME question. `pageTitle` falls back to the
+  // site name with `??`, which keeps an empty string — so an empty string is a page
+  // naming itself, and a truthiness test here would annotate that blank title with
+  // copy about the site instead.
+  it('asks for no help when the page named itself with an empty string', () => {
+    render(<SiteHeader siteId="cookbook" pageTitle="" />)
+    expect(headerProps.current?.pageTitle).toBe('')
+    expect(headerProps.current?.pageTitleHelp).toBeUndefined()
+  })
+
+  // `admin`, `hub-help` and `status` mount no populated help provider — they have
+  // no `site.config.ts`, so `defineSite` never runs for them. The registry's own
+  // description is defined for every site and keeps the title explained there.
+  it('offers the registry description as the fallback copy', () => {
+    render(<SiteHeader siteId="cookbook" />)
+    expect(headerProps.current?.pageTitleHelpFallback).toBe(getSite('cookbook')?.description)
+    expect(headerProps.current?.pageTitleHelpFallback).toBeTruthy()
+  })
+
+  it('has a description in the registry for every site, so no site is left unexplained', () => {
+    const missing = SITES.filter((s) => !s.description).map((s) => s.id)
+    expect(missing).toEqual([])
+  })
 })
 
 describe('the Details link', () => {

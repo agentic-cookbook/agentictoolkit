@@ -212,8 +212,13 @@ export function SiteHeader({
   const conceptSite = isConceptSite(siteId)
   // ...and only on the site's landing page. The link is a front-door affordance;
   // on an inner page it points back at something the reader has already passed.
-  // `usePathname() === '/'` is how this codebase asks the question already — see
-  // `defaultReturnTo` in header-auth.ts.
+  //
+  // `usePathname()`, NOT `window.location.pathname` — which is what `defaultReturnTo`
+  // in header-auth.ts reads, and is the wrong tool here. That one runs once to build
+  // an href; this decides whether a node RENDERS, so it has to re-decide on every
+  // navigation. `window.location` is not reactive: under the App Router a soft nav
+  // from `/` to an inner page re-renders nothing that reads it, and the Details link
+  // would stay on screen for the rest of the session — the exact bug being fixed.
   const onLandingPage = usePathname() === '/'
   // The registry-derived brand name. `siteHeaderTitle` takes the SiteDef, not the id;
   // an unknown id can't happen through the typed `SiteId`, but `getSite` is
@@ -313,7 +318,19 @@ export function SiteHeader({
       // The site's short name unless the page named itself — see `siteShortName`.
       pageTitle={pageTitle ?? siteShortName}
       // Only when the page named nothing — see AdhHeader's `pageTitleHelp`.
-      pageTitleHelp={pageTitle ? undefined : SITE_TITLE_HELP_ID}
+      //
+      // `== null`, matching the `??` above rather than a truthiness test: a page
+      // that passes `pageTitle=""` names itself with an empty string, so `??` keeps
+      // that empty string while `?` would fall through to the site help — annotating
+      // a title the site never wrote with copy about a different subject.
+      pageTitleHelp={pageTitle == null ? SITE_TITLE_HELP_ID : undefined}
+      // Last resort for the three layouts that mount no populated provider:
+      // `admin`, `hub-help` and `status` are the only sites of the 44 whose
+      // layout does not spread `site.shell` — none of them has a `site.config.ts`
+      // at all, so `defineSite` never runs and there is nothing to spread. The
+      // registry's own one-line `description` is defined for every site, so the
+      // site name still explains itself there instead of warning to the console.
+      pageTitleHelpFallback={site?.description}
       center={center}
       badges={badges}
       leadingActions={leadingActions}
