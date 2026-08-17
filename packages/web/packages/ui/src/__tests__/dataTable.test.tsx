@@ -1,3 +1,4 @@
+import * as React from 'react'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { DataTable, type DataTableColumn, type DataTableProps } from '../components/data-table'
@@ -308,5 +309,80 @@ describe('DataTable reorder', () => {
     expect(onSel).not.toHaveBeenCalled()
     fireEvent.keyDown(grid, { key: 'ArrowDown' })
     expect(ids(onSel.mock.calls.at(-1)![0])).toBe('b')
+  })
+})
+
+describe('DataTable selection checkboxes', () => {
+  const rows = [
+    { id: 'a', name: 'Alice' },
+    { id: 'b', name: 'Bob' },
+    { id: 'c', name: 'Cleo' },
+  ]
+  const columns = [{ key: 'name', header: 'Name' }]
+
+  function Harness({ showSelectionCheckboxes = true }: { showSelectionCheckboxes?: boolean }) {
+    const [selected, setSelected] = React.useState<Set<string>>(new Set())
+    return (
+      <DataTable
+        ariaLabel="People"
+        columns={columns}
+        rows={rows}
+        getRowId={(r) => r.id}
+        selectedIds={selected}
+        onSelectionChange={setSelected}
+        showSelectionCheckboxes={showSelectionCheckboxes}
+      />
+    )
+  }
+
+  it('renders no checkbox column unless asked', () => {
+    render(<Harness showSelectionCheckboxes={false} />)
+    expect(screen.queryByRole('checkbox', { name: 'Select Alice' })).toBeNull()
+  })
+
+  it('renders one checkbox per row plus a select-all', () => {
+    render(<Harness />)
+    expect(screen.getByRole('checkbox', { name: 'Select all' })).toBeTruthy()
+    expect(screen.getAllByRole('checkbox')).toHaveLength(4)
+  })
+
+  it('ticking a row checkbox ADDS to the selection rather than replacing it', () => {
+    // The trap this test exists for: the checkbox's clickable surface sits inside the row, so
+    // without stopPropagation the row's own click handler still fires and would call
+    // selectOne() — turning a three-row tick into a one-row selection. Batch select would be
+    // unusable and look like a rendering bug.
+    render(<Harness />)
+    fireEvent.click(screen.getAllByRole('checkbox')[1]!)
+    fireEvent.click(screen.getAllByRole('checkbox')[2]!)
+    expect((screen.getAllByRole('checkbox')[1] as HTMLInputElement).getAttribute('data-checked')).not.toBeNull()
+    expect((screen.getAllByRole('checkbox')[2] as HTMLInputElement).getAttribute('data-checked')).not.toBeNull()
+  })
+
+  it('unticking removes just that row', () => {
+    render(<Harness />)
+    const boxes = () => screen.getAllByRole('checkbox')
+    fireEvent.click(boxes()[1]!)
+    fireEvent.click(boxes()[2]!)
+    fireEvent.click(boxes()[1]!)
+    expect(boxes()[1]!.getAttribute('data-checked')).toBeNull()
+    expect(boxes()[2]!.getAttribute('data-checked')).not.toBeNull()
+  })
+
+  it('select-all ticks every row, and again clears them', () => {
+    render(<Harness />)
+    const all = () => screen.getByRole('checkbox', { name: 'Select all' })
+    fireEvent.click(all())
+    for (const box of screen.getAllByRole('checkbox')) {
+      expect(box.getAttribute('data-checked')).not.toBeNull()
+    }
+    fireEvent.click(all())
+    for (const box of screen.getAllByRole('checkbox')) {
+      expect(box.getAttribute('data-checked')).toBeNull()
+    }
+  })
+
+  it('the checkbox column is not resizable', () => {
+    render(<Harness />)
+    expect(screen.queryByRole('separator', { name: 'Resize column __select' })).toBeNull()
   })
 })

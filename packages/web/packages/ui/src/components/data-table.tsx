@@ -4,6 +4,7 @@ import * as React from "react"
 import { ChevronUp, ChevronDown } from "lucide-react"
 
 import { cn } from "../lib/utils"
+import { Checkbox } from "./checkbox"
 import { inlineCommitHoverScopeClass } from "./inline-commit-control"
 import {
   SortableItem,
@@ -100,6 +101,16 @@ export interface DataTableProps<T> {
    *  and omit it while a sort or a filter is in force, where a dragged position would describe the
    *  view rather than the list underneath it. See {@link DataTableReorder}. */
   reorder?: DataTableReorder
+  /** Show a leading checkbox column: one box per row, plus a select-all in the header.
+   *
+   *  Selection works without it — click, shift-click and Space have always been wired — but a
+   *  table that can be multi-selected and never says so is discoverable only by guessing. The
+   *  column is built HERE rather than handed in by the caller because a caller-built column's
+   *  `render` receives no selection state, so it would need its own copy of `selectedIds`; two
+   *  copies of one fact disagree the first time a shift-click extends a range.
+   *
+   *  Ignored without `onSelectionChange`: an action-list table has no selection to show. */
+  showSelectionCheckboxes?: boolean
 }
 
 const NO_SELECTION: Set<string> = new Set()
@@ -109,6 +120,20 @@ type ColumnWidths = Record<string, number>
 
 /** A column dragged narrower than this is pointless (the header label would vanish). */
 const MIN_COLUMN_PX = 48
+
+/** The synthetic checkbox column's key. Underscored so it cannot collide with a data column. */
+const SELECT_COLUMN_KEY = "__select"
+
+/** A checkbox needs a name a screen reader can tell apart from the other rows'. The row's first
+ *  string-ish field is the best guess available without asking every caller for a labeller. */
+function describeRowForSelection(row: unknown, id: string): string {
+  if (row !== null && typeof row === "object") {
+    for (const value of Object.values(row as Record<string, unknown>)) {
+      if (typeof value === "string" && value.trim() !== "" && value !== id) return value
+    }
+  }
+  return `row ${id}`
+}
 
 function readWidths(key: string | undefined): ColumnWidths {
   if (!key || typeof window === "undefined") return {}
@@ -123,13 +148,53 @@ function readWidths(key: string | undefined): ColumnWidths {
 export function DataTable<T>({
   columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange, onRowActivate,
   sort, onSortChange, emptyLabel = "No items.", loading = false, ariaLabel, className,
-  autoSizeColumns = false, columnWidthsKey, reorder,
+  autoSizeColumns = false, columnWidthsKey, reorder, showSelectionCheckboxes = false,
 }: DataTableProps<T>): React.ReactElement {
   const selectable = onSelectionChange != null
   const baseId = React.useId()
   const anchorRef = React.useRef<string | null>(null)
   const ids = React.useMemo(() => rows.map(getRowId), [rows, getRowId])
   const [focusedId, setFocusedId] = React.useState<string | null>(null)
+
+  // The synthetic leading column. `columns` below means "what the table renders", so the width
+  // template, the header row, the cells and the auto-size measuring pass all pick it up without
+  // any of them learning that a checkbox exists.
+  //
+  // Placed after `ids` (rather than immediately after `selectable`, above) because `allSelected`
+  // below reads it, and `const` bindings are not hoisted — sitting any earlier is a
+  // temporal-dead-zone crash the first time a selectable table renders.
+  const allSelected = selectable && ids.length > 0 && ids.every((id) => selectedIds.has(id))
+  const selectColumn: DataTableColumn<T> = {
+    key: SELECT_COLUMN_KEY,
+    width: "2.75rem",
+    // Nothing to widen, and a drag handle on a 44px column is mostly a way to break it.
+    resizable: false,
+    header: (
+      <Checkbox
+        aria-label="Select all"
+        checked={allSelected}
+        onCheckedChange={() => onSelectionChange?.(allSelected ? new Set() : new Set(ids))}
+      />
+    ),
+    render: (row) => {
+      const id = getRowId(row)
+      return (
+        // The stopPropagation is the whole point. The checkbox's clickable surface sits INSIDE
+        // this cell, so without it the click bubbles up to the row's own onClick and calls
+        // selectOne() — REPLACING the selection with this one row. Ticking three boxes would
+        // leave one ticked.
+        <span onClick={(e) => e.stopPropagation()} className="flex items-center">
+          <Checkbox
+            aria-label={`Select ${describeRowForSelection(row, id)}`}
+            checked={selectedIds.has(id)}
+            onCheckedChange={() => toggle(id)}
+          />
+        </span>
+      )
+    },
+  }
+  const renderedColumns =
+    selectable && showSelectionCheckboxes ? [selectColumn, ...columns] : columns
 
   // The user's dragged column widths (px), seeded from storage on first render and written back on
   // every change. A column with no entry falls back to its declared `width`, else the auto size.
@@ -260,7 +325,7 @@ export function DataTable<T>({
   const gridRef = React.useRef<HTMLDivElement>(null)
   const [autoWidths, setAutoWidths] = React.useState<ColumnWidths | null>(null)
   // Re-measure whenever the rows or the columns change (new content ⇒ new natural widths).
-  const sig = `${ids.join("|")}::${columns.map((c) => c.key).join(",")}`
+  const sig = `${ids.join("|")}::${renderedColumns.map((c) => c.key).join(",")}`
   const measuredSig = React.useRef<string | null>(null)
 
   React.useLayoutEffect(() => {
@@ -275,7 +340,7 @@ export function DataTable<T>({
     const el = gridRef.current
     if (!el) return
     const next: ColumnWidths = {}
-    for (const c of columns) {
+    for (const c of renderedColumns) {
       let max = 0
       el.querySelectorAll(`[data-col="${c.key}"]`).forEach((cell) => {
         max = Math.max(max, cell.getBoundingClientRect().width)
@@ -284,7 +349,7 @@ export function DataTable<T>({
     }
     measuredSig.current = sig
     setAutoWidths(next)
-  }, [autoSizeColumns, sig, columns, autoWidths])
+  }, [autoSizeColumns, sig, renderedColumns, autoWidths])
 
   // The grid track for each column: a width the USER dragged wins, then the column's declared
   // `width`, then the measured natural width — falling back to `max-content` for the one measuring
@@ -301,7 +366,7 @@ export function DataTable<T>({
     return measured != null ? `${measured}px` : "max-content"
   }
   const template =
-    columns.map(trackOf).join(" ") + (autoSizeColumns ? " minmax(0,1fr)" : "")
+    renderedColumns.map(trackOf).join(" ") + (autoSizeColumns ? " minmax(0,1fr)" : "")
 
   // Drag the trailing border of a header cell: the new width is the pointer's distance from that
   // cell's left edge. Double-click clears the override, returning the column to its content size.
@@ -375,7 +440,7 @@ export function DataTable<T>({
         // The drag's transform comes LAST: while a row is being dragged its position is the
         // pointer's, not the layout's.
         style={{ gridTemplateColumns: template, ...drag?.style }}>
-        {columns.map((col) => (
+        {renderedColumns.map((col) => (
           // `truncate` (with min-w-0) matters even when a column sizes to its content: the moment
           // the user DRAGS it narrower than that, the cell must ellipsise rather than reflow and
           // knock every row out of alignment.
@@ -416,7 +481,7 @@ export function DataTable<T>({
         selectable && "focus-visible:ring-2 focus-visible:ring-apt-gold/25", className)}>
       <div role="row" className="sticky top-0 z-10 grid bg-apt-surface-2 text-xs font-medium text-apt-text-muted"
         style={{ gridTemplateColumns: template }}>
-        {columns.map((col) => (
+        {renderedColumns.map((col) => (
           <div key={col.key} role="columnheader" data-col={col.key}
             aria-sort={sort?.key === col.key ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}
             className={cn("relative px-3 py-2", col.align === "end" && "text-right")}>

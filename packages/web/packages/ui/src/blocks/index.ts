@@ -130,9 +130,21 @@ export { TransferOwnershipSection, type TransferOwnershipSectionProps, type Tran
 export { ListHeader, type ListHeaderProps, type ListHeaderSearch } from "./list-header"
 export { ListWithDetailsPane, type ListWithDetailsPaneProps, type ListAction } from "./list-with-details-pane"
 export { SelectionActions, type SelectionActionsProps } from "./selection-actions"
+// Batch select: the Select/Done mode a list enters to act on several rows at once. Shared because
+// LEAVING the mode must clear the selection — a hidden selection is one a bulk action still acts on.
+export { useBatchSelect, BatchSelectButton, type BatchSelect, type BatchSelectButtonProps } from "./batch-select"
 export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
 export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"
 export { CreateResourceDialog, type CreateResourceDialogProps } from "./create-resource-dialog"
+// The modal a long, partly-failable batch runs behind. It HALTS on the first error and asks
+// Continue or Stop, and it does not close itself: a dialog that dismisses on completion takes the
+// only record of what happened with it.
+export {
+  ProgressModal,
+  type ProgressModalProps,
+  type ProgressResult,
+  type ProgressError,
+} from "./progress-modal"
 // The command palette (⌘K) — the one surface that finds a thing by NAME rather than by place. It
 // renders the groups it is handed and filters nothing; `filterCommandItems` is the shared definition
 // of "matches", for a host narrowing its own static commands. Pairs with `hooks/useShortcut`.
@@ -143,6 +155,9 @@ export {
   type CommandGroup,
   type CommandItem,
 } from "./command-palette"
+// Pick an rdid: the palette, pointed at the identifier registry. Scoping is the CALLER's — it
+// closes over its own entityType when it builds `search`, so this never owns a list of scopes.
+export { RdidPicker, type RdidPickerProps, type RdidOption } from "./rdid-picker"
 export {
   UserCard,
   UserCardSkeleton,
