@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
 import {
+  MAX_PREVIEW_HISTORY_ENTRIES,
+  MAX_PREVIEW_TURNS,
   demoPreviewApi,
   type CannedInk,
   type DemoPreviewDiagnostic,
@@ -39,7 +41,13 @@ const INK_SYNTAX: ReadonlyArray<{ label: string; syntax: string }> = [
   { label: "Section", syntax: "=== engaged ===" },
   { label: "Go to a section", syntax: "-> engaged" },
   { label: "End the story", syntax: "-> DONE" },
-  { label: "Off-script section", syntax: "=== off_script ===\nThat's outside my line of work." },
+  {
+    label: "Off-script section",
+    // The divert is part of the lesson, not decoration: a knot that just stops leaves the story
+    // with nothing standing, so the NEXT message has no choices left to match and goes off script
+    // too. Send it back to the section the conversation was in and the visitor rejoins it.
+    syntax: "=== off_script ===\nOutside my line of work.\n-> engaged",
+  },
   { label: "Count the visits", syntax: "{ off_script:\n- 1: First time.\n- else: Understood.\n}" },
   { label: "Condition", syntax: "{ off_script < 3: -> invite | -> offer }" },
   { label: "Comment", syntax: "// not shown to anyone" },
@@ -206,6 +214,13 @@ export function InkScriptEditor({
 
   // The turn whose standing choices are worth showing: the one just played, else the opening.
   const shown: DemoPreviewTurn | undefined = play.data ?? lint.data;
+  /**
+   * The transcript has reached the length the route refuses (see `MAX_PREVIEW_HISTORY_ENTRIES`).
+   * Sending anyway would 400, and — since the transcript only grows — every later turn would 400
+   * too, leaving the author stuck behind "Couldn't play that turn. Please try again." forever.
+   * So the panel stops here and says why, and `Start over` is the way on.
+   */
+  const full = said.length >= MAX_PREVIEW_HISTORY_ENTRIES;
   const errors = (lint.data?.diagnostics ?? []).filter((d) => d.severity === "error");
 
   return (
@@ -303,25 +318,32 @@ export function InkScriptEditor({
           className="flex items-center gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            if (draft.trim() === "") return;
+            if (draft.trim() === "" || full) return;
             play.mutate(draft);
           }}
         >
           <Input
             aria-label="Say something to the persona"
             value={draft}
-            disabled={disabled || ink.source.trim() === ""}
+            disabled={disabled || full || ink.source.trim() === ""}
             placeholder="Say something…"
             onChange={(e) => setDraft(e.target.value)}
           />
           <Button
             type="submit"
             size="sm"
-            disabled={disabled || play.isPending || draft.trim() === "" || ink.source.trim() === ""}
+            disabled={
+              disabled || full || play.isPending || draft.trim() === "" || ink.source.trim() === ""
+            }
           >
             Send
           </Button>
         </form>
+        {full ? (
+          <p role="status" className="text-xs text-apt-text-muted">
+            {`That's ${MAX_PREVIEW_TURNS} turns — as far as a preview goes. Start over to keep trying it.`}
+          </p>
+        ) : null}
         {play.isError ? <ErrorText error="Couldn't play that turn. Please try again." className="text-xs" /> : null}
 
         {shown ? <Choices turn={shown} /> : null}

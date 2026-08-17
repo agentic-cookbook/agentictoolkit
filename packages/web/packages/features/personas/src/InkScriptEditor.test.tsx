@@ -2,7 +2,12 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ToolkitQueryProvider } from "@agentic-toolkit/data/query";
-import { demoPreviewApi, type DemoPreviewTurn } from "@agentic-toolkit/data/personas";
+import {
+  MAX_PREVIEW_HISTORY_ENTRIES,
+  MAX_PREVIEW_TURNS,
+  demoPreviewApi,
+  type DemoPreviewTurn,
+} from "@agentic-toolkit/data/personas";
 import { InkScriptEditor } from "./InkScriptEditor";
 
 // The editor holds no ink engine of its own — every answer on the screen came from
@@ -171,6 +176,38 @@ describe("InkScriptEditor conversation", () => {
     fireEvent.click(screen.getByRole("button", { name: /start over/i }));
     expect(screen.queryByText("hello")).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("InkScriptEditor transcript ceiling", () => {
+  // The route caps `history` at MAX_PREVIEW_HISTORY_ENTRIES and a transcript only ever grows, so
+  // an editor that does not know the number posts one over the line and then EVERY later turn
+  // fails the same way — a 400 rendered as "try again", which trying again can never clear.
+  it("stops at the length the route refuses rather than sending a turn that 400s", async () => {
+    renderEditor({ source: SOURCE, signInLine: "" });
+    await waitFor(() => expect(play).toHaveBeenCalled(), settle);
+
+    const input = screen.getByLabelText(/say something to the persona/i);
+    for (let i = 0; i < MAX_PREVIEW_TURNS; i++) {
+      play.mockResolvedValue(TURN({ text: `reply ${i}` }));
+      fireEvent.change(input, { target: { value: `message ${i}` } });
+      fireEvent.click(screen.getByRole("button", { name: /^send$/i }));
+      await screen.findByText(`reply ${i}`, undefined, settle);
+    }
+
+    for (const call of play.mock.calls) {
+      expect((call[0].history ?? []).length).toBeLessThanOrEqual(MAX_PREVIEW_HISTORY_ENTRIES);
+    }
+    // Only `full` can disable the box here — the script is non-blank and the panel is not
+    // read-only — so this is the ceiling doing it, and the author is told which ceiling.
+    expect((input as HTMLInputElement).disabled).toBe(true);
+    expect(screen.getByText(new RegExp(`${MAX_PREVIEW_TURNS} turns`))).toBeTruthy();
+
+    // And starting over is the way on, without touching the script.
+    fireEvent.click(screen.getByRole("button", { name: /start over/i }));
+    expect((screen.getByLabelText(/say something to the persona/i) as HTMLInputElement).disabled).toBe(
+      false,
+    );
   });
 });
 

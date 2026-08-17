@@ -55,6 +55,21 @@ export interface DemoPreviewTurn {
   tagPlacementHint: string;
 }
 
+/**
+ * How many EXCHANGES a preview transcript may carry — the mirror of `MAX_PREVIEW_TURNS` in the
+ * backend's `routes/personaDemoPreview.ts`.
+ *
+ * The server rejects a longer `history` with a 400, and a transcript only ever grows, so an editor
+ * that does not know this number sends one over the line and then every later turn fails too — an
+ * error the author can only clear by starting over, with nothing on screen saying so. Sending a
+ * TRUNCATED history instead would be worse than the 400: replay derives the story's position from
+ * the transcript, so dropping the front of it silently previews a different point in the script.
+ */
+export const MAX_PREVIEW_TURNS = 40;
+
+/** The same bound in the unit `history` counts: a turn contributes two messages. */
+export const MAX_PREVIEW_HISTORY_ENTRIES = MAX_PREVIEW_TURNS * 2;
+
 export interface DemoPreviewBody {
   /** The draft ink source, exactly as it sits in the editor. */
   source: string;
@@ -62,7 +77,10 @@ export interface DemoPreviewBody {
   signInLine?: string;
   /** The visitor's message. Omit with no `history` to lint and see the opening. */
   message?: string;
-  /** The transcript BEFORE this message. The story is replayed over it. */
+  /**
+   * The transcript BEFORE this message. The story is replayed over it, and it may hold at most
+   * {@link MAX_PREVIEW_HISTORY_ENTRIES} messages — past that the server answers 400.
+   */
   history?: { role: "user" | "assistant"; content: string }[];
   /**
    * Preview the SIGNED-IN visitor's demo, where an off-script message falls through to the real
