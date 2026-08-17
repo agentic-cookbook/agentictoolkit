@@ -24,6 +24,11 @@ export const RDID_TYPE_TO_ENTITY_TYPE = {
   // integration instances (integration_provider_configs) are rdid-addressed like apps/personas:
   // `integration.<ecosystem-slug>.<name>` (entity_type 'integration'). Mirrors the backend map.
   integration: 'integration',
+  // `game.games` rows: `game.<ecosystem path>.<slug>` (entity_type 'game'). Ecosystem-scoped like
+  // app/storage/integration. Only the catalog row is addressed — the rest of the `game` schema
+  // reaches its game through a `game_id` FK that the backend rewrites to this rdid on the wire.
+  // Mirrors the backend map.
+  game: 'game',
 } as const;
 
 export type RdidType = keyof typeof RDID_TYPE_TO_ENTITY_TYPE;
