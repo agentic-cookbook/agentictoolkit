@@ -20,6 +20,10 @@ import { MarketingSiteHeader } from '@agentic-toolkit/adh/marketing/MarketingSit
 // are this one now.
 import type { NavLink } from '@agentic-toolkit/adh/header'
 import type { FooterLink } from '@agentic-toolkit/adh/footer'
+import {
+  HelpContentProvider,
+  type SiteHelp,
+} from '@agentic-toolkit/ui/components/help-content'
 
 /** The serializable half of a link: what a server layout can hand across the
  *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot
@@ -90,6 +94,12 @@ export type MarketingRootHtmlProps = {
    * hand-rolled `<body>` produced.
    */
   providers?: ComponentType<{ children: ReactNode }>
+  /** The site's help copy, published to the whole document.
+   *
+   *  A provider rather than a header prop: the `header` slot below lets a site
+   *  replace the shared header entirely (four do), and a prop would reach the
+   *  shared header and miss them. */
+  help?: SiteHelp
   children: ReactNode
 }
 
@@ -148,6 +158,7 @@ export function MarketingRootHtml({
   silentSso = true,
   header,
   providers,
+  help,
   children,
 }: MarketingRootHtmlProps): ReactElement {
   const loc = getLocale()
@@ -164,24 +175,26 @@ export function MarketingRootHtml({
         <AdhThemeStyle />
       </head>
       <body>
-        <AuthProvider clientId="adh" storageKey="auth_tokens" silentSso={silentSso}>
-          <SiteProviders>
-            <AppShell
-              header={
-                header ?? (
-                  <MarketingSiteHeader
-                    siteId={siteId}
-                    navLinks={navLinks}
-                    trailingNavLinks={trailingNavLinks}
-                  />
-                )
-              }
-              footer={{ links: footerLinks ?? [] }}
-            >
-              {children}
-            </AppShell>
-          </SiteProviders>
-        </AuthProvider>
+        <HelpContentProvider help={help ?? {}}>
+          <AuthProvider clientId="adh" storageKey="auth_tokens" silentSso={silentSso}>
+            <SiteProviders>
+              <AppShell
+                header={
+                  header ?? (
+                    <MarketingSiteHeader
+                      siteId={siteId}
+                      navLinks={navLinks}
+                      trailingNavLinks={trailingNavLinks}
+                    />
+                  )
+                }
+                footer={{ links: footerLinks ?? [] }}
+              >
+                {children}
+              </AppShell>
+            </SiteProviders>
+          </AuthProvider>
+        </HelpContentProvider>
       </body>
     </html>
   )

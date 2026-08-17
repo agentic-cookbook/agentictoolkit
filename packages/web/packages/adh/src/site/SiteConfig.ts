@@ -1,6 +1,13 @@
 import type { ComponentType, ReactNode } from 'react'
 import type { SiteId } from '@agentic-toolkit/adh-registry'
 import type { SiteRoute, SiteSeo } from '@agentic-toolkit/adh-registry/seo'
+// The ID comes from `lib/help-ids`, not from `components/help-content` where the rest of
+// the help vocabulary lives. This module is in the SERVER graph (see SiteConfig's own doc
+// below), `help-content` is `"use client"`, and a server module cannot read a plain value
+// out of a client one — React hands it a client reference and the read throws. `lib/help-ids`
+// carries no directive, so both graphs may import it. The TYPE is erased either way.
+import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
+import type { SiteHelp } from '@agentic-toolkit/ui/components/help-content'
 // Type-only, so nothing crosses at runtime and no `external` pairing is owed — the
 // whole-statement `import type … from` form is erased before the bundler sees it, and
 // frontend/tools/verify-bundle-boundaries.py skips exactly that form (see its comment at
@@ -68,6 +75,12 @@ export interface SiteDefinition {
   /** Title + description, and optionally a bespoke social card. Not derivable: the
    *  registry knows what a site is called, not what it is for. */
   seo: SiteSeo
+  /** The site's help copy, keyed by the id a <HelpEnabled> names.
+   *
+   *  The site-title entry is DERIVED from `seo.description` below, so a site
+   *  gets the header's help without writing anything; declaring it here
+   *  overrides that. */
+  help?: SiteHelp
   /** Paths to keep out of the production index, replacing (not extending)
    *  FAMILY_ROBOTS_DISALLOW. Omit unless the site genuinely differs. */
   robotsDisallow?: readonly string[]
@@ -173,9 +186,10 @@ export interface SiteConfig {
 /**
  * Assemble a site's configuration.
  *
- * The one per-site declaration in the family. It reads as data and it is data: no field is
- * inspected here beyond `id`, so the React values (`header`, `providers`) pass through
- * untouched and stay whatever the server graph made them.
+ * The one per-site declaration in the family. It reads as data and it is data: the React
+ * values (`header`, `providers`) pass through untouched and stay whatever the server graph
+ * made them. The one field READ rather than forwarded is `seo.description`, which seeds the
+ * header's help entry so no site has to write the same sentence twice.
  */
 export function defineSite(site: SiteDefinition): SiteConfig {
   return {
@@ -194,6 +208,13 @@ export function defineSite(site: SiteDefinition): SiteConfig {
       trailingNavLinks: site.trailingNavLinks,
       footerLinks: site.footerLinks,
       silentSso: site.silentSso,
+      // Derived, not required: every site already describes its purpose in `seo.description`,
+      // and a fourth copy of that sentence is how the cookbook's sections.ts ended up warning
+      // that "Nothing reports a disagreement between the two". A site's own entry wins.
+      help: {
+        [SITE_TITLE_HELP_ID]: { body: site.seo.description, flavor: 'info' as const },
+        ...site.help,
+      },
     },
   }
 }
