@@ -70,14 +70,14 @@ describe("persona field descriptors", () => {
       avatarAttachmentId: null,
       serviceId: "svc_1",
       model: null,
-      visibility: "unlisted" as const,
+      visibility: "hub" as const,
     };
     const body = personaToBody(draft);
     expect(body.modelPrompt).toBe("  leading and trailing  ");
     expect(body).toHaveProperty("avatarAttachmentId", null);
     expect(body.serviceId).toBe("svc_1");
     expect(body).toHaveProperty("model", null);
-    expect(body.visibility).toBe("unlisted");
+    expect(body.visibility).toBe("hub");
   });
 
   it("describes every field exactly once", () => {

@@ -229,7 +229,7 @@ export type PatchServiceBody = {
 export type Persona = PersonaRow & {
   serviceName?: string | null;
 };
-export type PersonaVisibility = "public" | "unlisted" | "private";
+export type PersonaVisibility = "public" | "hub" | "private";
 // The editable draft PersonaEditor works with: user-settable fields only — no
 // server-assigned userId/appId, `model` nullable while unset, and the
 // precise `visibility` union (the spec response types it as a plain string).
@@ -255,7 +255,7 @@ export type PersonaDraft = {
 // loose `visibility: string` back to the UI union.
 export function toPersonaDraft(p: Persona): PersonaDraft {
   const visibility: PersonaVisibility =
-    p.visibility === "public" || p.visibility === "unlisted" ? p.visibility : "private";
+    p.visibility === "public" || p.visibility === "hub" ? p.visibility : "private";
   return {
     id: p.id,
     slug: p.slug,

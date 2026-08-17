@@ -40,7 +40,7 @@ export type UserCardPersona = {
   name: string
   description: string | null
   /** @enum {string} */
-  visibility: 'public' | 'unlisted'
+  visibility: 'public' | 'hub'
   createdAt: string
 }
 

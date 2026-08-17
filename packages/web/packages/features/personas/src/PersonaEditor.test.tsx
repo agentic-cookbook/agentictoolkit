@@ -91,6 +91,11 @@ import {
 const updatePersona = vi.mocked(api.personas.update);
 const createPersona = vi.mocked(api.personas.create);
 
+// G18: `visibility: "hub"` is deliberate, not arbitrary. "hub" is a THIRD state the
+// OLD three-way vocabulary ("public"|"unlisted"|"private") could never produce, so any
+// code path that regressed to that vocabulary — or to a boolean-shaped mapping of it —
+// could not accidentally render this fixture correctly. It also leaves room for the
+// Save-gate test below to transition to a genuinely different value ("public").
 const PERSONA = {
   id: "persona-1",
   ownedEcosystemId: "owned-eco-9",
@@ -105,7 +110,7 @@ const PERSONA = {
   serviceId: null,
   serviceName: null,
   model: null,
-  visibility: "private",
+  visibility: "hub",
 } as unknown as Persona;
 
 // Prop-echoing stubs for the two injected cross-boundary renderers, passed to every render helper
@@ -526,10 +531,13 @@ describe("PersonaEditor Save gate", () => {
   });
 
   it("changing visibility alone enables Save", async () => {
+    // PrivacyLevelSelect is a popover/listbox (Task 7's shared control), not a native
+    // <select> — driven via its trigger button + option, not userEvent.selectOptions.
     renderEditor("identity");
     const save = screen.getByRole("button", { name: /save/i });
     expect(save).toBeDisabled();
-    await userEvent.selectOptions(screen.getByLabelText(/visibility/i), "public");
+    fireEvent.click(screen.getByRole("button", { name: "Persona visibility" }));
+    fireEvent.click(screen.getByRole("option", { name: /Public/ }));
     expect(save).toBeEnabled();
   });
 
@@ -731,6 +739,44 @@ describe("PersonaEditor save (create mode)", () => {
       { workspace: undefined },
     );
     expect(createPersona).toHaveBeenCalledTimes(1);
+  });
+});
+
+// The visibility control's wire-word round-trip, mirroring ProfilePanel.test.tsx's equivalent
+// coverage of the shared control (Task 7/8). PERSONA's fixture visibility is "hub" (see its G18
+// comment above) — a value the OLD three-way vocabulary could never produce — so this test also
+// proves the editor actually round-trips through PRIVACY_LEVEL_FROM_WIRE/PRIVACY_WIRE_VALUE rather
+// than a stale mapping that happens to typecheck. `updatePersona.mockClear()` insulates this from
+// the earlier save-mode describes above, which assert their own absolute call counts with no
+// clearing between tests (see their comments) — this test does not rely on running before or
+// after them.
+describe("PersonaEditor visibility control — shared privacy control wire words", () => {
+  it('loads the select as "Hub members" from the persona\'s wire visibility', () => {
+    renderEditor("identity");
+    expect(
+      screen.getByRole("button", { name: "Persona visibility" }),
+    ).toHaveTextContent("Hub members");
+  });
+
+  it('choosing "Only me" and saving sends visibility: "private" — the STORED word, not the UI literal "only-me"', async () => {
+    updatePersona.mockClear();
+    const saved: Persona = { ...PERSONA, visibility: "private" };
+    updatePersona.mockResolvedValue(saved);
+
+    renderEditor("identity");
+    fireEvent.click(screen.getByRole("button", { name: "Persona visibility" }));
+    fireEvent.click(screen.getByRole("option", { name: /Only me/ }));
+
+    const save = screen.getByRole("button", { name: /save/i });
+    expect(save).toBeEnabled();
+    fireEvent.click(save);
+
+    await waitFor(() => expect(updatePersona).toHaveBeenCalledTimes(1));
+    expect(updatePersona).toHaveBeenCalledWith(
+      PERSONA.id,
+      expect.objectContaining({ visibility: "private" }),
+      { workspace: undefined },
+    );
   });
 });
 

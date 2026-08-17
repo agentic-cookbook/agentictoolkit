@@ -32,6 +32,11 @@ import {
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { Select } from "@agentic-toolkit/ui/components/select";
+import {
+  PrivacyLevelSelect,
+  PRIVACY_WIRE_VALUE,
+  PRIVACY_LEVEL_FROM_WIRE,
+} from "@agentic-toolkit/ui/components/privacy-level-select";
 import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
 import { rdidPrefix, validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import { PersonaAvatarField } from "./PersonaAvatarField";
@@ -50,7 +55,6 @@ import {
   type Persona,
   type PersonaBody,
   type PersonaDraft,
-  type PersonaVisibility,
   type UserService,
 } from "@agentic-toolkit/data/personas";
 
@@ -165,12 +169,6 @@ function PersonaMemoryPane({
 }
 
 const BLANK = personaBlank();
-
-const VISIBILITIES: { id: PersonaVisibility; label: string }[] = [
-  { id: "public", label: "Public — listed on the registry" },
-  { id: "unlisted", label: "Unlisted — link only" },
-  { id: "private", label: "Private — only you" },
-];
 
 /** Build the wire body from a draft (drop display-only joins; coerce blanks to undefined). */
 const toBody = personaToBody;
@@ -416,16 +414,11 @@ export function PersonaEditor({
               )}
             </Field>
             <Field label="Visibility">
-              <Select
-                value={draft.visibility}
-                onChange={(e) => set("visibility", e.target.value as PersonaVisibility)}
-              >
-                {VISIBILITIES.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.label}
-                  </option>
-                ))}
-              </Select>
+              <PrivacyLevelSelect
+                value={PRIVACY_LEVEL_FROM_WIRE(draft.visibility)}
+                ariaLabel="Persona visibility"
+                onChange={(next) => set("visibility", PRIVACY_WIRE_VALUE[next])}
+              />
             </Field>
             {/* Public personas have a live profile page; surface the full URL so
                 the owner can open/share it. Opens in a new tab. Hidden entirely

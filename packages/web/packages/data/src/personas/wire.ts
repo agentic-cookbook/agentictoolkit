@@ -165,7 +165,7 @@ export interface PublicPersonaSummaryRow {
   slug: string;
   name: string;
   description: string | null;
-  visibility: "public";
+  visibility: "public" | "hub";
   createdAt: string;
   owner: PublicOwnerRow | null;
 }
@@ -365,7 +365,7 @@ export interface PublicPersonaRow {
   voice: string | null;
   character: string | null;
   examples: string | null;
-  visibility: "public" | "unlisted";
+  visibility: "public" | "hub";
   createdAt: string;
   owner: PublicOwnerRow | null;
   demoEnabled: boolean;
