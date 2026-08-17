@@ -78,6 +78,23 @@ describe("BillingPanel", () => {
     await waitFor(() => expect(screen.getByText(/unclaimed/)).toBeTruthy());
   });
 
+  // `GET /billing/accounts` is `requireAdmin` (every row carries a payer's email), so a 403 is
+  // the ORDINARY response for a non-admin member — not an edge case. Before this branch existed
+  // the read failed, `accounts` stayed null, and the length check downstream rendered "Nobody has
+  // bought anything yet": a selling product told its own members it had no customers. Asserting
+  // the absence too, because the regression is not that the notice is missing — it is that the
+  // false one comes back.
+  it("says payers are admin-only when the accounts read is refused, never that there are none", async () => {
+    authedJson.mockImplementation((path: string) =>
+      path === "/api/billing/accounts"
+        ? Promise.reject(new Error("403 Forbidden"))
+        : Promise.resolve([]),
+    );
+    render(<BillingPanel workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByText(/visible to product admins only/)).toBeTruthy());
+    expect(screen.queryByText("Nobody has bought anything yet.")).toBeNull();
+  });
+
   // The `/api` prefix has no visible symptom to assert on: without it the calls resolve against
   // the Next app, which answers 404 HTML, and the panel renders its ordinary empty states. So
   // this asserts the transport directly — it is the only place the prefix is observable, and it

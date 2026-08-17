@@ -132,8 +132,10 @@ export function adhNextConfig(options: AdhNextConfigOptions = {}): NextConfig {
   // two assertions above and before the config is assembled.
   materializeThemeFonts();
 
-  // `requiresBackendUrl` (Task 4) is set for FOUR sites — bitbag, personaregistry,
-  // projects and narratives.
+  // `requiresBackendUrl` (Task 4) is set for FIVE sites — bitbag, personaregistry,
+  // projects, narratives and billing. `build-fields.test.ts` pins that exact set, so this
+  // sentence and that assertion have to move together; it is a comment, so only the test
+  // makes the number true.
   // Passing it from the registry rather than hardcoding `false` is what keeps this
   // uniform code able to express a per-site difference; dropping the argument would
   // silently downgrade both hosted builds from "fail with a named variable" to

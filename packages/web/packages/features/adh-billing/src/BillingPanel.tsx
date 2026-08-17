@@ -29,7 +29,15 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
     `${key}:offers`,
     loadOffers,
   );
-  const { items: accounts } = useResourceList<AccountRow>(`${key}:accounts`, loadAccounts);
+  // reportErrors: false for the same reason as prices, and one more. `GET /billing/accounts` is
+  // `requireAdmin` — every row carries a payer's email — so a non-admin member of the workspace
+  // gets a 403 EVERY time this pane renders. That is the ordinary state for most of a product's
+  // members, not an auth incident, and reporting it would file one bug per member per view.
+  const { items: accounts, error: accountsError } = useResourceList<AccountRow>(
+    `${key}:accounts`,
+    loadAccounts,
+    { reportErrors: false },
+  );
   // reportErrors: false — a product that has not connected Stripe yet is the ORDINARY state, not
   // an auth incident, and reporting it would file a bug on every unconfigured ecosystem.
   const { items: prices } = useResourceList<PriceRow>(`${key}:prices`, loadPrices, {
@@ -89,7 +97,15 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
 
       <section>
         <h2 className="text-lg font-semibold">Payers</h2>
-        {(accounts ?? []).length === 0 ? (
+        {accountsError ? (
+          // The failure is reported, never rendered as emptiness. This read is admin-only, so the
+          // overwhelmingly common error here is a non-admin's 403 — and showing that as "nobody has
+          // bought anything yet" tells a member of a selling product that it has no customers,
+          // which is both false and unfalsifiable from where they are standing.
+          <p className="text-sm text-apt-text-muted">
+            Payer details are visible to product admins only.
+          </p>
+        ) : (accounts ?? []).length === 0 ? (
           <p className="text-sm text-apt-text-muted">Nobody has bought anything yet.</p>
         ) : (
           <ul className="flex flex-col gap-2">

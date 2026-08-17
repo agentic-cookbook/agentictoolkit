@@ -54,6 +54,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/',
     '/[workspace]/[[...path]]',
     '/auth/callback',
+    '/claim',
     '/details',
     '/details/[topic]',
     '/home',
