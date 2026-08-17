@@ -12,14 +12,17 @@ import UserNotifications
 public struct SystemPermissionChecker: PermissionChecking {
     private let automationProbe: any AutomationProbing
 
-    // A single long-lived manager: CLLocationManager reports authorization on
-    // the instance, and a freshly allocated one can answer `.notDetermined`
-    // before it has talked to the daemon. `CLLocationManager` is not `Sendable`,
-    // but its `authorizationStatus` reads and authorization-request calls are
-    // documented as safe from any thread, so `nonisolated(unsafe)` here — rather
-    // than isolating this `Sendable` checker to `@MainActor` — is a targeted,
-    // justified opt-out, not a blanket `@preconcurrency`/`@unchecked Sendable`.
-    private nonisolated(unsafe) static let locationManager = CLLocationManager()
+    // A single long-lived coordinator: `CLLocationManager` reports
+    // authorization on the instance, and a freshly allocated one can answer
+    // `.notDetermined` before it has talked to the daemon. Both the
+    // coordinator type and this static reference to it are `@MainActor`,
+    // because CoreLocation delivers delegate callbacks on the run loop of the
+    // thread that created the manager — creating it and receiving callbacks
+    // on the main actor is what makes that well-defined under strict
+    // concurrency. That isolation also removes the need for a
+    // `nonisolated(unsafe)` opt-out: the manager itself is never touched off
+    // the main actor, so there is nothing left to be unsafe about.
+    @MainActor private static let locationCoordinator = LocationAuthorizationCoordinator()
 
     public init(automationProbe: any AutomationProbing = SystemAutomationProbe()) {
         self.automationProbe = automationProbe
@@ -41,7 +44,8 @@ public struct SystemPermissionChecker: PermissionChecking {
             let status = await automationStatus(forBundleID: bundleID, promptIfNeeded: false)
             return Self.automationStatus(status)
         case .location:
-            return Self.locationStatus(Self.locationManager.authorizationStatus)
+            let status = await Self.locationCoordinator.currentStatus
+            return Self.locationStatus(status)
         }
     }
 
@@ -62,9 +66,12 @@ public struct SystemPermissionChecker: PermissionChecking {
             return Self.automationStatus(status)
         case .location:
             // `requestAlwaysAuthorization` is the background-capable grant —
-            // olylod observes location while the user is not in the app.
-            Self.locationManager.requestAlwaysAuthorization()
-            return await status(permission)
+            // olylod observes location while the user is not in the app. It is
+            // also fire-and-forget: the decision arrives later through the
+            // delegate, which `locationCoordinator` awaits so this returns the
+            // user's actual answer rather than the pre-prompt status.
+            let status = await Self.locationCoordinator.requestAlways()
+            return Self.locationStatus(status)
         }
     }
 
@@ -124,9 +131,84 @@ public struct SystemPermissionChecker: PermissionChecking {
     static func locationStatus(_ status: CLAuthorizationStatus) -> PermissionStatus {
         switch status {
         case .authorizedAlways: return .granted
+        // "While Using the App" is not a grant we can use: olylod reads location
+        // while the user is in no app at all. Reported as `.denied` rather than
+        // `.undetermined` so PermissionPresenter's Settings-pane fallback fires and
+        // the user has a route to upgrade it to Always — `requestAlwaysAuthorization()`
+        // will not re-prompt once any decision exists.
+        case .authorizedWhenInUse: return .denied
         case .denied, .restricted: return .denied
         case .notDetermined: return .undetermined
         @unknown default: return .undetermined
         }
+    }
+}
+
+/// Owns the `CLLocationManager` and bridges its delegate-based authorization
+/// flow into async/await. Isolated to `@MainActor` because CoreLocation
+/// delivers delegate callbacks on the run loop of the thread that created the
+/// manager — creating the manager and receiving its callbacks on the main
+/// actor is what makes both sides of that contract well-defined under strict
+/// concurrency.
+@MainActor
+private final class LocationAuthorizationCoordinator: NSObject, CLLocationManagerDelegate {
+    private let manager = CLLocationManager()
+    private var pendingContinuation: CheckedContinuation<CLAuthorizationStatus, Never>?
+    private var timeoutTask: Task<Void, Never>?
+
+    override init() {
+        super.init()
+        manager.delegate = self
+    }
+
+    var currentStatus: CLAuthorizationStatus {
+        manager.authorizationStatus
+    }
+
+    /// Requests Always authorization. If the status is already settled
+    /// (anything but `.notDetermined`), fires the request for its
+    /// no-op/Settings-hint effect and returns the current status
+    /// synchronously — only a genuinely undetermined first ask needs to wait.
+    /// `requestAlwaysAuthorization()` itself is fire-and-forget; the user's
+    /// decision arrives later through `locationManagerDidChangeAuthorization`,
+    /// which resumes the continuation this sets up. A 120-second timeout
+    /// guards against a prompt the user closes without deciding, or one that
+    /// never appears (Location Services off globally, missing usage-
+    /// description), so the caller's `await` cannot hang forever.
+    func requestAlways() async -> CLAuthorizationStatus {
+        let before = manager.authorizationStatus
+        manager.requestAlwaysAuthorization()
+        guard before == .notDetermined else {
+            return manager.authorizationStatus
+        }
+
+        return await withCheckedContinuation { continuation in
+            pendingContinuation = continuation
+            timeoutTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(120))
+                guard let self, !Task.isCancelled else { return }
+                self.resume(with: self.manager.authorizationStatus)
+            }
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        let status = manager.authorizationStatus
+        guard status != .notDetermined else { return }
+        Task { @MainActor [weak self] in
+            self?.resume(with: status)
+        }
+    }
+
+    /// Resumes the pending continuation exactly once. Guards both against a
+    /// second delegate callback firing after the first already resumed, and
+    /// against a race between the delegate and the timeout — either would
+    /// crash `CheckedContinuation` if allowed to resume twice.
+    private func resume(with status: CLAuthorizationStatus) {
+        guard let continuation = pendingContinuation else { return }
+        pendingContinuation = nil
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        continuation.resume(returning: status)
     }
 }
