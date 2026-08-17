@@ -80,8 +80,9 @@ describe("BillingPanel", () => {
     await waitFor(() => expect(screen.getByText(/unclaimed/)).toBeTruthy());
   });
 
-  // `GET /billing/accounts` and `GET /billing/prices` are both `requireAdmin` (accounts rows carry
-  // payer emails), so a 403 is the ORDINARY response for a non-admin member — not an edge case.
+  // `GET /billing/accounts` and `GET /billing/prices` are both behind `requireBillingOperator`
+  // (accounts rows carry payer emails), so a 403 is the ORDINARY response for a member who does
+  // not own the ecosystem — not an edge case.
   // Before these branches existed both reads failed, both lists stayed null, and the length checks
   // downstream rendered the empty states: a selling product told its own members it had no
   // customers and no Stripe prices. Asserting the ABSENCE of each false line too, because the
@@ -91,7 +92,7 @@ describe("BillingPanel", () => {
   // reaches the panel as `useResourceList`'s `errorStatus`, read off the thrown error's numeric
   // `.status`, so a stand-in carrying the code only in its message would take the generic branch
   // and this test would assert nothing about the code that ships.
-  it("says the admin-only reads are admin-only when refused, never that there is nothing there", async () => {
+  it("says the owner-only reads are owner-only when refused, never that there is nothing there", async () => {
     authedJson.mockImplementation((path: string) =>
       path === "/api/billing/accounts" || path === "/api/billing/prices"
         ? Promise.reject(new AuthHttpError(403, "forbidden"))
@@ -125,8 +126,28 @@ describe("BillingPanel", () => {
     expect(screen.queryByText(/Stripe details are visible/)).toBeNull();
   });
 
+  // `requireBillingOperator` answers 404 — not 403 — when the `billing` ecosystem flag is off, and
+  // it asks that BEFORE the ownership check. The two statuses therefore mean different things to
+  // different readers (the product is not selling / you are not its owner), and the panel must not
+  // collapse them: an owner told they lack permission goes looking for a role they already hold.
+  it("distinguishes billing being disabled from the reader lacking ownership", async () => {
+    authedJson.mockImplementation((path: string) =>
+      path === "/api/billing/accounts" || path === "/api/billing/prices"
+        ? Promise.reject(new AuthHttpError(404, "billing is not enabled for this ecosystem"))
+        : Promise.resolve([]),
+    );
+    render(<BillingPanel workspaceSlug="acme" />);
+    await waitFor(() =>
+      expect(screen.getAllByText("Billing is not enabled for this product.")).toHaveLength(2),
+    );
+    expect(screen.queryByText(/Payer details are visible/)).toBeNull();
+    expect(screen.queryByText(/Stripe details are visible/)).toBeNull();
+    expect(screen.queryByText("Nobody has bought anything yet.")).toBeNull();
+    expect(screen.queryByText(/has no active prices yet/)).toBeNull();
+  });
+
   // The inversion of the test above, and the reason the panel checks the STATUS rather than merely
-  // "did this error". An admin who hits a 500 must not be told they lack admin rights — that sends
+  // "did this error". An owner who hits a 500 must not be told they lack rights — that sends
   // the one person who can fix it to go looking at permissions.
   it("does not blame permissions for a failure that is not a 403", async () => {
     authedJson.mockImplementation((path: string) =>
@@ -138,6 +159,25 @@ describe("BillingPanel", () => {
     await waitFor(() => expect(screen.getByText("Payer details could not be loaded.")).toBeTruthy());
     expect(screen.queryByText(/Payer details are visible/)).toBeNull();
     expect(screen.queryByText("Nobody has bought anything yet.")).toBeNull();
+  });
+
+  // The same defect as the two tests above, reached through the offer/price JOIN rather than
+  // through a section header — and the place it actually shipped. `/prices` is owners-only, so a
+  // non-owner member loading a product with a working catalog saw every offer labelled "missing
+  // in Stripe": a failed read of OUR OWN making, rendered as a fact about the operator's Stripe
+  // account. `/offers` must succeed here, or no row renders and the test asserts nothing.
+  it("does not call an offer's price missing in Stripe when the price list failed to load", async () => {
+    authedJson.mockImplementation((path: string) =>
+      path === "/api/billing/prices"
+        ? Promise.reject(new AuthHttpError(403, "forbidden"))
+        : path === "/api/billing/offers"
+          ? Promise.resolve([OFFER])
+          : Promise.resolve([]),
+    );
+    render(<BillingPanel workspaceSlug="acme" />);
+    await waitFor(() => expect(screen.getByText("price could not be loaded")).toBeTruthy());
+    expect(screen.getByText("Pro")).toBeTruthy();
+    expect(screen.queryByText("missing in Stripe")).toBeNull();
   });
 
   // The `/api` prefix has no visible symptom to assert on: without it the calls resolve against
