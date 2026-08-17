@@ -45,7 +45,58 @@ describe('HelpEnabled', () => {
     expect(document.querySelector('[data-slot="help-enabled-badge"]')).toBeNull()
   })
 
-  it('warns once in development for an unknown id', () => {
+  // The caller's class is LAYOUT, not decoration for the help affordance — adh's
+  // header passes the class that centres the title, clips it and hides it on
+  // mobile. Dropping it on the unknown-id path moved the site name off-centre on
+  // every page, which is a worse failure than the missing help entry itself.
+  it('keeps the caller className for an unknown id', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    render(
+      <HelpContentProvider help={help}>
+        <HelpEnabled id="missing-too" className="page-title">
+          Cookbook
+        </HelpEnabled>
+      </HelpContentProvider>,
+    )
+    expect(screen.getByText('Cookbook')).toHaveClass('page-title')
+  })
+
+  it('uses the fallback copy when the site published no entry', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    render(
+      <HelpContentProvider help={help}>
+        <HelpEnabled id="unpublished" fallback="The registry blurb.">
+          Admin
+        </HelpEnabled>
+      </HelpContentProvider>,
+    )
+    fireEvent.click(screen.getByText('Admin'))
+    await waitFor(() =>
+      expect(screen.getByText('The registry blurb.')).toBeInTheDocument(),
+    )
+    // A fallback is a deliberate choice by the caller, not a misconfiguration.
+    expect(warn).not.toHaveBeenCalled()
+  })
+
+  it('prefers a real entry over the fallback', async () => {
+    render(
+      <HelpContentProvider help={help}>
+        <HelpEnabled id="site-title" fallback="The registry blurb.">
+          Cookbook
+        </HelpEnabled>
+      </HelpContentProvider>,
+    )
+    fireEvent.click(screen.getByText('Cookbook'))
+    await waitFor(() =>
+      expect(screen.getByText('What this site is for.')).toBeInTheDocument(),
+    )
+    expect(screen.queryByText('The registry blurb.')).toBeNull()
+  })
+
+  // NOTE: every unknown id in this file must be unique. The throttle is a
+  // module-scope Set that no `afterEach` can reach — reusing an id across tests
+  // would make this assertion depend on test order.
+  it('warns once per unknown id, not once per render', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     render(
       <HelpContentProvider help={help}>

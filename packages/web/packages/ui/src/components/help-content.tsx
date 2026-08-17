@@ -11,14 +11,23 @@ export interface HelpEntry {
   /** Optional heading above the body. Omitted for the header's site-name entry,
    *  which is derived from SEO copy and has no title to invent. */
   title?: string
-  /** A string, not a ReactNode: 36 of the 40 site configs are `.ts` and cannot
+  /** A string, not a ReactNode: 37 of adh's 41 site configs are `.ts` and cannot
    *  hold JSX, and this value is declared in those files. */
   body: string
   /** Default `info`. */
   flavor?: HelpFlavor
 }
 
-/** A site's help copy, keyed by the id a <HelpEnabled> names. */
+/** A site's help copy, keyed by the id a <HelpEnabled> names.
+ *
+ *  NOT adh's other help store, which is easy to mistake this for. That one
+ *  (`adh/src/help/store.ts` over `adh-site-config/content/help.en.json`) is
+ *  ROUTE-keyed — `<feature>` / `<feature>/<topic>` — and serves the hierarchical
+ *  topic/detail views under the `must-source-help-from-config` rule, returning a
+ *  bare string for a pane to show in place. This one is keyed by a UI element's
+ *  id, spans a whole site rather than one feature's routes, and carries a flavor.
+ *  Different key space, different surface; neither is a migration target for the
+ *  other. */
 export type SiteHelp = Record<string, HelpEntry>
 
 // The well-known ids live in `../lib/help-ids`, NOT here — this module is
@@ -51,5 +60,11 @@ export function HelpContentProvider({
  *  here turns a typo into a white screen. <HelpEnabled> warns to the console
  *  instead, once per unknown id. */
 export function useHelpEntry(id: string): HelpEntry | undefined {
-  return useContext(HelpContentContext)[id]
+  const help = useContext(HelpContentContext)
+  // `hasOwn`, not a bare index: `SiteHelp` is a plain object literal written by
+  // hand in a site config, so it inherits Object.prototype. A bare `help[id]`
+  // answers ids like `constructor` or `toString` with a function, and
+  // <HelpEnabled> would take that truthy value for an entry and render a popover
+  // out of `undefined` copy rather than warning that the id is unknown.
+  return Object.hasOwn(help, id) ? help[id] : undefined
 }

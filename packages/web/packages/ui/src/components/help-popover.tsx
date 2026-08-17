@@ -31,12 +31,25 @@ export function HelpPopoverContent({
   const flavor = entry.flavor ?? "info"
   const { icon: Icon, label } = FLAVORS[flavor]
   return (
-    <PopoverContent arrow side={side} align={align} className="w-80">
+    // `aria-label` on the panel, not just on the icon: PopoverContent's Popup
+    // hard-wires `role="dialog"`, and Base UI derives a dialog's accessible name
+    // only from a `Popover.Title`/`Popover.Description` descendant — neither of
+    // which this renders. Without it the panel announces as an unnamed dialog,
+    // and the title (when there is one) is the flavor's job to qualify anyway.
+    <PopoverContent
+      arrow
+      side={side}
+      align={align}
+      className="w-80"
+      aria-label={entry.title ? `${label}: ${entry.title}` : label}
+    >
       <div className="flex gap-2.5">
+        {/* Decorative HERE, though the flavor is not decorative information: the
+            same `label` is the dialog's accessible name above, so labelling the
+            icon too would announce the flavor twice on open. */}
         <Icon
           data-help-flavor={flavor}
-          aria-label={label}
-          role="img"
+          aria-hidden="true"
           className="mt-0.5 size-4 shrink-0 text-apt-text-muted"
         />
         <div className="min-w-0">

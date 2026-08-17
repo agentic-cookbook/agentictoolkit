@@ -49,7 +49,21 @@ function PopoverContent({
           {arrow && (
             <PopoverPrimitive.Arrow
               data-slot="popover-arrow"
-              className="size-2 rotate-45 rounded-[2px] border-r border-b border-apt-border bg-apt-surface data-[side=bottom]:-top-1 data-[side=bottom]:rotate-[225deg] data-[side=top]:-bottom-1"
+              className={cn(
+                // A square with only its right and bottom borders drawn, rotated so
+                // those two form the tip. `bg-apt-surface` matches the popup exactly,
+                // so the undrawn half of the square disappears into it.
+                "size-2 rounded-[2px] border-r border-b border-apt-border bg-apt-surface",
+                // One rule per side, because the arrow sits on the edge FACING the
+                // trigger and points at it — a side with no rule leaves the diamond
+                // unrotated and un-nudged, i.e. centred inside the popup pointing the
+                // wrong way. All four `side` values are reachable: `side` is a public
+                // prop of both PopoverContent and HelpPopoverContent.
+                "data-[side=top]:-bottom-1 data-[side=top]:rotate-45",
+                "data-[side=bottom]:-top-1 data-[side=bottom]:rotate-[225deg]",
+                "data-[side=left]:-right-1 data-[side=left]:rotate-[315deg]",
+                "data-[side=right]:-left-1 data-[side=right]:rotate-[135deg]",
+              )}
             />
           )}
         </PopoverPrimitive.Popup>

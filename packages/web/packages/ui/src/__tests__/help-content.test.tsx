@@ -38,4 +38,20 @@ describe('help content', () => {
     render(<Probe id="site-title" />)
     expect(screen.getByTestId('probe')).toHaveTextContent('none')
   })
+
+  // `SiteHelp` is a hand-written object literal in a site config, so it inherits
+  // Object.prototype. A bare `help[id]` answers these ids with a function, which
+  // <HelpEnabled> would take for an entry and render a popover out of undefined
+  // copy instead of reporting the id as unknown.
+  it.each(['constructor', 'toString', 'hasOwnProperty', '__proto__'])(
+    'treats the inherited %s as an unknown id',
+    (id) => {
+      render(
+        <HelpContentProvider help={help}>
+          <Probe id={id} />
+        </HelpContentProvider>,
+      )
+      expect(screen.getByTestId('probe')).toHaveTextContent('none')
+    },
+  )
 })

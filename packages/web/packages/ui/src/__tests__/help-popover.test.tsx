@@ -36,4 +36,28 @@ describe('HelpPopoverContent', () => {
     expect(document.querySelector('[data-help-flavor="new"]')).not.toBeNull()
     expect(document.querySelector('[data-help-flavor="info"]')).toBeNull()
   })
+
+  // The panel is a `role="dialog"` (Base UI hard-wires it on Popup) and derives a
+  // name only from a Popover.Title/Description descendant, which this renders
+  // neither of. Assert the name on the DIALOG, not on the icon: the flavor is the
+  // only thing saying what the popover is for, so an unnamed dialog loses it.
+  it('names the dialog after the flavor', async () => {
+    await open({ body: 'Brand new.', flavor: 'new' })
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', "What's new")
+  })
+
+  it('qualifies the dialog name with the title when there is one', async () => {
+    await open({ title: 'Cookbook', body: 'Recipes.', flavor: 'help' })
+    expect(screen.getByRole('dialog')).toHaveAttribute('aria-label', 'Help: Cookbook')
+  })
+
+  // The same words are already the dialog's name, so labelling the icon too would
+  // announce the flavor twice on open.
+  it('leaves the icon out of the accessibility tree', async () => {
+    await open({ body: 'Recipes.' })
+    expect(document.querySelector('[data-help-flavor="info"]')).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    )
+  })
 })
