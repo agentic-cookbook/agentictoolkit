@@ -235,6 +235,9 @@ function reservedWorkspaceSlugs() {
 // src/site/index.ts
 import { isHubWorkspacePath, hubWorkspaceSlug } from "@agentic-toolkit/adh/site/hubWorkspacePath";
 
+// src/settings/registry.tsx
+import { siteUrl } from "@agentic-toolkit/adh-registry";
+
 // src/settings/AppearancePanel.tsx
 import dynamic from "next/dynamic";
 import "react";
@@ -425,7 +428,13 @@ var PANELS = {
   security: /* @__PURE__ */ jsx2(SecurityWorkspace, {}),
   subscription: /* @__PURE__ */ jsx2(SubscriptionPanel, {}),
   usage: /* @__PURE__ */ jsx2(UsagePanel, {}),
-  profile: /* @__PURE__ */ jsx2(ProfilePanel, { reservedSlugs: reservedWorkspaceSlugs() }),
+  profile: /* @__PURE__ */ jsx2(
+    ProfilePanel,
+    {
+      reservedSlugs: reservedWorkspaceSlugs(),
+      profileUrlFor: (slug) => siteUrl("hub", `/${encodeURIComponent(slug)}`, window.location.hostname)
+    }
+  ),
   appearance: /* @__PURE__ */ jsx2(AppearancePanel, {}),
   social: /* @__PURE__ */ jsx2(SocialLinksPanel, {}),
   addresses: /* @__PURE__ */ jsx2(AddressesPanel, {}),

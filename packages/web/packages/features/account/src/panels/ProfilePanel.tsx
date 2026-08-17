@@ -21,11 +21,16 @@ import {
   type PrivacyGrant,
 } from "@agentic-toolkit/data/profile";
 import { slugify, validateSlug } from "@agentic-toolkit/ui/lib/slug";
+import {
+  PrivacyLevelSelect,
+  PRIVACY_WIRE_VALUE,
+  PRIVACY_LEVEL_FROM_WIRE,
+  type PrivacyLevel,
+} from "@agentic-toolkit/ui/components/privacy-level-select";
 import { useSettingsDirty } from "@agentic-toolkit/resource";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { UserCard, UserCardSkeleton, type UserCardDto } from "@agentic-toolkit/ui/blocks";
 import { EditActionBar } from "@agentic-toolkit/resource";
@@ -38,7 +43,7 @@ import { AvatarSection } from "./profile/AvatarSection";
 type Edits = {
   name?: string;
   slug?: string;
-  publicProfileEnabled?: boolean;
+  profileVisibility?: PrivacyLevel;
 };
 
 // ── Component ──────────────────────────────────────────────────────────────────
@@ -58,9 +63,22 @@ export interface ProfilePanelProps {
    *  error on Save. A host that genuinely wants generic-only validation says so out loud
    *  by passing an empty set. */
   reservedSlugs: ReadonlySet<string>;
+
+  /** The host's public profile URL for a slug — e.g. `https://agenticdeveloperhub.com/mike`.
+   *  Injected for the same reason `reservedSlugs` is: this package is MECHANISM tier and must
+   *  not import an `adh*`-scoped VOCABULARY package, and the hub's origin is vocabulary. The
+   *  host mints it from the registry (`siteUrl('hub', `/${slug}`, location.hostname)`); a
+   *  component that writes `agenticdeveloperhub.com` into a string is the defect this replaces,
+   *  and it was there twice.
+   *
+   *  REQUIRED, and deliberately not optional, on the same argument the prop above makes: every
+   *  host has an origin, so there is no host for which "no URL" is right — only hosts that
+   *  forgot, and the omission would degrade silently into a panel that shows the user no
+   *  address at all. */
+  profileUrlFor: (slug: string) => string;
 }
 
-export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
+export function ProfilePanel({ reservedSlugs, profileUrlFor }: ProfilePanelProps) {
   const meQuery = useCurrentUser();
   const me = meQuery.data;
   const qc = useQueryClient();
@@ -76,11 +94,12 @@ export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
   // Derived current form values
   const serverName = me?.name ?? "";
   const serverSlug = me?.slug ?? "";
-  const serverPublicProfileEnabled = me?.publicProfileEnabled ?? true;
+  const serverProfileVisibility = PRIVACY_LEVEL_FROM_WIRE(
+    me?.profileVisibility ?? "public",
+  );
   const name = edits.name ?? serverName;
   const slug = edits.slug ?? serverSlug;
-  const publicProfileEnabled =
-    edits.publicProfileEnabled ?? serverPublicProfileEnabled;
+  const profileVisibility = edits.profileVisibility ?? serverProfileVisibility;
 
   // ── Slug availability (debounced) ─────────────────────────────────────────
   const [debouncedSlug, setDebouncedSlug] = useState(slug);
@@ -143,8 +162,8 @@ export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
   const dirty =
     (edits.name !== undefined && edits.name.trim() !== serverName) ||
     (edits.slug !== undefined && edits.slug !== serverSlug) ||
-    (edits.publicProfileEnabled !== undefined &&
-      edits.publicProfileEnabled !== serverPublicProfileEnabled);
+    (edits.profileVisibility !== undefined &&
+      edits.profileVisibility !== serverProfileVisibility);
   useEffect(() => {
     reportDirty("profile", dirty);
     return () => reportDirty("profile", false);
@@ -216,10 +235,11 @@ export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
       body.slug = edits.slug;
     }
     if (
-      edits.publicProfileEnabled !== undefined &&
-      edits.publicProfileEnabled !== serverPublicProfileEnabled
+      edits.profileVisibility !== undefined &&
+      edits.profileVisibility !== serverProfileVisibility
     ) {
-      body.publicProfileEnabled = edits.publicProfileEnabled;
+      // The STORED word, not the UI literal — 'only-me' is spelled 'private' on the wire.
+      body.profileVisibility = PRIVACY_WIRE_VALUE[edits.profileVisibility];
     }
     if (Object.keys(body).length === 0) {
       setEdits({});
@@ -411,42 +431,38 @@ export function ProfilePanel({ reservedSlugs }: ProfilePanelProps) {
                       </span>
                     ) : (
                       <span className="text-apt-text-muted">
-                        Your public URL: agenticdeveloperhub.com/user/
+                        Your public URL:{" "}
                         <span className="text-apt-text">
-                          {displaySlug || "…"}
+                          {profileUrlFor(displaySlug || "…")}
                         </span>
                       </span>
                     )}
                   </p>
                 </div>
 
-                {/* Public-profile toggle */}
+                {/* Profile visibility */}
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex flex-col gap-1">
-                    <Label
-                      htmlFor="profile-public-toggle"
-                      className="leading-snug"
-                    >
-                      Public profile page
+                    <Label className="leading-snug">
+                      Profile visibility
                     </Label>
                     <p className="text-xs text-apt-text-muted">
-                      Your profile is visible at agenticdeveloperhub.com/user/
+                      Your profile is at{" "}
                       <span className="text-apt-text">
-                        {displaySlug || "…"}
+                        {profileUrlFor(displaySlug || "…")}
                       </span>
                     </p>
                   </div>
-                  <Switch
-                    id="profile-public-toggle"
-                    checked={publicProfileEnabled}
-                    onCheckedChange={(checked) => {
-                      setEdits((prev) => ({
-                        ...prev,
-                        publicProfileEnabled: checked,
-                      }));
-                      setSaveError(null);
-                    }}
-                  />
+                  <div className="w-44">
+                    <PrivacyLevelSelect
+                      value={profileVisibility}
+                      ariaLabel="Profile visibility"
+                      onChange={(next) => {
+                        setEdits((prev) => ({ ...prev, profileVisibility: next }));
+                        setSaveError(null);
+                      }}
+                    />
+                  </div>
                 </div>
               </CardContent>
             </Card>

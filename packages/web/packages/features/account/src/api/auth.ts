@@ -35,6 +35,9 @@ export interface Me {
   slug: string | null;
   /** Whether the public profile card is visible at /public/users/:slug */
   publicProfileEnabled: boolean;
+  /** The page-level profile visibility. Supersedes `publicProfileEnabled` above, which the
+   *  backend still writes in parallel until a contract migration drops it. */
+  profileVisibility: "public" | "hub" | "private";
   capabilities: string[];
 }
 
@@ -59,6 +62,7 @@ export function updateMe(body: {
   /** Format: uri */
   avatarUrl?: string;
   publicProfileEnabled?: boolean;
+  profileVisibility?: "public" | "hub" | "private";
 }): Promise<Me> {
   return authedJson<Me>("/api/auth/me", {
     method: "PATCH",

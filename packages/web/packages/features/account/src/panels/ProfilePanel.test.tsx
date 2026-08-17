@@ -15,15 +15,29 @@ import type { Me } from "../api/auth";
 // is synchronous and deterministic; the four card-preview list queries (social
 // links / addresses / contacts / privacy grants) run through the REAL useQuery,
 // which is why a QueryClientProvider wrapper is required at all.
+// G18: `publicProfileEnabled` and `profileVisibility` deliberately DISAGREE here —
+// false vs. "hub" — the row this fixture exists to make falsifiable. This is a
+// stronger disagreement than a true/false-shaped mismatch would be: `hub` is a
+// THIRD state a boolean cannot express at all, so any code path still deriving the
+// visibility select's value from `publicProfileEnabled` cannot produce "Hub
+// members" no matter how it maps true/false — it would have to render "Only me" or
+// "Public". The assertion below that the select loads as "Hub members" is proof
+// the panel reads `profileVisibility`, not `publicProfileEnabled`.
 const ME: Me = {
   id: "user_1",
   email: "mike@example.com",
   name: "Mike Fullerton",
   avatarUrl: "",
   slug: "mike",
-  publicProfileEnabled: true,
+  publicProfileEnabled: false,
+  profileVisibility: "hub",
   capabilities: [],
 };
+
+// `profileUrlFor` is a REQUIRED prop (see its doc comment on ProfilePanelProps) — no
+// host is exempt from minting a URL — so the default here stands in for a host's
+// injection the same way `reservedSlugs: new Set()` stands in for its own.
+const PROFILE_URL_FOR = (slug: string) => `https://example.test/${slug}`;
 
 // vi.mock factories are hoisted above ALL other top-level code, including plain
 // `const` declarations — vi.hoisted() is the escape hatch for a factory-referenced
@@ -75,7 +89,11 @@ function saveButton() {
  *  exist), so the helper defaults it to the empty set — the explicit "generic validation
  *  only" answer — and each test overrides it when the reserved list is the subject. */
 async function renderPanel(props: Partial<ProfilePanelProps> = {}) {
-  const resolved: ProfilePanelProps = { reservedSlugs: new Set(), ...props };
+  const resolved: ProfilePanelProps = {
+    reservedSlugs: new Set(),
+    profileUrlFor: PROFILE_URL_FOR,
+    ...props,
+  };
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const result = render(
     <QueryClientProvider client={qc}>
@@ -215,5 +233,36 @@ describe("ProfilePanel — reserved-slug rejection is host-injected, not built i
       target: { value: "admin" },
     });
     expect(screen.queryByText("That slug is reserved.")).not.toBeInTheDocument();
+  });
+});
+
+describe("ProfilePanel — profile visibility select replaces the public-profile switch", () => {
+  it('loads the select as "Hub members" from `profileVisibility`, which `publicProfileEnabled: false` alone could never produce (see the ME fixture comment)', async () => {
+    await renderPanel();
+    expect(
+      screen.getByRole("button", { name: "Profile visibility" }),
+    ).toHaveTextContent("Hub members");
+  });
+
+  it("renders the host-injected profileUrlFor(slug) — in both the slug hint and the visibility subtitle — never a hardcoded host", async () => {
+    await renderPanel();
+    expect(screen.getAllByText("https://example.test/mike")).toHaveLength(2);
+    expect(
+      screen.queryByText(/agenticdeveloperhub\.com/),
+    ).not.toBeInTheDocument();
+  });
+
+  it('choosing "Only me" sends profileVisibility: "private" — the STORED word, not the UI literal "only-me"', async () => {
+    updateMe.mockResolvedValue(ME);
+    await renderPanel();
+    fireEvent.click(screen.getByRole("button", { name: "Profile visibility" }));
+    fireEvent.click(screen.getByRole("option", { name: /Only me/ }));
+    fireEvent.click(saveButton());
+    await waitFor(() => {
+      expect(updateMe).toHaveBeenCalled();
+      expect(updateMe.mock.calls[0]![0]).toEqual({
+        profileVisibility: "private",
+      });
+    });
   });
 });

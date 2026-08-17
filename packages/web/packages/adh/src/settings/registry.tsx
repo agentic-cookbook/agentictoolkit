@@ -45,6 +45,7 @@ import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 // settings. Making it external would cost more, not less. The rule that bans a relative
 // import is about client-directive taint and module identity; neither is in play here.
 import { reservedWorkspaceSlugs } from "../site";
+import { siteUrl } from "@agentic-toolkit/adh-registry";
 import { AppearancePanel } from "./AppearancePanel";
 // Package path, not "./topics": this is the same specifier a Server Component outside this
 // package must use to reach these exports without going through the "use client"-tainted
@@ -104,7 +105,14 @@ const PANELS: Record<SettingsTopicId, ReactNode> = {
   security: <SecurityWorkspace />,
   subscription: <SubscriptionPanel />,
   usage: <UsagePanel />,
-  profile: <ProfilePanel reservedSlugs={reservedWorkspaceSlugs()} />,
+  profile: (
+    <ProfilePanel
+      reservedSlugs={reservedWorkspaceSlugs()}
+      profileUrlFor={(slug) =>
+        siteUrl("hub", `/${encodeURIComponent(slug)}`, window.location.hostname)
+      }
+    />
+  ),
   appearance: <AppearancePanel />,
   social: <SocialLinksPanel />,
   addresses: <AddressesPanel />,
