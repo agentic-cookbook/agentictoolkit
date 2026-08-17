@@ -15,6 +15,9 @@ public enum Permission: Sendable, Hashable {
     /// bundle identifier (e.g. `"com.googlecode.iterm2"`). Each target app is a
     /// distinct grant in System Settings → Privacy & Security → Automation.
     case automation(targetBundleID: String)
+    /// Core Location — needed both for physical location itself and for the
+    /// Wi-Fi SSID, which macOS gates behind location authorization.
+    case location
 }
 
 extension Permission {
@@ -24,6 +27,7 @@ extension Permission {
         case .accessibility: "Accessibility"
         case .notifications: "Notifications"
         case .automation: "Automation"
+        case .location: "Location"
         }
     }
 
@@ -33,6 +37,7 @@ extension Permission {
         case .accessibility: "hand.raised"
         case .notifications: "bell.badge"
         case .automation: "gearshape.2"
+        case .location: "location"
         }
     }
 
@@ -45,6 +50,8 @@ extension Permission {
             "Allows notifications when sessions start, end, or become stale."
         case .automation:
             "Needed to control terminal apps like iTerm2, Terminal, and Warp."
+        case .location:
+            "Records where you are and which Wi-Fi network you're on, so activity can be grouped by place."
         }
     }
 
@@ -67,6 +74,8 @@ extension Permission {
             }
         case .automation:
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Automation"
+        case .location:
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_LocationServices"
         }
     }
 

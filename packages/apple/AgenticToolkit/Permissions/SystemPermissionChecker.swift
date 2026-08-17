@@ -1,4 +1,5 @@
 import ApplicationServices
+import CoreLocation
 import CoreServices
 import Foundation
 import UserNotifications
@@ -10,6 +11,15 @@ import UserNotifications
 /// and are exercised only at runtime.
 public struct SystemPermissionChecker: PermissionChecking {
     private let automationProbe: any AutomationProbing
+
+    // A single long-lived manager: CLLocationManager reports authorization on
+    // the instance, and a freshly allocated one can answer `.notDetermined`
+    // before it has talked to the daemon. `CLLocationManager` is not `Sendable`,
+    // but its `authorizationStatus` reads and authorization-request calls are
+    // documented as safe from any thread, so `nonisolated(unsafe)` here — rather
+    // than isolating this `Sendable` checker to `@MainActor` — is a targeted,
+    // justified opt-out, not a blanket `@preconcurrency`/`@unchecked Sendable`.
+    private nonisolated(unsafe) static let locationManager = CLLocationManager()
 
     public init(automationProbe: any AutomationProbing = SystemAutomationProbe()) {
         self.automationProbe = automationProbe
@@ -30,6 +40,8 @@ public struct SystemPermissionChecker: PermissionChecking {
         case .automation(let bundleID):
             let status = await automationStatus(forBundleID: bundleID, promptIfNeeded: false)
             return Self.automationStatus(status)
+        case .location:
+            return Self.locationStatus(Self.locationManager.authorizationStatus)
         }
     }
 
@@ -48,6 +60,11 @@ public struct SystemPermissionChecker: PermissionChecking {
         case .automation(let bundleID):
             let status = await automationStatus(forBundleID: bundleID, promptIfNeeded: true)
             return Self.automationStatus(status)
+        case .location:
+            // `requestAlwaysAuthorization` is the background-capable grant —
+            // olylod observes location while the user is not in the app.
+            Self.locationManager.requestAlwaysAuthorization()
+            return await status(permission)
         }
     }
 
@@ -97,6 +114,19 @@ public struct SystemPermissionChecker: PermissionChecking {
             return .undetermined
         @unknown default:
             return .undetermined
+        }
+    }
+
+    /// Maps a `CLAuthorizationStatus` to a tri-state. Only `.authorizedAlways`
+    /// counts as granted — a when-in-use grant is not enough for a daemon that
+    /// observes location while the app is not running, so it must read as
+    /// not-granted rather than as a lie.
+    static func locationStatus(_ status: CLAuthorizationStatus) -> PermissionStatus {
+        switch status {
+        case .authorizedAlways: return .granted
+        case .denied, .restricted: return .denied
+        case .notDetermined: return .undetermined
+        @unknown default: return .undetermined
         }
     }
 }
