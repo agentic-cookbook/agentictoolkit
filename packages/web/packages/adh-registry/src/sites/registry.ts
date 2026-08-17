@@ -924,8 +924,9 @@ export function registryOrgPath(slug: string): string {
 /**
  * A persona's public profile URL on the registry — absolute, for a host linking in from
  * somewhere else. `siteUrl` resolves the right host for the current environment (local suite
- * / testing / staging / prod). Only reachable once the persona is saved with public/unlisted
- * visibility.
+ * / testing / staging / prod). Only reachable once the persona is saved with `public` or `hub`
+ * visibility — a `hub` persona resolves for a signed-in viewer and 404s for an anonymous one, so
+ * a link built here is not a promise that the recipient can open it.
  */
 export function personaProfileUrl(slug: string): string {
   // globalThis, not `window`: this file is also typechecked by the backend (no dom lib),
