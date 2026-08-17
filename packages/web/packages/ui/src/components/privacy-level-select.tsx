@@ -22,6 +22,37 @@ export const PRIVACY_AUDIENCE_MASK = {
   'hub': 2,
 } as const satisfies Record<PrivacyLevel, number>
 
+/**
+ * The word each level is STORED as — `customer.customers.profile_visibility` and
+ * `organization.organizations.profile_visibility`, and `visibility` on personas, registries and
+ * registry entries.
+ *
+ * A second map rather than a rename, because the two conversions answer different questions.
+ * `PRIVACY_AUDIENCE_MASK` above converts a level to an integer for a PER-ROW privacy grant, which
+ * can plausibly hold several audiences at once. This converts a level to the single word a PAGE
+ * or object-level switch stores. Collapsing them would force one of the two shapes onto the other.
+ *
+ * `'only-me'` spells itself `'private'` on the wire, and that asymmetry is deliberate: every
+ * visibility column already in the schema says `private`, so matching the TS literal instead
+ * would make the new columns disagree with all of them over a spelling.
+ */
+export const PRIVACY_WIRE_VALUE = {
+  'only-me': 'private',
+  'hub': 'hub',
+  'public': 'public',
+} as const satisfies Record<PrivacyLevel, 'public' | 'hub' | 'private'>
+
+/**
+ * The level a stored word selects. FAILS CLOSED — anything unrecognised reads as `'only-me'`, so
+ * a value this build does not know about (a row written before a migration, a replica mid-deploy)
+ * renders as the most private option rather than as "Public".
+ */
+export function PRIVACY_LEVEL_FROM_WIRE(v: string): PrivacyLevel {
+  if (v === 'public') return 'public'
+  if (v === 'hub') return 'hub'
+  return 'only-me'
+}
+
 type PrivacyOption = {
   value: PrivacyLevel
   label: string
