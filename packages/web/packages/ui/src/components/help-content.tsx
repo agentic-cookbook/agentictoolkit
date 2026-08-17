@@ -48,8 +48,8 @@ export function HelpContentProvider({
  *
  *  Undefined rather than a throw, including with no provider mounted at all:
  *  the first consumer is in the header on every page of every site, so a throw
- *  here turns a typo into a white screen. <HelpEnabled> warns in development
- *  instead. */
+ *  here turns a typo into a white screen. <HelpEnabled> warns to the console
+ *  instead, once per unknown id. */
 export function useHelpEntry(id: string): HelpEntry | undefined {
   return useContext(HelpContentContext)[id]
 }

@@ -9,7 +9,17 @@ import { HelpPopoverContent } from "./help-popover"
 import { useHelpEntry } from "./help-content"
 
 /** Ids already warned about, so a component rendered on every page warns once
- *  rather than once per render. */
+ *  rather than once per render.
+ *
+ *  Once per id is the whole of the throttling — there is deliberately no
+ *  `NODE_ENV !== 'production'` guard around the warning. A guard like that cannot
+ *  work in a package that ships a prebuilt `dist`: esbuild substitutes
+ *  `process.env.NODE_ENV` at THIS package's build time, not the consumer's, so the
+ *  emitted `dist/components/help-enabled.js` had the condition folded away to
+ *  always-true — a check that reads as conditional and is not. (`ui` also carries no
+ *  `@types/node`, so the expression does not even typecheck here.) A missing help
+ *  entry is a real misconfiguration, and one console line per bad id is the right
+ *  size of complaint in any environment. */
 const warned = new Set<string>()
 
 export interface HelpEnabledProps {
@@ -36,7 +46,7 @@ export function HelpEnabled({ id, children, className }: HelpEnabledProps): Reac
   if (!entry) {
     // Not a throw: this sits in the header on every page of every site, so a
     // typo must not be reported by white-screening the fleet.
-    if (process.env.NODE_ENV !== "production" && !warned.has(id)) {
+    if (!warned.has(id)) {
       warned.add(id)
       console.warn(`[HelpEnabled] no help entry for id "${id}" — rendering plain text`)
     }
