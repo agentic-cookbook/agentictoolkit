@@ -1,3 +1,4 @@
+import CoreLocation
 import Foundation
 import Testing
 import UserNotifications
@@ -55,6 +56,27 @@ struct AutomationMappingTests {
         #expect(SystemPermissionChecker.notificationStatus(.authorized) == .granted)
         #expect(SystemPermissionChecker.notificationStatus(.denied) == .denied)
         #expect(SystemPermissionChecker.notificationStatus(.notDetermined) == .undetermined)
+    }
+
+    @Test("locationStatus: only authorizedAlways is granted, everything else is not")
+    func locationMapping() {
+        #expect(SystemPermissionChecker.locationStatus(.authorizedAlways) == .granted)
+        // `CLAuthorizationStatus.authorizedWhenInUse` is declared
+        // `API_UNAVAILABLE(macos)` — it cannot be written by name in code that
+        // targets macOS, even inside a switch pattern's sibling expression
+        // context, so it cannot appear here as `.authorizedWhenInUse`. It is
+        // still a real wire value CoreLocation can hand back (macOS just never
+        // originates it itself), and `locationStatus`'s own switch matches it
+        // by raw value, so rawValue 4 — its documented raw value — exercises
+        // the identical arm. "While Using the App" reading as granted would let
+        // a location trigger start even though the OS will not serve it once
+        // olylod's daemon is running with no app in the foreground — this is
+        // the arm most worth pinning.
+        let authorizedWhenInUse = CLAuthorizationStatus(rawValue: 4)!
+        #expect(SystemPermissionChecker.locationStatus(authorizedWhenInUse) == .denied)
+        #expect(SystemPermissionChecker.locationStatus(.denied) == .denied)
+        #expect(SystemPermissionChecker.locationStatus(.restricted) == .denied)
+        #expect(SystemPermissionChecker.locationStatus(.notDetermined) == .undetermined)
     }
 
     @Test("isGranted convenience is true only for .granted")
