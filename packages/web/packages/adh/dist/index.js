@@ -849,6 +849,7 @@ function AdhHeader({
   debugMenu,
   pageTitle,
   pageTitleHelp,
+  pageTitleHelpFallback,
   center,
   badges = [],
   leadingActions,
@@ -910,6 +911,7 @@ function AdhHeader({
           HelpEnabled,
           {
             id: pageTitleHelp,
+            fallback: pageTitleHelpFallback,
             className: "adh-header__page-title adh-header__page-title--help",
             children: /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title-text", children: pageTitle })
           }

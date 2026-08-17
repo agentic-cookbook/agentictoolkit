@@ -849,6 +849,7 @@ function AdhHeader({
   debugMenu,
   pageTitle,
   pageTitleHelp,
+  pageTitleHelpFallback,
   center,
   badges = [],
   leadingActions,
@@ -910,6 +911,7 @@ function AdhHeader({
           HelpEnabled,
           {
             id: pageTitleHelp,
+            fallback: pageTitleHelpFallback,
             className: "adh-header__page-title adh-header__page-title--help",
             children: /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title-text", children: pageTitle })
           }
@@ -2147,7 +2149,8 @@ function SiteHeader({
         }
       ),
       pageTitle: pageTitle ?? siteShortName,
-      pageTitleHelp: pageTitle ? void 0 : SITE_TITLE_HELP_ID,
+      pageTitleHelp: pageTitle == null ? SITE_TITLE_HELP_ID : void 0,
+      pageTitleHelpFallback: site?.description,
       center,
       badges,
       leadingActions,
