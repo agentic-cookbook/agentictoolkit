@@ -48,4 +48,17 @@ describe("AvatarMenu", () => {
     const link = await screen.findByRole("link", { name: "Profile" });
     expect(link.getAttribute("href")).toBe("/mikefullerton/profile");
   });
+
+  it("places Profile between Home and Settings", async () => {
+    render(<AvatarMenu user={userWithSlug} onSettings={vi.fn()} onLogout={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open Mike Fullerton menu" }));
+    await screen.findByText("Profile");
+    // Position is the requirement, not merely presence: every other case here queries by text or
+    // role and would pass just as happily with Profile moved below Log out. Reading indices out of
+    // the rendered text is what makes a reordering fail — the rows are siblings in DOM order, so
+    // document order IS visual order.
+    const text = document.body.textContent ?? "";
+    expect(text.indexOf("Profile")).toBeGreaterThan(text.indexOf("Home"));
+    expect(text.indexOf("Profile")).toBeLessThan(text.indexOf("User Settings"));
+  });
 });
