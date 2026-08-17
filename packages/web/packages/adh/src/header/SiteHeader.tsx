@@ -2,6 +2,7 @@
 
 import { type ReactElement } from 'react'
 import dynamic from 'next/dynamic'
+import { usePathname } from 'next/navigation'
 import {
   AdhHeader,
   useClientHost,
@@ -209,6 +210,11 @@ export function SiteHeader({
   // appear after hydration), mirroring how the auth hrefs upgrade — deterministic,
   // no hydration mismatch.
   const conceptSite = isConceptSite(siteId)
+  // ...and only on the site's landing page. The link is a front-door affordance;
+  // on an inner page it points back at something the reader has already passed.
+  // `usePathname() === '/'` is how this codebase asks the question already — see
+  // `defaultReturnTo` in header-auth.ts.
+  const onLandingPage = usePathname() === '/'
   // The registry-derived brand name. `siteHeaderTitle` takes the SiteDef, not the id;
   // an unknown id can't happen through the typed `SiteId`, but `getSite` is
   // nominally partial, so fall back to the id rather than widening its return.
@@ -329,7 +335,7 @@ export function SiteHeader({
       // works pre-hydration and resolves the real route. The `/details` path and the
       // "Details" copy are adh vocabulary and stay on this side of the boundary.
       preAuthLinks={
-        conceptSite ? (
+        conceptSite && onLandingPage ? (
           <a href="/details" className="adh-header__nav-link adh-header__nav-link--details">
             Details
           </a>

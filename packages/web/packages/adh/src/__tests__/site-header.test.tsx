@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 
 // The equivalence test for Task 5.6's split. `AdhHeader` (now
@@ -8,8 +8,9 @@ import { render, screen } from '@testing-library/react'
 // bar's markup (the toolkit's own header-contract.test.tsx covers that) but that the
 // registry half still does its jobs and hands the generic half the right values.
 
+const pathname = vi.hoisted(() => ({ current: '/' }))
 vi.mock('next/navigation', () => ({
-  usePathname: () => '/',
+  usePathname: () => pathname.current,
   useRouter: () => ({ push: vi.fn() }),
 }))
 
@@ -393,5 +394,29 @@ describe('site name help', () => {
   it('asks for no help when the page named itself', () => {
     render(<SiteHeader siteId="cookbook" pageTitle="Billing settings" />)
     expect(headerProps.current?.pageTitleHelp).toBeUndefined()
+  })
+})
+
+describe('the Details link', () => {
+  afterEach(() => {
+    pathname.current = '/'
+  })
+
+  it('shows on the landing page of a concept site', () => {
+    pathname.current = '/'
+    render(<SiteHeader siteId="projects" />)
+    expect(screen.getByRole('link', { name: 'Details' })).toBeInTheDocument()
+  })
+
+  it('is absent on an inner page of the same site', () => {
+    pathname.current = '/recipes'
+    render(<SiteHeader siteId="projects" />)
+    expect(screen.queryByRole('link', { name: 'Details' })).toBeNull()
+  })
+
+  it('is absent on the details page itself', () => {
+    pathname.current = '/details'
+    render(<SiteHeader siteId="projects" />)
+    expect(screen.queryByRole('link', { name: 'Details' })).toBeNull()
   })
 })
