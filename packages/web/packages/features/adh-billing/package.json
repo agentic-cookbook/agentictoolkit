@@ -1,0 +1,51 @@
+{
+  "name": "@agentic-toolkit/adh-billing",
+  "version": "0.1.0",
+  "description": "The Billing feature: connect Stripe, declare what is for sale, and see who is paying.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist", "sources.css"],
+  "sideEffects": ["**/*.css"],
+  "comment:tier": "VOCABULARY, not mechanism — see scripts/check_boundaries.py, which classifies on the `@agentic-toolkit/adh` name boundary alone. Note what this package does NOT do: it imports no vocabulary package, only mechanism ones (auth, data), so the guard would equally permit the mechanism name `@agentic-toolkit/billing`. The `adh-` prefix is a deliberate claim about the CONTENT — every shape in src/api/billing.ts is a column of adh's billing schema, and the panel's copy names adh's own setup steps — so a non-adh host mounting this would be mounting adh's model of selling, not a general one. Naming it vocabulary now also keeps the door open: the day this panel wants @agentic-toolkit/adh's help store, a mechanism-tier name would have to be renamed across every host, and a vocabulary one just adds the import.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./sources.css": "./sources.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}
