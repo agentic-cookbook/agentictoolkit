@@ -13041,6 +13041,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/game/artifacts/{id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish the caller’s own artifact to the public feed (screened)
+         * @description The write side §6.6 named and §6.3 owed: `visibility` and `published_at` are server-managed on `game.artifacts`, so this is the only way an artifact reaches `GET /game/feed`. Screening (§6.5) runs BEFORE the row flips, on every string the artifact carries — `text` plus every string leaf of `summary` and `data` — because adh cannot tell which jsonb slots hold player prose without doing the engine’s job. Long artifacts are screened in CHUNKS rather than truncated to the classifier’s character budget, which would publish the tail unjudged; past eight chunks the request is 422 rather than silently partly-screened. Idempotent: an already-published artifact returns 200 with the current row and calls no classifier, so a retry is free. 404 covers both "no such artifact" and "not yours" — the ownership term is in the UPDATE itself, so there is no check-then-write window. Publishing is one-way; withdrawing is `DELETE /game/artifacts/{id}`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The published artifact */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["GameArtifact"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/game/feed": {
         parameters: {
             query?: never;
@@ -13543,7 +13631,7 @@ export interface paths {
         };
         /**
          * The caller’s own instances, including what is inside what they hold
-         * @description A recursive containment walk: everything located on the player, plus everything located inside those, and so on — the chest in the inventory and the key in the chest. Two INDEPENDENT bounds, and neither substitutes for the other: a depth cap (default and maximum 32) cuts a containment cycle, and a hard row limit (2000) cuts breadth, because a cycle at depth 2 fanning out ten ways per level is still 10^32 rows inside the depth cap. `location_id` carries no FK, so nothing is read from the request: the player id comes from the caller’s own resolved profile. A caller who has never played gets an empty list, not a 404.
+         * @description A recursive containment walk: everything located on the player, plus everything located inside those, and so on — the chest in the inventory and the key in the chest. Two INDEPENDENT bounds, and neither substitutes for the other: a depth cap (default and maximum 32) cuts a containment cycle, and a hard row limit (2000) cuts breadth, because a cycle at depth 2 fanning out ten ways per level is still 10^32 rows inside the depth cap. The row limit is applied BEFORE the sort, so a truncated walk returns the rows the walk reached first (shallowest first) rather than the smallest 2000 by sort key; on a well-formed world nothing is truncated and the two are the same. `location_id` carries no FK, so nothing is read from the request: the player id comes from the caller’s own resolved profile. A caller who has never played gets an empty list, not a 404.
          */
         get: {
             parameters: {
@@ -49884,7 +49972,6 @@ export interface paths {
                 content: {
                     "application/json": {
                         ecosystemId?: string;
-                        authorCustomerId?: string;
                         gameId: string;
                         kind: string;
                         key: string;
@@ -50039,7 +50126,6 @@ export interface paths {
                 content: {
                     "application/json": {
                         ecosystemId?: string;
-                        authorCustomerId?: string;
                         gameId?: string;
                         kind?: string;
                         key?: string;
@@ -51216,7 +51302,6 @@ export interface paths {
                     "application/json": {
                         ecosystemId?: string;
                         gameId: string;
-                        characterName?: string | null;
                         characterAvatarUrl?: string | null;
                         visibility?: string;
                         firstPlayedAt: string;
@@ -51358,7 +51443,6 @@ export interface paths {
                     "application/json": {
                         ecosystemId?: string;
                         gameId?: string;
-                        characterName?: string | null;
                         characterAvatarUrl?: string | null;
                         visibility?: string;
                         firstPlayedAt?: string;
@@ -63575,10 +63659,10 @@ export interface components {
         };
         GameInstance: {
             id: string;
-            definition_id: string;
+            definitionId: string;
             /** @enum {string} */
-            location_type: "player" | "session" | "instance" | "game";
-            location_id: string;
+            locationType: "player" | "session" | "instance" | "game";
+            locationId: string;
             slot?: string | null;
             quantity: number;
             data?: {
