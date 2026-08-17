@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
 import { ProfileFallback } from '../profile/ProfileFallback'
-import { useSiteId } from '../site/site-id'
+import { useSiteIdOrNull } from '@agentic-toolkit/adh/site/site-id'
 import { WorkspaceBar } from './WorkspaceBar'
 import { useWorkspaceRoute } from './useWorkspaceRoute'
 import { workspacePathTail } from './workspacePathTail'
@@ -42,7 +42,10 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  *     handed that answer.
  *   - Rendering the chooser ONCE, in a labelled bar directly under the header, at every width.
  *
- * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
+ * Signed-out visitors DO reach here: the workspace route's gate is `WorkspaceOrProfileGate`,
+ * which renders `children` (this shell) for a caller with a session and the principal's profile
+ * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
+ * this workspace — and lands in the same place.
  */
 export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement {
   // `error` is not optional to read here. A failed list leaves `items` at its previous value —
@@ -98,7 +101,7 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
   // slug into a wrong ROW: a miss holds `children` exactly as an unresolved slug does, which is a
   // state this shell already renders (the bar, and nothing under it).
   const workspace = workspaces?.find((w) => w.slug === resolved) ?? null
-  const siteId = useSiteId()
+  const siteId = useSiteIdOrNull()
 
   // The URL names a slug the caller is not a member of → their PROFILE, not a 404.
   //
@@ -125,6 +128,15 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
     !isFetching &&
     !workspaces.some((w) => w.slug === workspaceSlug)
   ) {
+    // Reaching here without a provider is a wiring bug in the route, not a state to render: this
+    // branch only fires when the URL named a workspace, which is the `[workspace]` layout's
+    // subtree, which is where SiteIdProvider is mounted. `/home` — the mount that has no provider
+    // — cannot get here at all, because `workspaceSlug` is undefined there.
+    if (siteId === null) {
+      throw new Error(
+        'SiteHomeShell reached the profile branch outside <SiteIdProvider> — the workspace layout must mount it',
+      )
+    }
     return <ProfileFallback slug={workspaceSlug} siteId={siteId} />
   }
 

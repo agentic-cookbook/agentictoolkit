@@ -231,6 +231,11 @@
       "development": "./src/site/hubWorkspacePath.ts",
       "import": "./dist/site/hubWorkspacePath.js"
     },
+    "./site/site-id": {
+      "types": "./dist/site/site-id.d.ts",
+      "development": "./src/site/site-id.tsx",
+      "import": "./dist/site/site-id.js"
+    },
     "./landing": {
       "types": "./dist/landing/index.d.ts",
       "development": "./src/landing/index.ts",

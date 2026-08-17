@@ -321,17 +321,8 @@ function ProfileFallback({ slug, siteId }) {
   return /* @__PURE__ */ jsx3("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: /* @__PURE__ */ jsx3("p", { className: "text-apt-text-muted", children: "Couldn't load this profile. Reload the page to try again." }) });
 }
 
-// src/site/site-id.tsx
-import { createContext, useContext } from "react";
-import { jsx as jsx4 } from "react/jsx-runtime";
-var SiteIdContext = createContext(null);
-function useSiteId() {
-  const id = useContext(SiteIdContext);
-  if (id === null) {
-    throw new Error("useSiteId must be used within <SiteIdProvider> (mounted by the workspace layout)");
-  }
-  return id;
-}
+// src/home/SiteHomeShell.tsx
+import { useSiteIdOrNull } from "@agentic-toolkit/adh/site/site-id";
 
 // src/home/WorkspaceBar.tsx
 import "react";
@@ -340,14 +331,14 @@ import "react";
 import "react";
 import { ChevronDown } from "lucide-react";
 import { PopupMenu } from "@agentic-toolkit/ui/blocks";
-import { jsx as jsx5 } from "react/jsx-runtime";
+import { jsx as jsx4 } from "react/jsx-runtime";
 function WorkspacePicker({
   workspaces,
   selected,
   onSelect
 }) {
   const allLabel = workspaces === null ? "Loading\u2026" : workspaces.length === 0 ? "No workspaces" : selected === null ? "Loading\u2026" : null;
-  return /* @__PURE__ */ jsx5(
+  return /* @__PURE__ */ jsx4(
     PopupMenu,
     {
       items: (workspaces ?? []).map((w) => ({ id: w.slug, label: w.name })),
@@ -357,14 +348,14 @@ function WorkspacePicker({
       },
       allLabel,
       ariaLabel: "Workspace",
-      icon: /* @__PURE__ */ jsx5(ChevronDown, { size: 14, "aria-hidden": true, className: "shrink-0 text-apt-text-muted" }),
+      icon: /* @__PURE__ */ jsx4(ChevronDown, { size: 14, "aria-hidden": true, className: "shrink-0 text-apt-text-muted" }),
       className: "w-auto max-w-full"
     }
   );
 }
 
 // src/home/WorkspaceBar.tsx
-import { jsx as jsx6, jsxs as jsxs3 } from "react/jsx-runtime";
+import { jsx as jsx5, jsxs as jsxs3 } from "react/jsx-runtime";
 function WorkspaceBar({
   workspaces,
   selected,
@@ -379,8 +370,8 @@ function WorkspaceBar({
     // again. The empty first and third tracks are what make the two cases identical.
     /* @__PURE__ */ jsxs3("div", { className: "adh-home__toolbar", children: [
       /* @__PURE__ */ jsxs3("div", { className: "adh-home__toolbar-control", children: [
-        /* @__PURE__ */ jsx6("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
-        /* @__PURE__ */ jsx6(WorkspacePicker, { workspaces, selected, onSelect })
+        /* @__PURE__ */ jsx5("span", { className: "adh-home__toolbar-label", "aria-hidden": true, children: "Workspace" }),
+        /* @__PURE__ */ jsx5(WorkspacePicker, { workspaces, selected, onSelect })
       ] }),
       action
     ] })
@@ -488,7 +479,7 @@ function workspacePathTail(pathname) {
 }
 
 // src/home/SiteHomeShell.tsx
-import { Fragment, jsx as jsx7, jsxs as jsxs4 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
 function SiteHomeShell({ workspaceSlug, children }) {
   const { items: workspaces, error, isFetching } = useResourceList(
@@ -508,14 +499,19 @@ function SiteHomeShell({ workspaceSlug, children }) {
     switchHrefFor
   });
   const workspace = workspaces?.find((w) => w.slug === resolved) ?? null;
-  const siteId = useSiteId();
+  const siteId = useSiteIdOrNull();
   if (workspaceSlug !== void 0 && workspaces !== null && !isFetching && !workspaces.some((w) => w.slug === workspaceSlug)) {
-    return /* @__PURE__ */ jsx7(ProfileFallback, { slug: workspaceSlug, siteId });
+    if (siteId === null) {
+      throw new Error(
+        "SiteHomeShell reached the profile branch outside <SiteIdProvider> \u2014 the workspace layout must mount it"
+      );
+    }
+    return /* @__PURE__ */ jsx6(ProfileFallback, { slug: workspaceSlug, siteId });
   }
   return /* @__PURE__ */ jsxs4(Fragment, { children: [
-    /* @__PURE__ */ jsx7(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
-    error !== null && workspaces === null && /* @__PURE__ */ jsx7(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
-    resolved === null && /* @__PURE__ */ jsx7(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
+    /* @__PURE__ */ jsx6(WorkspaceBar, { workspaces, selected: resolved ?? null, onSelect }),
+    error !== null && workspaces === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
+    resolved === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
     resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null && children({
       workspaceSlug: resolved,
       scopedBase: `/${resolved}`,
@@ -525,7 +521,7 @@ function SiteHomeShell({ workspaceSlug, children }) {
 }
 
 // src/home/SiteHomeRoute.tsx
-import { jsx as jsx8 } from "react/jsx-runtime";
+import { jsx as jsx7 } from "react/jsx-runtime";
 function SiteHomeRoute({ model }) {
   const params = useParams();
   const raw = params?.path;
@@ -533,7 +529,7 @@ function SiteHomeRoute({ model }) {
   const workspaceSlug = params?.workspace;
   const view = model.parse(rest);
   const Shell = model.shell ?? SiteHomeShell;
-  return /* @__PURE__ */ jsx8(Shell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
+  return /* @__PURE__ */ jsx7(Shell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
 }
 
 // src/home/SiteHomeModel.ts
@@ -549,7 +545,8 @@ function noSubPath(segments) {
 // src/home/WorkspaceOrProfileGate.tsx
 import { useParams as useParams2 } from "next/navigation";
 import { useAuth } from "@agentic-toolkit/auth";
-import { Fragment as Fragment2, jsx as jsx9 } from "react/jsx-runtime";
+import { useSiteId } from "@agentic-toolkit/adh/site/site-id";
+import { Fragment as Fragment2, jsx as jsx8 } from "react/jsx-runtime";
 function WorkspaceOrProfileGate({ children }) {
   const { isAuthenticated, isLoading } = useAuth();
   const params = useParams2();
@@ -557,9 +554,9 @@ function WorkspaceOrProfileGate({ children }) {
   const siteId = useSiteId();
   if (isLoading) return null;
   if (!isAuthenticated) {
-    return slug ? /* @__PURE__ */ jsx9(ProfileFallback, { slug, siteId }) : null;
+    return slug ? /* @__PURE__ */ jsx8(ProfileFallback, { slug, siteId }) : null;
   }
-  return /* @__PURE__ */ jsx9(Fragment2, { children });
+  return /* @__PURE__ */ jsx8(Fragment2, { children });
 }
 export {
   SiteHomeRoute,

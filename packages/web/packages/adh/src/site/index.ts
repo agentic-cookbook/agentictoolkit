@@ -25,7 +25,7 @@ export {
 // `external`, so this barrel forwards a preserved import instead of inlining the module a second
 // time beside the header's copy. See tsup.config.ts's entry note.
 export { isHubWorkspacePath, hubWorkspaceSlug } from '@agentic-toolkit/adh/site/hubWorkspacePath'
-// The site id's client-side carrier: the server layout mounts `SiteIdProvider`, the client
-// components under it (SiteHomeShell, WorkspaceOrProfileGate) read it with `useSiteId`. See
-// site-id.tsx for why this is a context and not a prop threaded through the per-site model.
-export { SiteIdProvider, useSiteId } from './site-id'
+// `SiteIdProvider` / `useSiteId` are deliberately NOT re-exported here. This barrel is a server
+// entry — sitemap.ts and site.config.ts read it on 40 sites — and site-id is a 'use client' leaf,
+// so a re-export (even a preserved one by package path) puts a client reference in every one of
+// those server graphs for no gain. Import it from '@agentic-toolkit/adh/site/site-id'.

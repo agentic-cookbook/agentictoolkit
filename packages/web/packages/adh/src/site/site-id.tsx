@@ -30,3 +30,19 @@ export function useSiteId(): SiteId {
   }
   return id
 }
+
+/**
+ * The site id, or null when no provider is mounted.
+ *
+ * For the one consumer whose NEED for the id is conditional: `SiteHomeShell` is mounted at
+ * `/<workspace>` (under the provider) and at `/home` (not under it, and 40 sites deep), and only
+ * the first can reach the branch that uses the id — `/home` carries no workspace slug, so the
+ * profile branch is unreachable there. Reading through the throwing hook would take those 40
+ * sites' `/home` down for a value that route never uses.
+ *
+ * A caller that reaches the id-consuming branch with null here IS misplaced, and must say so
+ * loudly rather than guess — see `SiteHomeShell`'s use.
+ */
+export function useSiteIdOrNull(): SiteId | null {
+  return useContext(SiteIdContext)
+}

@@ -27,7 +27,10 @@ import type { SiteHomeShellProps } from './SiteHomeModel';
  *     handed that answer.
  *   - Rendering the chooser ONCE, in a labelled bar directly under the header, at every width.
  *
- * Signed-out visitors never reach here: the workspace route sits behind HomeGate.
+ * Signed-out visitors DO reach here: the workspace route's gate is `WorkspaceOrProfileGate`,
+ * which renders `children` (this shell) for a caller with a session and the principal's profile
+ * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
+ * this workspace — and lands in the same place.
  */
 export declare function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement;
 //# sourceMappingURL=SiteHomeShell.d.ts.map

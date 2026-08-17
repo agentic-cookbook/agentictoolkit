@@ -1,5 +1,3 @@
-'use client'
-
 // src/site/SiteConfig.ts
 import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
 var FAMILY_ROBOTS_DISALLOW = [
@@ -228,33 +226,16 @@ function reservedWorkspaceSlugs() {
 
 // src/site/index.ts
 import { isHubWorkspacePath, hubWorkspaceSlug } from "@agentic-toolkit/adh/site/hubWorkspacePath";
-
-// src/site/site-id.tsx
-import { createContext, useContext } from "react";
-import { jsx } from "react/jsx-runtime";
-var SiteIdContext = createContext(null);
-function SiteIdProvider({ siteId, children }) {
-  return /* @__PURE__ */ jsx(SiteIdContext.Provider, { value: siteId, children });
-}
-function useSiteId() {
-  const id = useContext(SiteIdContext);
-  if (id === null) {
-    throw new Error("useSiteId must be used within <SiteIdProvider> (mounted by the workspace layout)");
-  }
-  return id;
-}
 export {
   FAMILY_ROBOTS_DISALLOW,
   FAMILY_ROUTE_SEGMENTS,
   GRAMMAR_SEGMENTS,
   RESERVED_HANDLE_WORDS,
   SITE_ROUTE_SEGMENTS,
-  SiteIdProvider,
   defineSite,
   hubWorkspaceSlug,
   isHubWorkspacePath,
   reservedWorkspaceSlugs,
-  siteSitemapRoutes,
-  useSiteId
+  siteSitemapRoutes
 };
 //# sourceMappingURL=index.js.map

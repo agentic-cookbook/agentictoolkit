@@ -215,6 +215,14 @@ export default defineConfig({
     // entries outright, and its allowlist is not available to a toolkit package. Both halves
     // are load-bearing: this entry, AND the package path in every reaching module.
     'site/hubWorkspacePath': 'src/site/hubWorkspacePath.ts',
+    // The site-id context. Its own entry for BOTH of this file's usual reasons at once. It is a
+    // 'use client' leaf, and the `site/index` barrel it would otherwise sit in is a SERVER entry
+    // (40 sites' sitemap.ts and site.config.ts import it), so inlining it there stamps the whole
+    // barrel 'use client'. And it holds a module-scope React context, so — exactly as the flags
+    // note below spells out — every entry that reached it relatively would inline its OWN context
+    // object, and a provider mounted from one copy would be invisible to a `useSiteId` from
+    // another. Both halves fail only in a production build.
+    'site/site-id': 'src/site/site-id.tsx',
     // The family's landing DECK — the shape of every site's `/` and `/tour`, which used to
     // be emitted into each site as markup. Its own entry rather than a member of
     // marketing/index: that barrel is what a site's layout imports on every route, and the
@@ -291,6 +299,10 @@ export default defineConfig({
     // resolved by the consumer. One surviving '../site/hubWorkspacePath' defeats it, exactly
     // as one surviving './recents' would above.
     '@agentic-toolkit/adh/site/hubWorkspacePath',
+    // The site-id context leaf (entry above). Preserved import ⇒ ONE context object, resolved by
+    // the consumer. One surviving '../site/site-id' relative import defeats it and forks the
+    // context — see the flags note below for what a forked context looks like in production.
+    '@agentic-toolkit/adh/site/site-id',
     // The flags module holds the React context (FeatureFlagsProvider / FeatureFlagsContext).
     // With splitting:false, every entry that inlines it gets its OWN context instance — a consumer
     // entry in THIS package (`footer/AdhFooter`, which landed here in Task 5.7, is the nearest
