@@ -4,7 +4,7 @@ import {
   PRIVACY_WIRE_VALUE,
   PRIVACY_LEVEL_FROM_WIRE,
   PRIVACY_AUDIENCE_MASK,
-} from '../privacy-level-select'
+} from '../components/privacy-level-select'
 
 describe('privacy level ↔ wire word', () => {
   it('spells only-me as private on the wire', () => {
