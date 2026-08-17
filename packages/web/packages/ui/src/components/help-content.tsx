@@ -21,11 +21,9 @@ export interface HelpEntry {
 /** A site's help copy, keyed by the id a <HelpEnabled> names. */
 export type SiteHelp = Record<string, HelpEntry>
 
-/** The id the shared header's site name looks up. Lives here rather than in
- *  `adh/header` because `adh/site` needs it too, and `adh/site` already imports
- *  `adh/marketing`, which imports `adh/header` — a constant on that side would
- *  close the cycle. */
-export const SITE_TITLE_HELP_ID = "site-title"
+// The well-known ids live in `../lib/help-ids`, NOT here — this module is
+// `"use client"`, and adh's server-graph `defineSite` needs to read one. See that
+// file's header for why a constant cannot cross the boundary a component can.
 
 const HelpContentContext = createContext<SiteHelp>({})
 

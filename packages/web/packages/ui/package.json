@@ -26,6 +26,11 @@
       "development": "./src/lib/utils.ts",
       "import": "./dist/lib/utils.js"
     },
+    "./lib/help-ids": {
+      "types": "./dist/lib/help-ids.d.ts",
+      "development": "./src/lib/help-ids.ts",
+      "import": "./dist/lib/help-ids.js"
+    },
     "./lib/step-index": {
       "types": "./dist/lib/step-index.d.ts",
       "development": "./src/lib/step-index.ts",
