@@ -383,3 +383,15 @@ describe('SiteHeader — the shared settings overlay', () => {
     expect(switcherProps.current?.settingsHref).toContain('/settings')
   })
 })
+
+describe('site name help', () => {
+  it('asks for site-title help when the page named nothing', () => {
+    render(<SiteHeader siteId="cookbook" />)
+    expect(headerProps.current?.pageTitleHelp).toBe('site-title')
+  })
+
+  it('asks for no help when the page named itself', () => {
+    render(<SiteHeader siteId="cookbook" pageTitle="Billing settings" />)
+    expect(headerProps.current?.pageTitleHelp).toBeUndefined()
+  })
+})

@@ -215,6 +215,31 @@
   }
 }
 
+/* The help-enabled title is a BUTTON, so it has to take back the pointer events
+   the plain title deliberately refuses — the base class sets `pointer-events: none`
+   because a title nobody can click should not eat clicks aimed past it. */
+.adh-header__page-title--help {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* Truncation moves inward: the trigger is a flex container, and `text-overflow`
+   does not apply to one. Its flex item does the ellipsis instead. */
+.adh-header__page-title-text {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Doubled class = (0,2,0), so this beats HelpEnabled's Tailwind `inline-flex`
+   whatever order the two stylesheets land in. Without it, whether the title
+   disappears on a phone depends on stylesheet order rather than on this rule. */
+@media (max-width: 640px) {
+  .adh-header__page-title--help.adh-header__page-title--help {
+    display: none;
+  }
+}
+
 .adh-header__title {
   font-family: var(--adh-header-title-font, var(--font-serif));
   font-style: var(--adh-header-title-style, italic);

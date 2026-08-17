@@ -29,6 +29,7 @@ import { isConceptSite } from '@agentic-toolkit/adh/concepts/participating'
 import { useSettingsOverlay } from '@agentic-toolkit/adh/settings'
 import { SiteMenuSwitcher } from './SiteMenuSwitcher'
 import { DevToolsMenu } from './DevToolsMenu'
+import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
 
 import type { ReactNode } from 'react'
 
@@ -305,6 +306,8 @@ export function SiteHeader({
       }
       // The site's short name unless the page named itself — see `siteShortName`.
       pageTitle={pageTitle ?? siteShortName}
+      // Only when the page named nothing — see AdhHeader's `pageTitleHelp`.
+      pageTitleHelp={pageTitle ? undefined : SITE_TITLE_HELP_ID}
       center={center}
       badges={badges}
       leadingActions={leadingActions}

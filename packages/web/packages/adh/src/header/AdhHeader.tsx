@@ -9,6 +9,7 @@ import { NavLinkItem, type NavLink } from './NavLink'
 import { PreviewNotice } from './PreviewNotice'
 import type { AdhThemeKey } from '../themes/adh-themes'
 import { Badge } from '@agentic-toolkit/ui/components/badge'
+import { HelpEnabled } from '@agentic-toolkit/ui/components/help-enabled'
 
 /** A small pill shown under the site name. `tone` selects its colour. */
 export type HeaderBadge = {
@@ -86,6 +87,12 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
   debugMenu?: ReactNode
   /** Optional page/section title, shown centered in the bar. */
   pageTitle?: string
+  /** Help id for `pageTitle`, making the title help-enabled.
+   *
+   *  Separate from `pageTitle` because that slot holds the SITE name only when a
+   *  page named nothing; when a page names itself, help about the site would be
+   *  help about the wrong thing. SiteHeader sets this only in the former case. */
+  pageTitleHelp?: string
   /** Optional interactive content centered in the bar (e.g. a live status
    *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
    *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
@@ -155,6 +162,7 @@ export function AdhHeader({
   siteSwitcher,
   debugMenu,
   pageTitle,
+  pageTitleHelp,
   center,
   badges = [],
   leadingActions,
@@ -255,7 +263,22 @@ export function AdhHeader({
         {center ? (
           <div className="adh-header__center">{center}</div>
         ) : (
-          pageTitle && <span className="adh-header__page-title">{pageTitle}</span>
+          pageTitle &&
+          (pageTitleHelp ? (
+            // The TRIGGER carries the title class, rather than wrapping a span that
+            // has it: `.adh-header__page-title` is absolutely centred and sets
+            // `pointer-events: none`, so a button around it would be both mispositioned
+            // and unclickable over the text. The inner span exists to keep the
+            // ellipsis, which a flex item cannot do for itself.
+            <HelpEnabled
+              id={pageTitleHelp}
+              className="adh-header__page-title adh-header__page-title--help"
+            >
+              <span className="adh-header__page-title-text">{pageTitle}</span>
+            </HelpEnabled>
+          ) : (
+            <span className="adh-header__page-title">{pageTitle}</span>
+          ))
         )}
         <nav className="adh-header__nav" aria-label="Primary">
           {leadingActions && (
