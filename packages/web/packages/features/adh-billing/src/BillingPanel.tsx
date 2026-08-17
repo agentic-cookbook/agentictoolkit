@@ -73,13 +73,21 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
             Stripe details are visible to product admins only.
           </p>
         ) : pricesStatus === 409 ? (
-          // The ONE cause this panel can name with certainty, and it earns its own branch for
-          // that reason: `routes/billing.ts` maps `StripeNotConfiguredError` to a 409 precisely so
-          // the setup step is distinguishable from a bug. Note it arrives as an ERROR, not as an
-          // empty list — `listPrices` throws on any non-ok response, so a missing key never
-          // reaches the empty state below.
+          // The one OUTCOME this panel can state with certainty — Stripe is not usable for this
+          // product — and it earns its own branch because it is a setup step rather than a bug:
+          // `routes/billing.ts` maps `StripeNotConfiguredError` to 409 precisely so the two are
+          // distinguishable. It arrives as an ERROR, not as an empty list, because `listPrices`
+          // throws on any non-ok response.
+          //
+          // The copy names the PLACE, not the remedy, because that error covers three conditions
+          // (`stripeClient.ts`: no config row, a row paused with `enabled === false`, or a stored
+          // key that is empty) and the status cannot tell them apart. "Add a restricted key" is
+          // false for the operator who connected Stripe and then deliberately paused it — the
+          // same shape of confident wrong instruction the 403 branch above exists to prevent. All
+          // three are fixed in one place, so pointing there is both true and sufficient.
           <p className="text-sm text-apt-text-muted">
-            No Stripe account is connected. Add a restricted Stripe key under Integrations.
+            Stripe is not active for this product. Check its Stripe integration under
+            Integrations — the connection may be paused, or missing its restricted key.
           </p>
         ) : pricesError ? (
           // Every OTHER failure, ahead of the empty state for the same reason the 403 is: a read

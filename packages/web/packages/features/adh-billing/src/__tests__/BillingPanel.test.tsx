@@ -103,22 +103,23 @@ describe("BillingPanel", () => {
     expect(screen.queryByText("Nobody has bought anything yet.")).toBeNull();
     // Both of the Stripe section's non-403 lines, by their real current wording. A regex for copy
     // no longer in the component would pass forever while asserting nothing.
-    expect(screen.queryByText(/No Stripe account is connected/)).toBeNull();
+    expect(screen.queryByText(/Stripe is not active for this product/)).toBeNull();
     expect(screen.queryByText(/has no active prices yet/)).toBeNull();
   });
 
-  // 409 is the ONE status this panel translates into a named cause, so it is the one most worth
-  // pinning: `routes/billing.ts` maps `StripeNotConfiguredError` to it precisely so an operator's
-  // setup step is distinguishable from a bug. It arrives as a thrown error, never as an empty
-  // list, which is why the empty-state copy must be absent here.
-  it("names the missing Stripe connection on a 409 instead of reporting an empty catalog", async () => {
+  // 409 is the one status this panel translates into a setup step rather than a bug, so it is
+  // worth pinning: `routes/billing.ts` maps `StripeNotConfiguredError` to it for that reason. It
+  // arrives as a thrown error, never as an empty list, which is why the empty-state copy must be
+  // absent here. The assertion deliberately does NOT pin a remedy — that error covers three
+  // conditions (no config row, paused, empty key) and naming one of them would be a guess.
+  it("names the inactive Stripe connection on a 409 instead of reporting an empty catalog", async () => {
     authedJson.mockImplementation((path: string) =>
       path === "/api/billing/prices"
         ? Promise.reject(new AuthHttpError(409, "connect a Stripe account before listing prices"))
         : Promise.resolve([]),
     );
     render(<BillingPanel workspaceSlug="acme" />);
-    await waitFor(() => expect(screen.getByText(/No Stripe account is connected/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/Stripe is not active for this product/)).toBeTruthy());
     expect(screen.queryByText(/has no active prices yet/)).toBeNull();
     expect(screen.queryByText("Stripe prices could not be loaded.")).toBeNull();
     expect(screen.queryByText(/Stripe details are visible/)).toBeNull();
