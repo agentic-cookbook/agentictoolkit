@@ -2,7 +2,6 @@
 
 import { useCallback } from "react";
 import { useResourceList } from "@agentic-toolkit/data";
-import { AuthHttpError } from "@agentic-toolkit/auth/client";
 import {
   listAccounts,
   listOffers,
@@ -25,8 +24,13 @@ import {
  * product a 403 is the ORDINARY response and not an incident — and the natural-looking
  * "no rows, so show the empty state" collapses that into a confident falsehood ("nobody has
  * bought anything", "no Stripe prices are visible") that the reader has no way to disprove
- * from where they are standing. Hence a leading error branch on every section, and `isForbidden`
- * to separate "you may not see this" from "this broke".
+ * from where they are standing. Hence a leading error branch on every section, keyed on the
+ * STATUS — `errorStatus === 403` separates "you may not see this" from "this broke", and the two
+ * need different words. `error` alone cannot: it is the flattened message string.
+ *
+ * Only 403. Everything else takes the generic branch, a 401 included: a dead session is the auth
+ * layer's to resolve, not a sentence in a billing pane. `errorStatus` is null for a transport or
+ * parse failure, which has no status — so those land there too, which is where they belong.
  */
 export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
   const key = `workspace:${workspaceSlug ?? ""}:billing`;
@@ -34,10 +38,8 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
   const loadAccounts = useCallback(() => listAccounts(), []);
   const loadPrices = useCallback(() => listPrices(), []);
 
-  const { items: offers, error: offersError } = useResourceList<OfferRow>(
-    `${key}:offers`,
-    loadOffers,
-  );
+  const { items: offers, error: offersError, errorStatus: offersStatus } =
+    useResourceList<OfferRow>(`${key}:offers`, loadOffers);
   // `/offers` is NOT admin-gated, but it still answers 403 for two different reasons: the
   // `billing` ecosystem flag being off (crud/factory.ts's `requireEcosystemFlag`, which has no
   // admin exemption — a kill switch an admin walks through is not a kill switch) and the roles
@@ -47,15 +49,12 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
   // `requireAdmin` — every row carries a payer's email — so a non-admin member of the workspace
   // gets a 403 EVERY time this pane renders. That is the ordinary state for most of a product's
   // members, not an auth incident, and reporting it would file one bug per member per view.
-  const { items: accounts, error: accountsError } = useResourceList<AccountRow>(
-    `${key}:accounts`,
-    loadAccounts,
-    { reportErrors: false },
-  );
+  const { items: accounts, error: accountsError, errorStatus: accountsStatus } =
+    useResourceList<AccountRow>(`${key}:accounts`, loadAccounts, { reportErrors: false });
   // reportErrors: false — a product that has not connected Stripe yet is the ORDINARY state, not
   // an auth incident, and reporting it would file a bug on every unconfigured ecosystem. `/prices`
   // is `requireAdmin` too, so a non-admin's 403 is just as ordinary and just as unworthy of a bug.
-  const { items: prices, error: pricesError } = useResourceList<PriceRow>(
+  const { items: prices, errorStatus: pricesStatus } = useResourceList<PriceRow>(
     `${key}:prices`,
     loadPrices,
     { reportErrors: false },
@@ -68,7 +67,7 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
     <div className="flex flex-col gap-6 p-4">
       <section>
         <h2 className="text-lg font-semibold">Stripe</h2>
-        {isForbidden(pricesError) ? (
+        {pricesStatus === 403 ? (
           // Split out ahead of the empty state, because it is neither an empty catalog nor a
           // missing key: `/prices` is `requireAdmin`, so this is what every non-admin member of
           // the product sees, every render. Left in the branch below it, they would be told to go
@@ -95,7 +94,7 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
 
       <section>
         <h2 className="text-lg font-semibold">Offers</h2>
-        {isForbidden(offersError) ? (
+        {offersStatus === 403 ? (
           <p className="text-sm text-apt-text-muted">
             Offers are not visible here. Either billing is not enabled for this product, or your
             role does not include it.
@@ -127,7 +126,7 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
 
       <section>
         <h2 className="text-lg font-semibold">Payers</h2>
-        {isForbidden(accountsError) ? (
+        {accountsStatus === 403 ? (
           // The failure is reported, never rendered as emptiness. This read is admin-only, so the
           // overwhelmingly common error here is a non-admin's 403 — and showing that as "nobody has
           // bought anything yet" tells a member of a selling product that it has no customers,
@@ -158,19 +157,6 @@ export function BillingPanel({ workspaceSlug }: { workspaceSlug?: string }) {
       </section>
     </div>
   );
-}
-
-/**
- * "You may not see this" as distinct from "this broke".
- *
- * `instanceof AuthHttpError` rather than a `status` duck-check: every one of these errors comes
- * from `authedFetch`, which throws that class on any non-ok response, so a plain `Error` reaching
- * here is a transport or parse failure — exactly the case that must NOT be reported as a
- * permission answer. Anything that is not a 403 falls through to the generic branch, including a
- * 401: a dead session is the auth layer's to resolve, not a sentence in a billing pane.
- */
-function isForbidden(e: unknown): boolean {
-  return e instanceof AuthHttpError && e.status === 403;
 }
 
 function formatPrice(p: PriceRow): string {
