@@ -3,6 +3,7 @@
 import { notFound } from 'next/navigation'
 import type { ComponentType, ReactNode } from 'react'
 import type { Workspace } from '@agentic-toolkit/data'
+import type { ProfilePrincipal } from '../profile/types'
 
 // The contract a site implements to have a workspace landing view at `/<workspace>`.
 //
@@ -108,6 +109,27 @@ export interface SiteHomeModel<View> {
    * has no such check of its own.
    */
   shell?: ComponentType<SiteHomeShellProps>
+  /**
+   * This site's public section on a principal's profile at `/<slug>/profile`.
+   *
+   * Omit and the profile is the shared header alone — which is the RIGHT answer for a site with
+   * nothing public to say, not a gap. That default is what makes this field cost the other 38
+   * sites zero lines: `billing` has no public surface, so it declares nothing and gets a correct
+   * page.
+   *
+   * A site that HAS a public surface but finds this principal has nothing in it says so from
+   * INSIDE the section — "This user has no public projects" — rather than by returning null.
+   * Only the site knows the noun, and a shell that guessed one would be guessing a different word
+   * per site.
+   *
+   * Fetches its own data, client-side, keyed on the principal. That is what keeps adding a
+   * section to one site from touching any other: the profile route is the same bytes everywhere
+   * and knows nothing about what a section needs.
+   *
+   * Optional and separate from `render` because the two are different pages: `render` draws a
+   * workspace the caller is working IN, this draws a page ABOUT someone who may be a stranger.
+   */
+  profileSection?: (principal: ProfilePrincipal) => ReactNode
 }
 
 /**
