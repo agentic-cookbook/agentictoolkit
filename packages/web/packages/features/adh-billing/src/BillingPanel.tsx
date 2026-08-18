@@ -236,7 +236,9 @@ function minorUnitFactor(currency: string): number {
       style: "currency",
       currency,
     }).resolvedOptions();
-    return 10 ** maximumFractionDigits;
+    // `resolvedOptions()` types this as optional — a currency Intl resolves but declines to
+    // quantify falls back to the same two places the `catch` below uses.
+    return 10 ** (maximumFractionDigits ?? 2);
   } catch {
     return 100;
   }
