@@ -12,9 +12,9 @@ export type AvatarMenuUser = {
      *  printing the handle. `name` still equals this whenever a name exists, so no
      *  caller has to choose between them for a11y or initials. */
     fullName?: string;
-    /** The account's handle. Present ⇒ the menu offers Profile, pointing at this site's
-     *  `/<slug>/profile`. Absent ⇒ the row does not render, which is correct rather than
-     *  degraded: an account with no slug has no profile address to send anyone to. */
+    /** The account's handle. Data only — it does NOT gate the Profile row (see
+     *  `AvatarMenuProps.profileHref`); a caller that has resolved a slug but knows this
+     *  site carries no `/<slug>/profile` route must still withhold `profileHref`. */
     slug?: string;
     imageUrl?: string;
 };
@@ -23,6 +23,15 @@ export type AvatarMenuProps = {
     /** Where "Home" points. The site's own post-login landing, supplied by the
      *  registry-aware wrapper; defaults to the site root. */
     homeHref?: string;
+    /** Where the Profile row points, and whether it renders at all — present ⇒ the row
+     *  offers it, absent ⇒ the row is omitted. This component resolves no site ids and
+     *  holds no route map (same reason `homeHref` arrives pre-built rather than being
+     *  derived from a slug here): the `/<slug>/profile` route this row links to does not
+     *  exist on every site the shared header renders on, so the registry-aware wrapper
+     *  decides, from the account's slug AND the current site's own route map, whether
+     *  there is anywhere to send this row — and hands in the finished href only when
+     *  both hold. */
+    profileHref?: string;
     onLogout?: () => void;
     settingsHref?: string;
     onSettings?: () => void;
@@ -46,5 +55,5 @@ export type AvatarMenuProps = {
  * the repo owner's explicit instruction — which is the only way the count moves.
  * (Repo rule: `.claude/skills/project-guidelines/topics/ui-development.md`.)
  */
-export declare function AvatarMenu({ user, homeHref, onLogout, settingsHref, onSettings, }: AvatarMenuProps): import("react").JSX.Element;
+export declare function AvatarMenu({ user, homeHref, profileHref, onLogout, settingsHref, onSettings, }: AvatarMenuProps): import("react").JSX.Element;
 //# sourceMappingURL=AvatarMenu.d.ts.map

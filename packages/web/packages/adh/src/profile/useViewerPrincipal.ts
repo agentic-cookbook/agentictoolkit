@@ -56,6 +56,14 @@ export function useViewerPrincipal(
       return
     }
     let live = true
+    // Clear the PREVIOUS identity's wider body before starting the new fetch — this effect also
+    // re-runs on a `slug` change (it's a dependency below), and without this line `wider` would
+    // keep rendering the prior slug's card for the whole of the new fetch, and indefinitely if
+    // that fetch 404s. `live` (below) is the separate, already-present guard against the OTHER
+    // failure mode — an out-of-order response from a fetch this effect has since abandoned; the
+    // two are not the same problem, so both stay: this clears a stale value eagerly, `live` stops
+    // a stale value from being written at all.
+    setWider(null)
     setPending(true)
     void (async () => {
       const encoded = encodeURIComponent(slug)

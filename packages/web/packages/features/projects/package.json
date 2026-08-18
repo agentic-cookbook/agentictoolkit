@@ -25,11 +25,6 @@
       "types": "./dist/parse-path.d.ts",
       "development": "./src/parse-path.ts",
       "import": "./dist/parse-path.js"
-    },
-    "./profile": {
-      "types": "./dist/ProfileProjects.d.ts",
-      "development": "./src/ProfileProjects.tsx",
-      "import": "./dist/ProfileProjects.js"
     }
   },
   "scripts": {
@@ -41,7 +36,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@agentic-toolkit/adh": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
     "@agentic-toolkit/teams": "workspace:*",

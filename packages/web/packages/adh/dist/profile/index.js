@@ -51,6 +51,7 @@ function useViewerPrincipal(slug, seed, enabled = true) {
       return;
     }
     let live = true;
+    setWider(null);
     setPending(true);
     void (async () => {
       const encoded = encodeURIComponent(slug);
@@ -99,7 +100,7 @@ function ProfileView({
   const { principal: shown0 } = useViewerPrincipal(principal.slug, principal, upgrade);
   const shown = shown0 ?? principal;
   const hostname = useClientHost();
-  const fullProfileHref = siteId === "hub" ? null : hostname ? siteUrl("hub", `/${encodeURIComponent(shown.slug)}`, hostname) : siteProdUrl("hub", `/${encodeURIComponent(shown.slug)}`);
+  const fullProfileHref = siteId === "hub" ? null : hostname ? siteUrl("hub", `/${encodeURIComponent(shown.slug)}/profile`, hostname) : siteProdUrl("hub", `/${encodeURIComponent(shown.slug)}/profile`);
   return /* @__PURE__ */ jsxs("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: [
     /* @__PURE__ */ jsx(UserCard, { user: shown }),
     shown.description && /* @__PURE__ */ jsx("p", { className: "mt-4 text-apt-text-muted", children: shown.description }),

@@ -28,6 +28,7 @@ import { isConceptSite } from '@agentic-toolkit/adh/concepts/participating'
 // fork SettingsOverlayContext from the copy AppShell.tsx's provider writes into, so this
 // hook would always read null even with a provider mounted.
 import { useSettingsOverlay } from '@agentic-toolkit/adh/settings'
+import { hasProfileRoute } from '../profile/profileRoute'
 import { SiteMenuSwitcher } from './SiteMenuSwitcher'
 import { DevToolsMenu } from './DevToolsMenu'
 import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
@@ -348,6 +349,18 @@ export function SiteHeader({
       // the site, so it should navigate client-side rather than reload through the
       // env-resolved origin.
       homeHref={siteHomePath(siteId)}
+      // The avatar menu's Profile row: present only when BOTH the signed-in account has
+      // a slug (a stranger with no slug has no profile address at all) AND this site
+      // actually carries the `/<slug>/profile` route — `hasProfileRoute` reads that off
+      // the generated per-site route map, not a maintained list, so a site gaining or
+      // dropping the route can't drift out of step with this gate. Without the second
+      // half every site in the family would offer the row and three of them (today)
+      // would send it to a 404.
+      profileHref={
+        user?.slug && hasProfileRoute(siteId)
+          ? `/${encodeURIComponent(user.slug)}/profile`
+          : undefined
+      }
       // Concept-graph affordances, before the auth cluster. A plain anchor so it
       // works pre-hydration and resolves the real route. The `/details` path and the
       // "Details" copy are adh vocabulary and stay on this side of the boundary.

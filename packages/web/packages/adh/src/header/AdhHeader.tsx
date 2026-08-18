@@ -140,6 +140,11 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
    *  This header resolves no site ids, so whoever knows the registry hands it in;
    *  defaults to the site root. */
   homeHref?: string
+  /** Where the avatar menu's Profile row points, and whether it renders at all —
+   *  `AvatarMenu`'s own `profileHref` prop. This header resolves no site ids and holds
+   *  no route map, so whoever knows the registry (and whether the current site
+   *  carries `/<slug>/profile`) hands it in; absent omits the row. */
+  profileHref?: string
   /** The words in the full-width strip above the bar. Defaults to
    *  {@link DEFAULT_PREVIEW_NOTICE}. The package draws the strip; the host supplies
    *  what it says.
@@ -179,6 +184,7 @@ export function AdhHeader({
   preAuthLinks,
   accountActions,
   homeHref,
+  profileHref,
   previewNotice,
   previewDetail,
   user,
@@ -320,6 +326,7 @@ export function AdhHeader({
             <AvatarMenu
               user={user}
               homeHref={homeHref}
+              profileHref={profileHref}
               onLogout={onLogout}
               settingsHref={settingsHref}
               onSettings={onSettings}

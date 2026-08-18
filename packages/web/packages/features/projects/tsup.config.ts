@@ -1,6 +1,6 @@
 import { featureTsup } from '../tsup.preset'
 
-// `ProfileProjects` is its own chunk, same reason as `parse-path`: the barrel dist hoists
-// `'use client'` from `ProjectsFeature`, and this component's home is the `./profile`
-// subpath a site's home-model imports directly — never through the barrel.
-export default featureTsup(['src/index.ts', 'src/parse-path.ts', 'src/ProfileProjects.tsx'])
+// ProfileProjects moved to the projects site's own src/ (it renders `profileSection`, which
+// imports the adh vocabulary tier a portable package may not — see check_boundaries.py), so this
+// package builds only its own two entries again.
+export default featureTsup(['src/index.ts', 'src/parse-path.ts'])

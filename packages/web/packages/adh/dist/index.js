@@ -28,6 +28,7 @@ function initialsOf(name) {
 function AvatarMenu({
   user,
   homeHref = "/",
+  profileHref,
   onLogout,
   settingsHref,
   onSettings
@@ -60,10 +61,10 @@ function AvatarMenu({
         /* @__PURE__ */ jsx(Home, { className: "adh-avatar-menu__item-icon" }),
         /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Home" })
       ] }),
-      user.slug && /* @__PURE__ */ jsxs(
+      profileHref && /* @__PURE__ */ jsxs(
         DropdownMenuLinkItem,
         {
-          render: /* @__PURE__ */ jsx(Link, { href: `/${encodeURIComponent(user.slug)}/profile` }),
+          render: /* @__PURE__ */ jsx(Link, { href: profileHref }),
           className: "adh-avatar-menu__item",
           children: [
             /* @__PURE__ */ jsx(UserIcon, { className: "adh-avatar-menu__item-icon" }),
@@ -869,6 +870,7 @@ function AdhHeader({
   preAuthLinks,
   accountActions,
   homeHref,
+  profileHref,
   previewNotice,
   previewDetail,
   user,
@@ -945,6 +947,7 @@ function AdhHeader({
           {
             user,
             homeHref,
+            profileHref,
             onLogout,
             settingsHref,
             onSettings

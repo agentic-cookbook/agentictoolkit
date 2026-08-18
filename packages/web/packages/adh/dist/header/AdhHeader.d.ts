@@ -73,19 +73,6 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     debugMenu?: ReactNode;
     /** Optional page/section title, shown centered in the bar. */
     pageTitle?: string;
-    /** Help id for `pageTitle`, making the title help-enabled.
-     *
-     *  Separate from `pageTitle` because that slot holds the SITE name only when a
-     *  page named nothing; when a page names itself, help about the site would be
-     *  help about the wrong thing. SiteHeader sets this only in the former case. */
-    pageTitleHelp?: string;
-    /** Copy for `pageTitleHelp` when the site published no entry under that id.
-     *
-     *  Ignored unless `pageTitleHelp` is set, and always loses to a real entry. It
-     *  exists because a handful of sites mount no help provider at all, and a title
-     *  that silently stops being help-enabled on those sites is worse than one
-     *  explained by a shorter line. */
-    pageTitleHelpFallback?: string;
     /** Optional interactive content centered in the bar (e.g. a live status
      *  indicator + refresh). Unlike `pageTitle` it accepts arbitrary nodes and stays
      *  clickable. When set it occupies the centre slot in place of `pageTitle`. */
@@ -126,6 +113,11 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
      *  This header resolves no site ids, so whoever knows the registry hands it in;
      *  defaults to the site root. */
     homeHref?: string;
+    /** Where the avatar menu's Profile row points, and whether it renders at all —
+     *  `AvatarMenu`'s own `profileHref` prop. This header resolves no site ids and holds
+     *  no route map, so whoever knows the registry (and whether the current site
+     *  carries `/<slug>/profile`) hands it in; absent omits the row. */
+    profileHref?: string;
     /** The words in the full-width strip above the bar. Defaults to
      *  {@link DEFAULT_PREVIEW_NOTICE}. The package draws the strip; the host supplies
      *  what it says.
@@ -146,5 +138,5 @@ export type AdhHeaderProps = AdhHeaderAuthProps & {
     /** The active theme key. Presentational hosts may key styling off it. */
     themeKey?: AdhThemeKey;
 };
-export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, pageTitleHelp, pageTitleHelpFallback, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, accountActions, homeHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
+export declare function AdhHeader({ siteName, siteNameHref, sites, onSwitchSite, siteSwitcher, debugMenu, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, preAuthLinks, accountActions, homeHref, profileHref, previewNotice, previewDetail, user, authLoading, loginHref, signupHref, onLogin, onSignup, onLogout, settingsHref, onSettings, }: AdhHeaderProps): import("react").JSX.Element;
 //# sourceMappingURL=AdhHeader.d.ts.map

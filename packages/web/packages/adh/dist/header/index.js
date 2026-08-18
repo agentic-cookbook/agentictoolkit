@@ -28,6 +28,7 @@ function initialsOf(name) {
 function AvatarMenu({
   user,
   homeHref = "/",
+  profileHref,
   onLogout,
   settingsHref,
   onSettings
@@ -60,10 +61,10 @@ function AvatarMenu({
         /* @__PURE__ */ jsx(Home, { className: "adh-avatar-menu__item-icon" }),
         /* @__PURE__ */ jsx("span", { className: "adh-avatar-menu__item-label", children: "Home" })
       ] }),
-      user.slug && /* @__PURE__ */ jsxs(
+      profileHref && /* @__PURE__ */ jsxs(
         DropdownMenuLinkItem,
         {
-          render: /* @__PURE__ */ jsx(Link, { href: `/${encodeURIComponent(user.slug)}/profile` }),
+          render: /* @__PURE__ */ jsx(Link, { href: profileHref }),
           className: "adh-avatar-menu__item",
           children: [
             /* @__PURE__ */ jsx(UserIcon, { className: "adh-avatar-menu__item-icon" }),
@@ -849,7 +850,6 @@ function PreviewNotice({
 
 // src/header/AdhHeader.tsx
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { HelpEnabled } from "@agentic-toolkit/ui/components/help-enabled";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,
@@ -859,8 +859,6 @@ function AdhHeader({
   siteSwitcher,
   debugMenu,
   pageTitle,
-  pageTitleHelp,
-  pageTitleHelpFallback,
   center,
   badges = [],
   leadingActions,
@@ -869,6 +867,7 @@ function AdhHeader({
   preAuthLinks,
   accountActions,
   homeHref,
+  profileHref,
   previewNotice,
   previewDetail,
   user,
@@ -912,22 +911,7 @@ function AdhHeader({
           )
         )) })
       ] }),
-      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && (pageTitleHelp ? (
-        // The TRIGGER carries the title class, rather than wrapping a span that
-        // has it: `.adh-header__page-title` is absolutely centred and sets
-        // `pointer-events: none`, so a button around it would be both mispositioned
-        // and unclickable over the text. The inner span exists to keep the
-        // ellipsis, which a flex item cannot do for itself.
-        /* @__PURE__ */ jsx9(
-          HelpEnabled,
-          {
-            id: pageTitleHelp,
-            fallback: pageTitleHelpFallback,
-            className: "adh-header__page-title adh-header__page-title--help",
-            children: /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title-text", children: pageTitle })
-          }
-        )
-      ) : /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle })),
+      center ? /* @__PURE__ */ jsx9("div", { className: "adh-header__center", children: center }) : pageTitle && /* @__PURE__ */ jsx9("span", { className: "adh-header__page-title", children: pageTitle }),
       /* @__PURE__ */ jsxs6("nav", { className: "adh-header__nav", "aria-label": "Primary", children: [
         leadingActions && /* @__PURE__ */ jsx9("span", { className: "adh-header__actions", children: leadingActions }),
         barLinks.length > 0 && /* @__PURE__ */ jsx9("span", { className: "adh-header__links", children: barLinks.map((link) => /* @__PURE__ */ jsx9(NavLinkItem, { link }, link.href + link.label)) }),
@@ -945,6 +929,7 @@ function AdhHeader({
           {
             user,
             homeHref,
+            profileHref,
             onLogout,
             settingsHref,
             onSettings
@@ -1041,7 +1026,6 @@ function useWorkspacesMenu() {
 // src/header/SiteHeader.tsx
 import "react";
 import dynamic2 from "next/dynamic";
-import { usePathname as usePathname6 } from "next/navigation";
 import {
   AdhHeader as AdhHeader2,
   useClientHost as useClientHost4
@@ -1050,6 +1034,13 @@ import { useAnonymousHeaderAuth } from "@agentic-toolkit/adh/header-auth";
 import { getSite as getSite3, siteHeaderTitle as siteHeaderTitle2, siteHomePath, siteProdUrl as siteProdUrl2, siteUrl as siteUrl2 } from "@agentic-toolkit/adh-registry";
 import { isConceptSite } from "@agentic-toolkit/adh/concepts/participating";
 import { useSettingsOverlay } from "@agentic-toolkit/adh/settings";
+
+// src/profile/profileRoute.ts
+import { SITE_ROUTES } from "@agentic-toolkit/adh-registry/routes";
+var PROFILE_ROUTE = "/[workspace]/profile";
+function hasProfileRoute(siteId) {
+  return (SITE_ROUTES[siteId] ?? []).includes(PROFILE_ROUTE);
+}
 
 // src/header/SiteMenuSwitcher.tsx
 import { Fragment as Fragment5 } from "react";
@@ -2027,9 +2018,9 @@ function DevToolsMenuPopover({
   useEffect5(() => {
     if (!wantGeneratedRoutes) return;
     let cancelled = false;
-    void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES }) => {
+    void import("@agentic-toolkit/adh-registry/routes").then(({ SITE_ROUTES: SITE_ROUTES2 }) => {
       if (cancelled) return;
-      const paths = SITE_ROUTES[currentSiteId];
+      const paths = SITE_ROUTES2[currentSiteId];
       setGenerated({
         siteId: currentSiteId,
         sections: paths?.length ? [{ label: "Site", routes: paths.map((path) => ({ path })) }] : []
@@ -2080,7 +2071,6 @@ function DevToolsMenuPopover({
 }
 
 // src/header/SiteHeader.tsx
-import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
 import { jsx as jsx18 } from "react/jsx-runtime";
 var NotificationBell = dynamic2(
   () => import("@agentic-toolkit/messaging/components/notification-bell").then((m) => m.NotificationBell)
@@ -2121,7 +2111,6 @@ function SiteHeader({
   const resolvedNavLinks = (typeof navLinks === "function" ? navLinks(user != null) : navLinks) ?? [];
   const hostname = useClientHost4();
   const conceptSite = isConceptSite(siteId);
-  const onLandingPage = usePathname6() === "/";
   const site = getSite3(siteId);
   const siteName = site ? siteHeaderTitle2(site) : siteId;
   const siteShortName = site?.label ?? siteId;
@@ -2160,8 +2149,6 @@ function SiteHeader({
         }
       ),
       pageTitle: pageTitle ?? siteShortName,
-      pageTitleHelp: pageTitle == null ? SITE_TITLE_HELP_ID : void 0,
-      pageTitleHelpFallback: site?.description,
       center,
       badges,
       leadingActions,
@@ -2170,7 +2157,8 @@ function SiteHeader({
       previewNotice,
       previewDetail,
       homeHref: siteHomePath(siteId),
-      preAuthLinks: conceptSite && onLandingPage ? /* @__PURE__ */ jsx18("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      profileHref: user?.slug && hasProfileRoute(siteId) ? `/${encodeURIComponent(user.slug)}/profile` : void 0,
+      preAuthLinks: conceptSite ? /* @__PURE__ */ jsx18("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
       accountActions: user != null ? /* @__PURE__ */ jsx18(NotificationBell, {}) : void 0,
       user,
       authLoading,

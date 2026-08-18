@@ -64,6 +64,12 @@ export function ProfileView({
   // On the hub there is no link: the hub's profile IS the full profile, so a link back to itself
   // would be a link to the page the visitor is already on.
   //
+  // The target is `/<slug>/profile`, not `/<slug>` — the hub's root segment resolves by
+  // ownership (the signed-in owner's own workspace, not a profile view), so a bare slug would
+  // send this component's own owner-viewing-their-own-card case somewhere other than the profile
+  // it is linking to. `/<slug>/profile` is unconditional: it renders the profile no matter who is
+  // looking, which is the one guarantee this link needs.
+  //
   // `useClientHost` (`null` on the server AND the first client render, the real host once
   // mounted) rather than a direct `globalThis.location` read: this component carries 'use
   // client', but a client component still renders on the SERVER first, where `location` is
@@ -76,8 +82,8 @@ export function ProfileView({
     siteId === 'hub'
       ? null
       : hostname
-        ? siteUrl('hub', `/${encodeURIComponent(shown.slug)}`, hostname)
-        : siteProdUrl('hub', `/${encodeURIComponent(shown.slug)}`)
+        ? siteUrl('hub', `/${encodeURIComponent(shown.slug)}/profile`, hostname)
+        : siteProdUrl('hub', `/${encodeURIComponent(shown.slug)}/profile`)
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16 sm:px-6">
