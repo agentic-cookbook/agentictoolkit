@@ -14381,6 +14381,203 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move one customer (and the workspace they own) to another ecosystem (admin)
+         * @description Runs in ONE transaction. Rewrites the account tables, revokes API tokens scoped to the source, re-parents the ecosystems the user owns beneath it, and re-derives every affected rdid from the new parent chain. Old addresses remain resolvable as aliases.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description the customer's uuid */
+                        userId: string;
+                        /** @description destination ecosystem (uuid or rdid) */
+                        target: string;
+                        /** @description report conflicts without writing */
+                        dryRun?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description What moved (or, for a dry run, what would collide) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            userId?: string;
+                            from?: string;
+                            to?: string;
+                            dryRun?: boolean;
+                            moved?: {
+                                [key: string]: number;
+                            };
+                            /** @description API tokens deleted */
+                            revoked?: number;
+                            ecosystemsReparented?: number;
+                            /** @description addresses re-derived by the cascade */
+                            rewritten?: number;
+                            conflicts?: {
+                                userId?: string;
+                                constraint?: string;
+                                detail?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/transfer/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What would collide if these users moved, without moving them (admin) */
+        get: {
+            parameters: {
+                query: {
+                    /** @description comma-separated customer uuids — the whole selection, in one call */
+                    userIds: string;
+                    /** @description destination ecosystem (uuid or rdid) */
+                    target: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Conflicts across the whole selection */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            target?: string;
+                            conflicts?: {
+                                userId?: string;
+                                constraint?: string;
+                                detail?: string;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/discussion/topics": {
         parameters: {
             query?: never;
@@ -29838,7 +30035,62 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Search rdids by prefix, or resolve a batch of entity ids (admin only)
+         * @description Send `q` for a left-anchored prefix search, or `entityIds` for a batch reverse lookup — never both. Only canonical rows are returned; aliases are never offered. Unknown ids in a batch are omitted rather than failing the request.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    q?: string;
+                    entityIds?: string;
+                    entityType?: string;
+                    limit?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description the matching mappings, rdid-ascending */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RegistryIdentifier"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         put?: never;
         /** Create an rdid -> entity mapping */
         post: {
@@ -34600,6 +34852,156 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/reserved-identifiers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin-only list of held-but-unused rdids (paginated, newest-stuck first) */
+        get: {
+            parameters: {
+                query?: {
+                    page?: string;
+                    pageSize?: string;
+                    q?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Reserved identifier page */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReservedIdentifierPage"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/reserved-identifiers/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release one held rdid back into the pool (admin) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description The held identifier, exactly as listed */
+                        rdid: string;
+                        /** @description Verified against the stored mapping */
+                        entityType: string;
+                        /** @description Verified against the stored mapping */
+                        entityId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description What the release did */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ReleaseResult"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -65940,6 +66342,40 @@ export interface components {
             pageSize: number;
             /** @description Saturates at a 10,000-row count cap */
             total: number;
+        };
+        ReservedIdentifier: {
+            rdid: string;
+            entityType: string;
+            entityId: string;
+            /**
+             * @description What is holding the name, and therefore what releasing it does: an in-window rename alias and an orphaned mapping are deleted; a deleted entity is RENAMED to a placeholder and its subtree moves with it.
+             * @enum {string}
+             */
+            reason: "rename-leftover" | "orphan" | "deleted-entity";
+            /** @description When the name got stuck: an alias's supersede instant, else the row's last write */
+            heldSince: string | null;
+            /** @description False for names this surface can only report — a revoked token slug (reserved by policy) and legacy reverse-domain handles. Releasing one answers 403. */
+            releasable: boolean;
+        };
+        ReservedIdentifierPage: {
+            items: components["schemas"]["ReservedIdentifier"][];
+            page: number;
+            /** @description Clamped 1..200 */
+            pageSize: number;
+            /** @description Saturates at a 2,000-row cap: the list merges heterogeneous sources and cannot be paged by a single SQL OFFSET */
+            total: number;
+        };
+        ReleaseResult: {
+            rdid: string;
+            /** @enum {string} */
+            reason: "rename-leftover" | "orphan" | "deleted-entity";
+            /** @description The released NAME is available again. Deliberately not "the surrounding namespace is empty" — a different type sharing that path is a different name. */
+            freed: boolean;
+            /** @description The name the entity was renamed to, when the release was a rename */
+            placeholder?: string;
+            aliasesRemoved: number;
+            /** @description Canonical addresses still sitting in that space, informational. Read as "these exist nearby", never as "the release failed". */
+            stillHeldBy: string[];
         };
         TeamMember: {
             id: string;
