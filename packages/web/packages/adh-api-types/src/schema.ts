@@ -764,6 +764,11 @@ export interface paths {
                         /** Format: uri */
                         avatarUrl?: string;
                         publicProfileEnabled?: boolean;
+                        /**
+                         * @description The principal's page-level profile visibility. Supersedes publicProfileEnabled, which is retained during the expand phase and written in parallel.
+                         * @enum {string}
+                         */
+                        profileVisibility?: "public" | "hub" | "private";
                     };
                 };
             };
@@ -28619,7 +28624,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Search public-profile users by slug or display name */
+        /** Search visible user and organization profiles by slug or display name */
         get: {
             parameters: {
                 query: {
@@ -28631,7 +28636,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Matching public users (max 20) */
+                /** @description Matching principals visible to the caller (max 20) */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -29330,7 +29335,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get one public/unlisted entry by slug (301s a superseded slug) */
+        /** Get one public entry by slug (301s a superseded slug) */
         get: {
             parameters: {
                 query?: never;
@@ -29418,6 +29423,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search visible user and organization profiles as a signed-in viewer ('public' + 'hub') */
+        get: {
+            parameters: {
+                query: {
+                    q: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Matching principals ('public' + 'hub' profiles, max 20) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicUserSearchHit"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{slug}": {
         parameters: {
             query?: never;
@@ -29476,6 +29528,242 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/orgs/{slug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        /** Get an organization card as a signed-in viewer ('public' + 'hub' orgs) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Organization profile card */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicOrgProfile"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{ownerSlug}/personas/{personaSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ownerSlug: string;
+                personaSlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get a persona scoped to its owning user as a signed-in viewer ('public' + 'hub') */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ownerSlug: string;
+                    personaSlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Persona (public + hub rows) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicPersona"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/orgs/{ownerSlug}/personas/{personaSlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ownerSlug: string;
+                personaSlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get a persona scoped to its owning organization as a signed-in viewer ('public' + 'hub') */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    ownerSlug: string;
+                    personaSlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Persona (public + hub rows) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicPersona"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/registries/{registrySlug}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                registrySlug: string;
+            };
+            cookie?: never;
+        };
+        /** Get a registry as a signed-in viewer ('public' + 'hub' registries) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    registrySlug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Registry metadata */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PublicRegistry"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/registries/{registrySlug}/entries/{entrySlug}": {
         parameters: {
             query?: never;
@@ -29486,7 +29774,7 @@ export interface paths {
             };
             cookie?: never;
         };
-        /** Get one entry as a signed-in viewer (public + authenticated fields) */
+        /** Get one entry as a signed-in viewer (public + authenticated fields, 'hub' rows) */
         get: {
             parameters: {
                 query?: never;
@@ -30142,7 +30430,7 @@ export interface paths {
                         categoryRoot?: string;
                         entryTerm?: string;
                         /** @enum {string} */
-                        visibility?: "public" | "unlisted" | "private";
+                        visibility?: "public" | "hub" | "private";
                         /** @enum {string} */
                         submissionPolicy?: "open" | "reviewed";
                         servicesEnabled?: boolean;
@@ -30333,7 +30621,7 @@ export interface paths {
                         categoryRoot?: string;
                         entryTerm?: string;
                         /** @enum {string} */
-                        visibility?: "public" | "unlisted" | "private";
+                        visibility?: "public" | "hub" | "private";
                         /** @enum {string} */
                         submissionPolicy?: "open" | "reviewed";
                         servicesEnabled?: boolean;
@@ -31236,7 +31524,7 @@ export interface paths {
                         /** @enum {string} */
                         status?: "draft" | "pending" | "published";
                         /** @enum {string} */
-                        visibility?: "public" | "unlisted" | "private";
+                        visibility?: "public" | "hub" | "private";
                         /** @description shape-checked against the live field defs on every write; required-ness only enforced when the resulting status is (or stays) published. On PATCH this is a JSON Merge Patch (RFC 7386) applied to the STORED values, not a full replace: a key you omit is left untouched; a key you send with a non-null value replaces that one field; a key you send as null DELETES it. Send only the section you are editing — the rest of the entry is preserved. On POST there is no prior state, so this object IS the initial values as given (null has no special meaning here). */
                         values?: {
                             [key: string]: unknown;
@@ -31419,7 +31707,7 @@ export interface paths {
                         /** @enum {string} */
                         status?: "draft" | "pending" | "published";
                         /** @enum {string} */
-                        visibility?: "public" | "unlisted" | "private";
+                        visibility?: "public" | "hub" | "private";
                         /** @description shape-checked against the live field defs on every write; required-ness only enforced when the resulting status is (or stays) published. On PATCH this is a JSON Merge Patch (RFC 7386) applied to the STORED values, not a full replace: a key you omit is left untouched; a key you send with a non-null value replaces that one field; a key you send as null DELETES it. Send only the section you are editing — the rest of the entry is preserved. On POST there is no prior state, so this object IS the initial values as given (null has no special meaning here). */
                         values?: {
                             [key: string]: unknown;
@@ -47100,6 +47388,7 @@ export interface paths {
                             slug: string;
                             avatarUrl: string;
                             publicProfileEnabled: boolean;
+                            profileVisibility: string;
                             tokenVersion: number;
                             preferredMfaMethod: string | null;
                             mfaFailedAttempts: number;
@@ -47142,7 +47431,7 @@ export interface paths {
                         displayName?: string | null;
                         slug?: string;
                         avatarUrl?: string;
-                        publicProfileEnabled?: boolean;
+                        profileVisibility?: string;
                         tokenVersion?: number;
                         preferredMfaMethod?: string | null;
                         syncTxid?: number;
@@ -47165,6 +47454,7 @@ export interface paths {
                             slug: string;
                             avatarUrl: string;
                             publicProfileEnabled: boolean;
+                            profileVisibility: string;
                             tokenVersion: number;
                             preferredMfaMethod: string | null;
                             mfaFailedAttempts: number;
@@ -47240,6 +47530,7 @@ export interface paths {
                             slug: string;
                             avatarUrl: string;
                             publicProfileEnabled: boolean;
+                            profileVisibility: string;
                             tokenVersion: number;
                             preferredMfaMethod: string | null;
                             mfaFailedAttempts: number;
@@ -47292,7 +47583,7 @@ export interface paths {
                         displayName?: string | null;
                         slug?: string;
                         avatarUrl?: string;
-                        publicProfileEnabled?: boolean;
+                        profileVisibility?: string;
                         tokenVersion?: number;
                         preferredMfaMethod?: string | null;
                         syncTxid?: number;
@@ -47315,6 +47606,7 @@ export interface paths {
                             slug: string;
                             avatarUrl: string;
                             publicProfileEnabled: boolean;
+                            profileVisibility: string;
                             tokenVersion: number;
                             preferredMfaMethod: string | null;
                             mfaFailedAttempts: number;
@@ -62534,6 +62826,11 @@ export interface components {
             slug: string | null;
             /** @description Whether the public profile card is visible at /public/users/:slug */
             publicProfileEnabled: boolean;
+            /**
+             * @description The principal's page-level profile visibility. Supersedes publicProfileEnabled, which is retained during the expand phase and written in parallel.
+             * @enum {string}
+             */
+            profileVisibility: "public" | "hub" | "private";
             capabilities: string[];
         };
         AuthResult: {
@@ -64880,7 +65177,7 @@ export interface components {
             character: string | null;
             examples: string | null;
             /** @enum {string} */
-            visibility: "public" | "unlisted";
+            visibility: "public" | "hub";
             createdAt: string;
             owner: components["schemas"]["PublicOwner"];
             demoEnabled: boolean;
@@ -64988,7 +65285,7 @@ export interface components {
             name: string;
             description: string | null;
             /** @enum {string} */
-            visibility: "public";
+            visibility: "public" | "hub";
             createdAt: string;
             owner: components["schemas"]["PublicOwner"];
         };
@@ -65010,6 +65307,8 @@ export interface components {
             slug: string;
             displayName: string | null;
             avatarUrl: string | null;
+            /** @enum {string} */
+            kind: "user" | "organization";
         };
         PublicUserProfile: {
             slug: string;
@@ -65375,7 +65674,7 @@ export interface components {
             /** @description what this registry calls an entry, e.g. "coach" */
             entryTerm: string;
             /** @enum {string} */
-            visibility: "public" | "unlisted" | "private";
+            visibility: "public" | "hub" | "private";
             /** @enum {string} */
             submissionPolicy: "open" | "reviewed";
             /** @description a fleet SITE SLUG this registry is bound to; set by platform admin only, never via this API */
@@ -65481,7 +65780,7 @@ export interface components {
             /** @enum {string} */
             status: "draft" | "pending" | "published";
             /** @enum {string} */
-            visibility: "public" | "unlisted" | "private";
+            visibility: "public" | "hub" | "private";
             /** @description owner-defined tail, keyed by field_defs.key; shape-validated on every write */
             values: {
                 [key: string]: unknown;
