@@ -34,6 +34,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/login',
     '/messaging',
     '/privacy',
+    '/reserved-identifiers',
     '/server-bags',
     '/sync',
     '/terms',
