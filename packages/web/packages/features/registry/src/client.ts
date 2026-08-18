@@ -9,11 +9,12 @@ import type { PublicEntry } from '@agenticdevelopertoolkit/registry-profile';
  * this exists).
  *
  * The registry's own visibility, and (below) the field-def's, are two names for two sets —
- * the backend validates each independently (`backend/src/adh/src/routes/registries.ts:41`
- * and `:102`), and a field def has no `'unlisted'` state. Do not fold the two into one type:
- * that would silently hand the narrower one a member it does not accept.
+ * the backend validates each independently (`backend/src/adh/src/routes/registries.ts`,
+ * `registryFields.visibility` and `FIELD_VISIBILITIES`), and a field def's set is not a
+ * registry's. Do not fold the two into one type: that would silently hand the narrower one
+ * a member it does not accept.
  */
-export const REGISTRY_VISIBILITIES = ['public', 'unlisted', 'private'] as const;
+export const REGISTRY_VISIBILITIES = ['public', 'hub', 'private'] as const;
 export type RegistryVisibility = (typeof REGISTRY_VISIBILITIES)[number];
 
 /** `backend/src/adh/src/routes/registries.ts:42`. */
@@ -32,10 +33,11 @@ export type SubmissionPolicy = (typeof SUBMISSION_POLICIES)[number];
 export { FIELD_VISIBILITIES };
 export type { FieldVisibility };
 
-/** `backend/src/adh/src/routes/registryEntries.ts:65`. Same members as `RegistryVisibility`
- *  today, validated independently by a different route — kept as its own name rather than
- *  reused so the two can diverge without a silent widening on either side. */
-export const ENTRY_VISIBILITIES = ['public', 'unlisted', 'private'] as const;
+/** `backend/src/adh/src/routes/registryEntries.ts`, `entryWrite`'s `visibility` field. Same
+ *  members as `RegistryVisibility` today, validated independently by a different route —
+ *  kept as its own name rather than reused so the two can diverge without a silent widening
+ *  on either side. */
+export const ENTRY_VISIBILITIES = ['public', 'hub', 'private'] as const;
 export type EntryVisibility = (typeof ENTRY_VISIBILITIES)[number];
 
 /** `ENTRY_STATUSES`, `backend/src/adh/src/routes/registryEntries.ts:40`. */
