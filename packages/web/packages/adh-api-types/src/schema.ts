@@ -39184,6 +39184,350 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/offers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List offers */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            purpose: string;
+                            stripePriceId: string;
+                            stripeProductId: string | null;
+                            collectionMethod: string;
+                            daysUntilDue: number | null;
+                            grantsEcosystemId: string | null;
+                            lapseAction: string;
+                            graceDays: number;
+                            isActive: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create offers */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        slug: string;
+                        name: string;
+                        description?: string | null;
+                        purpose?: string;
+                        stripePriceId: string;
+                        stripeProductId?: string | null;
+                        collectionMethod?: string;
+                        daysUntilDue?: number | null;
+                        grantsEcosystemId?: string | null;
+                        lapseAction?: string;
+                        graceDays?: number;
+                        isActive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description offers */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            purpose: string;
+                            stripePriceId: string;
+                            stripeProductId: string | null;
+                            collectionMethod: string;
+                            daysUntilDue: number | null;
+                            grantsEcosystemId: string | null;
+                            lapseAction: string;
+                            graceDays: number;
+                            isActive: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/offers/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get offers by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description offers */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            purpose: string;
+                            stripePriceId: string;
+                            stripeProductId: string | null;
+                            collectionMethod: string;
+                            daysUntilDue: number | null;
+                            grantsEcosystemId: string | null;
+                            lapseAction: string;
+                            graceDays: number;
+                            isActive: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update offers */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        slug?: string;
+                        name?: string;
+                        description?: string | null;
+                        purpose?: string;
+                        stripePriceId?: string;
+                        stripeProductId?: string | null;
+                        collectionMethod?: string;
+                        daysUntilDue?: number | null;
+                        grantsEcosystemId?: string | null;
+                        lapseAction?: string;
+                        graceDays?: number;
+                        isActive?: boolean;
+                    };
+                };
+            };
+            responses: {
+                /** @description offers */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            slug: string;
+                            name: string;
+                            description: string | null;
+                            purpose: string;
+                            stripePriceId: string;
+                            stripeProductId: string | null;
+                            collectionMethod: string;
+                            daysUntilDue: number | null;
+                            grantsEcosystemId: string | null;
+                            lapseAction: string;
+                            graceDays: number;
+                            isActive: boolean;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete offers */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/billing/subscription-tiers": {
         parameters: {
             query?: never;

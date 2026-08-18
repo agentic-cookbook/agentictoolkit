@@ -101,7 +101,7 @@ export const CRUD_TABLES: Record<string, CrudTableMeta> = {
       {"name": "isActive", "type": "boolean", "required": false, "nullable": false, "serverManaged": false},
       {"name": "createdAt", "type": "string", "required": false, "nullable": false, "serverManaged": true},
       {"name": "updatedAt", "type": "string", "required": false, "nullable": false, "serverManaged": true},
-      {"name": "deletedAt", "type": "string", "required": false, "nullable": true, "serverManaged": false},
+      {"name": "deletedAt", "type": "string", "required": false, "nullable": true, "serverManaged": true},
     ],
   },
   "billing/subscription-tiers": {
