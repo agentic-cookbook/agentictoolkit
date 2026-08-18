@@ -72,7 +72,12 @@ export async function listRailwayProjects(token: string, signal: AbortSignal): P
     const edges = body.data?.projects?.edges ?? [];
     return edges.map((e) => ({ id: e.node.id, name: e.node.name })).filter((p) => p.id && p.name);
   } catch (err) {
-    console.error(`Railway project listing failed: ${err instanceof Error ? err.message : String(err)}`);
+    // Same rule as the domains lookup below: an abort is the CALLER's own time box, and
+    // only the caller knows whether it will retry. Reporting it here made a transient loss
+    // that the very next attempt won look like a Railway outage.
+    if (!signal.aborted) {
+      console.error(`Railway project listing failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
     return null;
   }
 }
