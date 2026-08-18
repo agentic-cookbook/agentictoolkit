@@ -2,7 +2,8 @@
 
 import type { ReactElement } from 'react'
 import type { ProfilePrincipal } from '@agentic-toolkit/adh/profile'
-import { registryUserPersonaPath, siteUrl } from '@agentic-toolkit/adh-registry'
+import { registryUserPersonaPath, siteProdUrl, siteUrl } from '@agentic-toolkit/adh-registry'
+import { useClientHost } from '@agentic-toolkit/adh/header'
 
 /**
  * This site's section of a principal's profile at `/<slug>/profile` — declared as
@@ -33,9 +34,15 @@ import { registryUserPersonaPath, siteUrl } from '@agentic-toolkit/adh-registry'
  * owner-scoped form `/<owner>/<persona>` — and `siteUrl` (`registry.ts:933`) resolves the right
  * host for the current environment (local suite / testing / staging / prod).
  *
- * Reads `location.hostname` off `globalThis` rather than `window`, mirroring
- * `personaProfileUrl`'s own comment (`registry.ts:926-930`): this pattern is shared with contexts
- * that have no dom lib, where a bare `window` reference is TS2304 even behind a typeof guard.
+ * The host comes from `useClientHost` (`@agentic-toolkit/adh/header`) — `null` on the server AND
+ * on the first client render, the real host once mounted — rather than a direct
+ * `globalThis.location` read. This component carries `'use client'`, but a client component still
+ * renders on the SERVER first, where `location` is undefined: a direct read would make the server
+ * see `''` and the first client render see the real host, disagreeing on every `href` here and
+ * logging a hydration error. `ProfileView`, the component that renders this one as its
+ * `children`, guards its own `Full Profile` link the same way and says so. `siteProdUrl` is a
+ * correct absolute URL in every environment — just not the environment-local one — so the
+ * pre-mount render is never broken, only less local until the post-mount re-render.
  *
  * A link built this way is not a promise the recipient can open it — a `hub`-visibility persona
  * resolves for a signed-in viewer and 404s for an anonymous one. That is carried over from
@@ -43,6 +50,8 @@ import { registryUserPersonaPath, siteUrl } from '@agentic-toolkit/adh-registry'
  * roster, since the backend already audience-filtered what it returned.
  */
 export function ProfilePersonas({ principal }: { principal: ProfilePrincipal }): ReactElement {
+  // Before the early return: a hook cannot be called conditionally.
+  const hostname = useClientHost()
   const personas = principal.personas
   const subject = principal.kind === 'organization' ? 'This organization' : 'This user'
   if (personas.length === 0) {
@@ -52,8 +61,11 @@ export function ProfilePersonas({ principal }: { principal: ProfilePrincipal }):
       </section>
     )
   }
-  // globalThis, not `window`: see the docblock above.
-  const hostname = (globalThis as { location?: { hostname?: string } }).location?.hostname ?? ''
+  // Deterministic prod host until mounted; see the docblock above.
+  const hrefFor = (personaSlug: string): string => {
+    const path = registryUserPersonaPath(principal.slug, personaSlug)
+    return hostname ? siteUrl('personaregistry', path, hostname) : siteProdUrl('personaregistry', path)
+  }
   return (
     <section className="mt-8">
       <h2 className="mb-3 font-mono text-[0.6rem] uppercase tracking-[0.1em] text-apt-text-dim">
@@ -67,11 +79,7 @@ export function ProfilePersonas({ principal }: { principal: ProfilePrincipal }):
           >
             <div className="font-medium text-apt-text">{p.name}</div>
             <a
-              href={siteUrl(
-                'personaregistry',
-                registryUserPersonaPath(principal.slug, p.slug),
-                hostname,
-              )}
+              href={hrefFor(p.slug)}
               className="text-sm text-apt-text-muted underline underline-offset-4 hover:text-apt-text"
             >
               View persona
