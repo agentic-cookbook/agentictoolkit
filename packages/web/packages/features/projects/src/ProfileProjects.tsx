@@ -16,10 +16,11 @@ import type { ProfilePrincipal } from '@agentic-toolkit/adh/profile'
  * "This user has no public projects" is the honest answer for every principal, not a
  * placeholder for one this component hasn't fetched yet.
  *
- * `principal` is unused here for the same reason: there is nothing to key a request on
- * because there is no request. It stays in the signature because `profileSection`'s contract
- * (Task 11) is `(principal: ProfilePrincipal) => ReactNode`, and every site's section takes
- * it — this one just doesn't need it yet.
+ * `principal` is read for one thing only — whether to say "user" or "organization". Every
+ * principal reaching a profile page is one or the other (`ProfilePrincipal['kind']` is
+ * `'user' | 'organization'`), and an org told it has no public projects as "This user" is
+ * simply wrong about who it is looking at. Nothing else is read from it, because there is
+ * nothing to key a request on while there is no request.
  *
  * When a visibility column arrives on `project`, this component grows a client-side fetch
  * keyed on `principal.slug`, and the site gains the endpoint pair the plan for this task
@@ -29,9 +30,10 @@ import type { ProfilePrincipal } from '@agentic-toolkit/adh/profile'
  * on `backend/src/adh/src/routes/org-card.ts`.
  */
 export function ProfileProjects({ principal }: { principal: ProfilePrincipal }): ReactElement {
+  const subject = principal.kind === 'organization' ? 'This organization' : 'This user'
   return (
     <section className="mt-8">
-      <p className="text-sm text-apt-text-muted">This user has no public projects.</p>
+      <p className="text-sm text-apt-text-muted">{subject} has no public projects.</p>
     </section>
   )
 }
