@@ -156,6 +156,11 @@
       "development": "./src/home/index.ts",
       "import": "./dist/home/index.js"
     },
+    "./home/PublicProfileEscape": {
+      "types": "./dist/home/PublicProfileEscape.d.ts",
+      "development": "./src/home/PublicProfileEscape.tsx",
+      "import": "./dist/home/PublicProfileEscape.js"
+    },
     "./docs": {
       "types": "./dist/docs/index.d.ts",
       "development": "./src/docs/index.ts",

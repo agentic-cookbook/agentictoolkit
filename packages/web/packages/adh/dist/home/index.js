@@ -279,7 +279,7 @@ function ProfileView({
 
 // src/profile/ProfileFallback.tsx
 import { jsx as jsx3 } from "react/jsx-runtime";
-function ProfileFallback({ slug, siteId }) {
+function ProfileFallback({ slug, siteId, section }) {
   const [state, setState] = useState4({ status: "loading" });
   const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null);
   useEffect3(() => {
@@ -313,9 +313,11 @@ function ProfileFallback({ slug, siteId }) {
       cancelled = true;
     };
   }, [slug]);
-  if (viewer) return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false });
+  if (viewer)
+    return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false, children: section?.(viewer) });
   if (state.status === "loading") return null;
-  if (state.status === "found") return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId, upgrade: false });
+  if (state.status === "found")
+    return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId, upgrade: false, children: section?.(state.principal) });
   if (viewerPending) return null;
   if (state.status === "missing") return /* @__PURE__ */ jsx3(ProfileNotFound, {});
   return /* @__PURE__ */ jsx3("main", { className: "mx-auto max-w-2xl px-4 py-16 sm:px-6", children: /* @__PURE__ */ jsx3("p", { className: "text-apt-text-muted", children: "Couldn't load this profile. Reload the page to try again." }) });

@@ -18,8 +18,12 @@ import type { ProfilePrincipal } from './types';
  * profile reads as null at this layer. `useViewerPrincipal` is the other half; the signed-in body
  * is fetched in the browser, from the authed twin, and never enters a server cache.
  *
- * A non-404 failure THROWS, so the route's error boundary shows an error rather than the
- * not-found page — see ProfileFallback for why that distinction is worth keeping.
+ * A non-404 failure THROWS rather than returning null, so the two outcomes stay distinguishable to
+ * a caller — "we could not ask" is not "there is nobody there", and ProfileFallback explains why
+ * collapsing them is worse than useless to a visitor. What the CALLER does with the throw is its
+ * own decision: `/<slug>/profile` catches it and hands the slug to the browser, because neither a
+ * missing `API_BACKEND_URL` nor a backend blip is a fact about whether the profile exists. Nothing
+ * here reaches an error boundary on its own.
  *
  * SERVER ONLY, by convention rather than by the `server-only` package, which this workspace does
  * not install (it is in no package.json here and in no lockfile, so the import would not

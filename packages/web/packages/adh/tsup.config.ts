@@ -91,6 +91,15 @@ export default defineConfig({
     // precisely so that stays true of what a public page loads — messaging, and the data it
     // pulls in behind it, arrive in their own chunk and only once someone is signed in.
     'home/index': 'src/home/index.ts',
+    // The `[workspace]` gate's one exemption — the `'use client'` leaf that lets
+    // `/<slug>/profile` render un-gated while everything else under `/<slug>` stays behind
+    // the gate. Its own entry for the reason `site/site-id` has one: a SERVER layout on 40
+    // sites mounts it, and any entry that inlined it would take its 'use client' banner on
+    // the whole chunk (preserve-directives hoists it). Deliberately NOT a member of
+    // `home/index`, even though that barrel is already 'use client': the barrel drags
+    // SiteHomeShell and with it @agentic-toolkit/data, and the escape's whole job is to be
+    // the piece the layout can reach without the gated app behind it.
+    'home/PublicProfileEscape': 'src/home/PublicProfileEscape.tsx',
     // The ADH docs shell (server component: sidebar + article). No context/state, so it needs no
     // external self-entry like help — a plain entry the consumer resolves to dist/ in prod.
     'docs/index': 'src/docs/index.ts',
@@ -399,6 +408,13 @@ export default defineConfig({
     // src/ imports it today, but the day an entry here does it is already a boundary rather
     // than a silently inlined second copy of the shell's state.
     '@agentic-toolkit/adh/home',
+    // The `[workspace]` gate's escape leaf (entry above). Pre-listed for the same reason as the
+    // barrel on the line above — nothing under src/ imports it today; the 40 site layouts do —
+    // and it is a DIRECTIVE boundary the day one does, exactly like
+    // '@agentic-toolkit/adh/graph/ConceptGraphClient' below. It is also what
+    // verify-bundle-boundaries.py's Check C reads to hold this line, the entry above and the
+    // `./home/PublicProfileEscape` exports subpath together.
+    '@agentic-toolkit/adh/home/PublicProfileEscape',
     // ── Self-references from the merged adh vocabulary tier ─────────────────────────
     // Same rule as every entry above, and it applies to ALL of these without exception:
     // a package-path specifier that is NOT listed here is not a boundary — esbuild

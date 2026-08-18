@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
 import type { SiteId } from '@agentic-toolkit/adh-registry'
 import { principalFromOrgCard, principalFromUserCard, type OrgCardBody, type UserCardBody } from './normalize'
 import { ProfileNotFound } from './ProfileNotFound'
@@ -17,6 +17,18 @@ type State =
 export interface ProfileFallbackProps {
   slug: string
   siteId: SiteId
+  /**
+   * The site's own addition to the profile, as a RENDER PROP rather than a node.
+   *
+   * It has to be a function because the principal it describes is not known when this component is
+   * mounted — that is the entire difference between this component and `ProfileClient`'s seeded
+   * branch. A caller with no principal in hand cannot call `site.home.profileSection(principal)`
+   * itself, so it hands over the function and this calls it once the lookup lands.
+   *
+   * Deliberately NOT applied to the `ProfileNotFound` or error renders: there is no principal to
+   * pass, and a site section rendered under "no such profile" would be describing nobody.
+   */
+  section?: (principal: ProfilePrincipal) => ReactNode
 }
 
 /**
@@ -25,8 +37,16 @@ export interface ProfileFallbackProps {
  * This is the `/<slug>` half of the feature, and it is client-side for a reason the server half
  * is not: whether a caller can reach a workspace is only known after the workspace list resolves
  * in the browser, so the decision to show a profile instead happens well after the server
- * response has been sent. The `/<slug>/profile` route, which needs no such decision, fetches on
- * the server and gets real metadata out of it (see the route's page.tsx).
+ * response has been sent.
+ *
+ * It is ALSO the un-seeded half of `/<slug>/profile`. That route does fetch on the server, but only
+ * the ANONYMOUS layer is reachable from there — a `hub` profile, or any principal whose visibility
+ * excludes the anonymous public, comes back empty for a viewer who is nonetheless entitled to see
+ * it, and a backend that is down comes back empty for everybody. Neither is a verdict, so the
+ * route treats its server fetch as a SEED: a hit renders straight through, a miss hands the slug to
+ * this component and the two-layer lookup below decides. What the server fetch is still solely
+ * responsible for is `generateMetadata`, which has no second chance in the browser (see the route's
+ * page.tsx).
  *
  * Three outcomes on the anonymous layer, and they are deliberately not two:
  *   - 404 → the not-found page with its search. "No such principal" and "not visible to you" are
@@ -55,7 +75,7 @@ export interface ProfileFallbackProps {
  * That is the price of keeping the widening a property of the view rather than of every caller;
  * it happens on one code path, for signed-in viewers only, and never on the anonymous render.
  */
-export function ProfileFallback({ slug, siteId }: ProfileFallbackProps): ReactElement | null {
+export function ProfileFallback({ slug, siteId, section }: ProfileFallbackProps): ReactElement | null {
   const [state, setState] = useState<State>({ status: 'loading' })
   const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null)
 
@@ -96,9 +116,19 @@ export function ProfileFallback({ slug, siteId }: ProfileFallbackProps): ReactEl
   // if the authed twin resolved the principal, the page is not broken for this visitor. This
   // component already ran useViewerPrincipal to decide THAT, so ProfileView is told not to run
   // it again with upgrade={false} — a second identical lookup would be pure waste.
-  if (viewer) return <ProfileView principal={viewer} siteId={siteId} upgrade={false} />
+  if (viewer)
+    return (
+      <ProfileView principal={viewer} siteId={siteId} upgrade={false}>
+        {section?.(viewer)}
+      </ProfileView>
+    )
   if (state.status === 'loading') return null
-  if (state.status === 'found') return <ProfileView principal={state.principal} siteId={siteId} upgrade={false} />
+  if (state.status === 'found')
+    return (
+      <ProfileView principal={state.principal} siteId={siteId} upgrade={false}>
+        {section?.(state.principal)}
+      </ProfileView>
+    )
   // Neither "not found" nor "we are down" is final while the viewer's own lookup is still
   // running: a `hub` profile is a 404 on the anonymous route BY DESIGN, so the public miss
   // is the expected first answer for the very viewers the setting exists to admit.
