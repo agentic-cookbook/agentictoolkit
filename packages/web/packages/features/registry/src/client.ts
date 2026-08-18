@@ -17,7 +17,7 @@ import type { PublicEntry } from '@agenticdevelopertoolkit/registry-profile';
 export const REGISTRY_VISIBILITIES = ['public', 'hub', 'private'] as const;
 export type RegistryVisibility = (typeof REGISTRY_VISIBILITIES)[number];
 
-/** `backend/src/adh/src/routes/registries.ts:42`. */
+/** `backend/src/adh/src/routes/registries.ts`, `registryFields.submissionPolicy`. */
 export const SUBMISSION_POLICIES = ['open', 'reviewed'] as const;
 export type SubmissionPolicy = (typeof SUBMISSION_POLICIES)[number];
 
@@ -40,23 +40,25 @@ export type { FieldVisibility };
 export const ENTRY_VISIBILITIES = ['public', 'hub', 'private'] as const;
 export type EntryVisibility = (typeof ENTRY_VISIBILITIES)[number];
 
-/** `ENTRY_STATUSES`, `backend/src/adh/src/routes/registryEntries.ts:40`. */
+/** `ENTRY_STATUSES`, `backend/src/adh/src/routes/registryEntries.ts` — the const of that name. */
 export const ENTRY_STATUSES = ['draft', 'pending', 'published'] as const;
 export type EntryStatus = (typeof ENTRY_STATUSES)[number];
 
-/** `backend/src/adh/src/routes/registryEntries.ts:47`. */
+/** `backend/src/adh/src/routes/registryEntries.ts`, `entryWrite`'s `providerType`. */
 export const PROVIDER_TYPES = ['person', 'organization', 'persona'] as const;
 export type ProviderType = (typeof PROVIDER_TYPES)[number];
 
-/** `backend/src/adh/src/routes/registryEntries.ts:58`. Same members as `ServiceDeliveryMode`
- *  below (`:87`) today, validated independently by a different `z.enum` on a different table
+/** `backend/src/adh/src/routes/registryEntries.ts`, `entryWrite`'s `deliveryMode`. Same members
+ *  as `ServiceDeliveryMode` below today, validated independently by a different `z.enum` on a
+ *  different table
  *  — kept as its own name rather than reused so the two can diverge without a silent widening
  *  on either side. */
 export const ENTRY_DELIVERY_MODES = ['in_person', 'virtual', 'hybrid'] as const;
 export type EntryDeliveryMode = (typeof ENTRY_DELIVERY_MODES)[number];
 
 /**
- * `backend/src/adh/src/routes/registryEntries.ts:62`. How the SPINE offers to be contacted
+ * `backend/src/adh/src/routes/registryEntries.ts`, `entryWrite`'s `contactMode`. How the SPINE
+ * offers to be contacted
  * — a platform DM, or nothing.
  *
  * Not a ban on published contact details: an owner-defined `email`/`phone`/`address` field
@@ -148,14 +150,15 @@ export type EntryWrite = Partial<Omit<EntryRow, 'valueVisibility'>> & {
   valueVisibility?: Record<string, FieldVisibility | null>;
 };
 
-/** `backend/src/adh/src/routes/registryEntries.ts:82`. */
+/** `backend/src/adh/src/routes/registryEntries.ts`, `serviceFields`' `pricingModel`. */
 export const PRICING_MODELS = [
   'hourly', 'per_job', 'per_deliverable', 'subscription', 'free', 'barter',
 ] as const;
 export type PricingModel = (typeof PRICING_MODELS)[number];
 
-/** `backend/src/adh/src/routes/registryEntries.ts:87`. Same members as `EntryDeliveryMode`
- *  above today, validated independently by a different `z.enum` on a different table — kept
+/** `backend/src/adh/src/routes/registryEntries.ts`, `serviceFields`' `deliveryMode`. Same members
+ *  as `EntryDeliveryMode` above today, validated independently by a different `z.enum` on a
+ *  different table — kept
  *  as its own name rather than reused so the two can diverge without a silent widening on
  *  either side. */
 export const SERVICE_DELIVERY_MODES = ['in_person', 'virtual', 'hybrid'] as const;
