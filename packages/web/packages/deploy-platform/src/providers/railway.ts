@@ -162,7 +162,13 @@ export async function listRailwayProjectDomains(
     }
     return out;
   } catch (err) {
-    console.error(`Railway project ${projectId} domains failed: ${err instanceof Error ? err.message : String(err)}`);
+    // A failure caused by the CALLER's own time box is the caller's to report: it is the
+    // only side that knows whether it will retry, and logging here made every transient
+    // loss look like a Railway fault. Anything else is a genuine surprise and is reported
+    // where it happens.
+    if (!signal.aborted) {
+      console.error(`Railway project ${projectId} domains failed: ${err instanceof Error ? err.message : String(err)}`);
+    }
     return null;
   }
 }

@@ -237,6 +237,30 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
 }
 
 /**
+ * Per-project time box for the domains lookup, how many attempts it gets, and how many
+ * run at once.
+ *
+ * Railway's GraphQL is fast in the median with a very fat tail. Measured from inside a
+ * deployed container, 200 samples of this exact query ran p50=83ms / p90=138ms /
+ * p95=189ms but p99=2237ms with a 3.4s max — and because an enumeration runs minutes
+ * apart, every one of them starts on a COLD connection, which added up to 4.2s of TLS
+ * setup on top. A 6s box is therefore inside the tail, not outside it, and a deployment
+ * logged ~40 self-inflicted `This operation was aborted` failures a day, arriving in
+ * same-millisecond bursts as a whole concurrent wave lost together.
+ *
+ * The tail is INDEPENDENT per request rather than sticky to a slow project (one project
+ * measured slow on 2 of 20 samples and fast on the other 18), so a second attempt lands
+ * in the 83ms median. That is why this is a retry and NOT a longer box: widening the box
+ * would make a genuinely stuck project hold one of the four slots for twice as long,
+ * spending the fan-out on the project least likely to answer. It also matters that these
+ * losses are not free — a lost lookup clears `complete`, which is what tells every caller
+ * "we never saw this project", suppressing the whole retirement pass for the platform.
+ */
+const RAILWAY_DOMAINS_TIMEOUT_MS = 6_000;
+const RAILWAY_DOMAINS_ATTEMPTS = 2;
+const RAILWAY_DOMAINS_CONCURRENCY = 4;
+
+/**
  * Resolve each Railway project's monitorable hosts, split PER ENVIRONMENT (projectName →
  * one {@link RailwayEnvDomains} per environment). Each env carries its own representative
  * `domain` + full `domains` list (custom domains plus provider hosts, so provider-only
@@ -261,31 +285,42 @@ async function resolveRailwayDomains(
   // Bounded concurrency (not an unbounded Promise.all): an account token can list many
   // projects, and Railway's GraphQL is rate-limited — a 100-wide fan-out would get
   // throttled, dropping domains. 4 in flight keeps it gentle.
-  await mapLimit(projects, 4, async (p) => {
+  await mapLimit(projects, RAILWAY_DOMAINS_CONCURRENCY, async (p) => {
     // A project the list named without an id can't be queried at all — a blind spot, not
     // a project without domains.
     if (!p.id) {
       complete = false;
       return;
     }
-    const timer = withTimeout(6_000);
-    try {
-      const services = await listRailwayProjectDomains(token, p.id, timer.signal);
-      if (!services) {
+    for (let attempt = 1; attempt <= RAILWAY_DOMAINS_ATTEMPTS; attempt++) {
+      const timer = withTimeout(RAILWAY_DOMAINS_TIMEOUT_MS);
+      try {
+        const services = await listRailwayProjectDomains(token, p.id, timer.signal);
+        if (!services) {
+          // Only OUR box firing earns a second try. A project that ANSWERED with a
+          // failure (unauthorized, a GraphQL error) gave a real verdict, and asking it
+          // the identical question again would only spend the fan-out twice.
+          if (timer.signal.aborted && attempt < RAILWAY_DOMAINS_ATTEMPTS) continue;
+          if (timer.signal.aborted) {
+            console.error(`Railway project ${p.id} domains timed out on all ${RAILWAY_DOMAINS_ATTEMPTS} attempts`);
+          }
+          complete = false;
+          return;
+        }
+        const envs = railwayProjectEnvironments(services);
+        // Only record projects that expose a real host in at least one env; provider-only /
+        // Postgres projects (no domains anywhere) stay absent so they enumerate "no domain".
+        if (envs.length) out.set(p.name, envs);
+        return;
+      } catch {
+        // One project's failure must never fail the others (or the whole endpoint) —
+        // it simply contributes no domain. listRailwayProjectDomains already swallows
+        // its own errors; this guards anything unexpected in the pick.
         complete = false;
         return;
+      } finally {
+        timer.done();
       }
-      const envs = railwayProjectEnvironments(services);
-      // Only record projects that expose a real host in at least one env; provider-only /
-      // Postgres projects (no domains anywhere) stay absent so they enumerate "no domain".
-      if (envs.length) out.set(p.name, envs);
-    } catch {
-      // One project's failure must never fail the others (or the whole endpoint) —
-      // it simply contributes no domain. listRailwayProjectDomains already swallows
-      // its own errors; this guards anything unexpected in the pick.
-      complete = false;
-    } finally {
-      timer.done();
     }
   });
   return { byProject: out, complete };
