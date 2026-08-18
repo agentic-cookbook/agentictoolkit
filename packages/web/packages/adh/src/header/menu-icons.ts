@@ -51,6 +51,7 @@ import {
   Flag,
   FlaskConical,
   FolderKanban,
+  Gamepad2,
   GitPullRequest,
   Globe,
   GraduationCap,
@@ -210,6 +211,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   domains: Globe,
   ecosystems: Network, // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
   education: School,
+  games: Gamepad2, // authoring games, not the achievements feature below
   gamification: Trophy, // matches the '/gamification' route
   integrations: Plug, // matches the '/integrations' route
   knowledgebases: BookOpen, // matches FEATURE_META `knowledgebases`

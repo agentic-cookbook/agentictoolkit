@@ -110,6 +110,7 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   integrations: { tier: 'chapter', pillar: 'backend', funnelStage: 'build', nextStep: 'hub' },
   // Gamification is a property OF a product, so its story continues into products.
   gamification: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'products' },
+  games: { tier: 'chapter', pillar: 'build', funnelStage: 'ship', nextStep: 'products' },
   // --- studio & consulting. FishLamp Design is the studio the family sits under
   // (it replaced Agentic Developer Studio, whose site is gone); consulting points
   // at it as the absorbing site. fishlampdesign is the same site on its second
@@ -174,7 +175,8 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   gamification: 'integrations',
   integrations: 'notifications',
   notifications: 'orgs',
-  orgs: 'products',
+  orgs: 'games',
+  games: 'products',
   products: 'registries',
   registries: 'community',
   community: 'consultants',

@@ -1,7 +1,20 @@
 import * as React from 'react'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, within } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 import { ProgressModal } from '../blocks/progress-modal'
+
+/**
+ * The FOOTER's Close, not the dialog's ×. `showClose={finished}` means that once the run has
+ * ended there are two buttons whose accessible name is "Close" — the corner dismiss (an
+ * `aria-label`) and the footer button (its text) — so an unscoped query matches both and
+ * throws. Both are genuinely "Close" to a screen reader, which is why the test narrows its
+ * scope rather than renaming one of them.
+ */
+function footerButton(name: string): HTMLElement {
+  const footer = document.querySelector('[data-slot="dialog-footer"]')
+  if (!(footer instanceof HTMLElement)) throw new Error('the dialog rendered no footer')
+  return within(footer).getByRole('button', { name })
+}
 
 describe('ProgressModal', () => {
   it('reports progress as a percentage of the total', () => {
@@ -83,7 +96,7 @@ describe('ProgressModal', () => {
     render(
       <ProgressModal open finished title="Moving users" total={3} done={3} onClose={vi.fn()} onContinue={vi.fn()} />,
     )
-    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+    expect(footerButton('Close')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
   })
 
@@ -91,7 +104,7 @@ describe('ProgressModal', () => {
     // A stopped run is finished. Deriving finished from done === total would leave the operator
     // holding a modal they cannot dismiss.
     render(<ProgressModal open finished title="Moving users" total={3} done={1} onClose={vi.fn()} />)
-    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+    expect(footerButton('Close')).toBeTruthy()
   })
 
   it('logs every item, ok and failed alike, and keeps the log after the run ends', () => {
@@ -119,7 +132,7 @@ describe('ProgressModal', () => {
   it('Close calls onClose', () => {
     const onClose = vi.fn()
     render(<ProgressModal open finished title="Moving users" total={1} done={1} onClose={onClose} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.click(footerButton('Close'))
     expect(onClose).toHaveBeenCalled()
   })
 })

@@ -1,0 +1,17 @@
+/* Tailwind v4 source registration for @agentic-toolkit/games.
+   Both globs are needed: `next dev` resolves this package's `development` export
+   condition to src, a production build resolves it to dist, and a class that only
+   appears in the half Tailwind was not told to scan is simply not emitted. */
+
+/* This package registers what IT mounts: every pane here is a resource
+   MasterDetailLayout / ResourceExplorer / CreateResourceDialog, so a host that
+   registers `games` alone still loses their utilities. Chained HERE because under
+   pnpm's isolated node_modules only a declaring package can resolve the specifier
+   — the same reason features/teams/sources.css chains it, and for the same reason
+   it is chained unconditionally rather than "only when no host already covers it":
+   a rule whose answer depends on composition is how the settings overlay shipped
+   half-styled across the fleet. */
+@import "@agentic-toolkit/resource/sources.css";
+
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

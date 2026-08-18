@@ -16,6 +16,7 @@ export default defineConfig({
     'src/security/index.ts',
     'src/integrations/index.ts',
     'src/gamification/index.ts',
+    'src/games/index.ts',
     'src/invitations/index.ts',
     'src/access/index.ts',
     'src/ownership/index.ts',

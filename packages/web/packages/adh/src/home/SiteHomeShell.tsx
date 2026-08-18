@@ -47,7 +47,7 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
  * this workspace — and lands in the same place.
  */
-export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement {
+export function SiteHomeShell({ workspaceSlug, children, action }: SiteHomeShellProps): ReactElement {
   // `error` is not optional to read here. A failed list leaves `items` at its previous value —
   // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
   // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so
@@ -142,7 +142,19 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
 
   return (
     <>
-      <WorkspaceBar workspaces={workspaces} selected={resolved ?? null} onSelect={onSelect} />
+      <WorkspaceBar
+        workspaces={workspaces}
+        selected={resolved ?? null}
+        onSelect={onSelect}
+        // Only once the workspace has RESOLVED: the bar paints during resolution, and
+        // `action` is documented as never seeing an absent workspace. This is the same
+        // narrowing the children guard below applies, deliberately — one rule, two slots.
+        action={
+          resolved !== undefined && resolved !== null && resolved === workspaceSlug && workspace !== null
+            ? action?.({ workspaceSlug: resolved, scopedBase: `/${resolved}`, workspace })
+            : undefined
+        }
+      />
       {/* Said only while the list is genuinely missing: a reload that fails AFTER a successful one
           leaves the workspaces on screen, and replacing a working page with an error would be a
           worse answer than the slightly stale one it already has. */}

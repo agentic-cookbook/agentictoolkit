@@ -1129,6 +1129,7 @@ import {
   Flag,
   FlaskConical,
   FolderKanban,
+  Gamepad2,
   GitPullRequest,
   Globe,
   GraduationCap,
@@ -1300,6 +1301,8 @@ var MENU_ICONS = {
   ecosystems: Network,
   // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
   education: School,
+  games: Gamepad2,
+  // authoring games, not the achievements feature below
   gamification: Trophy,
   // matches the '/gamification' route
   integrations: Plug,
@@ -1608,7 +1611,9 @@ var FLEET_MENU_GROUPS = [
       { site: "domains" },
       { site: "education" },
       { site: "integrations" },
-      { site: "registries" }
+      { site: "registries" },
+      { site: "gamification" },
+      { site: "games" }
     ]
   }),
   topic({

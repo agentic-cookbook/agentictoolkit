@@ -6,8 +6,9 @@
 
 // Authed HTTP transport + the status-error helpers the resource views read: the
 // raw `httpStatus` extractor, the 404/403/409/503 predicates, the friendly
-// message fallback, and the conflict rethrow. A host (the hub) re-exports these
-// rather than keeping a byte-identical copy.
+// message fallback, the conflict rethrow, and the client-side refusal constructor a
+// pre-flight check throws so the shared reporter drops it. A host (the hub) re-exports
+// these rather than keeping a byte-identical copy.
 export {
   authedJson,
   authedRequest,
@@ -17,6 +18,7 @@ export {
   isForbidden,
   isServiceUnavailable,
   errMsg,
+  clientRefusal,
   rethrowConflict,
   readTokenSubject,
 } from "./http";

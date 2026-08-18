@@ -48,7 +48,7 @@ describe('rdid grammar', () => {
 
   it('RDID_TYPES is the fixed set', () => {
     expect(RDID_TYPES).toEqual([
-      'org', 'user', 'ecosystem', 'storage', 'app', 'persona', 'token', 'integration',
+      'org', 'user', 'ecosystem', 'storage', 'app', 'persona', 'token', 'integration', 'game',
     ]);
   });
 });

@@ -146,6 +146,8 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'education' },
       { site: 'integrations' },
       { site: 'registries' },
+      { site: 'gamification' },
+      { site: 'games' },
     ],
   }),
   topic({

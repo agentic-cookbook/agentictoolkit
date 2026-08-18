@@ -170,15 +170,25 @@ describe("DemoFacet engine", () => {
     ink: { source, signInLine: "" },
   });
 
+  /** The engine badge, read out of the "Conversation" group's header row. Scoped there
+   *  rather than matched by its text: the ink quick-reference trigger inside the same group
+   *  is also labelled "Ink", so a bare `getByText("Ink")` matches two elements and throws. */
+  const engineBadge = () => {
+    const heading = screen.getByRole("heading", { name: "Conversation" });
+    const row = heading.parentElement;
+    if (!row) throw new Error("the Conversation group rendered no header row");
+    return (row.textContent ?? "").replace("Conversation", "").trim();
+  };
+
   it("says the keyword fields run when there is no ink", () => {
     renderFacet(<DemoFacet value={{ ...DEMO_DEFAULT_CONFIG, enabled: true }} onChange={vi.fn()} />);
-    expect(screen.getByText("Keywords")).toBeTruthy();
+    expect(engineBadge()).toBe("Keywords");
     expect(screen.getByText(/demos on the keyword fields/i)).toBeTruthy();
   });
 
   it("says the ink script runs once one is written", () => {
     renderFacet(<DemoFacet value={withInk("Hi.\n-> DONE\n")} onChange={vi.fn()} />);
-    expect(screen.getByText("Ink")).toBeTruthy();
+    expect(engineBadge()).toBe("Ink");
     expect(screen.getByText(/demos on its ink script/i)).toBeTruthy();
   });
 
@@ -186,7 +196,7 @@ describe("DemoFacet engine", () => {
   // server reads it as absent (`inkCanSpeak`), so the facet must not claim ink is running.
   it("treats a whitespace-only source as no ink at all", () => {
     renderFacet(<DemoFacet value={withInk("   \n")} onChange={vi.fn()} />);
-    expect(screen.getByText("Keywords")).toBeTruthy();
+    expect(engineBadge()).toBe("Keywords");
   });
 
   it("writes the ink back into the config it was given", () => {

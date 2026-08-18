@@ -149,7 +149,13 @@ var SITE_ROUTE_SEGMENTS = [
 ];
 var GRAMMAR_SEGMENTS = [
   // organizations, teams, projects, ecosystems — `parse-path.ts`, the "all" landing.
-  "all"
+  "all",
+  // games — `parse-path.ts` compares the first segment IT is handed to `"new"` before reading
+  // it as a game id, so `/<workspace>/new` is the create-game dialog. That is the second URL
+  // segment, so unlike a route directory it cannot shadow a workspace slug; it is listed anyway
+  // on the reasoning the rest of this file records — a slug is minted once, against every site
+  // at once, and `all` above is here for exactly the same reason.
+  "new"
 ];
 var RESERVED_HANDLE_WORDS = [
   "about",

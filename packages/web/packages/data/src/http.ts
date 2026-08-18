@@ -26,6 +26,26 @@ export function httpStatus(err: unknown): number | undefined {
   return typeof status === "number" ? status : undefined;
 }
 
+/**
+ * A refusal the shared error reporter DROPS — for the checks a client makes BEFORE it
+ * reaches the backend, whose message is meant for the operator and no one else.
+ *
+ * The dialogs and forms in `@agentic-toolkit/resource` hand every error they catch to
+ * `reportUnexpectedAuthError`, whose gate keeps only errors with NO numeric `status` or a
+ * 5xx one — a network failure or a backend outage. A plain `new Error("pick a game first")`
+ * has no status, so it passes that gate and files an operator's mis-click in production
+ * telemetry as an outage. Giving the refusal a 4xx says what it is in the one vocabulary
+ * the gate reads.
+ *
+ * `status` defaults to 400 and takes any 4xx the situation fits better (409 for a
+ * conflicting local state, 422 for an unusable input).
+ */
+export function clientRefusal(message: string, status = 400): Error & { status: number } {
+  const err = new Error(message) as Error & { status: number };
+  err.status = status;
+  return err;
+}
+
 /** True if `err` is a backend 404 (a status-carrying HTTP error with status 404). */
 export function isNotFound(err: unknown): boolean {
   return httpStatus(err) === 404;

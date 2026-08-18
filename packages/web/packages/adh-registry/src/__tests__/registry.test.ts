@@ -239,6 +239,7 @@ describe('LISTED_SITES (the family roster)', () => {
       'orgs',
       'notebook',
       'integrations',
+      'games',
       'gamification',
       // </gen:order>
       'fishlamp',
@@ -723,6 +724,7 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'orgs',
       'notebook',
       'integrations',
+      'games',
       'gamification',
       // </gen:order>
       'fishlamp',

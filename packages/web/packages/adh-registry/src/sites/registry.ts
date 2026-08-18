@@ -55,6 +55,7 @@ export type SiteId =
   | 'orgs'
   | 'notebook'
   | 'integrations'
+  | 'games'
   | 'gamification'
   // </gen:union>
   | 'narratives'
@@ -243,6 +244,7 @@ export const SITES: SiteDef[] = [
   { id: 'orgs', label: 'Organizations', fullLabel: 'Agentic Developer Organizations', description: 'Manage organizations', prodHost: 'agenticdeveloperorgs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotebook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'integrations', label: 'Integrations', fullLabel: 'Agentic Developer Integrations', description: 'Manage integrations', prodHost: 'agenticdeveloperintegrations.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'games', label: 'Games', fullLabel: 'Agentic Developer Games', description: 'Build your games', prodHost: 'agenticdevelopergames.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'gamification', label: 'Gamification', fullLabel: 'Agentic Developer Gamification', description: 'Product gamification', prodHost: 'agenticdevelopergamification.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
@@ -414,7 +416,7 @@ export const MAIN_SITE_IDS: SiteId[] = [
 ]
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',
-  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education', 'gamification',
+  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education', 'games', 'gamification',
   'integrations', 'knowledgebases', 'narratives', 'notebook', 'notifications', 'orgs',
   'personabuilder', 'personas', 'products', 'projects', 'recipes', 'registries', 'research',
   'sites', 'storage', 'teambuilder', 'teamregistry', 'tools',
@@ -434,8 +436,11 @@ export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
     // orgs and integrations sit with the other things a workspace is CONFIGURED with —
     // orgs beside teamregistry/teambuilder (the same tenancy layer, one level up),
     // integrations beside authentication/notifications (an external service wired in).
+    // games sits beside knowledgebases because it is the same shape of thing: a body of
+    // content you author here that the platform stores and hands back, rather than a
+    // service you wire up. The tail of this list is infrastructure, which it is not.
     label: 'Build',
-    ids: ['personas', 'personabuilder', 'personaregistry', 'registries', 'teamregistry', 'teambuilder', 'orgs', 'myagenticteams', 'ecosystems', 'knowledgebases', 'storage', 'tools', 'sites', 'domains', 'authentication', 'integrations', 'devices', 'notifications', 'dashboards'],
+    ids: ['personas', 'personabuilder', 'personaregistry', 'registries', 'teamregistry', 'teambuilder', 'orgs', 'myagenticteams', 'ecosystems', 'knowledgebases', 'games', 'storage', 'tools', 'sites', 'domains', 'authentication', 'integrations', 'devices', 'notifications', 'dashboards'],
   },
   // gamification is configured PER PRODUCT (its root topic list is the workspace's
   // products), so it belongs to the product group, not to Build.
