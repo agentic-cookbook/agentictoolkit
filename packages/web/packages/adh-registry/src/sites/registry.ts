@@ -782,7 +782,7 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
  *  workspace slug, exactly as {@link SITE_LANDING_SEGMENTS} does for a `'root'` site.
  *
  *  Two sets rather than one, because the two sites' roots hold different words: the hub
- *  serves `/login`, `/explore`, `/settings` and `/user/<handle>`, which no template site
+ *  serves `/login`, `/explore`, `/settings` and `/features`, which no template site
  *  has, and does not serve cookbook's `/guidelines` or community's `/forum`, which the
  *  other set carries. Either set used on the other's site gives a wrong answer in both
  *  directions at once.
@@ -831,16 +831,15 @@ export const HUB_ROUTE_SEGMENTS = new Set<string>([
   'contact',
   'explore',
   // The hub's own trees. `features` is where the eight marketing feature pages moved when
-  // `[workspace]` claimed the root (`app/features/[id]`), and `user` is the public profile
-  // prefix that moved with them; `settings` is the account, which came off `/home` when that
-  // segment became the family's workspace redirect; `integrations` is the OAuth return that
-  // every site mounting that feature grows, at a path built from the window's own origin;
-  // `old-landing` is the superseded hero page, still routable and deliberately kept so.
+  // `[workspace]` claimed the root (`app/features/[id]`); `settings` is the account, which
+  // came off `/home` when that segment became the family's workspace redirect; `integrations`
+  // is the OAuth return that every site mounting that feature grows, at a path built from the
+  // window's own origin; `old-landing` is the superseded hero page, still routable and
+  // deliberately kept so.
   'features',
   'integrations',
   'old-landing',
   'settings',
-  'user',
 ])
 
 /** The workspace slug `pathname` names on `site`, or null when it names none — the

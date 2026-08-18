@@ -13,6 +13,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   academy: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -42,6 +43,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   authentication: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -53,6 +55,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   billing: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/claim',
     '/details',
@@ -65,6 +68,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   codereviews: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -76,6 +80,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   communities: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -87,6 +92,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   community: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/admin',
     '/admin/members',
     '/admin/topics',
@@ -110,6 +116,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   consultants: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/consultant/[entry]',
     '/details',
@@ -123,6 +130,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   consulting: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -134,6 +142,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   cookbook: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/appendix/[[...slug]]',
     '/auth/callback',
     '/compliance/[[...slug]]',
@@ -152,6 +161,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   customers: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -163,6 +173,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   dashboards: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -174,6 +185,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   devices: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -185,6 +197,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   devteam: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details/[[...path]]',
     '/home',
@@ -195,6 +208,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   domains: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -206,6 +220,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   ecosystems: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -217,6 +232,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   education: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -228,6 +244,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   gamification: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/home',
     '/privacy',
@@ -237,6 +254,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   help: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/home',
     '/privacy',
@@ -264,6 +282,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/[workspace]/persona-services/[[...path]]',
     '/[workspace]/personas/[[...path]]',
     '/[workspace]/products/[[...path]]',
+    '/[workspace]/profile',
     '/[workspace]/projects/[[...path]]',
     '/[workspace]/registries/[[...path]]',
     '/[workspace]/research/[[...path]]',
@@ -292,7 +311,6 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
     '/signup',
     '/terms',
     '/tour',
-    '/user/[slug]',
   ],
   'hub-help': [
     '/',
@@ -308,6 +326,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   integrations: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/home',
     '/integrations/oauth-callback',
@@ -318,6 +337,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   knowledgebases: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -329,6 +349,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   narratives: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -340,6 +361,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   news: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -351,6 +373,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   notebook: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/home',
     '/privacy',
@@ -360,6 +383,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   notifications: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -371,6 +395,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   orgs: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/home',
     '/privacy',
@@ -380,6 +405,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   personabuilder: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -400,6 +426,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   personas: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -411,6 +438,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   products: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -422,6 +450,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   projects: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -433,6 +462,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   recipes: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -444,6 +474,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   registries: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -458,6 +489,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   research: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -472,6 +504,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   sites: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -488,6 +521,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   storage: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -499,6 +533,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   support: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -510,6 +545,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   teambuilder: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -521,6 +557,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   teamregistry: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
@@ -532,6 +569,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   toolkit: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/demo',
     '/demo/chat',
@@ -544,6 +582,7 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   tools: [
     '/',
     '/[workspace]/[[...path]]',
+    '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
