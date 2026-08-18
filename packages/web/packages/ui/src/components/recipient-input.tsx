@@ -5,6 +5,7 @@ import * as React from "react"
 import { Input, fieldShellClass } from "./input"
 import { RemovableChip } from "./removable-chip"
 import { Badge } from "./badge"
+import { noAutofillProps } from "../lib/autofill"
 import { cn } from "../lib/utils"
 
 export interface RecipientInputProps {
@@ -187,6 +188,10 @@ export function RecipientInput({
           disabled={disabled}
           aria-label={`Add to ${ariaLabel}`}
           inputMode={kind === "email" ? "email" : kind === "phone" ? "tel" : "text"}
+          // A recipient box collects OTHER people's addresses, so an email
+          // `inputMode` here is exactly the cue that makes a manager offer the
+          // signed-in user's own — see lib/autofill.
+          {...noAutofillProps}
           className="min-w-[8ch] flex-1 bg-transparent text-sm text-apt-text outline-none placeholder:text-apt-text-dim"
         />
       )}

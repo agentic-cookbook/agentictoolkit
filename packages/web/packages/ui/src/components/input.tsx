@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { noAutofillPropsFor } from "../lib/autofill"
 import { cn } from "../lib/utils"
 
 // The one home for the form-control shell (border + radius + field surface).
@@ -15,6 +16,11 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     <input
       type={type}
       data-slot="input"
+      // Password managers stay out of an adh field unless it names an autofill
+      // token — see lib/autofill. Spread FIRST so `{...props}` below wins:
+      // `autoComplete` decides, and a caller can still clear an individual
+      // attribute by passing it as undefined.
+      {...noAutofillPropsFor(props.autoComplete)}
       className={cn(
         fieldShellClass,
         "flex h-9 w-full min-w-0 px-3 py-2 text-sm text-apt-text transition-colors outline-none",

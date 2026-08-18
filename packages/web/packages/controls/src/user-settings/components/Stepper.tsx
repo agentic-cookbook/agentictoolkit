@@ -2,6 +2,8 @@
 
 import { useId, type ReactNode } from 'react'
 
+import { noAutofillProps } from '../../internal/autofill'
+
 export interface StepperProps {
   label?: ReactNode
   hint?: ReactNode
@@ -67,6 +69,7 @@ export function Stepper({
             const n = Number(e.target.value)
             if (!Number.isNaN(n)) set(n)
           }}
+          {...noAutofillProps}
         />
         <button
           type="button"

@@ -17,6 +17,7 @@ import {
   type ThemeKey,
 } from '@agentic-toolkit/themes'
 import './index.css'
+import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
 
 export const meta = { id: 'theme', label: 'Theme' }
 
@@ -602,10 +603,11 @@ const TOPICS: Topic[] = [
             demo: (
               <div className="awt-controls">
                 <div className="awt-control-row">
-                  <input type="text" placeholder="Default input" />
+                  <input type="text" placeholder="Default input" {...noAutofillProps} />
                   <input
                     type="text"
                     placeholder="Focused input — click to focus"
+                    {...noAutofillProps}
                   />
                 </div>
                 <label className="awt-control-row">
@@ -737,6 +739,7 @@ const TOPICS: Topic[] = [
                   type="text"
                   defaultValue="Caret color appears when this input is focused"
                   className="awt-chrome-caret"
+                  {...noAutofillProps}
                 />
               </div>
             ),

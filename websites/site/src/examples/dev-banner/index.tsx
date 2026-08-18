@@ -5,6 +5,7 @@ import { ExamplePanel } from '../../ExamplePanel'
 import { DevBanner } from '@agentic-toolkit/controls/dev-banner'
 import '@agentic-toolkit/controls/dev-banner/styles.css'
 import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
+import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
 import '@agentic-toolkit/controls/source-code-panel/styles.css'
 
 export const meta = { id: 'dev-banner', label: 'Dev Banner' }
@@ -39,6 +40,7 @@ export default function DevBannerExample() {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               style={inputStyle}
+              {...noAutofillProps}
             />
           </label>
 

@@ -21,6 +21,7 @@
 
 import * as React from "react"
 
+import { noAutofillProps } from "../lib/autofill"
 import { cn } from "../lib/utils"
 
 export interface EmailSignupFormProps {
@@ -399,15 +400,18 @@ export function EmailSignupForm({
       </div>
 
       {/* Honeypot. Hidden from sight AND from assistive tech, excluded from tab order, and
-          autocomplete off so a password manager never fills it. A human cannot reach it; a
-          bot walking the DOM fills it and the server drops the submission silently. */}
+          opted out of autofill so a password manager never fills it. A human cannot reach it; a
+          bot walking the DOM fills it and the server drops the submission silently.
+          `autoComplete="off"` speaks only to the browser — a manager that decided this looked
+          like a username would fill it and silently bin a real signup, so the field carries the
+          full per-vendor opt-out from lib/autofill. */}
       <input
         type="text"
         name="website"
         value={honeypot}
         onChange={(e) => setHoneypot(e.target.value)}
         tabIndex={-1}
-        autoComplete="off"
+        {...noAutofillProps}
         aria-hidden="true"
         style={{ position: "absolute", left: "-9999px", width: 1, height: 1 }}
       />

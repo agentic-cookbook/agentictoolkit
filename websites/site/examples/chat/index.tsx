@@ -18,6 +18,7 @@ import '@agentic-toolkit/chat/css/modes/mobile.css'
 import '@agentic-toolkit/chat/css/components/content-overlay.css'
 
 import backgroundImage from './shih_tzu.webp'
+import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
 
 export const meta = { id: 'chat', label: 'Chat' }
 
@@ -255,6 +256,7 @@ export default function ChatExample() {
                 value={size[key]}
                 onChange={(e) => setSize({ ...size, [key]: Number(e.target.value) || 0 })}
                 style={numberInputStyle}
+                {...noAutofillProps}
               />
             </label>
           ))}
@@ -270,6 +272,7 @@ export default function ChatExample() {
                 value={padding[side]}
                 onChange={(e) => setPadding({ ...padding, [side]: Number(e.target.value) || 0 })}
                 style={numberInputStyle}
+                {...noAutofillProps}
               />
             </label>
           ))}

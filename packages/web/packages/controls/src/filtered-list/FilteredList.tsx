@@ -4,6 +4,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import { useFilteredList } from './useFilteredList'
 import type { FilteredListProps } from './types'
+import { noAutofillProps } from '../internal/autofill'
 
 export function FilteredList<T>(props: FilteredListProps<T>) {
   const {
@@ -112,7 +113,7 @@ export function FilteredList<T>(props: FilteredListProps<T>) {
         aria-activedescendant={
           highlighted !== undefined ? `${listId}-${getId(highlighted)}` : undefined
         }
-        autoComplete="off"
+        {...noAutofillProps}
       />
       {total === 0 ? (
         <div className="fl-empty">No items.</div>

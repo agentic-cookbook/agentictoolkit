@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, type KeyboardEvent } from 'react'
+import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
 import { cn } from '@agentic-toolkit/ui/lib/utils'
 import { railLinkVariants } from '@agentic-toolkit/ui/lib/nav-rail'
 
@@ -61,6 +62,7 @@ export function DetailsRail({ topics, siteLabel }: { topics: RailTopic[]; siteLa
         onKeyDown={onInputKey}
         aria-label={`Filter ${siteLabel} topics`}
         aria-controls="adh-details-rail-nav"
+        {...noAutofillProps}
       />
       <nav
         id="adh-details-rail-nav"

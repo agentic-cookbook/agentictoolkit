@@ -4,6 +4,7 @@ import { FIELD_TYPES, SHOW_IF_OPS } from '@agenticdevelopertoolkit/registry-type
 import type { FieldType, ShowIfRule } from '@agenticdevelopertoolkit/registry-types';
 import { FIELD_VISIBILITIES } from '../client';
 import type { FieldVisibility } from '../client';
+import { noAutofillProps } from '../autofill';
 
 export interface FieldDefDraft {
   id?: string;
@@ -179,7 +180,7 @@ export function FieldDefEditor({
 
       <label>
         Label
-        <input value={def.label} onChange={(e) => set('label', e.target.value)} />
+        <input value={def.label} onChange={(e) => set('label', e.target.value)} {...noAutofillProps} />
       </label>
 
       <label>
@@ -189,7 +190,8 @@ export function FieldDefEditor({
           so a rename orphans them all. The builder offers add-new + remove-old instead.
         */}
         <input value={def.key} disabled={existing}
-          onChange={(e) => set('key', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))} />
+          onChange={(e) => set('key', e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
+          {...noAutofillProps} />
       </label>
 
       <label>
@@ -204,7 +206,7 @@ export function FieldDefEditor({
 
       <label>
         Help text
-        <input value={def.help} onChange={(e) => set('help', e.target.value)} />
+        <input value={def.help} onChange={(e) => set('help', e.target.value)} {...noAutofillProps} />
       </label>
 
       <label>
@@ -292,6 +294,7 @@ export function FieldDefEditor({
                       value: e.target.value.split(',').map((s) => s.trim()).filter(Boolean),
                     })
                   }
+                  {...noAutofillProps}
                 />
               ) : subjectDef?.type === 'boolean' && (def.showIf.op === 'eq' || def.showIf.op === 'ne') ? (
                 <select
@@ -306,6 +309,7 @@ export function FieldDefEditor({
                 <input
                   value={typeof def.showIf.value === 'string' ? def.showIf.value : ''}
                   onChange={(e) => set('showIf', { ...def.showIf!, value: e.target.value })}
+                  {...noAutofillProps}
                 />
               )}
             </label>
@@ -329,7 +333,7 @@ export function FieldDefEditor({
       {wantsOptions ? (
         <label>
           Options (one per line)
-          <textarea rows={4} value={rawOptions.join('\n')}
+          <textarea rows={4} value={rawOptions.join('\n')} {...noAutofillProps}
             onChange={(e) =>
               set('config', {
                 ...def.config,

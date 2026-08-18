@@ -36,7 +36,18 @@ export function ChatInput({
         type="text"
         inputMode="text"
         placeholder={placeholder}
+        // A chat composer is never a credential field. `autoComplete="off"` speaks
+        // only to the browser, so each manager also needs its own ignore attribute —
+        // the list of record is `@agentic-toolkit/ui/lib/autofill`, copied inline because
+        // this package ships zero runtime dependencies. Keeping them out is not only
+        // cosmetic: Dashlane plants `data-dashlane-rid` on the field, and a mutation
+        // between SSR and hydration is a React hydration mismatch.
         autoComplete="off"
+        data-form-type="other"
+        data-1p-ignore="true"
+        data-lpignore="true"
+        data-bwignore="true"
+        data-protonpass-ignore="true"
         autoFocus={autoFocus}
         enterKeyHint="send"
         onKeyDown={(e) => {

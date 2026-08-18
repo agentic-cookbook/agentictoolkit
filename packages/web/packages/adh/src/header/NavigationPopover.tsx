@@ -15,7 +15,7 @@ import {
 } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { type NavLinkIcon } from './NavLink'
-import { cn } from '@agentic-toolkit/ui'
+import { cn, noAutofillProps } from '@agentic-toolkit/ui'
 import { confirmNavigation, GUARDED_NAV_ATTR } from '@agentic-toolkit/ui/lib/navigation-guard'
 import {
   DropdownMenu,
@@ -650,7 +650,7 @@ export function NavigationPopover({
             // Announce the keyboard-highlighted row to assistive tech (focus
             // stays in this input; the rows carry matching `${uid}-…` ids).
             aria-activedescendant={activeId}
-            autoComplete="off"
+            {...noAutofillProps}
             spellCheck={false}
             value={query}
             onChange={(event) => {

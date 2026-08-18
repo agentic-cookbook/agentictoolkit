@@ -3,6 +3,7 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import type { SearchState } from '@agentic-toolkit/model'
 import type { SiteEntry } from '@agentic-toolkit/model'
+import { noAutofillProps } from '../internal/autofill'
 
 export type SearchDialogProps = {
   open: boolean
@@ -86,6 +87,7 @@ export function SearchDialog({
               onKeyDown={handleKey}
               placeholder={placeholder}
               aria-label="Search"
+              {...noAutofillProps}
             />
             <kbd className="awt-search-dialog__kbd">Esc</kbd>
           </div>

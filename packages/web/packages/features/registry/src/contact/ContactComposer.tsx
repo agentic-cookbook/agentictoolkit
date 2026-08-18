@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import type { Fetcher } from '../client';
+import { noAutofillProps } from '../autofill';
 
 export interface ContactComposerProps {
   registrySlug: string;
@@ -126,7 +127,7 @@ export function ContactComposer({
     <div className="rc">
       <label>
         Message {displayName}
-        <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} />
+        <textarea rows={4} value={body} onChange={(e) => setBody(e.target.value)} {...noAutofillProps} />
       </label>
       {state.kind === 'error' ? <p role="alert">{state.message}</p> : null}
       <button type="button" disabled={state.kind === 'sending' || body.trim() === ''} onClick={() => void send()}>

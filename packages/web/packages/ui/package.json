@@ -21,6 +21,11 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
+    "./lib/autofill": {
+      "types": "./dist/lib/autofill.d.ts",
+      "development": "./src/lib/autofill.ts",
+      "import": "./dist/lib/autofill.js"
+    },
     "./lib/utils": {
       "types": "./dist/lib/utils.d.ts",
       "development": "./src/lib/utils.ts",

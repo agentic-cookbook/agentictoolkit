@@ -1,5 +1,6 @@
 import * as React from "react"
 
+import { noAutofillPropsFor } from "../lib/autofill"
 import { cn } from "../lib/utils"
 import { fieldShellClass } from "./input"
 
@@ -8,6 +9,10 @@ function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
+      // Same opt-out as Input — see lib/autofill. A textarea is never a
+      // credential, but managers still decorate one when the page reads like a
+      // form to them.
+      {...noAutofillPropsFor(props.autoComplete)}
       className={cn(
         fieldShellClass,
         "flex min-h-16 w-full px-3 py-2 text-sm text-apt-text transition-colors outline-none",

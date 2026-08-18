@@ -4,6 +4,7 @@ import { useId } from 'react';
 import { tightestVisibility, visibilitiesWithin } from '@agenticdevelopertoolkit/registry-types';
 import type { FieldDefLike } from '@agenticdevelopertoolkit/registry-types';
 import type { FieldVisibility } from '../client';
+import { noAutofillProps } from '../autofill';
 
 export interface FieldEditorProps {
   /**
@@ -127,7 +128,7 @@ export function FieldEditor({
       case 'markdown':
         return (
           <textarea id={id} rows={def.type === 'markdown' ? 10 : 4} value={asText(value)}
-            onChange={(e) => onChange(e.target.value)} {...invalid} />
+            onChange={(e) => onChange(e.target.value)} {...noAutofillProps} {...invalid} />
         );
 
       case 'boolean':
@@ -166,7 +167,10 @@ export function FieldEditor({
         const part = (key: string, label: string) => (
           <label key={key}>
             {label}
-            <input value={a[key] ?? ''} onChange={(e) => onChange({ ...a, [key]: e.target.value })} />
+            {/* An address on a registry ENTRY, not the reader's own — without the
+                opt-out the browser and every manager offer to fill in theirs. */}
+            <input value={a[key] ?? ''} onChange={(e) => onChange({ ...a, [key]: e.target.value })}
+              {...noAutofillProps} />
           </label>
         );
         return (
@@ -185,13 +189,13 @@ export function FieldEditor({
         // the host site's; this control accepts the id the site hands back.
         return (
           <input id={id} type="text" placeholder="Attachment id" value={asText(value)}
-            onChange={(e) => onChange(e.target.value)} {...invalid} />
+            onChange={(e) => onChange(e.target.value)} {...noAutofillProps} {...invalid} />
         );
 
       case 'date':
         return (
           <input id={id} type="date" value={asText(value)}
-            onChange={(e) => onChange(e.target.value)} {...invalid} />
+            onChange={(e) => onChange(e.target.value)} {...noAutofillProps} {...invalid} />
         );
 
       case 'url':
@@ -201,7 +205,7 @@ export function FieldEditor({
       default:
         return (
           <input id={id} type={INPUT_TYPE[def.type] ?? 'text'} value={asText(value)}
-            onChange={(e) => onChange(e.target.value)} {...invalid} />
+            onChange={(e) => onChange(e.target.value)} {...noAutofillProps} {...invalid} />
         );
     }
   })();

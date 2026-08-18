@@ -2,6 +2,8 @@
 
 import { useId, type ReactNode } from 'react'
 
+import { noAutofillProps } from '../../internal/autofill'
+
 interface BaseTextFieldProps {
   label?: ReactNode
   hint?: ReactNode
@@ -50,6 +52,7 @@ export function TextField({
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           rows={4}
+          {...noAutofillProps}
         />
       ) : (
         <input
@@ -60,6 +63,7 @@ export function TextField({
           placeholder={placeholder}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
+          {...noAutofillProps}
         />
       )}
       {hint && <p className="aws-field__hint">{hint}</p>}
@@ -92,6 +96,11 @@ export function SecureTextField(props: SecureTextFieldProps) {
         placeholder={placeholder}
         disabled={disabled}
         onChange={(e) => onChange(e.target.value)}
+        // `type="password"` here means "mask it on screen" — this is a settings
+        // secret (an API key, a token), never the account credential. Without the
+        // opt-out every manager offers to save it as the site's password and then
+        // offers it back on the sign-in form.
+        {...noAutofillProps}
       />
       {hint && <p className="aws-field__hint">{hint}</p>}
     </div>

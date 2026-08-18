@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { ExamplePanel } from '../../src/ExamplePanel'
+import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
 import {
   SiteConfigProvider,
   ContentProvider,
@@ -77,6 +78,7 @@ function Inner() {
           color: 'var(--color-text-primary)',
           border: '1px solid var(--color-border)',
         }}
+        {...noAutofillProps}
       />
       <ul>
         {results.map((r) => (
