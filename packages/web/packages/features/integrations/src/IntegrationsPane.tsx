@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import {
   Bookmark,
   Calendar,
+  CreditCard,
   Landmark,
   ListTodo,
   Mail,
@@ -66,6 +67,7 @@ const SERVICE_TYPE_ICONS: Record<string, ReactNode> = {
   social: <Share2 />,
   profile: <UserRound />,
   financial: <Landmark />,
+  billing: <CreditCard />,
 };
 
 /**
@@ -107,9 +109,26 @@ export function mergeFetchedRow(
  */
 export function IntegrationsPane({
   ecosystemId,
+  providerIds,
+  levelTitle = "Integrations",
   leaf,
 }: {
   ecosystemId?: string;
+  /**
+   * Restrict the pane to these providers — the rows it LISTS and the catalog "Add integration"
+   * offers. Omit for the whole catalog, which is what both existing hosts do.
+   *
+   * Its reason for existing is one integration record reachable from two places: the billing site
+   * mounts this pane with `["stripe"]` rather than growing a Stripe form of its own, so setting
+   * Stripe up there and setting it up under Integrations write the same
+   * `integration.provider_config` row through the same routes. Two edit surfaces for one
+   * credential is what makes drift inevitable rather than unlikely.
+   */
+  providerIds?: readonly string[];
+  /** The published level's title. Defaults to "Integrations"; the billing site passes "Stripe",
+   *  because a rail level called "Integrations" holding only Stripe rows, inside a site called
+   *  Billing, names the wrong thing three times. */
+  levelTitle?: string;
   /** Accepted for the ScopedPane prop shape; the breadcrumb + level title name the pane now. */
   title?: ReactNode;
   /** Accepted for the ScopedPane prop shape; there is no button bar to host a "?" popover now. */
@@ -166,6 +185,34 @@ export function IntegrationsPane({
   const configRows = configs ?? (loadError ? NO_CONFIGS : null);
   const providerRows = providers ?? (catalogError ? NO_PROVIDERS : null);
 
+  // The filter, applied at exactly the two derived values it must reach, and nowhere else.
+  //
+  // A Set hoisted through useMemo because both memos below depend on it: a fresh Set per render
+  // would defeat `rows`'s memo, and `rows` is the `items` IDENTITY that useMasterDetailForm and
+  // useMasterDetailLevel compare against — a new array each pass re-runs their item effects.
+  // `providerIds` is a caller-owned array, so memoize on its joined text rather than its identity;
+  // a host writing the array inline (which the billing site does) would otherwise pass a new one
+  // every render.
+  const providerFilterKey = providerIds ? providerIds.join(",") : null;
+  const providerFilter = useMemo(
+    () => (providerFilterKey === null ? null : new Set(providerFilterKey.split(","))),
+    [providerFilterKey],
+  );
+  const visibleConfigRows = useMemo(
+    () =>
+      configRows === null || providerFilter === null
+        ? configRows
+        : configRows.filter((c) => providerFilter.has(c.providerId)),
+    [configRows, providerFilter],
+  );
+  const offerableProviders = useMemo(
+    () =>
+      providerRows === null || providerFilter === null
+        ? providerRows
+        : providerRows.filter((p) => providerFilter.has(p.providerId)),
+    [providerRows, providerFilter],
+  );
+
   const providerById = useMemo(
     () => new Map((providerRows ?? []).map((p) => [p.providerId, p])),
     [providerRows],
@@ -216,11 +263,11 @@ export function IntegrationsPane({
   // Memoized: `rows` is the `items` identity `useMasterDetailForm`/`useMasterDetailLevel` compare
   // against, so a fresh array on every render would re-run their item effects each pass.
   const rows = useMemo<MaskedProviderConfig[] | null>(() => {
-    if (configRows === null || providerRows === null) return null;
+    if (visibleConfigRows === null || providerRows === null) return null;
     // On `addressOf` again — `c.rdid === fetchedCfg.rdid` would read `null === null` as a match
     // and swallow the deep-linked row whenever any OTHER unmapped config is in the list.
-    return mergeFetchedRow(configRows, fetchedCfg);
-  }, [configRows, providerRows, fetchedCfg]);
+    return mergeFetchedRow(visibleConfigRows, fetchedCfg);
+  }, [visibleConfigRows, providerRows, fetchedCfg]);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
@@ -273,7 +320,7 @@ export function IntegrationsPane({
 
   useMasterDetailLevel({
     id: "integrations-list",
-    title: "Integrations",
+    title: levelTitle,
     form,
     items: rows,
     getId: addressOf,
@@ -369,7 +416,7 @@ export function IntegrationsPane({
         open={modalOpen}
         onOpenChange={setModalOpen}
         ecosystemId={ecosystemId ?? ""}
-        providers={providerRows}
+        providers={offerableProviders}
         // Do NOT close the modal here — it stays open so the user can add another; it closes via
         // its own ✕/Escape. Selecting the new address means the created instance's detail is
         // showing once they DO close it.
