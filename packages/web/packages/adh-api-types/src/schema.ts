@@ -10168,6 +10168,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What a billing UI needs before it can draw a control
+         * @description The one billing route that is NOT behind `requireBillingOperator`, and deliberately so: that gate answers 404 when the ecosystem’s `billing` flag is off — which is precisely the state an operator is trying to leave — so every other route here is invisible to the person who has to turn it on.
+         *
+         *     It leaks nothing that gate protects. `ecosystemId` is the caller’s own acting scope, which their token already carries; the rest are facts ABOUT that scope, not rows from it. A non-owner gets `canManage: false` and a UI with no controls, rather than a 404 that would read as a claim about the product rather than about the reader.
+         *
+         *     `ecosystemId` comes from `actingIdentity(principal)` and is by construction the same id `/billing/accounts`, `/billing/prices`, `/billing/events` and the redrive scope to. A browser cannot derive it, which is why this route exists at all.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The acting ecosystem’s billing context */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingContext"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/billing/accounts": {
         parameters: {
             query?: never;
@@ -10373,6 +10425,76 @@ export interface paths {
                 };
                 /** @description Error */
                 409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The webhook ledger, newest first
+         * @description The receipt log the redrive below operates on: did the event arrive, and did it process. A row with `processedAt: null` beside an `error` is the surface this route exists for — without it a purchase that never landed is only visible in the database.
+         *
+         *     The stored payload is NOT returned. It is Stripe’s event body verbatim, and an operator’s ledger is not a place to re-publish a third party’s customer data; what this returns is the six fields that answer the question.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    limit?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Up to `limit` events, newest first */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingEvent"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -67245,6 +67367,22 @@ export interface components {
         RotateKeyResult: {
             /** @description the list's NEW embed key. The old key stops working immediately — any page still embedding it must be updated. */
             publicKey: string;
+        };
+        BillingContext: {
+            ecosystemId: string;
+            billingEnabled: boolean;
+            canManage: boolean;
+            /** @enum {string} */
+            stripeStatus: "connected" | "not_connected" | "unknown";
+            webhookPath: string;
+        };
+        BillingEvent: {
+            id: string;
+            stripeEventId: string;
+            type: string;
+            receivedAt: string;
+            processedAt?: string | null;
+            error?: string | null;
         };
         BillingAccount: {
             id: string;
