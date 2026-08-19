@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import type { ReactElement } from "react";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
@@ -70,6 +70,11 @@ export function SetupPane({
   // Origin-relative from the server, absolute here: the operator pastes this into Stripe, and a
   // path alone is not something Stripe can call. Guarded because this renders on the server too
   // in a host that prerenders; an empty origin degrades to the path, which is still copyable.
+  // `useId` rather than a literal: this pane is a package component, and a literal id would be
+  // the same string in every mount. Two mounts on one page — which nothing here forbids — would
+  // give the document duplicate ids, and `aria-labelledby` resolves to the FIRST match, so one
+  // switch would silently borrow the other's caption.
+  const enabledCaptionId = useId();
   const origin = typeof window === "undefined" ? "" : window.location.origin;
   const webhookUrl = webhookPath ? `${origin}${webhookPath}` : "";
 
@@ -88,12 +93,12 @@ export function SetupPane({
             different accessible name is a WCAG 2.5.3 failure, and it breaks voice control — an
             operator saying "click Sell through this ecosystem" would hit nothing. */}
         <div className="flex flex-col items-start gap-1.5">
-          <span id="billing-enabled-caption" className={fieldCaptionClass}>
+          <span id={enabledCaptionId} className={fieldCaptionClass}>
             Sell through this ecosystem
           </span>
           <div className="flex items-center gap-3">
             <Switch
-              aria-labelledby="billing-enabled-caption"
+              aria-labelledby={enabledCaptionId}
               checked={billingEnabled}
               disabled={!canManage || !ecosystemId || saving}
               onCheckedChange={(next: boolean) => void toggle(next)}
