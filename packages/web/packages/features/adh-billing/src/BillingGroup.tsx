@@ -61,6 +61,10 @@ export function BillingGroup({
   context: BillingContextResolution;
   /** Omit for internal selection (the hub and products embeds) — StackGroupDetail's fallback. */
   urlSelection?: { selectedId: string | null; onSelect: (id: string | null) => void };
+  /** Cedes the segment BELOW the member to the host, so an offer / payer / integration is itself
+   *  deep-linkable. Omit for internal selection — and note that omitting it is what the three
+   *  list members' `leaf={renderSubLeaf ? subLeaf : undefined}` reads, since this prop's presence
+   *  is the only honest signal of the mode (see the Stripe member below). */
   renderSubLeaf?: (memberId: string) => { leafId: string | null; onSelect: (id: string | null) => void };
 }): ReactElement {
   const { ecosystemId, canManage, isError } = context;
@@ -80,11 +84,16 @@ export function BillingGroup({
     setup: {
       label: "Setup",
       icon: <Settings size={16} aria-hidden />,
-      render: () => (
+      // `selectMember`, not `urlSelection?.onSelect`: the optional chain is `undefined` on the two
+      // hosts that mount this group with INTERNAL selection (the hub's workspace rail and the
+      // products topic), so "Connect Stripe" rendered enabled there and did nothing at all. The
+      // group's own setter routes to the URL when URL-driven and to internal state otherwise, so
+      // the button works on all three hosts.
+      render: (_subLeaf, selectMember) => (
         <SetupPane
           context={context}
           onChanged={() => void context.reload?.()}
-          onOpenStripe={() => urlSelection?.onSelect("stripe")}
+          onOpenStripe={() => selectMember("stripe")}
         />
       ),
     },
@@ -96,12 +105,27 @@ export function BillingGroup({
       // same component the Integrations site mounts, filtered to one provider. Setting Stripe up
       // here and setting it up under Integrations write the same provider_config row through the
       // same routes, which is what makes drift impossible rather than unlikely.
+      //
+      // `renderSubLeaf ? subLeaf : undefined` — NOT `subLeaf` — and the same on Offers and Payers
+      // below. StackGroupDetail hands a member `LOCAL_SUBLEAF` when the host cedes no deeper URL
+      // segment (resource/src/group-topic-detail.tsx), and that sentinel is a TRUTHY object with a
+      // constant `null` id and a no-op setter. Every one of these three panes picks its selection
+      // mode by the leaf's truthiness (`leaf ? {…} : undefined`), so handing the sentinel through
+      // put them in URL-driven mode pinned at "nothing selected": the rows rendered and clicking
+      // one did nothing, on the hub and products mounts, forever. `undefined` is precisely the
+      // state their internal-selection path exists for. Do not "simplify" this back to `subLeaf`.
       render: (subLeaf) => (
         <IntegrationsPane
           ecosystemId={ecosystemId}
           providerIds={STRIPE_ONLY}
           levelTitle="Stripe"
-          leaf={subLeaf}
+          leaf={renderSubLeaf ? subLeaf : undefined}
+          // Setup's "Connected" / "Not connected" line and its Connect-vs-Manage button are
+          // derived from `GET /billing/context`, which is read ONCE above this rail and cached at
+          // the client's 5-minute staleTime. Without this, an operator could paste a valid key
+          // here, save successfully, walk back to Setup and be told it is still not connected —
+          // with nothing on the page able to correct it.
+          onChanged={() => void context.reload?.()}
         />
       ),
     },
@@ -109,13 +133,19 @@ export function BillingGroup({
       label: "Offers",
       icon: <Tag size={16} aria-hidden />,
       leadsTo: "list",
-      render: (subLeaf) => <OffersPane ecosystemId={ecosystemId} leaf={subLeaf} />,
+      // `renderSubLeaf ? subLeaf : undefined` — see the Stripe member above for why.
+      render: (subLeaf) => (
+        <OffersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
+      ),
     },
     payers: {
       label: "Payers",
       icon: <Users size={16} aria-hidden />,
       leadsTo: "list",
-      render: (subLeaf) => <PayersPane ecosystemId={ecosystemId} leaf={subLeaf} />,
+      // `renderSubLeaf ? subLeaf : undefined` — see the Stripe member above for why.
+      render: (subLeaf) => (
+        <PayersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
+      ),
     },
     events: {
       label: "Events",

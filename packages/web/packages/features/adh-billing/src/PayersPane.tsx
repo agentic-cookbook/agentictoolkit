@@ -85,7 +85,15 @@ export function PayersPane({
   const selected = selectedId ? ((accounts ?? []).find((a) => a.id === selectedId) ?? null) : null;
 
   const [busy, setBusy] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * The outcome of the last Resend, carrying WHICH outcome it was rather than only its words.
+   *
+   * A discriminant, not a string the renderer sniffs: the two branches are set from two different
+   * code paths, and re-deriving "did this fail?" from message text would be a second, weaker
+   * answer to a question the code already knows — and one that breaks the day a success message
+   * happens to contain the word the sniff looks for.
+   */
+  const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   // The detail is re-rendered, not remounted, when the operator picks a different payer in the
   // rail (there is no keyed subtree here), so a notice left over from A's Resend click would
@@ -109,10 +117,16 @@ export function PayersPane({
       if (selectedIdRef.current !== requestedFor) return;
       // The new expiry is the whole content of the success: a claim link that has been re-issued
       // and whose clock the operator cannot see is a link they will re-issue again in ten minutes.
-      setNotice(`A fresh claim link was sent. It expires ${new Date(r.expiresAt).toLocaleString()}.`);
+      setNotice({
+        ok: true,
+        text: `A fresh claim link was sent. It expires ${new Date(r.expiresAt).toLocaleString()}.`,
+      });
     } catch (e) {
       if (selectedIdRef.current !== requestedFor) return;
-      setNotice(e instanceof Error ? e.message : "Could not re-issue the claim link.");
+      setNotice({
+        ok: false,
+        text: e instanceof Error ? e.message : "Could not re-issue the claim link.",
+      });
     } finally {
       setBusy(false);
     }
@@ -190,7 +204,16 @@ export function PayersPane({
               >
                 Resend claim link
               </Button>
-              {notice ? <p className="mt-1 text-xs text-apt-text-muted">{notice}</p> : null}
+              {/* A failure is NOT the same surface as a success. Both used to render as the same
+                  neutral grey paragraph, differing only in wording — so a 500 read as "text
+                  appeared, so it sent", and the operator told a real customer to check an inbox
+                  for a link that was never issued. The failure gets the platform's one inline
+                  error line, which is red and carries role="alert" so it is also announced. */}
+              {notice === null ? null : notice.ok ? (
+                <p className="mt-1 text-xs text-apt-text-muted">{notice.text}</p>
+              ) : (
+                <ErrorText error={notice.text} className="mt-1 text-xs" />
+              )}
               <FieldFootnote
                 hint={
                   selected.claimedCustomerId

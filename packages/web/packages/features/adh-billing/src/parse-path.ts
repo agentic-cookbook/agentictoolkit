@@ -17,9 +17,27 @@
 export const BILLING_MEMBER_IDS = ["setup", "stripe", "offers", "payers", "events"] as const;
 export type BillingMemberId = (typeof BILLING_MEMBER_IDS)[number];
 
+/**
+ * The members that have an INNER ENTITY, and so admit a second segment below them — an integration
+ * config, an offer, a payer account. Equally a closed list, and it lives here for the same reason
+ * the member list does: whether `/setup/x` is a URL is a fact about the grammar, not about a pane.
+ *
+ * The other two members have no inner entity at all: `setup` is a single record and `events` is a
+ * flat ledger whose pane says in as many words that it ignores the sub-leaf
+ * (`BillingGroup.tsx`'s `events` member). Admitting a segment under them minted unbounded distinct
+ * URLs over byte-identical content — exactly what the parse below claims to prevent.
+ */
+export const BILLING_MEMBERS_WITH_ENTITY = ["stripe", "offers", "payers"] as const;
+export type BillingMemberWithEntity = (typeof BILLING_MEMBERS_WITH_ENTITY)[number];
+
 /** Whether a raw URL segment names one of this group's members. */
 export function isBillingMemberId(id: string): id is BillingMemberId {
   return (BILLING_MEMBER_IDS as readonly string[]).includes(id);
+}
+
+/** Whether this member admits a second segment naming a record inside it. */
+export function billingMemberTakesEntity(id: BillingMemberId): id is BillingMemberWithEntity {
+  return (BILLING_MEMBERS_WITH_ENTITY as readonly string[]).includes(id);
 }
 
 /** Which member is open, and what is open inside it — the two segments below the host's base. */
@@ -32,14 +50,15 @@ export interface BillingPathSelection {
  * Parse a billing route's catch-all `path` segments:
  *   (none) / []               → { memberId: null, entityId: null } (the group, unselected)
  *   [member]                  → that member's pane
- *   [member, entity]          → that member open on a record (an offer, a payer, an integration)
+ *   [member, entity]          → that member open on a record (an offer, a payer, an integration),
+ *                               for the members that HAVE one ({@link BILLING_MEMBERS_WITH_ENTITY})
  *   anything else             → null
  *
  * NULL means "not a URL this grammar admits", and the caller's answer to that is a 404 — not this
  * same pane served at every depth. The site mounts a catch-all, so without the check
- * `/<ws>/bogus` and `/<ws>/offers/of_1/any/depth` would each 200 with the unselected group,
- * minting unbounded distinct URLs over identical content and making every typo look like it
- * worked.
+ * `/<ws>/bogus`, `/<ws>/setup/anything` and `/<ws>/offers/of_1/any/depth` would each 200 with a
+ * pane identical to the one at the shorter URL, minting unbounded distinct URLs over identical
+ * content and making every typo look like it worked.
  *
  * `entityId` is NOT validated, deliberately: it names an offer, a payer account or an integration
  * config, which only the server can adjudicate, and the pane shows its own not-found for an id
@@ -47,8 +66,13 @@ export interface BillingPathSelection {
  * owns.
  */
 export function parseBillingPath(path?: string[]): BillingPathSelection | null {
-  const [memberId, entityId, ...rest] = path ?? [];
+  const [rawMember, entityId, ...rest] = path ?? [];
   if (rest.length > 0) return null;
-  if (memberId !== undefined && !isBillingMemberId(memberId)) return null;
-  return { memberId: memberId ?? null, entityId: entityId ?? null };
+  // No member segment: the group, unselected. Nothing below it to name, by construction.
+  if (rawMember === undefined) return { memberId: null, entityId: null };
+  if (!isBillingMemberId(rawMember)) return null;
+  // A second segment is only a URL under a member that HAS an inner entity. Under `setup` or
+  // `events` it names nothing, and the pane would render exactly as it does one segment up.
+  if (entityId !== undefined && !billingMemberTakesEntity(rawMember)) return null;
+  return { memberId: rawMember, entityId: entityId ?? null };
 }

@@ -7,7 +7,16 @@ import type { TopicLeaf } from "./resource-explorer";
 import { StackLevels } from "./rail-host";
 
 /** A TopicLeaf that selects nothing and routes nowhere — the sub-leaf handed to a member when the
- *  caller doesn't cede a deeper URL segment (so a member's inner selection stays local). */
+ *  caller doesn't cede a deeper URL segment (so a member's inner selection stays local).
+ *
+ *  ⚠️ It is a TRUTHY object, and it does NOT by itself make a member's selection local. The panes
+ *  in this fleet decide their own mode by the leaf's truthiness (`leaf ? { selectedId: leaf.leafId,
+ *  onSelect: leaf.onSelect } : undefined`), so a pane handed THIS goes URL-driven with a constant
+ *  `null` id and a no-op setter — its rows render and clicking one does nothing, forever. A member
+ *  whose pane works that way must pass `undefined` down when its group has no `renderSubLeaf`;
+ *  `features/adh-billing/src/BillingGroup.tsx` does exactly that and says why. Widening this to
+ *  `undefined` here would be the smaller fix and is a fleet-wide, compile-breaking change to
+ *  `render`'s first parameter, so it is not made unilaterally. */
 const LOCAL_SUBLEAF: TopicLeaf = { leafId: null, onSelect: () => {} };
 
 export interface GroupTopicItem {
@@ -25,8 +34,20 @@ export interface GroupTopicItem {
   leadsTo?: "list" | "detail";
   /** The member's detail pane (it may itself publish deeper rails). `subLeaf` carries the
    *  deep-linkable inner entity (the segment AFTER this member) for members that URL-drive their
-   *  own selection — a persona list, a master/detail config pane; members without one ignore it. */
-  render: (subLeaf: TopicLeaf) => ReactNode;
+   *  own selection — a persona list, a master/detail config pane; members without one ignore it.
+   *
+   *  `selectMember` moves THIS GROUP's own selection to a SIBLING member — for a pane whose job
+   *  includes sending the operator somewhere else in the same rail (Billing's Setup reports the
+   *  Stripe connection and offers a "Connect Stripe" button that opens the Stripe member, which is
+   *  where credentials are actually entered). It respects the group's CURRENT selection mode: it
+   *  routes through `urlSelection.onSelect` when the group is URL-driven and writes the internal
+   *  state otherwise, which is the whole point of `useDualModeSelection` — so a pane that uses it
+   *  works identically on a host that cedes a URL segment and on one that does not.
+   *
+   *  A SECOND parameter rather than a change to the first, deliberately: a function declared with
+   *  fewer parameters is assignable in TypeScript, so every existing `render` in the fleet keeps
+   *  compiling untouched and only a member that needs the setter has to name it. */
+  render: (subLeaf: TopicLeaf, selectMember: (memberId: string | null) => void) => ReactNode;
   /** Flags this member's rail row as the one holding the blocking field — forwarded to
    *  {@link TopicDetailItem}'s own `blocked` field, which draws an amber dot on the row's icon
    *  (expanded and collapsed alike), names it "needs attention" for AT, and sets
@@ -131,7 +152,7 @@ export function StackGroupDetail({
         {leafHeader}
         {active ? (
           <Fragment key={active.id}>
-            {active.render(renderSubLeaf ? renderSubLeaf(active.id) : LOCAL_SUBLEAF)}
+            {active.render(renderSubLeaf ? renderSubLeaf(active.id) : LOCAL_SUBLEAF, setSelected)}
           </Fragment>
         ) : (
           // Fallback only — the frame's automatic frontier nudge replaces this whenever this

@@ -12,13 +12,18 @@ const READY = {
   stripeConnected: false, webhookPath: "/api/public/webhooks/stripe/eco_1", isError: false,
 };
 
+// The switch is queried by "Sell through this ecosystem" — its VISIBLE caption, which is also its
+// accessible name via `aria-labelledby`. "Billing enabled" is the FieldGroup's heading, a sibling,
+// and contributes nothing to the control's name. Do not "fix" a failure here by adding an
+// `aria-label` back to the Switch: a visible label plus a different accessible name is the WCAG
+// 2.5.3 failure SetupPane.tsx's own comment says it removed on purpose, and it breaks voice control.
 describe("SetupPane", () => {
   it("writes the flag through setEcosystemFlag and re-reads the context", async () => {
     setEcosystemFlag.mockResolvedValue(undefined);
     const onChanged = vi.fn();
     render(<SetupPane context={READY} onChanged={onChanged} onOpenStripe={vi.fn()} />);
 
-    await userEvent.click(screen.getByRole("switch", { name: /billing enabled/i }));
+    await userEvent.click(screen.getByRole("switch", { name: /sell through this ecosystem/i }));
     await waitFor(() => expect(setEcosystemFlag).toHaveBeenCalledWith("eco_1", "billing", true, expect.any(String)));
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
   });
@@ -41,7 +46,7 @@ describe("SetupPane", () => {
   it("surfaces a failed flag write instead of leaving the switch looking flipped", async () => {
     setEcosystemFlag.mockRejectedValue(Object.assign(new Error("nope"), { status: 403 }));
     render(<SetupPane context={READY} onChanged={vi.fn()} onOpenStripe={vi.fn()} />);
-    await userEvent.click(screen.getByRole("switch", { name: /billing enabled/i }));
+    await userEvent.click(screen.getByRole("switch", { name: /sell through this ecosystem/i }));
     expect(await screen.findByText(/nope/i)).toBeInTheDocument();
   });
 });

@@ -112,6 +112,7 @@ export function IntegrationsPane({
   providerIds,
   levelTitle = "Integrations",
   leaf,
+  onChanged,
 }: {
   ecosystemId?: string;
   /**
@@ -135,6 +136,22 @@ export function IntegrationsPane({
   help?: ReactNode;
   /** Deep-linkable instance selection (`…/integrations/<rdid-or-uuid>`). */
   leaf?: TopicLeaf;
+  /**
+   * A write to this ecosystem's provider configs SUCCEEDED — created, saved, rotated or removed.
+   * Optional; this pane already refreshes its own list, so a host needs it only when it holds
+   * state DERIVED from these rows that no longer agrees with them.
+   *
+   * The billing site is that host: `GET /billing/context`'s `stripeConnected` is read once above
+   * the rail and cached at the client's staleTime, and Setup's "Connected" / "Not connected" line
+   * plus its Connect-vs-Manage button are derived from it. Without a seam here, connecting Stripe
+   * on this pane leaves Setup reporting the opposite for five minutes, with nothing on the page
+   * able to correct it.
+   *
+   * Fired on the SUCCESS path only, never on a rejected write, and never on a rotation that
+   * failed — a host uses this to re-read a fact, and re-reading after a failure would just paint
+   * the same stale answer with more confidence.
+   */
+  onChanged?: () => void;
 }) {
   // Creating is a MODAL over the stack (HTD `must-create-in-modal`): the `+` opens it, and on
   // add the new instance is selected so its REAL detail opens once the modal is dismissed.
@@ -315,7 +332,12 @@ export function IntegrationsPane({
         name: input.name.trim(),
         ...intToBody(input, providerById.get(input.providerId)),
       }),
-    remove: (r) => integrationsApi.deleteProviderConfigById(ecosystemId ?? "", r.id),
+    // `await`ed rather than returned so `onChanged` fires only once the delete actually resolved —
+    // a rejected delete leaves the row (and any host state derived from it) exactly as it was.
+    remove: async (r) => {
+      await integrationsApi.deleteProviderConfigById(ecosystemId ?? "", r.id);
+      onChanged?.();
+    },
     confirmDelete: (r) =>
       `Remove the "${r.name}" integration? This permanently deletes its stored configuration and secret.`,
     refresh: refreshConfigs,
@@ -394,11 +416,15 @@ export function IntegrationsPane({
               onSaved={(row) => {
                 void refreshConfigs();
                 form.onChange(intToInput(row, provider));
+                onChanged?.();
               }}
               // A rotation touches nothing the operator typed, so it deliberately does NOT reset
               // the draft — only the cached list row, which is where `cfg` comes from and would
               // otherwise keep showing the retired webhook secret.
-              onRotated={() => void refreshConfigs()}
+              onRotated={() => {
+                void refreshConfigs();
+                onChanged?.();
+              }}
             />
             <div className="flex flex-col gap-2 border-t border-apt-border pt-6">
               <div>
@@ -436,6 +462,7 @@ export function IntegrationsPane({
         // showing once they DO close it.
         onAdded={(row) => {
           void refreshConfigs();
+          onChanged?.();
           leaf?.onSelect(addressOf(row));
         }}
       />

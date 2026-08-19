@@ -44,6 +44,43 @@ describe("offerValidate", () => {
   });
 });
 
+describe("offerToInput", () => {
+  /**
+   * The body a PUT actually carries. `GET /api/billing/offers` is generic CRUD over the whole
+   * table, so the parsed JSON holds columns `OfferRow` never declares — and the old
+   * `const { id: _id, ...rest } = row` subtracted exactly one of them. TypeScript could not see
+   * that (a rest spread gets no excess-property check, and the declared type says the extras do
+   * not exist), which is why only a fixture carrying them can catch it.
+   */
+  const wire = {
+    ...row({}),
+    ecosystemId: "eco_1",
+    ownerKind: "ecosystem",
+    ownerId: "eco_1",
+    createdAt: "2026-01-01T00:00:00.000Z",
+    updatedAt: "2026-01-02T00:00:00.000Z",
+    deletedAt: null,
+  } as unknown as OfferRow;
+
+  it("carries exactly the fields a blank draft has, and no server-owned passengers", () => {
+    expect(Object.keys(offerToInput(wire)).sort()).toEqual(Object.keys(offerBlank()).sort());
+    // Also named one by one: the set comparison above would still pass if a passenger arrived in
+    // place of a real field rather than alongside it.
+    for (const k of ["id", "ecosystemId", "ownerKind", "ownerId", "createdAt", "updatedAt", "deletedAt"]) {
+      expect(offerToInput(wire)).not.toHaveProperty(k);
+    }
+  });
+
+  it("copies the twelve editable values through unchanged", () => {
+    expect(offerToInput(wire)).toEqual({
+      slug: "pro", name: "Pro", description: null, purpose: "access",
+      stripePriceId: "price_1", stripeProductId: null,
+      collectionMethod: "charge_automatically", daysUntilDue: null,
+      grantsEcosystemId: null, lapseAction: "none", graceDays: 0, isActive: true,
+    });
+  });
+});
+
 describe("offerNormalize", () => {
   it("trims, and turns an emptied optional field into null rather than an empty string", () => {
     const d = offerNormalize({ ...offerBlank(), name: "  Pro  ", slug: " pro ", description: "   ", grantsEcosystemId: "" });
@@ -67,9 +104,9 @@ describe("offerDiffers", () => {
     expect(offerDiffers(saved, { ...saved, name: "  Pro  " })).toBe(false);
   });
 
-  // `offerToInput` spreads a row while `offerBlank` writes a literal, so two drafts holding the
-  // same values can disagree on key ORDER — which a bare JSON.stringify comparison would report
-  // as an edit.
+  // A draft reaches `offerDiffers` through the form's `{ ...draft, field: value }` spreads and
+  // through callers that rebuild it, so two drafts holding identical values can still disagree on
+  // key ORDER — which a bare JSON.stringify comparison would report as an edit.
   it("ignores key order", () => {
     const saved = offerToInput(row({}));
     const reordered = Object.fromEntries(

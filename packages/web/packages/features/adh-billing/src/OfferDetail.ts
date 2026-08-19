@@ -22,9 +22,36 @@ export function offerBlank(): OfferInput {
   };
 }
 
+/**
+ * The saved row, as the editor's draft — built EXPLICITLY, key by key, from the same twelve fields
+ * {@link offerBlank} names.
+ *
+ * It used to be `const { id: _id, ...rest } = row; return rest;`, which subtracted exactly one key
+ * and is not what the type says. `OfferInput` is `Omit<OfferRow,"id">`, a COMPILE-time shape; the
+ * value at runtime is whatever generic CRUD's `GET /api/billing/offers` actually returned, which is
+ * the whole table — so `createdAt`, `updatedAt`, `ecosystemId`, `ownerKind`, `ownerId` and
+ * `deletedAt` all rode along on every PUT. A rest spread is not a fresh object literal, so
+ * TypeScript performs no excess-property check and nothing complained.
+ *
+ * An object literal DOES get that check, and — more usefully — a column added to `OfferRow` later
+ * becomes a missing-property compile error right here, where a reader can compare this list against
+ * the form, instead of a silent passenger on every update.
+ */
 export function offerToInput(row: OfferRow): OfferInput {
-  const { id: _id, ...rest } = row;
-  return rest;
+  return {
+    slug: row.slug,
+    name: row.name,
+    description: row.description,
+    purpose: row.purpose,
+    stripePriceId: row.stripePriceId,
+    stripeProductId: row.stripeProductId,
+    collectionMethod: row.collectionMethod,
+    daysUntilDue: row.daysUntilDue,
+    grantsEcosystemId: row.grantsEcosystemId,
+    lapseAction: row.lapseAction,
+    graceDays: row.graceDays,
+    isActive: row.isActive,
+  };
 }
 
 /** Both sides go through `offerNormalize` first, because the form's text bindings write `""` into
@@ -34,9 +61,11 @@ export function offerToInput(row: OfferRow): OfferInput {
  *  Normalizing is also what makes the comparison honest in the other direction — `"" ` and `null`
  *  are the same value to this column, so a difference between them is not an edit.
  *
- *  Keys are sorted rather than compared in insertion order: `offerToInput` spreads a row while
- *  `offerBlank` writes a literal, so the two can disagree on order while holding identical values,
- *  and `JSON.stringify` is order-sensitive. */
+ *  Keys are sorted rather than compared in insertion order, because `JSON.stringify` is
+ *  order-sensitive and neither draft's key order is this function's to rely on. `offerToInput` and
+ *  `offerBlank` do now write the same twelve keys in the same order, but a draft reaches here
+ *  through the form's `{ ...draft, field: value }` spreads and through callers that rebuild it,
+ *  and an order difference between two drafts holding identical values is not an edit. */
 const stableKey = (d: OfferInput): string => {
   const n = offerNormalize(d) as unknown as Record<string, unknown>;
   return JSON.stringify(Object.keys(n).sort().map((k) => [k, n[k]]));

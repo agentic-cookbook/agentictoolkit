@@ -54,12 +54,25 @@ export interface OfferRow {
 /**
  * What a create or update body may carry: `OfferRow` minus `id`, and minus every masked column.
  *
- * The masks are not optional politeness — the factory REJECTS a body naming them. `id`,
- * `createdAt`, `updatedAt` are global SERVER_MANAGED; `ownerKind`/`ownerId` are OWNER_FROM_CREATOR,
- * stamped from the creating principal; `deletedAt` is the tombstone column. `ecosystemId` is
- * technically writable and is still not here: omitted, the factory fills it from the caller's
- * ecosystem scope, which is the only correct value — and the one value a UI could get wrong in a
- * way nothing would notice until the offer failed to sell.
+ * Keeping the masked columns out is THIS client's job, not something the server enforces for it.
+ * `crudBodySchemas` (backend/src/adh/src/crud/generate.ts) builds the create body as
+ * `createInsertSchema(table).omit(mask)` and the update body as that schema `.partial()` — plain
+ * `z.object`s. A plain zod object STRIPS keys it does not declare; it does not reject them. The
+ * same backend writes `.strict()` explicitly where it does want a refusal (routes/integrations.ts,
+ * routes/projects.ts, llm/connectionSpec.ts, sync/registry.ts), and the CRUD schemas do not.
+ *
+ * So a body naming `createdAt`, `updatedAt`, `ownerKind`, `ownerId` or `deletedAt` is accepted and
+ * quietly discarded — no error to notice, and no signal that the client is sending something it
+ * believes is being honoured. `ecosystemId` is the one that is worse: it is `plan.scopeIdProp`,
+ * re-extended as optional-but-declared, so it is not stripped at all — it parses, and only
+ * `assertWriteWithinScope` stands between a wrong value and a cross-tenant write. It is omitted
+ * here because the factory fills it from the caller's scope, which is the only correct value.
+ *
+ * The consequence of getting this wrong is deferred rather than absent: the day anyone tightens
+ * `crudBodySchemas` to `.strict()` — in line with the rest of the backend — every offer UPDATE
+ * would start 400ing while creates kept working, a split that looks like a billing bug and is not.
+ * `offerToInput` (../OfferDetail.ts) therefore builds the body key by key rather than by
+ * subtracting from a row.
  */
 export type OfferBody = Omit<OfferRow, "id">;
 

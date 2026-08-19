@@ -54,8 +54,13 @@ const numOrNull = (v: string): number | null => (v.trim() === "" ? null : Number
  * The write bodies carry NONE of the masked columns: `id`, `createdAt`, `updatedAt` are
  * SERVER_MANAGED; `ownerKind`/`ownerId` are stamped from the creating principal; `deletedAt` is
  * the tombstone. `ecosystemId` is omitted too — technically writable, but the factory fills it
- * from the caller's scope, which is the only correct value. That is enforced by `OfferInput`
- * being `Omit<OfferRow,"id">` rather than by a rule anyone has to remember.
+ * from the caller's scope, which is the only correct value.
+ *
+ * That is kept true by `offerToInput` naming the twelve writable fields explicitly, NOT by the
+ * server refusing the rest and not by the `OfferInput = Omit<OfferRow,"id">` type: the type is
+ * erased at runtime, and generic CRUD's body schemas are plain `z.object`s (crud/generate.ts's
+ * `crudBodySchemas`), which STRIP an undeclared key silently and ACCEPT `ecosystemId`, since that
+ * one is the declared scope column. See `api/billing.ts`'s `OfferBody` for the full account.
  *
  * `ecosystemId` is a prop and is not sent anywhere: these routes scope by the bearer token's
  * acting ecosystem. It is here so the resource cache is keyed per ecosystem, which is what keeps
