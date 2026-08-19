@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ReactElement } from "react";
 import { Users } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
@@ -9,6 +9,8 @@ import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelec
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { FieldFootnote } from "@agentic-toolkit/ui/blocks/field";
+import { fieldCaptionClass } from "@agentic-toolkit/ui/lib/typography";
 import {
   listAccounts,
   listOffers,
@@ -85,6 +87,11 @@ export function PayersPane({
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // The detail is re-rendered, not remounted, when the operator picks a different payer in the
+  // rail (there is no keyed subtree here), so a notice left over from A's Resend click would
+  // otherwise still be showing under B's Resend button and read as B having just been emailed.
+  useEffect(() => setNotice(null), [selectedId]);
+
   async function onResend(account: AccountRow) {
     setBusy(true);
     setNotice(null);
@@ -156,14 +163,13 @@ export function PayersPane({
             <Field label="Created at">
               <span className="text-sm">{stamp(selected.createdAt)}</span>
             </Field>
-            <Field
-              label="Claim link"
-              hint={
-                selected.claimedCustomerId
-                  ? "Already claimed. Binding is irreversible, so a fresh link cannot be issued."
-                  : undefined
-              }
-            >
+            {/* Not a Field: Field wraps its children in a <Label>, and a <label> forwards a click
+                on its inert content — the caption text, or the notice paragraph a reader might
+                drag-select to copy the expiry — to its first labelable descendant, which here is
+                the Resend button. That would mail a real customer a second claim link, so this
+                row is built by hand instead of composing Field. */}
+            <div className="flex flex-col items-start gap-1.5">
+              <span className={fieldCaptionClass}>Claim link</span>
               <Button
                 type="button"
                 variant="outline"
@@ -174,7 +180,14 @@ export function PayersPane({
                 Resend claim link
               </Button>
               {notice ? <p className="mt-1 text-xs text-apt-text-muted">{notice}</p> : null}
-            </Field>
+              <FieldFootnote
+                hint={
+                  selected.claimedCustomerId
+                    ? "Already claimed. Binding is irreversible, so a fresh link cannot be issued."
+                    : undefined
+                }
+              />
+            </div>
           </FieldGroup>
         ) : (
           <TopicSelectHint title="Select a payer." />

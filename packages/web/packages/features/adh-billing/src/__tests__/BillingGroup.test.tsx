@@ -20,6 +20,9 @@ describe("BillingGroup gates", () => {
   it("shows the resolution error when the context read failed", () => {
     render(<BillingGroup context={{ ...OK, isError: true }} />);
     expect(screen.queryByText("Setup")).not.toBeInTheDocument();
+    // Positive: `WorkspaceResolutionError`'s title, verbatim, so a BillingGroup that returned an
+    // empty fragment on `isError` (which would still pass the absence check above) fails here.
+    expect(screen.getByText(/Couldn't load this workspace/i)).toBeInTheDocument();
   });
 
   it("shows the not-manageable notice for a viewer", () => {

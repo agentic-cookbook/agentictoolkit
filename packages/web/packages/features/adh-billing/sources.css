@@ -15,8 +15,12 @@
  *
  * Unlike before, this package DOES compose other packages' panes — the Stripe topic is
  * @agentic-toolkit/integrations' own pane, and the rail is @agentic-toolkit/resource's — so a
- * host importing this file gets their sources too and needs no further lines on their account. */
-@source "./src/**/*.{ts,tsx}";
-@source "./dist/**/*.js";
+ * host importing this file gets their sources too and needs no further lines on their account.
+ *
+ * @import must come before every other at-rule, including @source below: a conformant CSS
+ * parser drops a misplaced @import silently, with no build error, which would mean these two
+ * packages' utilities are never registered and the billing site ships an unstyled rail. */
 @import "@agentic-toolkit/resource/sources.css";
 @import "@agentic-toolkit/integrations/sources.css";
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

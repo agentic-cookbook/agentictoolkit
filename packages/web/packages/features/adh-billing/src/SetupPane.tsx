@@ -7,6 +7,8 @@ import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
+import { FieldFootnote } from "@agentic-toolkit/ui/blocks/field";
+import { fieldCaptionClass } from "@agentic-toolkit/ui/lib/typography";
 import { setEcosystemFlag } from "./api/feature-flags";
 import type { BillingContextResolution } from "./useBillingContext";
 
@@ -96,10 +98,12 @@ export function SetupPane({
       </FieldGroup>
 
       <FieldGroup title="Stripe connection">
-        <Field
-          label="Status"
-          hint="Keys are entered on the Stripe topic, which is the same integration record the Integrations site configures."
-        >
+        {/* Not a Field: Field wraps its children in a <Label>, which forwards a click on its
+            inert content — the "Status" caption, or the "Connected"/"Not connected" text — to
+            its first labelable descendant, here the Connect/Manage button. Same defect as
+            PayersPane's Resend row; built by hand for the same reason. */}
+        <div className="flex flex-col items-start gap-1.5">
+          <span className={fieldCaptionClass}>Status</span>
           <div className="flex items-center gap-3">
             <span className="text-sm">
               {stripeConnected ? "Connected" : "Not connected"}
@@ -108,21 +112,24 @@ export function SetupPane({
               {stripeConnected ? "Manage" : "Connect Stripe"}
             </Button>
           </div>
-        </Field>
+          <FieldFootnote hint="Keys are entered on the Stripe topic, which is the same integration record the Integrations site configures." />
+        </div>
       </FieldGroup>
 
       <FieldGroup title="Webhook endpoint">
-        <Field
-          label="Endpoint URL"
-          hint="Paste this into the Stripe dashboard. adh does not register it for you."
-        >
+        {/* Not a Field, for the same reason as "Status" above: CopyButton is a labelable
+            <button>, and a click on the caption or a drag-select over the endpoint code would
+            otherwise fire the copy. */}
+        <div className="flex flex-col items-start gap-1.5">
+          <span className={fieldCaptionClass}>Endpoint URL</span>
           <div className="flex items-center gap-2">
             <code className="rounded bg-apt-input px-2 py-1 text-xs break-all">
               {webhookUrl || webhookPath || "…"}
             </code>
             <CopyButton getText={() => webhookUrl} label="Copy webhook URL" />
           </div>
-        </Field>
+          <FieldFootnote hint="Paste this into the Stripe dashboard. adh does not register it for you." />
+        </div>
         <Field label="Events to subscribe to" hint="Anything outside these three is stored and never applied.">
           <ul className="flex flex-col gap-1 text-sm text-apt-text-muted">
             {EVENT_FAMILIES.map((f) => (

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { RailHostBoundary } from "@agentic-toolkit/resource";
 
 const listAccounts = vi.fn();
 const listOffers = vi.fn();
@@ -19,7 +20,15 @@ describe("PayersPane", () => {
   it("names a 403 rather than rendering it as an empty customer list", async () => {
     listAccounts.mockRejectedValue(Object.assign(new Error("forbidden"), { status: 403 }));
     listOffers.mockResolvedValue([]);
-    render(<PayersPane ecosystemId="eco_1" />);
+    // Wrapped in a RailHostBoundary: that copy only ever reaches the rail (it's `emptyLabel`),
+    // and `useStackLevel` is a documented no-op outside a rail host, so without a host this
+    // negative assertion has nothing to be false about — a regression that dropped the
+    // `loadError ??` from `emptyLabel` would still pass.
+    render(
+      <RailHostBoundary>
+        <PayersPane ecosystemId="eco_1" />
+      </RailHostBoundary>,
+    );
     expect(await screen.findByText(/owners only/i)).toBeInTheDocument();
     expect(screen.queryByText(/nobody has bought/i)).not.toBeInTheDocument();
   });

@@ -1,7 +1,8 @@
 import { featureVitest } from '../vitest.preset'
 
 // `setupFiles` is not optional for this package, whatever the one-line configs elsewhere suggest.
-// Every pane here (SetupPane, OffersPane, PayersPane, EventsPane) reads through `useResourceList`,
+// Every pane here that reads data (OffersPane, PayersPane, EventsPane) does so through
+// `useResourceList` — SetupPane takes its resolved context as a prop and reads nothing itself —
 // whose QueryClient is at MODULE scope with a five-minute `staleTime` — so without
 // `data/vitest-setup.ts`'s `afterEach` clear, the second test in a file is served the FIRST test's
 // rows and its own fetcher is never called. It fails as "my fixture never appeared", on a line

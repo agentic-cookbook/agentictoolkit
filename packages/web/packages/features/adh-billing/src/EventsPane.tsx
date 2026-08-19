@@ -29,6 +29,10 @@ export function EventsPane({ ecosystemId }: { ecosystemId?: string }): ReactElem
   async function runRedrive(offset?: number) {
     setBusy(true);
     setFailure(null);
+    // The counts are about a RUN, not the pane, so a new run owns them from the moment it
+    // starts — otherwise a run that fails after a prior success still shows that success's
+    // "applied N" beside today's red failure, which reads as this run's outcome.
+    setResult(null);
     try {
       const r = await redriveEvents(offset === undefined ? undefined : { offset });
       setResult(r);
