@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { HierarchicalTopicDetail, type TopicLevel } from "../blocks/hierarchical-topic-detail";
 import { HierarchicalMenuDetail } from "../blocks/hierarchical-menu-detail";
 
@@ -12,19 +12,26 @@ import { HierarchicalMenuDetail } from "../blocks/hierarchical-menu-detail";
 // types, and typing a `describe.each` callback parameter as their union produces a "no overload
 // matches this call" error at the render call. `tsc` doesn't run on this branch, so this file
 // avoids a form that might not compile.
-const ONE_CRUMB_LEVELS: TopicLevel[] = [{ id: "l", title: "All projects", items: [], selectedId: null }];
+//
+// The level's own `title` is deliberately NOT "All projects" — the rail paints its title as
+// visible text of its own (`blocks/topic-detail.tsx:753`), outside the `<nav>`, so giving it the
+// same text as `rootLabel` would make the crumb text ambiguous with the rail's title text on the
+// page. `rootLabel` is what supplies "All projects" to the breadcrumb trail.
+const ONE_CRUMB_LEVELS: TopicLevel[] = [{ id: "l", title: "Projects", items: [], selectedId: null }];
 
 function expectLeadingChevron(ui: ReactElement) {
   render(ui);
   const nav = screen.getByLabelText("Breadcrumb");
   expect(nav.querySelectorAll("svg")).toHaveLength(1);
-  expect(screen.getByText("All projects")).toBeInTheDocument();
+  expect(within(nav).getByText("All projects")).toBeInTheDocument();
 }
 
 function expectSeparatorsAriaHidden(ui: ReactElement) {
   render(ui);
   const nav = screen.getByLabelText("Breadcrumb");
-  nav.querySelectorAll("svg").forEach((el) => {
+  const separators = nav.querySelectorAll("svg");
+  expect(separators.length).toBeGreaterThan(0);
+  separators.forEach((el) => {
     expect(el).toHaveAttribute("aria-hidden");
   });
 }
