@@ -88,12 +88,14 @@ export function BillingGroup({
       // hosts that mount this group with INTERNAL selection (the hub's workspace rail and the
       // products topic), so "Connect Stripe" rendered enabled there and did nothing at all. The
       // group's own setter routes to the URL when URL-driven and to internal state otherwise, so
-      // the button works on all three hosts.
+      // the button works on all three hosts. The ternary is not defensive padding: the parameter
+      // is optional so that a caller invoking `render` itself can pass one argument, and without
+      // a setter the honest answer is no button rather than the inert one this replaced.
       render: (_subLeaf, selectMember) => (
         <SetupPane
           context={context}
           onChanged={() => void context.reload?.()}
-          onOpenStripe={() => selectMember("stripe")}
+          onOpenStripe={selectMember ? () => selectMember("stripe") : undefined}
         />
       ),
     },

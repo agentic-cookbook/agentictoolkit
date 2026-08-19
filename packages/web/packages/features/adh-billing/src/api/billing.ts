@@ -59,7 +59,8 @@ export interface OfferRow {
  * `createInsertSchema(table).omit(mask)` and the update body as that schema `.partial()` — plain
  * `z.object`s. A plain zod object STRIPS keys it does not declare; it does not reject them. The
  * same backend writes `.strict()` explicitly where it does want a refusal (routes/integrations.ts,
- * routes/projects.ts, llm/connectionSpec.ts, sync/registry.ts), and the CRUD schemas do not.
+ * routes/projects.ts, llm/connectionSpec.ts, llm/catalog.ts, sync/registry.ts among others), and
+ * the CRUD schemas do not.
  *
  * So a body naming `createdAt`, `updatedAt`, `ownerKind`, `ownerId` or `deletedAt` is accepted and
  * quietly discarded — no error to notice, and no signal that the client is sending something it

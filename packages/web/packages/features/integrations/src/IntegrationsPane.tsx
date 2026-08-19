@@ -460,10 +460,15 @@ export function IntegrationsPane({
         // Do NOT close the modal here — it stays open so the user can add another; it closes via
         // its own ✕/Escape. Selecting the new address means the created instance's detail is
         // showing once they DO close it.
+        // `form.select`, not `leaf?.onSelect`: the leaf is absent whenever the host cedes no URL
+        // segment for the inner entity, and the optional chain silently did nothing there — so a
+        // freshly added integration was the one row whose detail never opened, while every
+        // existing row selected fine. The form's own setter routes to the URL when URL-driven and
+        // to internal state otherwise, so the new row opens on every host.
         onAdded={(row) => {
           void refreshConfigs();
           onChanged?.();
-          leaf?.onSelect(addressOf(row));
+          form.select(addressOf(row));
         }}
       />
 

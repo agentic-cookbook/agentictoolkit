@@ -46,8 +46,14 @@ export interface GroupTopicItem {
    *
    *  A SECOND parameter rather than a change to the first, deliberately: a function declared with
    *  fewer parameters is assignable in TypeScript, so every existing `render` in the fleet keeps
-   *  compiling untouched and only a member that needs the setter has to name it. */
-  render: (subLeaf: TopicLeaf, selectMember: (memberId: string | null) => void) => ReactNode;
+   *  compiling untouched and only a member that needs the setter has to name it.
+   *
+   *  OPTIONAL, though this component always supplies it. Assignability covers every `render` that
+   *  is DECLARED, but not every one that is CALLED: a caller reaching into `items` and invoking
+   *  `item.render(leaf)` itself — the hub's `registries/__tests__/entryTopics.test.tsx` does it
+   *  seven times — passes one argument to a two-parameter type and fails to compile. The `?` costs
+   *  a member that wants the setter one optional-chain and cannot break a caller anywhere. */
+  render: (subLeaf: TopicLeaf, selectMember?: (memberId: string | null) => void) => ReactNode;
   /** Flags this member's rail row as the one holding the blocking field — forwarded to
    *  {@link TopicDetailItem}'s own `blocked` field, which draws an amber dot on the row's icon
    *  (expanded and collapsed alike), names it "needs attention" for AT, and sets

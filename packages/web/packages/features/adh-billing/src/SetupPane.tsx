@@ -43,8 +43,10 @@ export function SetupPane({
    *  here re-derives all of them from one place rather than from local optimistic state. */
   onChanged: () => void | Promise<void>;
   /** Select the `stripe` member. A callback rather than a link because the group owns the URL —
-   *  the same component is mounted with internal selection on two of its three hosts. */
-  onOpenStripe: () => void;
+   *  the same component is mounted with internal selection on two of its three hosts. Optional
+   *  so that "no way to get there" is a state the type can express: omitted hides the button
+   *  instead of rendering one that cannot work. */
+  onOpenStripe?: () => void;
 }): ReactElement {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,9 +129,15 @@ export function SetupPane({
             <span className="text-sm">
               {stripeConnected ? "Connected" : "Not connected"}
             </span>
-            <Button type="button" variant="outline" size="sm" onClick={onOpenStripe}>
-              {stripeConnected ? "Manage" : "Connect Stripe"}
-            </Button>
+            {/* No handler ⇒ no button, rather than a button that renders enabled and does
+                nothing. That inert button is the exact defect this row was just fixed for, and
+                leaving the prop required would only have moved it one level up. The hint below
+                still names where keys are entered, so the row does not become a dead end. */}
+            {onOpenStripe ? (
+              <Button type="button" variant="outline" size="sm" onClick={onOpenStripe}>
+                {stripeConnected ? "Manage" : "Connect Stripe"}
+              </Button>
+            ) : null}
           </div>
           <FieldFootnote hint="Keys are entered on the Stripe topic, which is the same integration record the Integrations site configures." />
         </div>
