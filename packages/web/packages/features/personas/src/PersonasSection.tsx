@@ -2,10 +2,11 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { UserCircle } from "lucide-react";
+import { Plus, UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { readTokenSubject, revalidateResources } from "@agentic-toolkit/data";
 import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { Label } from "@agentic-toolkit/ui/components/label";
@@ -13,7 +14,13 @@ import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
 import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
-import { StackLevels, useRailHost, CreateResourceDialog } from "@agentic-toolkit/resource";
+import {
+  StackLevels,
+  useRailHost,
+  CreateResourceDialog,
+  HomeBar,
+  HomeBarPortal,
+} from "@agentic-toolkit/resource";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { api, type Persona } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
@@ -23,8 +30,9 @@ import { PERSONA_SERVICES_CACHE_KEY, useUserServices } from "./useUserServices";
  * The Personas feature: the persona list as a stack LEVEL and the editor as the leaf (the frame's
  * select hint while nothing is open). Under a rail host it PUBLISHES its level into the host's
  * merged stack (via `useRailHost`) and renders only the leaf; standalone it renders its own
- * HierarchicalTopicDetail. "New Persona" is a `+` in the list header; the breadcrumb names the open
- * persona (from the level).
+ * HierarchicalTopicDetail. Either way "New Persona" is PUBLISHED into the home bar — the page-level
+ * strip between the workspace bar and the breadcrumb bar — rather than drawn in the list header; the
+ * breadcrumb names the open persona (from the level).
  *
  * DUAL SELECTION MODE (mirrors useMasterDetailForm.urlSelection): pass `urlSelection` and the open
  * persona + editor sub-tab are URL-driven + deep-linkable — a host's top-level Personas route wires
@@ -109,8 +117,8 @@ export function PersonasSection({
       : "Failed to load personas."
     : servicesError;
   // Creating a persona is a MODAL over the stack, never a blank editor leaf (HTD recipe
-  // `must-create-in-modal`): the `+` opens it, and on save the created persona is selected so its
-  // full editor (personality, purpose, abilities, …) opens.
+  // `must-create-in-modal`): the home bar's "New Persona" button opens it, and on save the created
+  // persona is selected so its full editor (personality, purpose, abilities, …) opens.
   const [newOpen, setNewOpen] = useState(false);
   // Dual-mode selection: URL-driven (deep-linkable) when `urlSelection` is passed, else internal
   // state (the embedded /home launcher / ecosystem rail).
@@ -155,9 +163,8 @@ export function PersonasSection({
       onSelect: (id) => selectPersona(id),
       onClear: () => selectPersona(null),
       emptyLabel: "No personas yet.",
-      // "New Persona" is a right-justified `+` in the list header; it opens the create modal.
-      onNew: () => setNewOpen(true),
-      newLabel: "New Persona",
+      // No `onNew`/`newLabel` here: creating a persona acts on the PAGE, not on this rail level, so
+      // it is published into the home bar instead (see `homeBar` below).
       // The unselected pane is the frame's select hint and nothing else (docs/ui/fleet-ui-audit.md
       // §1.5) — the rail beside it already lists every persona.
       itemNoun: "persona",
@@ -320,17 +327,51 @@ export function PersonasSection({
     />
   ) : null;
 
+  // The page's primary action, published into the HOME BAR — the strip between the workspace bar
+  // and the breadcrumb bar — instead of being drawn as the persona level's own right-justified `+`.
+  // Creating a persona acts on the PAGE (this feature IS both sites' /home), not on one level of a
+  // deeper rail stack, which is the fleet's placement rule for what belongs in the bar. Shape copied
+  // verbatim from `ResourceExplorer`'s create button so the fleet's "New …" reads identically on
+  // every site.
+  //
+  // UNCONDITIONAL, exactly as `onNew` was: not gated on the list having loaded or being non-empty.
+  // An empty personas list is precisely when the first create matters most, and a still-loading one
+  // resolves to a button that already works.
+  //
+  // `HomeBarPortal` moves these children out of this component's DOM subtree but NOT out of its
+  // REACT tree, so the button still closes over `setNewOpen` and still opens the dialog below.
+  // With no `HomeBarHost` above (a mount outside `SiteHomeShell`/the hub shell) it renders inline
+  // instead, so nothing disappears on a host that has no bar.
+  const homeBar = (
+    <HomeBarPortal>
+      <HomeBar
+        right={
+          <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
+            <Plus size={16} aria-hidden />
+            New Persona
+          </Button>
+        }
+      />
+    </HomeBarPortal>
+  );
+
   // Under a rail host: PUBLISH the persona level (StackLevels advances the depth so the editor's
-  // topics land after it) and render the leaf. Standalone: own HTD.
+  // topics land after it) and render the leaf. Standalone: own HTD. The bar rides BOTH branches —
+  // the two sites that mount this (personas, personabuilder) reach it through `PersonasFeature`'s
+  // `RailHostBoundary`, which self-hosts a `StandaloneRailHost`, so they take the FIRST branch;
+  // the second is the embedded/no-host mount. A bar in only one of them is a missing button on
+  // whichever set of callers takes the other.
   if (railHost)
     return (
       <>
+        {homeBar}
         <StackLevels levels={levels}>{content}</StackLevels>
         {newDialog}
       </>
     );
   return (
     <>
+      {homeBar}
       <HierarchicalDetailView levels={levels} showBreadcrumb={false}>
         {content}
       </HierarchicalDetailView>

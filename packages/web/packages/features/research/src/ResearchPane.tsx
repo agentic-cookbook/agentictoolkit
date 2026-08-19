@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Globe } from "lucide-react";
+import { FileText, Globe, Plus } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Field } from "@agentic-toolkit/ui/blocks";
+import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
@@ -19,6 +20,8 @@ import {
   useRecordAffordance,
   CreateResourceDialog,
   useResourceItem,
+  HomeBar,
+  HomeBarPortal,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
 import {
@@ -166,7 +169,7 @@ export function ResearchPane({
   const universe = universeDocs ?? [];
 
   // The account's existing categories + tags — the editor's autocomplete/browse source
-  // (distinct from the filter rail, which lists only what's present on the loaded docs).
+  // (distinct from the home bar's filter dropdowns, whose options come from `universe` above).
   // Refetched on save so a freshly-coined category/tag appears as a suggestion next time.
   //
   // Workspace-scoped like the documents themselves: the backend scopes the category/tag
@@ -421,8 +424,10 @@ export function ResearchPane({
   const editing = selectedId !== null;
 
   // PUBLISH the documents list into the workspace shell's ONE merged stack (like the sibling
-  // ecosystem panes) instead of a self-contained nested EditorSection: the list is a rail LEVEL
-  // whose header carries the search/category/tag filters (railSlot) and the "+" create affordance.
+  // ecosystem panes) instead of a self-contained nested master/detail pane: the list is a rail
+  // LEVEL and NOTHING ELSE — selection, prefetch, the busy spinner and the empty text. Its two
+  // page-level controls (the search/category/tag filters and the "New document" create) are
+  // published into the HOME BAR instead; see the `HomeBarPortal` at the top of the return below.
   const documentsLevel: TopicLevel = {
     id: "research-documents",
     title: "Documents",
@@ -436,17 +441,8 @@ export function ResearchPane({
     // editor paints the cached copy instead of blanking to "Loading…".
     busy: fetchingDoc,
     onClear: onCancel,
-    onNew: () => setNewOpen(true),
-    newLabel: "New document",
+    // `emptyLabel` STAYS: it is the rail's own text for an empty list, not a control.
     emptyLabel: docs === null ? "Loading…" : "No documents yet.",
-    railSlot: (
-      <ResearchFilters
-        filters={filters}
-        onChange={setFilters}
-        categories={categoriesOf(universe)}
-        tags={tagsOf(universe)}
-      />
-    ),
   };
   useStackLevel(documentsLevel);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
@@ -476,6 +472,40 @@ export function ResearchPane({
 
   return (
     <>
+      {/* The page's own controls, published into the HOME BAR — the strip between the workspace bar
+          and the breadcrumb bar. They sit outside the rail because they act on the LIST AS A WHOLE
+          (this pane IS the research site's /home), not on whichever level the rail happens to be
+          showing, which is the fleet's placement rule for the bar. `left` is search/filters,
+          `right` the primary action; `HomeBar` owns that arrangement so no caller re-derives it.
+
+          `ResearchFilters` goes in bare, with no wrapper of its own: `SearchFilterBar` draws only a
+          `role="search"` flex row — no border, no background, no padding — so it does not repeat
+          the strip `HomeBarHost` already draws around it (the doubled-border trap documented at
+          `resource-explorer.tsx`'s own left slot).
+
+          UNCONDITIONAL, exactly as the level's `onNew`/`railSlot` were: an empty document list is
+          precisely when the first create matters most, and a filter with nothing to narrow yet is
+          harmless. Portalled children stay in this component's REACT tree, so both controls still
+          drive `filters`/`newOpen` from here. */}
+      <HomeBarPortal>
+        <HomeBar
+          left={
+            <ResearchFilters
+              filters={filters}
+              onChange={setFilters}
+              categories={categoriesOf(universe)}
+              tags={tagsOf(universe)}
+            />
+          }
+          right={
+            <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
+              <Plus size={16} aria-hidden />
+              New document
+            </Button>
+          }
+        />
+      </HomeBarPortal>
+
       <MasterDetailLeaf
         form={{ actions, editing, draft }}
         trailing={renderRecordAffordance?.({

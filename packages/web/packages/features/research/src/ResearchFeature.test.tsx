@@ -9,12 +9,19 @@
 // ResearchPane PUBLISHES its documents list as ONE rail level (via useStackLevel) into a rail
 // HOST rather than rendering its own list — the button bar (Save/Cancel/Delete) is the only thing
 // MasterDetailLeaf renders directly. So the harness below (mirroring ProjectsFeature.test.tsx's
-// Rail) renders the published level's "New document" affordance AND its items, standing in for
-// the hub's workspace shell.
+// Rail) renders the published level's items, standing in for the hub's workspace shell.
+//
+// The pane's two PAGE-level controls are no longer part of that level: the search/category/tag
+// filters and the "New document" create are published into the HOME BAR (the strip between the
+// workspace bar and the breadcrumb bar) via HomeBarPortal, not handed to the rail as `railSlot`
+// and `onNew`. The Harness therefore mounts a real `HomeBarHost` the way SiteHomeShell does — and
+// it MUST: without a host, HomeBarPortal renders its children inline as a fallback, so every
+// unscoped `screen.*` query would pass identically whether the publish works or not.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, fireEvent, waitFor, within, cleanup } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  HomeBarHost,
   RailHostContext,
   type RailHostRegistry,
   type RegisteredLevels,
@@ -97,8 +104,10 @@ afterEach(cleanup);
 // next test's `get` is never called and its assertion fails describing the feature working
 // correctly. The tests below therefore each start from an empty cache.
 
-/** Renders the published rail affordances (the "New document" button + the document rows) the way
- *  the hub's workspace shell would, so the test can drive the shell-owned rail slot.
+/** Renders the published rail level (the document rows) the way the hub's workspace shell would,
+ *  so the test can drive the rows. It draws NO create button and NO filter slot: those are the
+ *  page's controls now and reach the home bar instead, so a rail stub that still rendered
+ *  `l.onNew`/`l.railSlot` would quietly keep a regression to the old arrangement passing.
  *
  *  It also stands in for the two signals the real `TopicRail` owns: the header spinner it shows
  *  while `busy`, and the hover dwell after which it calls `onPrefetch`. The dwell's TIMING is the
@@ -110,14 +119,6 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
       {levels.map((l) => (
         <div key={l.id}>
           {l.busy && <span data-testid={`busy-${l.id}`} />}
-          {/* The real TopicRail renders this beside the level's title; here it is what makes the
-              pane's search/category/tag filters drivable. */}
-          {l.railSlot}
-          {l.onNew && (
-            <button type="button" onClick={() => l.onNew?.()}>
-              {l.newLabel}
-            </button>
-          )}
           <ul>
             {l.items.map((item) => (
               <li key={item.id}>
@@ -139,8 +140,9 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
 
 /** A minimal rail HOST: it registers ResearchPane's published documents level and exposes the
  *  merged stack the way the hub's workspace shell would (the shell owns `mergedLevels`; this
- *  package owns only the RailHostContext contract). Stands in for the host so the published
- *  "New document" rail affordance and the document rows are drivable. */
+ *  package owns only the RailHostContext contract), plus a real {@link HomeBarHost} above both —
+ *  the two hosts SiteHomeShell / the hub shell mount around this feature. Stands in for them so
+ *  the published document rows AND the home bar's own controls are drivable. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
   const registry: RailHostRegistry = useMemo(
@@ -170,8 +172,10 @@ function Harness({ children }: { children: ReactNode }) {
     .flatMap((e) => e.levels);
   return (
     <RailHostContext.Provider value={registry}>
-      <Rail levels={mergedLevels} />
-      {children}
+      <HomeBarHost>
+        <Rail levels={mergedLevels} />
+        {children}
+      </HomeBarHost>
     </RailHostContext.Provider>
   );
 }
@@ -188,18 +192,22 @@ describe("ResearchFeature", () => {
     expect(list).toHaveBeenCalled();
   });
 
-  it("creates a document through the New document rail affordance", async () => {
+  it("creates a document through the home bar's New document button", async () => {
     render(
       <Harness>
         <ResearchFeature basePath="/w1/research" />
       </Harness>,
     );
 
-    // The rail affordance opens the CREATE MODAL (HTD `must-create-in-modal`): the body, plus
-    // the category that places it. The body is asked for here rather than left to the editor
-    // because it is now the document's NAME — the title is its first line — so an empty create
-    // would mint an "Untitled" row the user then has to go and find.
-    fireEvent.click(await screen.findByRole("button", { name: "New document" }));
+    // Clicked THROUGH the strip, not through `screen`: this is the button the user now has, and
+    // driving it from inside `home-bar` is also what proves the portal keeps its children in this
+    // component's REACT tree — a button that left the DOM subtree but still closes over
+    // `setNewOpen`. It opens the CREATE MODAL (HTD `must-create-in-modal`): the body, plus the
+    // category that places it. The body is asked for here rather than left to the editor because
+    // it is now the document's NAME — the title is its first line — so an empty create would mint
+    // an "Untitled" row the user then has to go and find.
+    const strip = within(await screen.findByTestId("home-bar"));
+    fireEvent.click(strip.getByRole("button", { name: "New document" }));
 
     // Scope to the dialog: the editor's portaled action bar has its own Save button.
     const dialog = within(screen.getByRole("dialog", { name: "New document" }));
@@ -502,5 +510,84 @@ describe("ResearchFeature", () => {
     const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
     expect(body.value).toBe("# Federated learning\n\nSome notes.");
     expect(get).not.toHaveBeenCalled();
+  });
+
+  // ── The home bar ─────────────────────────────────────────────
+  // Both of this pane's page-level controls moved OUT of the rail level's header and INTO the home
+  // bar. Every query below goes through `within(home-bar)` rather than `screen`, which is the only
+  // thing that makes these tests capable of failing: `HomeBarPortal` renders inline when no
+  // `HomeBarHost` is above it, so a bare `screen.getByRole("button", { name: "New document" })`
+  // finds the button whether it was published into the strip or left where it was.
+
+  it("publishes the filters and New document INTO the home bar, filters before the button", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+
+    const strip = await screen.findByTestId("home-bar");
+    const bar = within(strip);
+    const search = bar.getByRole("searchbox", { name: "Search research documents" });
+    const create = bar.getByRole("button", { name: "New document" });
+    // The whole filter cluster, not just the search field: `railSlot` carried all three axes, so
+    // all three have to arrive.
+    bar.getByRole("combobox", { name: "Filter by category" });
+    bar.getByRole("combobox", { name: "Filter by tag" });
+
+    // The fleet's placement rule — filters left, primary action right — which "both are present"
+    // cannot see. MASKED, not `toBe(4)`: `compareDocumentPosition` returns a BITMASK, and the
+    // FOLLOWING bit arrives OR-ed with others (CONTAINED_BY, IMPLEMENTATION_SPECIFIC) depending on
+    // the nesting, so an equality assertion on it passes or fails for reasons unrelated to order.
+    expect(search.compareDocumentPosition(create) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    // And nowhere ELSE. A control published into the bar but ALSO still handed to the rail as
+    // `onNew`/`railSlot` would satisfy every assertion above; only counting the whole document
+    // catches it.
+    expect(screen.getAllByRole("button", { name: "New document" })).toHaveLength(1);
+    expect(screen.getAllByRole("searchbox")).toHaveLength(1);
+  });
+
+  it("still publishes the bar with ZERO documents — the first create is when it matters most", async () => {
+    // An empty list, and the create must survive it: gating the bar on having something to list is
+    // precisely the trap this branch exists to close (a brand-new tenant with no way to create
+    // anything at all). The unfiltered universe read is empty here too, so the category/tag
+    // dropdowns hold only their all-pass entries — the search field is what has to be there.
+    list.mockResolvedValue([]);
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+
+    const bar = within(await screen.findByTestId("home-bar"));
+    expect(bar.getByRole("button", { name: "New document" })).not.toBeNull();
+    expect(bar.getByRole("searchbox", { name: "Search research documents" })).not.toBeNull();
+  });
+
+  it("filters the list from the home bar's search field", async () => {
+    // The publish is a PORTAL, not a move: the field left this pane's DOM subtree but still sits in
+    // its React tree, so typing in the strip must still drive the pane's `filters` state and reach
+    // the list request. A field that rendered in the bar but no longer fed the list would pass
+    // every placement assertion above.
+    list.mockImplementation(async (f) => (f?.q ? [] : [structuredClone(SUMMARY)]));
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    expect(await screen.findByText("Federated learning notes")).not.toBeNull();
+
+    const bar = within(await screen.findByTestId("home-bar"));
+    fireEvent.change(bar.getByRole("searchbox", { name: "Search research documents" }), {
+      target: { value: "fed" },
+    });
+    await waitFor(() =>
+      expect(list).toHaveBeenLastCalledWith(
+        { q: "fed", category: "", tag: "" },
+        { workspace: undefined },
+      ),
+    );
+    await waitFor(() => expect(screen.queryByText("Federated learning notes")).toBeNull());
   });
 });
