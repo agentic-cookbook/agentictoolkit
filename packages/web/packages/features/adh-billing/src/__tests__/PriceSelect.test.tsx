@@ -28,6 +28,10 @@ describe("PriceSelect", () => {
 
   it("keeps an unresolvable stored price visible rather than blank", () => {
     render(<PriceSelect value="price_gone" onChange={vi.fn()} prices={PRICES} error={null} errorStatus={null} />);
-    expect(screen.getByText(/missing in Stripe/i)).toBeInTheDocument();
+    // Two elements carry the phrase on purpose — the injected <option>, so the stored id stays
+    // selected rather than silently rewriting itself to the first real price, and the hint that
+    // says what that means. A bare getByText would match both and throw, so name each one.
+    expect(screen.getByRole("option", { name: /price_gone — missing in Stripe/ })).toBeInTheDocument();
+    expect(screen.getByText(/currently sells nothing/i)).toBeInTheDocument();
   });
 });
