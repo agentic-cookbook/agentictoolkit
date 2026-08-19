@@ -6798,7 +6798,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["InvitationRequest"][];
                     };
                 };
                 /** @description Error */
@@ -6945,7 +6945,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["PendingUser"][];
                     };
                 };
                 /** @description Error */
@@ -6999,7 +6999,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["EcoAddPendingUsersBody"];
+                    "application/json": components["schemas"]["AddPendingUsersBody"];
                 };
             };
             responses: {
@@ -7009,7 +7009,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["PendingUser"][];
                     };
                 };
                 /** @description Error */
@@ -7154,7 +7154,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["Invitation"][];
                     };
                 };
                 /** @description Error */
@@ -7208,7 +7208,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["EcoSendInvitesBody"];
+                    "application/json": components["schemas"]["SendInvitesBody"];
                 };
             };
             responses: {
@@ -7218,7 +7218,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["Invitation"][];
                     };
                 };
                 /** @description Error */
@@ -7366,7 +7366,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["AdminNote"][];
                     };
                 };
                 /** @description Error */
@@ -7419,7 +7419,7 @@ export interface paths {
             };
             requestBody?: {
                 content: {
-                    "application/json": components["schemas"]["EcoNotesReconcileBody"];
+                    "application/json": components["schemas"]["AdminNotesReconcileBody"];
                 };
             };
             responses: {
@@ -7507,7 +7507,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["EcoManagedRowList"];
+                        "application/json": components["schemas"]["EntityHistoryEntry"][];
                     };
                 };
                 /** @description Error */
@@ -7517,6 +7517,670 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invitation-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List join requests, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitation requests */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvitationRequest"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invitation-requests/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a join request
+         * @description Removes the request only. The pending user it produced is left alone.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/pending-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending users, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Pending users */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PendingUser"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Add people to the pending list
+         * @description Adds one or more people without inviting them — sending is a separate step (POST /auth/invitations). Each gets the next `userNumber` for the ecosystem.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AddPendingUsersBody"];
+                };
+            };
+            responses: {
+                /** @description The created pending users */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PendingUser"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/pending-users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a pending user */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invitations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List sent invitations, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Invitations */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invitation"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Send invitations to pending users
+         * @description One invitation per person per requested channel that they have a destination for — so naming three people with both `email` and `sms` returns up to six rows. Every id is checked before anything is sent: one unknown id fails the whole call with 404.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SendInvitesBody"];
+                };
+            };
+            responses: {
+                /** @description The invitations that were sent */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Invitation"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/invitations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a sent invitation
+         * @description Deletes the record. It does not revoke a token already in someone’s inbox.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/announcements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the ecosystem's announcements, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Announcements with their delivery counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AnnouncementList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Compose and send an announcement
+         * @description Accepted, not completed: the response is 202 and delivery runs in the background. Poll the announcement to watch `sentCount` climb and `sentAt` appear. A delivery failure therefore never surfaces here.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AnnouncementCreate"];
+                };
+            };
+            responses: {
+                /** @description Queued for delivery */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AnnouncementAccepted"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/announcements/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get one announcement and its delivery progress */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The announcement */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Announcement"];
                     };
                 };
                 /** @description Error */
@@ -11273,6 +11937,435 @@ export interface paths {
                 };
             };
         };
+        trace?: never;
+    };
+    "/chat/dms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's DM chats, newest activity first */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    /** @description Clamped server-side to at most 500. */
+                    pageSize?: number;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paged DM chats */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmChatList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Open (or reuse) a DM chat with another user
+         * @description Idempotent per user pair: 201 when a chat was created, 200 when one already existed. 403 when the recipient cannot be contacted (a block, or a privacy setting).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["DmCreateRequest"];
+                };
+            };
+            responses: {
+                /** @description The existing chat */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmCreateResult"];
+                    };
+                };
+                /** @description The newly created chat */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmCreateResult"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/dms/{chatId}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chatId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List the messages in a DM chat, oldest first
+         * @description Paginates from the newest end — page 1 is the most recent window — but returns each page in ascending `seq` order. 404 (not 403) when the caller is not a participant, so a chat id cannot be probed for existence.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    /** @description Clamped server-side to at most 200. */
+                    pageSize?: number;
+                };
+                header?: never;
+                path: {
+                    chatId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paged DM messages */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmMessageList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Send a DM
+         * @description Send a message into a DM chat. Supplying `clientMessageId` makes the send idempotent: a replay returns 200 with the already-stored message instead of 201.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    chatId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["DmSendMessage"];
+                };
+            };
+            responses: {
+                /** @description The message a previous send with this clientMessageId stored */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmMessage"];
+                    };
+                };
+                /** @description The stored message */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmMessage"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/dms/{chatId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chatId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark a DM chat read up to a message
+         * @description Marks the chat read through `messageId`. Omit it — or name a message that is not this chat's — to mark the latest message read, which always leaves `unreadCount` 0.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    chatId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["DmReadRequest"];
+                };
+            };
+            responses: {
+                /** @description The recomputed unread count */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DmReadResult"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/chat/dms/{chatId}/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chatId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Stream new DMs in a chat (SSE)
+         * @description Server-Sent Events (`text/event-stream`). Emits one `message` event per DM with `seq` greater than the `after` cursor — first the backlog, then each new message as it arrives. There is no `open`, `error`, or keepalive event, and no terminal event: the stream simply closes after at most 5 minutes, and the client reconnects with `after` set to the last `seq` it saw. Unlike the conversation turn stream, failures here are real HTTP statuses raised before the stream opens, never in-band.
+         *
+         *     Because a browser `EventSource` cannot set headers, this route (alone among the DM routes) also accepts the bearer token as an `access_token` query parameter.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Last `seq` already seen; only later messages are emitted. Defaults to 0. */
+                    after?: number;
+                    /** @description The bearer token, for clients that cannot send an Authorization header. */
+                    access_token?: string;
+                };
+                header?: never;
+                path: {
+                    chatId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SSE stream of `message` events */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": components["schemas"]["DmMessage"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/me/communication-settings": {
@@ -19420,6 +20513,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/notifications/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Wake on new notifications (SSE)
+         * @description Server-Sent Events (`text/event-stream`). Emits a `notification` event with an empty `{}` payload each time something lands for the caller; re-read GET /notifications or /notifications/unread-count to find out what.
+         *
+         *     If the backend was started without a notification hub, the stream instead emits a single `ready` event and closes immediately — the client should fall back to polling. Otherwise it stays open for at most 5 minutes and then closes with no terminal event; reconnect.
+         *
+         *     Because a browser `EventSource` cannot set headers, the bearer token may be passed as an `access_token` query parameter instead. Connecting also marks the caller present, and disconnecting marks them away.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The bearer token, for clients that cannot send an Authorization header. */
+                    access_token?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description SSE stream of `notification` wake events (or one `ready` event, then close) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": components["schemas"]["NotificationWakeEvent"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/notifications/{id}/read": {
         parameters: {
             query?: never;
@@ -22141,6 +23289,114 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/presence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Look up the presence of specific users
+         * @description Returns one entry per requested id. The caller always sees their own true state; every other id is visibility-gated, and one the caller may not see reports `online: false, lastSeenAt: null` — indistinguishable from genuinely offline.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The users to look up. Repeat the parameter, comma-separate the values, or both. At most 100 *distinct* ids — the cap is applied after de-duplication, so a longer list that collapses to 100 or fewer is accepted. Omitted means an empty result. */
+                    userIds?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Presence for the requested users */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PresenceList"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/presence/heartbeat": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh the caller's last-seen timestamp
+         * @description Marks the caller active now. Takes no body — any body sent is ignored. This only moves `lastSeenAt`; whether a user counts as *online* is driven by their open streaming connections, not by this call.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PresenceHeartbeatResult"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -30460,6 +31716,424 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/personas/{slug}/visitor-tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The public persona's slug */
+                slug: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint an anonymous visitor token for a public persona
+         * @description Unauthenticated, and the only way to obtain a visitor token. The token is returned once and never again — nothing server-side can reproduce it.
+         *
+         *     Slugs are unique per owner, not globally, so a slug shared by two *public* personas is a 409 rather than an arbitrary pick. A persona that is not public, does not exist, or whose owner cannot be resolved is uniformly a 404.
+         *
+         *     Refused with 403 when the owning ecosystem has not enabled visitor chat, 503 when visitor chat is switched off globally, and 429 past the per-IP hourly mint limit.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The public persona's slug */
+                    slug: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A visitor token, shown once */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VisitorToken"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/visitor-chat/conversations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start a visitor conversation
+         * @description Requires a visitor token (`tmp_…`) in the Authorization header — any other kind of token is a 403. The persona is taken from the token. Conversations expire on their own after a fixed window.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["VisitorConversationCreate"];
+                };
+            };
+            responses: {
+                /** @description The new conversation */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VisitorConversation"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                402: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/visitor-chat/conversations/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read a visitor conversation and its messages
+         * @description Scoped to the token that created it: another visitor's conversation, or an expired one, is a 404 — the same answer as one that never existed.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The conversation with its messages */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["VisitorConversationDetail"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                402: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/visitor-chat/conversations/{id}/turns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a turn in a visitor conversation (SSE)
+         * @description Streams the persona's reply as Server-Sent Events (`text/event-stream`): an `open` event, then `token`, `tool_call_started`, `tool_call_completed`, `status` and `award` events, ending in `done`, `ended` (the persona closed the chat) or `error`.
+         *
+         *     Every check happens BEFORE the stream opens, so a refusal is always a real HTTP status: 409 when the conversation is closed or full, 422 when the message is too long or is screened out, 429 past a rate window, 503 when capacity or budget is exhausted. Once the stream is open, HTTP is already 200 and any later failure arrives as an `error` event instead.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["VisitorTurnRequest"];
+                };
+            };
+            responses: {
+                /** @description SSE stream of the reply */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": components["schemas"]["VisitorTurnEvent"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                402: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/registry/identifiers": {
         parameters: {
             query?: never;
@@ -33570,6 +35244,507 @@ export interface paths {
         };
         trace?: never;
     };
+    "/ecosystem/auth-settings/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ecosystem uuid or rdid */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Read an ecosystem's sign-up/sign-in policy
+         * @description An ecosystem that has never been configured returns the defaults, not a 404.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The policy in force */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EcosystemAuthSettings"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update an ecosystem's sign-up/sign-in policy */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["EcosystemAuthSettingsUpdate"];
+                };
+            };
+            responses: {
+                /** @description The policy after the update */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EcosystemAuthSettings"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ecosystem/signin-apps/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ecosystem uuid or rdid */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * List an ecosystem's sign-in apps
+         * @description Internal clients are excluded — they are not manageable through this surface.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sign-in apps */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EcosystemSigninApp"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a sign-in app for an ecosystem
+         * @description The client is bound to this ecosystem by the server; the body cannot name a different one. Asking for GitHub sign-in when no GitHub provider is configured is a 400, checked before anything is written.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["EcosystemSigninAppCreate"];
+                };
+            };
+            responses: {
+                /** @description The created app */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EcosystemSigninApp"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ecosystem/signin-apps/{id}/{clientId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ecosystem uuid or rdid */
+                id: string;
+                /** @description The client uuid */
+                clientId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a sign-in app
+         * @description Also removes the client’s provider links. Internal clients cannot be deleted (403).
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                    /** @description The client uuid */
+                    clientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Update a sign-in app
+         * @description A client belonging to another ecosystem is a 404, not a 403 — the two are indistinguishable from outside. An internal client exists but is a 403.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem uuid or rdid */
+                    id: string;
+                    /** @description The client uuid */
+                    clientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["EcosystemSigninAppUpdate"];
+                };
+            };
+            responses: {
+                /** @description The app after the update */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EcosystemSigninApp"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/persona/bootstrap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Everything a persona implementation needs to start, from its token alone
+         * @description Requires a persona or visitor API token (`tmp_…`) in the Authorization header — NOT a user session JWT, which is a 400, and not an application token, which is a 403. The token identifies the persona; there is nothing to pass.
+         *
+         *     A visitor token gets the same shape with the anonymous floor applied: no tools, no memory, read-only buckets, and the public conversation URL. If the persona has since been made non-public, a visitor token stops working (403) even though it has not expired.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The persona, its prompt, and what its token may do */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PersonaBootstrap"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                503: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/persona/demo-preview": {
         parameters: {
             query?: never;
@@ -35475,6 +37650,194 @@ export interface paths {
                 };
                 /** @description Error */
                 404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/admin-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a subject's admin notes, oldest first */
+        get: {
+            parameters: {
+                query: {
+                    subjectTable: string;
+                    subjectId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Admin notes */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AdminNote"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /**
+         * Reconcile a subject's admin notes
+         * @description Replaces the whole set for the subject rather than editing one note: a note with an `id` is updated, one without is created, and any existing note the body omits is DELETED. Sending an empty `notes` array clears them all. Appends one `notes_updated` entry to the subject's history.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["AdminNotesReconcileBody"];
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            ok: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/system/entity-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a subject's history, newest first */
+        get: {
+            parameters: {
+                query: {
+                    subjectTable: string;
+                    subjectId: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description History entries */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["EntityHistoryEntry"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -37972,6 +40335,219 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sync/tables/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ecosystem rdid or uuid */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** List an ecosystem's sync enrollment, default and effective */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem rdid or uuid */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Every catalog resource with its effective state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncEnrollmentList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/sync/tables/{id}/{resource}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Ecosystem rdid or uuid */
+                id: string;
+                /** @description "<schema>.<table>" from the catalog */
+                resource: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Override whether one resource syncs for an ecosystem
+         * @description A resource that is not in the catalog is a 400 — overrides cannot invent resources.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem rdid or uuid */
+                    id: string;
+                    /** @description "<schema>.<table>" from the catalog */
+                    resource: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SyncEnrollmentUpdate"];
+                };
+            };
+            responses: {
+                /** @description The catalog after the write */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncEnrollmentList"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Drop the override and fall back to the catalog default
+         * @description Idempotent, and deliberately unvalidated: clearing an override that was never set — or one naming a resource the catalog has since dropped — succeeds rather than 400ing, so a stale override can always be cleaned up.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Ecosystem rdid or uuid */
+                    id: string;
+                    /** @description "<schema>.<table>" from the catalog */
+                    resource: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The catalog after the clear */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SyncEnrollmentList"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -64429,36 +67005,116 @@ export interface components {
             status: "accepted" | "verification_required";
             ecosystemName?: string;
         };
-        /** @description A row from the ecosystem-scoped invitation surface (pending user, invitation, invitation request, admin note, or history entry). Intentionally open — the shape mirrors the admin routes 1:1, so no fixed property schema is repeated here. */
-        EcoManagedRow: {
-            [key: string]: unknown;
+        /** @description A person known to the ecosystem who has not accepted an invitation yet. */
+        PendingUser: {
+            id: string;
+            ecosystemId: string;
+            /** @description Sequential within the ecosystem, assigned on insert */
+            userNumber: number;
+            name: string;
+            email: string | null;
+            phone: string | null;
+            /** @enum {string} */
+            status: "pending" | "invited" | "accepted" | "declined";
+            requestCount: number;
+            invitedCount: number;
+            lastRequestAt: string | null;
+            lastInviteSentAt: string | null;
+            firstRequestedAt: string;
+            lastSource: string | null;
+            lastNote: string | null;
+            acceptedCustomerId: string | null;
+            contactId?: string | null;
+            createdAt: string;
+            updatedAt: string;
         };
-        EcoManagedRowList: components["schemas"]["EcoManagedRow"][];
-        EcoAddPendingUsersBody: {
-            users: {
-                name: string;
-                /** Format: email */
-                email?: string;
-                phone?: string;
-                note?: string;
-            }[];
+        /** @description One invite delivered to one destination. Inviting by both email and SMS makes two. */
+        Invitation: {
+            id: string;
+            ecosystemId: string;
+            pendingUserId: string;
+            name: string;
+            /** @enum {string} */
+            channel: "email" | "sms";
+            destination: string;
+            tokenHash: string;
+            /** @enum {string} */
+            status: "sent" | "registered" | "accepted" | "expired" | "revoked";
+            sentBy: string;
+            sentAt: string;
+            expiresAt: string;
+            acceptedAt: string | null;
+            acceptedCustomerId: string | null;
+            messageLogId: string | null;
+            adminNote: string | null;
+            createdAt: string;
         };
-        EcoSendInvitesBody: {
+        /** @description An unsolicited ask to join, as captured by the public request form. */
+        InvitationRequest: {
+            id: string;
+            ecosystemId: string;
+            pendingUserId: string;
+            name: string;
+            email: string | null;
+            phone: string | null;
+            source: string | null;
+            note: string | null;
+            createdAt: string;
+            userNumber: number | null;
+        };
+        AddPendingUsersBody: {
+            users: components["schemas"]["AddPendingUser"][];
+        };
+        AddPendingUser: {
+            name: string;
+            /** Format: email */
+            email?: string;
+            phone?: string;
+            note?: string;
+        };
+        /** @description Names the people to invite and the channels to reach them on. At least one channel is required. */
+        SendInvitesBody: {
             pendingUserIds: string[];
-            email?: {
-                note?: string;
-            };
-            sms?: {
-                note?: string;
-            };
+            email?: components["schemas"]["SendInviteChannel"];
+            sms?: components["schemas"]["SendInviteChannel"];
         };
-        EcoNotesReconcileBody: {
-            subjectTable: string;
-            subjectId: string;
-            notes: {
-                id?: string;
-                content: string;
-            }[];
+        /** @description Send on this channel. `note` is added to the message body. */
+        SendInviteChannel: {
+            note?: string;
+        };
+        Announcement: {
+            id: string;
+            createdBy: string;
+            title: string;
+            body: string;
+            /** @description See AnnouncementCreate.audience */
+            audience: string;
+            /** @description e.g. sending, sent */
+            status: string;
+            createdAt: string;
+            updatedAt: string;
+            /** @description null until the fan-out finishes */
+            sentAt: string | null;
+            totalRecipients: number;
+            sentCount: number;
+        };
+        AnnouncementList: {
+            announcements: components["schemas"]["Announcement"][];
+        };
+        AnnouncementCreate: {
+            title: string;
+            body: string;
+            /**
+             * @description Reserved for targeting. Stored and echoed back, but fan-out currently reaches every live customer of the ecosystem whatever this says — it is not yet an enum, and no value narrows the audience.
+             * @default all_hub
+             */
+            audience: string;
+        };
+        AnnouncementAccepted: {
+            id: string;
+            recipientCount: number;
+            /** @enum {string} */
+            status: "sending";
         };
         AuthUserMethod: {
             id: string;
@@ -64751,6 +67407,69 @@ export interface components {
             result: string;
         } | Record<string, never> | {
             message: string;
+        };
+        /** @description One direct message. Also the payload of a `message` event on the DM SSE stream. */
+        DmMessage: {
+            id: string;
+            chatId: string;
+            senderParticipantId: string | null;
+            senderUserId: string;
+            /** @description Per-chat monotonic sequence; the stream cursor */
+            seq: number;
+            role: string;
+            body: string;
+            state: string;
+            dateSent: string;
+        };
+        /** @description The chat's most recent message, trimmed to what a chat list renders. */
+        DmMessagePreview: {
+            id: string;
+            senderParticipantId: string | null;
+            body: string;
+            seq: number;
+            dateSent: string;
+        } | null;
+        DmChatSummary: {
+            chatId: string;
+            otherUserId: string;
+            lastMessage: components["schemas"]["DmMessagePreview"];
+            unreadCount: number;
+        };
+        DmChatList: {
+            chats: components["schemas"]["DmChatSummary"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        DmMessageList: {
+            items: components["schemas"]["DmMessage"][];
+            total: number;
+            page: number;
+            pageSize: number;
+        };
+        DmCreateRequest: {
+            /** @description The other user. The caller's own id is a 400. */
+            recipientId: string;
+        };
+        DmCreateResult: {
+            /** @description The chat id */
+            id: string;
+            otherUserId: string;
+            /** @description false when an existing chat was reused */
+            created: boolean;
+        };
+        DmSendMessage: {
+            body: string;
+            /** @description Idempotency key; a replay returns 200 */
+            clientMessageId?: string;
+        };
+        DmReadRequest: {
+            /** @description Mark read through this message; omit for the latest */
+            messageId?: string;
+        };
+        DmReadResult: {
+            success: boolean;
+            unreadCount: number;
         };
         CommunicationSettings: {
             /** @description AUDIENCE bitmask of who may DM the user (0 = nobody; default PUBLIC|HUB = 3) */
@@ -65633,6 +68352,8 @@ export interface components {
             /** @description In-app (inbox) delivery for this category. */
             inApp: boolean;
         };
+        /** @description The payload of every event on GET /notifications/stream — always `{}`. The SSE `event:` name (`notification` or `ready`) carries the whole meaning; the body deliberately carries none, so a client can never read the stream instead of the inbox. */
+        NotificationWakeEvent: Record<string, never>;
         Friendship: {
             id: string;
             ecosystemId: string;
@@ -65716,6 +68437,18 @@ export interface components {
             verified: boolean;
             isPrimary: boolean;
             createdAt?: string;
+        };
+        PresenceView: {
+            userId: string;
+            online: boolean;
+            lastSeenAt: string | null;
+        };
+        PresenceList: {
+            /** @description One entry per requested id, in the order requested (duplicates included). */
+            presence: components["schemas"]["PresenceView"][];
+        };
+        PresenceHeartbeatResult: {
+            success: boolean;
         };
         PrivacyGrant: {
             /** @enum {string} */
@@ -66749,6 +69482,74 @@ export interface components {
             /** @description Public entry slugs, alphabetical. */
             slugs: string[];
         };
+        VisitorToken: {
+            /** @description The bearer token itself, `tmp_` followed by 64 hex characters. Returned once at mint and stored only as a hash — it cannot be recovered. */
+            token: string;
+            expiresAt: string;
+            personaId: string;
+        };
+        VisitorConversationCreate: {
+            /** @description Defaults to "New chat" */
+            title?: string;
+        };
+        VisitorConversation: {
+            id: string;
+            title: string;
+            /** @description The persona's configured model, copied at creation */
+            model: string;
+            personaSlug: string | null;
+            personaId: string | null;
+            /** @enum {string} */
+            state: "open" | "closed";
+            createdAt: string;
+            updatedAt: string;
+        };
+        VisitorMessage: {
+            id: string;
+            role: string;
+            content: string;
+            toolName: string | null;
+            createdAt: string;
+        };
+        VisitorConversationDetail: {
+            conversation: components["schemas"]["VisitorConversation"];
+            messages: components["schemas"]["VisitorMessage"][];
+        };
+        VisitorTurnRequest: {
+            /** @description Over the per-message character ceiling this is a 422, not a 400 */
+            message: string;
+            clientMessageId?: string;
+        };
+        /** @description One event in the visitor turn stream. The SSE `event:` name is the discriminator (`open` | `token` | `tool_call_started` | `tool_call_completed` | `status` | `award` | `done` | `ended` | `error`); the JSON `data:` payload is one of the shapes below. */
+        VisitorTurnEvent: Record<string, never> | {
+            text: string;
+        } | {
+            name: string;
+            arguments: string;
+        } | {
+            name: string;
+            ok: boolean;
+            result: string;
+        } | {
+            /** @enum {string} */
+            phase: "retrying";
+            attempt: number;
+        } | {
+            badges: components["schemas"]["VisitorAwardBadge"][];
+            xpGained: number;
+            leveledUpTo: number | null;
+        } | Record<string, never> | {
+            reason: string;
+        } | {
+            message: string;
+        };
+        VisitorAwardBadge: {
+            badgeId: string;
+            name: string;
+            icon: string;
+            tier: string;
+            description: string;
+        };
         RegistryIdentifier: {
             /** @description Reverse-domain identifier (e.g. com.acme.app) */
             rdid: string;
@@ -67059,6 +69860,58 @@ export interface components {
             /** @description the hub DM chat the opening message was sent into */
             chatId: string;
         };
+        /** @description An ecosystem's sign-up and sign-in policy. Defaults are returned when nothing has been set. */
+        EcosystemAuthSettings: {
+            /**
+             * @description Defaults to invite_only
+             * @enum {string}
+             */
+            signupMode: "open" | "invite_only" | "closed";
+            /** @description Defaults to true */
+            loginEnabled: boolean;
+            /** @description null means every configured provider. An empty array is stored as null, never as "none". */
+            allowedProviders: string[] | null;
+        };
+        /** @description A partial update — supply at least one field. Anything omitted is left as it was. */
+        EcosystemAuthSettingsUpdate: {
+            /** @enum {string} */
+            signupMode?: "open" | "invite_only" | "closed";
+            loginEnabled?: boolean;
+            /** @description Every slug must name a configured provider, or the call is a 400. An empty array is coerced to null (all providers) rather than locking everyone out. */
+            allowedProviders?: string[] | null;
+        };
+        /** @description An OAuth client that signs users into this ecosystem. The app token is represented by its non-secret prefix only — the secret itself is never part of this shape. */
+        EcosystemSigninApp: {
+            id: string;
+            /** @description The full client slug, composed server-side as "<ecosystem>.<leaf>" */
+            slug: string;
+            name: string;
+            allowedReturnOrigins: string[];
+            defaultEcosystemId: string;
+            jwtAudience: string | null;
+            /** @description Always false here — internal clients are not listed or editable */
+            isInternal: boolean;
+            appTokenPrefix: string | null;
+            githubEnabled: boolean;
+        };
+        EcosystemSigninAppCreate: {
+            /** @description The LEAF only — the stored slug is "<ecosystem-slug>.<this>", composed by the server. A composed slug over 100 characters is a 400. */
+            slug: string;
+            name: string;
+            /**
+             * @description Bare http(s) origins: no credentials, no path, no query, no fragment. Anything else is a 400.
+             * @default []
+             */
+            allowedReturnOrigins: string[];
+            /** @default true */
+            enableGithub: boolean;
+        };
+        /** @description A partial update — supply at least one field. `slug` and the owning ecosystem are deliberately not patchable: both are identity, not configuration. */
+        EcosystemSigninAppUpdate: {
+            name?: string;
+            allowedReturnOrigins?: string[];
+            githubEnabled?: boolean;
+        };
         PersonaDemoPreviewChoice: {
             /** @description The choice's own text, minus its tags */
             text: string;
@@ -67073,6 +69926,80 @@ export interface components {
             /** @description 1-based source line, if the compiler gave one */
             line: number | null;
             message: string;
+        };
+        /** @description Everything an implementation needs to start acting as its persona, in one read: who it is, what to say, what it may touch, and where to talk. Derived entirely from the bearer token — there are no parameters. */
+        PersonaBootstrap: {
+            persona: components["schemas"]["PersonaBootstrapPersona"];
+            prompt: components["schemas"]["PersonaBootstrapPrompt"];
+            auth: components["schemas"]["PersonaBootstrapAuth"];
+            buckets: components["schemas"]["PersonaBootstrapBucket"][];
+            memory: components["schemas"]["PersonaBootstrapMemory"];
+            tools: components["schemas"]["PersonaBootstrapTool"][];
+            chat: components["schemas"]["PersonaBootstrapChat"];
+        };
+        PersonaBootstrapPersona: {
+            /** Format: uuid */
+            id: string;
+            slug: string;
+            name: string;
+            description: string | null;
+            avatarUrl: string | null;
+        };
+        PersonaBootstrapPrompt: {
+            system: string;
+            voice: string | null;
+            character: string | null;
+        };
+        /** @description What the presented token is. A `visitor` token is the anonymous, read-shaped class. */
+        PersonaBootstrapAuth: {
+            /** @enum {string} */
+            tokenClass: "persona" | "visitor";
+            subject: components["schemas"]["PersonaBootstrapSubject"];
+            expiresAt: string | null;
+            scope: string[];
+        };
+        PersonaBootstrapSubject: {
+            kind: string;
+            id: string;
+        };
+        /** @description A bucket the token can at least read. Unreadable buckets are omitted, not listed as denied. */
+        PersonaBootstrapBucket: {
+            id: string;
+            name: string;
+            kind: string;
+            /** @enum {string} */
+            scope: "global";
+            access: components["schemas"]["PersonaBootstrapBucketAccess"];
+        };
+        /** @description A visitor token reports create/update/delete false whatever the underlying grant says. */
+        PersonaBootstrapBucketAccess: {
+            read: boolean;
+            create: boolean;
+            update: boolean;
+            delete: boolean;
+        };
+        /** @description Both false for a visitor token. */
+        PersonaBootstrapMemory: {
+            read: boolean;
+            write: boolean;
+        };
+        PersonaBootstrapTool: {
+            name: string;
+            displayName: string;
+            readOnly: boolean;
+            /** @description May be called without a human in the loop */
+            autonomous: boolean;
+        };
+        PersonaBootstrapChat: {
+            /** @description Where to open conversations — the public visitor surface or the authenticated one */
+            conversationsUrl: string;
+            /** @enum {string} */
+            streaming: "sse";
+            limits: components["schemas"]["PersonaBootstrapChatLimits"];
+        };
+        PersonaBootstrapChatLimits: {
+            maxConversationLength: number;
+            maxMessageChars: number;
         };
         SearchDiscussionTopicResult: {
             id: string;
@@ -67211,6 +70138,44 @@ export interface components {
             aliasesRemoved: number;
             /** @description Canonical addresses still sitting in that space, informational. Read as "these exist nearby", never as "the release failed". */
             stillHeldBy: string[];
+        };
+        /** @description An operator note attached to some other row. Never visible to that row’s subject. */
+        AdminNote: {
+            id: string;
+            ecosystemId: string;
+            subjectTable: string;
+            subjectId: string;
+            content: string;
+            createdBy: string;
+            createdAt: string;
+            updatedAt: string;
+        };
+        AdminNotesReconcileBody: {
+            subjectTable: string;
+            subjectId: string;
+            /** @description The complete set for this subject. Anything absent is deleted. */
+            notes: components["schemas"]["AdminNoteInput"][];
+        };
+        AdminNoteInput: {
+            /** @description Omit to create; supply to update in place */
+            id?: string;
+            content: string;
+        };
+        /** @description One thing that happened to a row. Append-only; nothing here is editable. */
+        EntityHistoryEntry: {
+            id: string;
+            ecosystemId: string;
+            subjectTable: string;
+            subjectId: string;
+            actorId: string | null;
+            actorLabel: string | null;
+            /** @description Free text, not an enum — each subsystem names its own. Emitted today: request_received, invite_sent, note_added, status_changed, accepted, notes_updated. */
+            action: string;
+            /** @description Action-specific payload; the shape is whatever emitted the entry. */
+            detail: {
+                [key: string]: unknown;
+            } | null;
+            createdAt: string;
         };
         TeamMember: {
             id: string;
@@ -67453,6 +70418,29 @@ export interface components {
         SyncPushResponse: {
             results: components["schemas"]["SyncPushResult"][];
             watermark: string;
+        };
+        /** @description One resource from the sync catalog as it stands for a given ecosystem: what the code ships as the default, and whether an operator has overridden it. */
+        SyncEnrollmentRow: {
+            /** @description "<schema>.<table>", e.g. content.contacts */
+            resource: string;
+            /** @enum {string} */
+            scope: "customer" | "ecosystem";
+            /**
+             * @description 'route' means /sync/push refuses direct writes; the row's own route owns them
+             * @enum {string}
+             */
+            pushMode: "generic" | "route";
+            /** @description What the shipped catalog says */
+            defaultEnabled: boolean;
+            /** @description What is actually in force — the override if there is one */
+            enabled: boolean;
+            overridden: boolean;
+        };
+        SyncEnrollmentList: {
+            tables: components["schemas"]["SyncEnrollmentRow"][];
+        };
+        SyncEnrollmentUpdate: {
+            enabled: boolean;
         };
         Theme: {
             key: string;
