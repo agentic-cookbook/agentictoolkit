@@ -33,9 +33,22 @@ export {
   FetchBackend,
   useChatSession,
   TypingIndicator,
+  // The persona-chat input mechanism: caret geometry, the tracker that keeps it
+  // live, and the focus keeper. Persona-agnostic on purpose — they carry no
+  // vocabulary, only the plumbing a terminal-style composer needs (a native
+  // <input> caret cannot be reshaped in CSS, so a theme that wants a block
+  // cursor has to have one drawn for it). Re-exported here for the same reason
+  // as everything above: a consumer that named `@agenticdevelopertoolkit/chat`
+  // to reach them would pull a second copy of the whole chat package.
+  caretMetrics,
+  useCaretTracker,
+  useBlockCursor,
+  useInputFocusReclaim,
+  CHAT_INPUT_SELECTOR,
 } from '@agenticdevelopertoolkit/chat'
 
 export type {
+  CaretMetrics,
   ChatBackend,
   ChatSession,
   ChatParticipant,
