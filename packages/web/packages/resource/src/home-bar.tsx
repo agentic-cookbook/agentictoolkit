@@ -17,11 +17,12 @@ import { createPortal } from "react-dom";
  * The HOME BAR — the strip between the workspace bar and the breadcrumb bar, where a site's
  * page-level controls live: its search and filters on the left, its primary "Add" on the right.
  *
- * It is deliberately its OWN context rather than a field on `RailHostRegistry`, which is where
- * this mechanism started life as the "feature bar" (`FeatureBarPortal` in `rail-host.tsx`). Two
- * reasons, and the first is fatal: `RailHostBoundary` reads `RailHostContext` to answer "is a
- * host already above me?", and a shell-level provider of that context would tell every feature
- * site that one is — so each would skip its own `StandaloneRailHost` and lose its rails entirely.
+ * It is deliberately its OWN context rather than a field on {@link RailHostRegistry}, which is
+ * where this mechanism started life as the "feature bar" ({@link FeatureBarPortal} in
+ * `rail-host.tsx`). Two reasons, and the first is fatal: {@link RailHostBoundary} reads
+ * {@link RailHostContext} to answer "is a host already above me?", and a shell-level provider of
+ * that context would tell every feature site that one is — so each would skip its own
+ * {@link StandaloneRailHost} and lose its rails entirely.
  * The second is that the bar and the rail host answer to different owners: the bar belongs to the
  * page's chrome (the home shell, the hub's workspace chrome), the rail host to whatever is drawing
  * rails underneath it.
@@ -46,8 +47,8 @@ export function useHomeBarSlot(): HTMLElement | null {
 /**
  * Hosts the home bar: draws the strip above `children` and hands out its node.
  *
- * Mounted by the two components that already draw the workspace bar — the toolkit's home shell
- * for the templated fleet, and the hub's workspace chrome for the same features at the hub's own
+ * Mounted by the two components that already draw the workspace bar — SiteHomeShell for the
+ * templated fleet, and the hub's WorkspaceChromeProvider for the same features at the hub's own
  * routes. A feature must not mount one: two hosts in one page would give the nearer one the
  * claims and leave the outer strip empty.
  */
