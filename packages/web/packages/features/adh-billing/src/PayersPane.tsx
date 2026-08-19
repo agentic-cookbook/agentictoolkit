@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactElement } from "react";
 import { Users } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
@@ -92,15 +92,26 @@ export function PayersPane({
   // otherwise still be showing under B's Resend button and read as B having just been emailed.
   useEffect(() => setNotice(null), [selectedId]);
 
+  // Tracks the payer currently on screen so onResend can tell, once its request resolves,
+  // whether the operator is still looking at the payer it was sent for.
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+
   async function onResend(account: AccountRow) {
+    // Race: onResend fires for `account`, the operator selects a different payer before the
+    // request settles, and the promise resolves after — without this guard the result would
+    // paint under the newly selected payer and read as confirmation about the wrong person.
+    const requestedFor = account.id;
     setBusy(true);
     setNotice(null);
     try {
       const r = await resendClaim(account.id);
+      if (selectedIdRef.current !== requestedFor) return;
       // The new expiry is the whole content of the success: a claim link that has been re-issued
       // and whose clock the operator cannot see is a link they will re-issue again in ten minutes.
       setNotice(`A fresh claim link was sent. It expires ${new Date(r.expiresAt).toLocaleString()}.`);
     } catch (e) {
+      if (selectedIdRef.current !== requestedFor) return;
       setNotice(e instanceof Error ? e.message : "Could not re-issue the claim link.");
     } finally {
       setBusy(false);

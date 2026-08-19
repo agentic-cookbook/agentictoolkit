@@ -25,6 +25,10 @@ export function EventsPane({ ecosystemId }: { ecosystemId?: string }): ReactElem
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<RedriveResult | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  // Kept apart from `result`, which a failed run clears on purpose (see below): a transient
+  // failure — a timeout, a 502 — must not also erase the offset the operator was walking from,
+  // or recovering from it means restarting the whole redrive from the beginning.
+  const [resumeOffset, setResumeOffset] = useState<number | undefined>(undefined);
 
   async function runRedrive(offset?: number) {
     setBusy(true);
@@ -36,6 +40,7 @@ export function EventsPane({ ecosystemId }: { ecosystemId?: string }): ReactElem
     try {
       const r = await redriveEvents(offset === undefined ? undefined : { offset });
       setResult(r);
+      setResumeOffset(r.nextOffset ?? undefined);
       await reload();
     } catch (e) {
       setFailure(e instanceof Error ? e.message : "The redrive could not be run.");
@@ -63,15 +68,15 @@ export function EventsPane({ ecosystemId }: { ecosystemId?: string }): ReactElem
             than looped automatically: a redrive is an operator action with side effects — it can
             mint and EMAIL claim links — and a UI that silently repeats it forty times is not one
             the operator authorised. */}
-        {result?.nextOffset != null ? (
+        {resumeOffset != null ? (
           <Button
             type="button"
             variant="outline"
             size="sm"
             disabled={busy}
-            onClick={() => void runRedrive(result.nextOffset ?? undefined)}
+            onClick={() => void runRedrive(resumeOffset)}
           >
-            {`Continue from ${result.nextOffset}`}
+            {`Continue from ${resumeOffset}`}
           </Button>
         ) : null}
       </div>

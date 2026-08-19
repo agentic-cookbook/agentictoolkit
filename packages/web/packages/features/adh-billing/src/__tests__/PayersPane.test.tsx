@@ -20,16 +20,20 @@ describe("PayersPane", () => {
   it("names a 403 rather than rendering it as an empty customer list", async () => {
     listAccounts.mockRejectedValue(Object.assign(new Error("forbidden"), { status: 403 }));
     listOffers.mockResolvedValue([]);
-    // Wrapped in a RailHostBoundary: that copy only ever reaches the rail (it's `emptyLabel`),
-    // and `useStackLevel` is a documented no-op outside a rail host, so without a host this
-    // negative assertion has nothing to be false about — a regression that dropped the
-    // `loadError ??` from `emptyLabel` would still pass.
+    // Wrapped in a RailHostBoundary: the rail's copy (`emptyLabel`) only renders with a host, and
+    // `useStackLevel` is a documented no-op outside one, so without a host this test could not see
+    // a regression that dropped the `loadError ??` from `emptyLabel` — it would still pass.
     render(
       <RailHostBoundary>
         <PayersPane ecosystemId="eco_1" />
       </RailHostBoundary>,
     );
-    expect(await screen.findByText(/owners only/i)).toBeInTheDocument();
+    // The refusal renders twice on purpose — as the rail's emptyLabel and as the detail
+    // column's ErrorText — so an operator sees it wherever they happen to be looking.
+    // Asserting the count rather than a single match keeps this test honest about that:
+    // a single-match query would break the moment either site rendered.
+    const refusals = await screen.findAllByText(/owners only/i);
+    expect(refusals).toHaveLength(2);
     expect(screen.queryByText(/nobody has bought/i)).not.toBeInTheDocument();
   });
 

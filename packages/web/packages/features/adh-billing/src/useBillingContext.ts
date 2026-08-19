@@ -4,8 +4,12 @@ import { useCallback } from "react";
 import { useResourceList } from "@agentic-toolkit/data";
 import { getBillingContext, type BillingContext } from "./api/billing";
 
-/** The cache key the three hosts share. */
-export const BILLING_CONTEXT_CACHE_KEY = "billing:context";
+/** This module's own react-query key prefix for `GET /billing/context`, interpolated below into
+ *  the per-workspace cache key. A named constant rather than an inline literal so the prefix
+ *  reads as what it is at the call site instead of as an unexplained string; nothing outside
+ *  this file imports it — each of the three hosts gets its resolution via `useBillingContext`,
+ *  not by reading the cache key directly. */
+const BILLING_CONTEXT_CACHE_KEY = "billing:context";
 
 /**
  * How far the caller got resolving billing's scope — the injected resolution `BillingGroup`

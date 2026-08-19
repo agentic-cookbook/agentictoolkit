@@ -37,14 +37,14 @@ import { PriceSelect } from "./PriceSelect";
 
 /**
  * An emptied `<input type="number">` reports `""`, and `Number("")` is 0 — a value the operator
- * never typed. That matters here because 0 is a MEANING in both of these columns, not a blank:
- * `days_until_due = 0` is "due immediately" and `grace_days = 0` is "no grace period". Reading a
- * cleared field as 0 writes a real setting onto the row and takes the field away from the person
- * clearing it, who cannot type past a 0 they did not put there.
+ * never typed. `daysUntilDue` is nullable, and 0 is a MEANING there ("due immediately"), not a
+ * blank, so an emptied field has to reach the API as `null`; `offerValidate` names what is
+ * missing when it does.
  *
- * `daysUntilDue` is nullable, so empty means null and `offerValidate` names what is missing.
- * `graceDays` is NOT NULL at the table's own default of 0, so its caller supplies that default
- * explicitly rather than leaning on the coercion to produce it.
+ * `graceDays` is NOT NULL at the table's own default of 0, so an emptied field there ends up as
+ * 0 either way — `numOrNull(v) ?? 0` is behaviourally identical to the `Number(v)` it replaced.
+ * Its caller uses it anyway so the default is stated explicitly, rather than left resting on
+ * `Number("") === 0`, which is a coincidence of JS coercion, not an intention.
  */
 const numOrNull = (v: string): number | null => (v.trim() === "" ? null : Number(v));
 

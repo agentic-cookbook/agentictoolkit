@@ -76,24 +76,38 @@ export function SetupPane({
   return (
     <div className="flex flex-col gap-6 p-4">
       <FieldGroup title="Billing enabled">
-        <Field
-          label="Sell through this ecosystem"
-          hint={
-            billingEnabled
-              ? "Offers can be created, and payers, prices and webhook events are readable."
-              : "With this off, offers cannot be created and the price, payer and event views all report that billing is not enabled. It is a real kill switch: it is not exempted for platform admins."
-          }
-        >
+        {/* Not a Field: Field wraps its children — and FieldFootnote's hint — in a <Label>, and a
+            <label> forwards a click on inert content to its first labelable descendant. The
+            control here is a Switch (Base UI renders a labelable <button role="switch">) and the
+            hint runs to ~200 characters, so drag-selecting it to read or copy would toggle
+            billing off for the whole ecosystem. Built by hand for the same reason as PayersPane's
+            Resend row and this file's Status/Endpoint rows below.
+
+            The caption also doubles as the Switch's accessible name via aria-labelledby, rather
+            than the separate aria-label Field would otherwise need: a visible label and a
+            different accessible name is a WCAG 2.5.3 failure, and it breaks voice control — an
+            operator saying "click Sell through this ecosystem" would hit nothing. */}
+        <div className="flex flex-col items-start gap-1.5">
+          <span id="billing-enabled-caption" className={fieldCaptionClass}>
+            Sell through this ecosystem
+          </span>
           <div className="flex items-center gap-3">
             <Switch
-              aria-label="Billing enabled"
+              aria-labelledby="billing-enabled-caption"
               checked={billingEnabled}
               disabled={!canManage || !ecosystemId || saving}
               onCheckedChange={(next: boolean) => void toggle(next)}
             />
             <span className="text-sm text-apt-text-muted">{billingEnabled ? "On" : "Off"}</span>
           </div>
-        </Field>
+          <FieldFootnote
+            hint={
+              billingEnabled
+                ? "Offers can be created, and payers, prices and webhook events are readable."
+                : "With this off, offers cannot be created and the price, payer and event views all report that billing is not enabled. It is a real kill switch: it is not exempted for platform admins."
+            }
+          />
+        </div>
         <ErrorText error={error} />
       </FieldGroup>
 
