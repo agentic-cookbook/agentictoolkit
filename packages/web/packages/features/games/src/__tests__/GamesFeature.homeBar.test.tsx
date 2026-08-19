@@ -89,7 +89,12 @@ describe("GamesFeature's Create Game reaches the home bar through ResourceExplor
     // filter (see resource-explorer.tsx `hasEntities`) — games ≥ 1 satisfies that — so this games
     // list must produce a searchbox, and it must precede Create Game in the DOM: true only when
     // one `<HomeBar left right>` call decides both slots at once, as `homeBarRight` now guarantees.
-    const field = screen.getByRole("searchbox");
+    // `await find…`, not a synchronous `getByRole`: the bar now publishes on mount rather than
+    // on load (see `homeBarRight`'s widened gate), so `findByTestId("home-bar")` above is no
+    // longer a barrier that guarantees the games list — and its filter field — have resolved by
+    // this point; a synchronous query here would be leaning on `act`'s microtask drain instead
+    // of on an explicit wait.
+    const field = await screen.findByRole("searchbox");
     expect(strip).toContainElement(field);
     expect(field.compareDocumentPosition(createLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -100,6 +105,11 @@ describe("GamesFeature's Create Game reaches the home bar through ResourceExplor
     expect(strip).toContainElement(screen.getByRole("link", { name: /Create Game/ }));
     // Zero games means ResourceExplorer's `hasEntities` is false, so no filter field — there is
     // nothing loaded to filter. `homeBarRight` alone is what keeps the bar itself published here.
+    // Belt-and-braces, not a load-state guard: `games` is `[]` here whether or not the list has
+    // finished loading, so this assertion is null either way and does not by itself distinguish
+    // "unloaded" from "loaded but empty." The assertion that actually pins "no field while
+    // unloaded" lives in resource-explorer.homeBar.test.tsx's own "before the list has loaded"
+    // case, which passes `items: null`.
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
 

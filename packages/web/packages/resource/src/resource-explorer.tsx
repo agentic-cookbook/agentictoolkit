@@ -178,7 +178,13 @@ export function ResourceExplorer<T>({
    *  component's `newOpen`). Takes over the bar's right slot instead of a `newLabel` button —
    *  see the render below for why passing both would be asking for two create controls in the
    *  same slot — and, unlike `newLabel`, keeps the bar published even while `items` is empty or
-   *  still loading, since a host publishing this way has no OTHER way to show the control. */
+   *  still loading, since a host publishing this way has no OTHER way to show the control. Also
+   *  bypasses the `!promoteTopics` guard that gates the filter field below: that guard exists
+   *  because the filter narrows `resourceLevel`, which a promoteTopics host never renders, but a
+   *  host's own right-side action has nothing to do with `resourceLevel` — so a promoteTopics
+   *  host passing this prop still gets a bar, on purpose. A falsy value (`false`, `null`,
+   *  `undefined`) counts as "not given" everywhere below, the same as omitting the prop, so a
+   *  host writing `homeBarRight={condition && <X/>}` does not publish an empty bar. */
   homeBarRight?: ReactNode;
 }): ReactElement {
   const router = useRouter();
@@ -469,8 +475,15 @@ export function ResourceExplorer<T>({
           handed us its own right-side control (`homeBarRight`) — a host that creates by
           navigation, like games, has no OTHER place to put that control, so the bar must appear
           even with zero items or before the list has loaded. `hasEntities` alone still gates the
-          FILTER FIELD below: an empty/loading list has nothing to filter, `homeBarRight` or not. */}
-      {(hasEntities || homeBarRight != null) && (
+          FILTER FIELD below: an empty/loading list has nothing to filter, `homeBarRight` or not.
+
+          `Boolean(homeBarRight)`, not `homeBarRight != null`: a host writing the natural
+          `homeBarRight={condition && <X/>}` hands this `false` when `condition` is false, and
+          `false != null` is true — that would publish a bar whose `right` slot is empty (see the
+          `right` assignment below, and `home-bar.tsx`'s `right !== undefined` check, which draws
+          the `ml-auto` wrapper for `false` same as for a real node). Truthiness treats that
+          exactly like the prop being omitted. */}
+      {(hasEntities || Boolean(homeBarRight)) && (
         <HomeBarPortal>
           <HomeBar
             left={
@@ -511,7 +524,11 @@ export function ResourceExplorer<T>({
               // host that passed both would be asking for two create controls in the same slot,
               // the exact hazard `homeBarRight` exists to avoid (see its doc above). No current
               // host passes both — games, the only `homeBarRight` caller, passes no `newLabel`.
-              homeBarRight ??
+              //
+              // `||`, not `??`: mirrors the gate above — a falsy `homeBarRight` (most likely
+              // `false`, from a host's own `condition && <X/>`) falls through to `newLabel`'s
+              // button instead of rendering as an empty `ml-auto` wrapper.
+              homeBarRight ||
               (newLabel != null ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
                   <Plus size={16} aria-hidden />

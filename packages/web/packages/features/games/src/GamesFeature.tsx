@@ -31,9 +31,12 @@ import { CreateGameAction } from "./CreateGameAction";
  *
  * Creation is the Create Game button this component hands to `ResourceExplorer` as
  * `homeBarRight`, which publishes it into the home bar. The button navigates to the reserved
- * `/new` segment — hence `creating` here rather than a `newLabel` on the rail — because a
- * `newLabel` button would open `ResourceExplorer`'s own independent create dialog instead of
- * this feature's, putting two unrelated create flows on screen at once.
+ * `/new` segment — hence `creating` here rather than a `newLabel` on the rail — because
+ * `homeBarRight` and `newLabel` are two different creation mechanisms: this feature creates by
+ * navigating and opens its OWN `CreateResourceDialog` off that URL, while `newLabel` instead
+ * drives `ResourceExplorer`'s internal `newOpen` state — and this feature supplies no
+ * `renderDialog` for that state to render, so a `newLabel` here would ship a button that opens
+ * nothing.
  */
 export function GamesFeature({
   basePath,
@@ -186,11 +189,14 @@ export function GamesFeature({
         topics={topics}
         reload={reload}
         // Create Game, in the home bar: handed to `ResourceExplorer` as `homeBarRight` rather
-        // than as a `newLabel`, because the two are different creation mechanisms, not one
-        // guarded one. This feature creates by NAVIGATING to the reserved `/new` segment (see
-        // `creating` below) and opens its OWN dialog off that URL; a `newLabel` button instead
-        // opens `ResourceExplorer`'s independent `newOpen` dialog. Passing both would put two
-        // unrelated create flows in the same bar.
+        // than as a `newLabel`, because the two are different creation mechanisms. This feature
+        // creates by NAVIGATING to the reserved `/new` segment (see `creating` below) and opens
+        // its OWN `CreateResourceDialog` off that URL; a `newLabel` button instead flips
+        // `ResourceExplorer`'s internal `newOpen`, and this feature supplies no `renderDialog`
+        // for that state to render — so a `newLabel` here would ship a button that opens
+        // nothing. (Passing both anyway would not stack two controls: `resource-explorer.tsx`'s
+        // `right` assignment makes `homeBarRight` win the slot outright over `newLabel`'s
+        // button.)
         homeBarRight={<CreateGameAction basePath={basePath} />}
         rail={{
           title: "All games",
