@@ -4,6 +4,7 @@ import { useCallback, type ReactElement } from 'react'
 import { usePathname } from 'next/navigation'
 import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
+import { HomeBarHost } from '@agentic-toolkit/resource'
 import { ProfileFallback } from '../profile/ProfileFallback'
 import { useSiteIdOrNull } from '@agentic-toolkit/adh/site/site-id'
 import { WorkspaceBar } from './WorkspaceBar'
@@ -47,7 +48,7 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
  * this workspace — and lands in the same place.
  */
-export function SiteHomeShell({ workspaceSlug, children, action }: SiteHomeShellProps): ReactElement {
+export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement {
   // `error` is not optional to read here. A failed list leaves `items` at its previous value —
   // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
   // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so
@@ -146,42 +147,41 @@ export function SiteHomeShell({ workspaceSlug, children, action }: SiteHomeShell
         workspaces={workspaces}
         selected={resolved ?? null}
         onSelect={onSelect}
-        // Only once the workspace has RESOLVED: the bar paints during resolution, and
-        // `action` is documented as never seeing an absent workspace. This is the same
-        // narrowing the children guard below applies, deliberately — one rule, two slots.
-        action={
-          resolved !== undefined && resolved !== null && resolved === workspaceSlug && workspace !== null
-            ? action?.({ workspaceSlug: resolved, scopedBase: `/${resolved}`, workspace })
-            : undefined
-        }
       />
-      {/* Said only while the list is genuinely missing: a reload that fails AFTER a successful one
-          leaves the workspaces on screen, and replacing a working page with an error would be a
-          worse answer than the slightly stale one it already has. */}
-      {error !== null && workspaces === null && (
-        <TopicSelectHint title="Couldn't load your workspaces. Reload the page to try again." />
-      )}
-      {/* No error clause needed here, and one would be wrong: `resolved` is `null` only once the
-          list has ARRIVED and was empty (it stays `undefined` while `workspaces` is null), so a
-          failed request cannot reach this line. The one state that could — a successful empty list
-          followed by a failed refetch — is still a user with no workspaces, and saying so beats
-          replacing a true statement with an apology. */}
-      {resolved === null && (
-        <TopicSelectHint title="No workspaces yet — create one from the hub to get started." />
-      )}
-      {/* `resolved === workspaceSlug` is what narrows `resolved` to the settled string: it is
-          `undefined` while resolving and `null` when there is nothing to resolve to, and neither
-          equals a slug. So the scope below is built from the RESOLVED workspace — the URL segment
-          merely has to agree before anything mounts. */}
-      {resolved !== undefined &&
-        resolved !== null &&
-        resolved === workspaceSlug &&
-        workspace !== null &&
-        children({
-          workspaceSlug: resolved,
-          scopedBase: `/${resolved}`,
-          workspace,
-        })}
+      {/* The home bar hosts every page-level control this site has — its search, its filters, its
+          primary "Add" — in the strip between this bar and the breadcrumb bar below. It is mounted
+          UNCONDITIONALLY and draws nothing until a feature claims it, so the ~24 sites that publish
+          no controls are pixel-identical to before. It wraps `children` rather than sitting beside
+          it because the feature that publishes into it is inside `children`. */}
+      <HomeBarHost>
+        {/* Said only while the list is genuinely missing: a reload that fails AFTER a successful one
+            leaves the workspaces on screen, and replacing a working page with an error would be a
+            worse answer than the slightly stale one it already has. */}
+        {error !== null && workspaces === null && (
+          <TopicSelectHint title="Couldn't load your workspaces. Reload the page to try again." />
+        )}
+        {/* No error clause needed here, and one would be wrong: `resolved` is `null` only once the
+            list has ARRIVED and was empty (it stays `undefined` while `workspaces` is null), so a
+            failed request cannot reach this line. The one state that could — a successful empty list
+            followed by a failed refetch — is still a user with no workspaces, and saying so beats
+            replacing a true statement with an apology. */}
+        {resolved === null && (
+          <TopicSelectHint title="No workspaces yet — create one from the hub to get started." />
+        )}
+        {/* `resolved === workspaceSlug` is what narrows `resolved` to the settled string: it is
+            `undefined` while resolving and `null` when there is nothing to resolve to, and neither
+            equals a slug. So the scope below is built from the RESOLVED workspace — the URL segment
+            merely has to agree before anything mounts. */}
+        {resolved !== undefined &&
+          resolved !== null &&
+          resolved === workspaceSlug &&
+          workspace !== null &&
+          children({
+            workspaceSlug: resolved,
+            scopedBase: `/${resolved}`,
+            workspace,
+          })}
+      </HomeBarHost>
     </>
   )
 }
