@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { offerBlank, offerNormalize, offerValidate } from "../OfferDetail";
+import { offerBlank, offerDiffers, offerNormalize, offerToInput, offerValidate } from "../OfferDetail";
 import type { OfferRow } from "../api/billing";
 
 const row = (o: Partial<OfferRow>): OfferRow => ({
@@ -51,5 +51,36 @@ describe("offerNormalize", () => {
     expect(d.slug).toBe("pro");
     expect(d.description).toBeNull();
     expect(d.grantsEcosystemId).toBeNull();
+  });
+});
+
+describe("offerDiffers", () => {
+  // The dirty signal drives Save and the unsaved-changes guard, so a false positive costs the
+  // operator a confirm dialog for an edit that changed nothing.
+  it("does not call a null field edited when the input hands back an empty string", () => {
+    const saved = offerToInput(row({ description: null, grantsEcosystemId: null }));
+    expect(offerDiffers(saved, { ...saved, description: "", grantsEcosystemId: "" })).toBe(false);
+  });
+
+  it("does not call a field edited when only surrounding whitespace changed", () => {
+    const saved = offerToInput(row({ name: "Pro" }));
+    expect(offerDiffers(saved, { ...saved, name: "  Pro  " })).toBe(false);
+  });
+
+  // `offerToInput` spreads a row while `offerBlank` writes a literal, so two drafts holding the
+  // same values can disagree on key ORDER — which a bare JSON.stringify comparison would report
+  // as an edit.
+  it("ignores key order", () => {
+    const saved = offerToInput(row({}));
+    const reordered = Object.fromEntries(
+      Object.entries(saved).reverse(),
+    ) as unknown as typeof saved;
+    expect(offerDiffers(saved, reordered)).toBe(false);
+  });
+
+  it("still reports a real edit", () => {
+    const saved = offerToInput(row({ name: "Pro" }));
+    expect(offerDiffers(saved, { ...saved, name: "Team" })).toBe(true);
+    expect(offerDiffers(saved, { ...saved, graceDays: 3 })).toBe(true);
   });
 });

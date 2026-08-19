@@ -36,6 +36,19 @@ import {
 import { PriceSelect } from "./PriceSelect";
 
 /**
+ * An emptied `<input type="number">` reports `""`, and `Number("")` is 0 — a value the operator
+ * never typed. That matters here because 0 is a MEANING in both of these columns, not a blank:
+ * `days_until_due = 0` is "due immediately" and `grace_days = 0` is "no grace period". Reading a
+ * cleared field as 0 writes a real setting onto the row and takes the field away from the person
+ * clearing it, who cannot type past a 0 they did not put there.
+ *
+ * `daysUntilDue` is nullable, so empty means null and `offerValidate` names what is missing.
+ * `graceDays` is NOT NULL at the table's own default of 0, so its caller supplies that default
+ * explicitly rather than leaning on the coercion to produce it.
+ */
+const numOrNull = (v: string): number | null => (v.trim() === "" ? null : Number(v));
+
+/**
  * Offers — what this ecosystem sells, as a master/detail over generic CRUD's `billing.offers`.
  *
  * The write bodies carry NONE of the masked columns: `id`, `createdAt`, `updatedAt` are
@@ -205,8 +218,8 @@ export function OffersPane({
               <Input
                 type="number"
                 min={0}
-                value={draft.daysUntilDue ?? 0}
-                onChange={(e) => form.onChange({ ...draft, daysUntilDue: Number(e.target.value) })}
+                value={draft.daysUntilDue ?? ""}
+                onChange={(e) => form.onChange({ ...draft, daysUntilDue: numOrNull(e.target.value) })}
               />
             </Field>
           ) : null}
@@ -235,7 +248,7 @@ export function OffersPane({
               type="number"
               min={0}
               value={draft.graceDays}
-              onChange={(e) => form.onChange({ ...draft, graceDays: Number(e.target.value) })}
+              onChange={(e) => form.onChange({ ...draft, graceDays: numOrNull(e.target.value) ?? 0 })}
             />
           </Field>
           <Field label="Active" hint="An inactive offer stays visible here and cannot be bought.">

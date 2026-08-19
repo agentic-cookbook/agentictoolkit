@@ -27,8 +27,23 @@ export function offerToInput(row: OfferRow): OfferInput {
   return rest;
 }
 
+/** Both sides go through `offerNormalize` first, because the form's text bindings write `""` into
+ *  a field the row stores as `null` (`value={draft.description ?? ""}` — clearing a null
+ *  description hands back an empty string, not null). Comparing the raw drafts would call that
+ *  dirty: Save lights up and the unsaved-changes guard fires for an edit that changed nothing.
+ *  Normalizing is also what makes the comparison honest in the other direction — `"" ` and `null`
+ *  are the same value to this column, so a difference between them is not an edit.
+ *
+ *  Keys are sorted rather than compared in insertion order: `offerToInput` spreads a row while
+ *  `offerBlank` writes a literal, so the two can disagree on order while holding identical values,
+ *  and `JSON.stringify` is order-sensitive. */
+const stableKey = (d: OfferInput): string => {
+  const n = offerNormalize(d) as unknown as Record<string, unknown>;
+  return JSON.stringify(Object.keys(n).sort().map((k) => [k, n[k]]));
+};
+
 export function offerDiffers(a: OfferInput, b: OfferInput): boolean {
-  return JSON.stringify(a) !== JSON.stringify(b);
+  return stableKey(a) !== stableKey(b);
 }
 
 /** "" is what an emptied text input holds; the column is nullable and `null` is what "unset"
