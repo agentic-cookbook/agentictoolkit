@@ -37,16 +37,31 @@ export function EventsPane({ ecosystemId }: { ecosystemId?: string }): ReactElem
     // starts — otherwise a run that fails after a prior success still shows that success's
     // "applied N" beside today's red failure, which reads as this run's outcome.
     setResult(null);
+    let ran = false;
     try {
       const r = await redriveEvents(offset === undefined ? undefined : { offset });
       setResult(r);
       setResumeOffset(r.nextOffset ?? undefined);
-      await reload();
+      ran = true;
     } catch (e) {
       setFailure(e instanceof Error ? e.message : "The redrive could not be run.");
-    } finally {
-      setBusy(false);
     }
+    // The ledger refresh is OUTSIDE the try on purpose. By the time it runs the redrive has
+    // already happened on the server and its counts are already in `result` — so a refresh that
+    // fails is a stale TABLE, not a redrive that could not be run. Inside the try it set
+    // `failure` to "The redrive could not be run." beside an "applied 12" the same run had just
+    // produced, and invited the operator to run it again: a redrive mints and EMAILS claim links,
+    // so the retry it invites is not free. `useResourceList`'s `reload` rethrows the query error
+    // AND leaves it on `query.error`, which `loadError` below already renders — swallowing it
+    // here loses nothing.
+    if (ran) {
+      try {
+        await reload();
+      } catch {
+        /* reported by `loadError`, from the list's own error state. */
+      }
+    }
+    setBusy(false);
   }
 
   const loadError =

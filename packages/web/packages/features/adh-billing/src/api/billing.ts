@@ -22,7 +22,15 @@ export interface BillingContext {
   ecosystemId: string;
   billingEnabled: boolean;
   canManage: boolean;
-  stripeConnected: boolean;
+  /**
+   * THREE states, and the third is not padding. `unknown` is what the route answers when the
+   * Stripe-connection read THREW — a missing or rotated SECRETS_ENCRYPTION_KEY, which is a live
+   * degraded condition in this fleet — as distinct from a read that succeeded and found no key.
+   * Folding those together is the false, unactionable answer `stripeConnectedFor` returns a
+   * boolean specifically to avoid: it sends the operator to re-paste a key that was never the
+   * problem, and the status does not change when they do.
+   */
+  stripeStatus: "connected" | "not_connected" | "unknown";
   /** Origin-relative. Render against `window.location.origin`; adh does not register it with
    *  Stripe, the operator pastes it in. */
   webhookPath: string;

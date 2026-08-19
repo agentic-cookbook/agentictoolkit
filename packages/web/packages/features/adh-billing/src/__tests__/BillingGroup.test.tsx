@@ -28,13 +28,23 @@ vi.mock("../OffersPane", () => ({
 }));
 vi.mock("../PayersPane", () => ({ PayersPane: () => <div>payers-pane</div> }));
 vi.mock("../EventsPane", () => ({ EventsPane: () => <div>events-pane</div> }));
-vi.mock("@agentic-toolkit/integrations", () => ({ IntegrationsPane: () => <div>integrations-pane</div> }));
+// Reports its `leaf` for the same reason OffersPane does. IntegrationsPane picks its selection
+// mode off that prop, and it is the ENTIRE billing-side implementation of "connect Stripe" — so
+// the mode it is put in decides whether the Stripe topic works at all on the two hosts that cede
+// no URL segment.
+vi.mock("@agentic-toolkit/integrations", () => ({
+  IntegrationsPane: ({ leaf }: { leaf?: unknown }) => (
+    <div data-testid="integrations-pane">
+      integrations-pane {leaf ? "url-driven" : "internal-selection"}
+    </div>
+  ),
+}));
 
 import { BillingGroup } from "../BillingGroup";
 
 const OK = {
   ecosystemId: "eco_1", billingEnabled: true, canManage: true,
-  stripeConnected: true, webhookPath: "/api/public/webhooks/stripe/eco_1", isError: false,
+  stripeStatus: "connected" as const, webhookPath: "/api/public/webhooks/stripe/eco_1", isError: false,
 };
 
 describe("BillingGroup gates", () => {
@@ -70,6 +80,21 @@ describe("BillingGroup gates", () => {
     render(<BillingGroup context={{ ...OK, billingEnabled: false }} />);
     expect(screen.getByText("Setup")).toBeInTheDocument();
     expect(screen.getByText("Stripe")).toBeInTheDocument();
+  });
+
+  // The rail must render while `GET /billing/context` is still in flight — same rule as the
+  // flag-off case above — but the four members that FETCH must not, because every one of their
+  // cache keys is built from `ecosystemId` and degrades to a shared bucket while it is undefined.
+  it("shows the rail but holds the fetching members while the context is in flight", async () => {
+    render(<BillingGroup context={{ ...OK, ecosystemId: undefined }} />);
+    expect(screen.getByRole("button", { name: "Offers" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Offers" }));
+    expect(screen.queryByTestId("offers-pane")).not.toBeInTheDocument();
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    // Setup is the exception: it fetches nothing and disables its own switch on a missing id, so
+    // holding it back would hide the one pane that still has something to say.
+    await userEvent.click(screen.getByRole("button", { name: "Setup" }));
+    expect(await screen.findByText("setup-pane")).toBeInTheDocument();
   });
 
   it("opens unselected", () => {
@@ -108,8 +133,29 @@ describe("BillingGroup on the internal-selection mount", () => {
     render(<BillingGroup context={OK} />);
     await userEvent.click(screen.getByRole("button", { name: "Setup" }));
     await userEvent.click(await screen.findByRole("button", { name: "connect-stripe" }));
-    expect(await screen.findByText("integrations-pane")).toBeInTheDocument();
+    expect(await screen.findByTestId("integrations-pane")).toBeInTheDocument();
     expect(screen.queryByText("setup-pane")).not.toBeInTheDocument();
+  });
+
+  it("lets the Stripe member keep its inner selection local", async () => {
+    // The Stripe member is `IntegrationsPane`, and it is the whole of "connect Stripe" on this
+    // site. Handed a truthy leaf on a host that cedes no segment, it sits in URL-driven mode
+    // pinned at "nothing selected": the provider rows render, clicking one selects nothing, and
+    // the credential form below them never appears — on the hub and products mounts, forever.
+    render(<BillingGroup context={OK} />);
+    await userEvent.click(screen.getByRole("button", { name: "Stripe" }));
+    expect(await screen.findByTestId("integrations-pane")).toHaveTextContent("internal-selection");
+  });
+
+  it("still cedes Stripe's inner selection when the host DOES pass renderSubLeaf", async () => {
+    render(
+      <BillingGroup
+        context={OK}
+        urlSelection={{ selectedId: "stripe", onSelect: vi.fn() }}
+        renderSubLeaf={() => ({ leafId: "pc_1", onSelect: vi.fn() })}
+      />,
+    );
+    expect(await screen.findByTestId("integrations-pane")).toHaveTextContent("url-driven");
   });
 
   it("lets a list member keep its inner selection local", async () => {

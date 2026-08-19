@@ -96,8 +96,35 @@ export function offerNormalize(d: OfferInput): OfferInput {
 }
 
 /**
+ * `days_until_due` and `grace_days` are `integer` — Postgres `int4`, whole and 32-bit.
+ *
+ * Neither property survives the trip from the form on its own. `<input type="number">` accepts
+ * "1.5" as valid input, and `numOrNull` (OffersPane.tsx) hands back `Number(v)` for anything
+ * non-empty, so unparseable text arrives as `NaN`. Both slip past a bare `v < 0` — `NaN < 0` is
+ * false — and land in the driver, which rejects them with a message about a column type rather
+ * than about a field, on a pane whose whole reason for restating the CHECK constraints is that
+ * such messages are unactionable.
+ *
+ * `Number.isInteger` is false for `NaN` and for both infinities, so it carries the finiteness
+ * check as well as the whole-number one.
+ */
+const INT4_MAX = 2147483647;
+const wholeDays = (v: number, label: string): string | null => {
+  if (!Number.isInteger(v)) return `${label} must be a whole number of days.`;
+  if (v < 0) return `${label} cannot be negative.`;
+  if (v > INT4_MAX) return `${label} is at most ${INT4_MAX} days.`;
+  return null;
+};
+
+/** The varchar widths from db/schema/billing.ts's `offersInBilling`, restated for the same reason
+ *  the CHECK constraints are: over-long text otherwise reaches Postgres as a 22001, which generic
+ *  CRUD surfaces as a 500 naming no field at all. */
+const overWidth = (v: string | null, max: number, label: string): string | null =>
+  (v ?? "").length > max ? `${label} is at most ${max} characters.` : null;
+
+/**
  * Everything the row must satisfy before it is worth a round trip — including the table's own
- * CHECK constraints, restated here on purpose.
+ * CHECK constraints and column widths, restated here on purpose.
  *
  * Restating a database constraint in a form is usually duplication worth avoiding. It is not here,
  * because the alternative is what the operator currently gets: Postgres raises 23514 naming
@@ -118,6 +145,13 @@ export function offerValidate(d: OfferInput, others: OfferRow[]): string | null 
   if (!n.stripePriceId) return "Choose the Stripe price this offer sells.";
   if (others.some((o) => o.slug === n.slug)) return `Another offer already uses the slug “${n.slug}”.`;
 
+  const tooLong =
+    overWidth(n.name, 255, "A name") ??
+    overWidth(n.stripePriceId, 255, "A Stripe price id") ??
+    overWidth(n.stripeProductId, 255, "A Stripe product id") ??
+    overWidth(n.grantsEcosystemId, 36, "An ecosystem id");
+  if (tooLong) return tooLong;
+
   // ck_billing_offers_days_until_due: an IFF, both directions.
   if (n.collectionMethod === "send_invoice" && n.daysUntilDue === null) {
     return "Invoiced offers need a number of days until due.";
@@ -125,7 +159,10 @@ export function offerValidate(d: OfferInput, others: OfferRow[]): string | null 
   if (n.collectionMethod !== "send_invoice" && n.daysUntilDue !== null) {
     return "Days until due applies only to invoiced offers.";
   }
-  if (n.daysUntilDue !== null && n.daysUntilDue < 0) return "Days until due cannot be negative.";
+  if (n.daysUntilDue !== null) {
+    const bad = wholeDays(n.daysUntilDue, "Days until due");
+    if (bad) return bad;
+  }
 
   // ck_billing_offers_grants.
   if (n.purpose !== "access" && n.grantsEcosystemId !== null) {
@@ -133,6 +170,7 @@ export function offerValidate(d: OfferInput, others: OfferRow[]): string | null 
   }
 
   // ck_billing_offers_grace_days.
-  if (n.graceDays < 0) return "The grace period cannot be negative.";
+  const badGrace = wholeDays(n.graceDays, "The grace period");
+  if (badGrace) return badGrace;
   return null;
 }

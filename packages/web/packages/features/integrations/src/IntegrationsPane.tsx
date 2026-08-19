@@ -22,6 +22,7 @@ import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   integrationsApi,
@@ -141,7 +142,7 @@ export function IntegrationsPane({
    * Optional; this pane already refreshes its own list, so a host needs it only when it holds
    * state DERIVED from these rows that no longer agrees with them.
    *
-   * The billing site is that host: `GET /billing/context`'s `stripeConnected` is read once above
+   * The billing site is that host: `GET /billing/context`'s `stripeStatus` is read once above
    * the rail and cached at the client's staleTime, and Setup's "Connected" / "Not connected" line
    * plus its Connect-vs-Manage button are derived from it. Without a seam here, connecting Stripe
    * on this pane leaves Setup reporting the opposite for five minutes, with nothing on the page
@@ -246,12 +247,25 @@ export function IntegrationsPane({
     [providerRows],
   );
 
-  // Selection lives in the URL leaf segment (an address — see `addressOf`). Hoisted to a stable
-  // primitive so the derived values below memoize on it cleanly.
-  const leafId = leaf?.leafId ?? null;
+  // Selection is DUAL-MODE, and this hook is the pane's single copy of it.
+  //
+  // `leaf` is the URL contract: present when the host cedes a segment below the topic (the
+  // Integrations site, and a billing host that threads `renderSubLeaf`), absent when it does not
+  // (the hub's workspace rail and the products topic, which mount BillingGroup with internal
+  // selection). Reading `leaf?.leafId` directly for the derived values below is what broke: with
+  // no leaf that expression is permanently `null`, so `selectedInList` and therefore `cfg` were
+  // permanently null while `useMasterDetailForm` — which runs its OWN `useDualModeSelection` —
+  // held a perfectly good internal selection. The rail highlighted the clicked row (it reads
+  // `form.selectedId`) and the detail below it rendered nothing, forever, on two of three hosts.
+  //
+  // One hook, therefore, owning the state for both: the pane reads `selectedId`, and the form is
+  // handed `{ selectedId, select }` so its own dual-mode hook is always in url-driven mode
+  // pointing here. Two hooks cannot disagree when only one of them holds state.
+  const urlSelection = leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined;
+  const { selectedId, select: setSelectedId } = useDualModeSelection(urlSelection);
 
   // The selected instance, resolved from the loaded list by its address.
-  const selectedInList = (configRows ?? []).find((c) => addressOf(c) === leafId) ?? null;
+  const selectedInList = (configRows ?? []).find((c) => addressOf(c) === selectedId) ?? null;
 
   // Fallback for a deep link the list hasn't surfaced yet (or an instance addressable by id but
   // not in the list): read the masked config by id/rdid so its detail still resolves.
@@ -269,7 +283,7 @@ export function IntegrationsPane({
   // than a 404, so it is a legitimate cached ANSWER and not an absence to re-ask for.
   const { item: fetchedCfg } = useResourceItemQuery<MaskedProviderConfig | null>(
     `ecosystem:${ecosystemId ?? ""}:integrations`,
-    leafId && ecosystemId && !selectedInList ? leafId : null,
+    selectedId && ecosystemId && !selectedInList ? selectedId : null,
     loadById,
   );
 
@@ -300,10 +314,6 @@ export function IntegrationsPane({
     return mergeFetchedRow(visibleConfigRows, visibleFetchedCfg);
   }, [visibleConfigRows, providerRows, visibleFetchedCfg]);
 
-  const urlSelection = leaf
-    ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }
-    : undefined;
-
   // The master/detail machine drives selection (URL-keyed via `leaf`), the selected instance's
   // draft (seeded from `intToInput` on address change), the pane-exit unsaved-work guard, and the
   // delete flow. The saved-instance detail (`IntegrationDetailView`) owns its own Save button, so
@@ -313,7 +323,13 @@ export function IntegrationsPane({
   const form = useMasterDetailForm<MaskedProviderConfig, IntegrationInput>({
     items: rows,
     getId: addressOf,
-    urlSelection,
+    // Always supplied, even when this pane has no URL leaf: it points at the pane's own dual-mode
+    // hook above, which is internal state in that case. The machine is therefore always in its
+    // url-driven branch — which is what we want, since the re-hydrate effect that branch guards is
+    // exactly how a selection made anywhere (the rail, a deep link, back/forward) reaches the
+    // draft. `create()`'s `if (!url) setSelection(null)` is the one behaviour this skips, and this
+    // pane never calls it: creating here is the modal (`onNew` below), not the inline form.
+    urlSelection: { selectedId, onSelect: setSelectedId },
     blank: () => intBlank(""),
     toInput: (r) => intToInput(r, providerById.get(r.providerId)),
     validate: (draft) => intValidate(draft, providerById.get(draft.providerId), cfg),
@@ -438,7 +454,11 @@ export function IntegrationsPane({
               </p>
             </div>
           </div>
-        ) : leaf?.leafId && (configRows === null || providerRows === null) ? (
+        ) : // `selectedId`, not `leaf?.leafId` — see the dual-mode hook above. With a row selected
+        // and only the CATALOG still loading, the leaf-only test fell through to the select nudge
+        // on an internal-selection host, telling the operator to select the thing they had just
+        // selected.
+        selectedId && (configRows === null || providerRows === null) ? (
           <EmptyState title="Loading…" />
         ) : loadError ? (
           <EmptyState title="Couldn't load integrations." />

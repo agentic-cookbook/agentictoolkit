@@ -27,7 +27,10 @@ export interface BillingContextResolution {
   ecosystemId?: string;
   billingEnabled: boolean;
   canManage: boolean;
-  stripeConnected: boolean;
+  /** Defaults to `"unknown"` while the read is in flight — the same rule the booleans follow, and
+   *  the honest one here: "we have not asked yet" is much closer to "we could not tell" than to a
+   *  positive claim that no key is configured. */
+  stripeStatus: "connected" | "not_connected" | "unknown";
   webhookPath?: string;
   isError: boolean;
   /** Re-read the context after a write elsewhere invalidates it. Optional: an embedded host that
@@ -63,7 +66,7 @@ export function useBillingContext(
     ecosystemId: ctx?.ecosystemId,
     billingEnabled: ctx?.billingEnabled ?? false,
     canManage: ctx?.canManage ?? false,
-    stripeConnected: ctx?.stripeConnected ?? false,
+    stripeStatus: ctx?.stripeStatus ?? "unknown",
     webhookPath: ctx?.webhookPath,
     isError: error !== null,
     reload,

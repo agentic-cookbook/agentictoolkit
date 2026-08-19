@@ -9,7 +9,8 @@ import { SetupPane } from "../SetupPane";
 
 const READY = {
   ecosystemId: "eco_1", billingEnabled: false, canManage: true,
-  stripeConnected: false, webhookPath: "/api/public/webhooks/stripe/eco_1", isError: false,
+  stripeStatus: "not_connected" as const,
+  webhookPath: "/api/public/webhooks/stripe/eco_1", isError: false,
 };
 
 // The switch is queried by "Sell through this ecosystem" — its VISIBLE caption, which is also its
@@ -41,6 +42,35 @@ describe("SetupPane", () => {
     // No credential field anywhere: two edit surfaces for one credential is the thing this design
     // exists to avoid.
     expect(screen.queryByLabelText(/restricted/i)).not.toBeInTheDocument();
+  });
+
+  // `unknown` means the connection read THREW — in this fleet, a missing or rotated
+  // SECRETS_ENCRYPTION_KEY. Rendering that as "Not connected" with a "Connect Stripe" button
+  // sends the operator to re-paste a key that was never the problem, and the row does not change
+  // when they do. Both halves are asserted: the caption must not claim a state we cannot see,
+  // and the button must not name the wrong remedy.
+  it("does not report an unreadable Stripe key as 'not connected'", () => {
+    render(
+      <SetupPane
+        context={{ ...READY, stripeStatus: "unknown" }}
+        onChanged={vi.fn()}
+        onOpenStripe={vi.fn()}
+      />,
+    );
+    expect(screen.getByText(/could not be checked/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^not connected$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /connect stripe/i })).not.toBeInTheDocument();
+  });
+
+  it("offers Manage rather than Connect once a key is stored", () => {
+    render(
+      <SetupPane
+        context={{ ...READY, stripeStatus: "connected" }}
+        onChanged={vi.fn()}
+        onOpenStripe={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /manage/i })).toBeInTheDocument();
   });
 
   it("surfaces a failed flag write instead of leaving the switch looking flipped", async () => {

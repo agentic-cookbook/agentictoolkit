@@ -77,6 +77,20 @@ export function BillingGroup({
   // NOT gated: `billingEnabled === false`. Turning it on is the first thing Setup is for, and a
   // gate here is the dead end that produced the screenshot this design exists to remove.
 
+  /**
+   * The context read is still in flight. Everything but Setup reads a ROW SET through a cache key
+   * built from `ecosystemId`, and while it is undefined those keys degrade to a common `billing:`
+   * / `ecosystem::` bucket — one cache entry that two ecosystems visited in a single session
+   * SHARE, which is exactly what keying by ecosystem exists to prevent (see OffersPane's
+   * docstring). The read issued under that key is also thrown away one render later, when the id
+   * arrives and the key changes.
+   *
+   * The RAIL is not gated on this — that is spec §2, and gating it is the dead end this design
+   * exists to remove. Only the pane that would fetch waits, and only until the id lands.
+   */
+  const awaitingScope = !ecosystemId;
+  const scopePending = <p className="p-4 text-sm text-apt-text-muted">Loading…</p>;
+
   // Keyed by member id and then mapped over BILLING_MEMBER_IDS, so the record is TOTAL over the
   // grammar's list and the rail's order comes from it — that list stays the one description of
   // what this group is, for the panes here and for the parse a host validates a URL against.
@@ -94,7 +108,12 @@ export function BillingGroup({
       render: (_subLeaf, selectMember) => (
         <SetupPane
           context={context}
-          onChanged={() => void context.reload?.()}
+          // Returned, not `void`-discarded. `SetupPane.toggle` AWAITS `onChanged()` and only then
+          // decides what to show; `void reload()` handed it an already-resolved `undefined`, so it
+          // finished against the stale context every time and the switch it had just written could
+          // still read as unchanged. SetupPane owns the failure sentence for this one (see its
+          // second try), which is why the promise reaches it instead of being swallowed here.
+          onChanged={() => context.reload?.()}
           onOpenStripe={selectMember ? () => selectMember("stripe") : undefined}
         />
       ),
@@ -116,45 +135,56 @@ export function BillingGroup({
       // put them in URL-driven mode pinned at "nothing selected": the rows rendered and clicking
       // one did nothing, on the hub and products mounts, forever. `undefined` is precisely the
       // state their internal-selection path exists for. Do not "simplify" this back to `subLeaf`.
-      render: (subLeaf) => (
-        <IntegrationsPane
-          ecosystemId={ecosystemId}
-          providerIds={STRIPE_ONLY}
-          levelTitle="Stripe"
-          leaf={renderSubLeaf ? subLeaf : undefined}
-          // Setup's "Connected" / "Not connected" line and its Connect-vs-Manage button are
-          // derived from `GET /billing/context`, which is read ONCE above this rail and cached at
-          // the client's 5-minute staleTime. Without this, an operator could paste a valid key
-          // here, save successfully, walk back to Setup and be told it is still not connected —
-          // with nothing on the page able to correct it.
-          onChanged={() => void context.reload?.()}
-        />
-      ),
+      render: (subLeaf) =>
+        awaitingScope ? scopePending : (
+          <IntegrationsPane
+            ecosystemId={ecosystemId}
+            providerIds={STRIPE_ONLY}
+            levelTitle="Stripe"
+            leaf={renderSubLeaf ? subLeaf : undefined}
+            // Setup's "Connected" / "Not connected" line and its Connect-vs-Manage button are
+            // derived from `GET /billing/context`, which is read ONCE above this rail and cached at
+            // the client's 5-minute staleTime. Without this, an operator could paste a valid key
+            // here, save successfully, walk back to Setup and be told it is still not connected —
+            // with nothing on the page able to correct it.
+            //
+            // Swallowed here, unlike Setup's: `IntegrationsPane`'s `onChanged?: () => void` never
+            // awaits what it is handed, so a rejected reload would surface as an unhandled rejection
+            // with no one to render it. The failure is not lost — `useBillingContext` reads through
+            // `useResourceList`, whose default `reportErrors` files it — and the context's own
+            // `isError` gate is what the operator sees.
+            onChanged={() => {
+              Promise.resolve(context.reload?.()).catch(() => {});
+            }}
+          />
+        ),
     },
     offers: {
       label: "Offers",
       icon: <Tag size={16} aria-hidden />,
       leadsTo: "list",
       // `renderSubLeaf ? subLeaf : undefined` — see the Stripe member above for why.
-      render: (subLeaf) => (
-        <OffersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
-      ),
+      render: (subLeaf) =>
+        awaitingScope ? scopePending : (
+          <OffersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
+        ),
     },
     payers: {
       label: "Payers",
       icon: <Users size={16} aria-hidden />,
       leadsTo: "list",
       // `renderSubLeaf ? subLeaf : undefined` — see the Stripe member above for why.
-      render: (subLeaf) => (
-        <PayersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
-      ),
+      render: (subLeaf) =>
+        awaitingScope ? scopePending : (
+          <PayersPane ecosystemId={ecosystemId} leaf={renderSubLeaf ? subLeaf : undefined} />
+        ),
     },
     events: {
       label: "Events",
       icon: <Radio size={16} aria-hidden />,
       // Ignores the sub-leaf: the ledger is a flat list with one action, so there is no inner
       // entity for the segment below to name.
-      render: () => <EventsPane ecosystemId={ecosystemId} />,
+      render: () => (awaitingScope ? scopePending : <EventsPane ecosystemId={ecosystemId} />),
     },
   };
   const items: GroupTopicItem[] = BILLING_MEMBER_IDS.map((id) => ({ id, ...panes[id] }));

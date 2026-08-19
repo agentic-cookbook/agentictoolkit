@@ -42,6 +42,45 @@ describe("offerValidate", () => {
     const base = { ...offerBlank(), name: "Pro", slug: "pro", stripePriceId: "price_1" };
     expect(offerValidate({ ...base, graceDays: -1 }, [])).toMatch(/grace/i);
   });
+
+  /**
+   * Both day counts are Postgres `integer`. `NaN` is the one that got through: it is what
+   * `numOrNull` (OffersPane) returns for any non-empty text that does not parse, and every
+   * comparison against it is false — so `n.daysUntilDue < 0` passed it straight to the driver,
+   * which answers with a type error naming a column, on the one pane whose reason for restating
+   * the constraints is that such errors are unactionable.
+   */
+  it("refuses a day count that is not a finite whole number", () => {
+    const base = {
+      ...offerBlank(), name: "Pro", slug: "pro", stripePriceId: "price_1",
+      collectionMethod: "send_invoice" as const,
+    };
+    expect(offerValidate({ ...base, daysUntilDue: Number.NaN }, [])).toMatch(/whole number/i);
+    expect(offerValidate({ ...base, daysUntilDue: 1.5 }, [])).toMatch(/whole number/i);
+    expect(offerValidate({ ...base, daysUntilDue: Number.POSITIVE_INFINITY }, [])).toMatch(/whole number/i);
+    expect(offerValidate({ ...base, daysUntilDue: 2147483648 }, [])).toMatch(/at most/i);
+    expect(offerValidate({ ...base, daysUntilDue: 30 }, [])).toBeNull();
+
+    const auto = { ...base, collectionMethod: "charge_automatically" as const, daysUntilDue: null };
+    expect(offerValidate({ ...auto, graceDays: Number.NaN }, [])).toMatch(/whole number/i);
+    expect(offerValidate({ ...auto, graceDays: 0.5 }, [])).toMatch(/whole number/i);
+    expect(offerValidate({ ...auto, graceDays: 2147483648 }, [])).toMatch(/at most/i);
+  });
+
+  // The varchar widths. Over-long text otherwise reaches Postgres as a 22001 that generic CRUD
+  // surfaces as a 500 naming no field, which is the same failure mode as the CHECK constraints.
+  it("refuses text wider than its column", () => {
+    const base = { ...offerBlank(), name: "Pro", slug: "pro", stripePriceId: "price_1" };
+    expect(offerValidate({ ...base, name: "n".repeat(256) }, [])).toMatch(/name is at most 255/i);
+    expect(offerValidate({ ...base, stripePriceId: `price_${"x".repeat(250)}` }, [])).toMatch(/price id is at most 255/i);
+    expect(offerValidate({ ...base, stripeProductId: "p".repeat(256) }, [])).toMatch(/product id is at most 255/i);
+    expect(
+      offerValidate({ ...base, purpose: "access", grantsEcosystemId: "e".repeat(37) }, []),
+    ).toMatch(/ecosystem id is at most 36/i);
+    // The boundary itself is legal — an off-by-one here rejects a value the column accepts.
+    expect(offerValidate({ ...base, name: "n".repeat(255) }, [])).toBeNull();
+    expect(offerValidate({ ...base, grantsEcosystemId: "e".repeat(36) }, [])).toBeNull();
+  });
 });
 
 describe("offerToInput", () => {

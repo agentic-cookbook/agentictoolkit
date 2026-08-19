@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import type { ReactElement } from "react";
-import { Tag } from "lucide-react";
+import { Tag, Trash2 } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
 import {
   RecordSettingsPane,
@@ -10,6 +10,7 @@ import {
   useMasterDetailLevel,
   type TopicLeaf,
 } from "@agentic-toolkit/resource";
+import { Button } from "@agentic-toolkit/ui/components/button";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
@@ -92,6 +93,24 @@ export function OffersPane({
     errorStatus: pricesStatus,
   } = useResourceList<PriceRow>(`${key}:prices`, loadPrices, { reportErrors: false });
 
+  /**
+   * One sentence for a failed read, used by BOTH surfaces that can show one — the rail's empty
+   * caption and the detail's load error. They used to be written separately and disagreed: the
+   * detail discriminated on the STATUS (a 403 with the flag off is a fact about the ecosystem an
+   * owner can act on) while the rail keyed on error-PRESENCE and said "Offers could not be
+   * loaded." beside it, which names a cause the status does not support.
+   *
+   * The status, not the message: generic CRUD's gate answers 403 both for the flag being off and
+   * for a role that does not include billing, and those are the same sentence to the person
+   * reading it — one place to look, one thing to check.
+   */
+  const offersProblem =
+    offersStatus === 403
+      ? "Offers are not visible here. Either billing is not enabled for this ecosystem, or your role does not include it."
+      : offersError
+        ? "Offers could not be loaded."
+        : null;
+
   const form = useMasterDetailForm<OfferRow, OfferInput>({
     items: offers,
     getId: (o) => o.id,
@@ -121,7 +140,7 @@ export function OffersPane({
     itemIcon: <Tag size={16} aria-hidden />,
     newLabel: "New offer",
     leaf,
-    emptyLabel: offersError ? "Offers could not be loaded." : "Nothing is for sale yet.",
+    emptyLabel: offersProblem ?? "Nothing is for sale yet.",
     itemNoun: "offer",
   });
 
@@ -131,17 +150,23 @@ export function OffersPane({
       items={offers}
       getId={(o) => o.id}
       title="Offer"
-      // The status, not the message: with the flag off this is a fact about the ECOSYSTEM that
-      // an owner can act on, and dressing it as a permissions problem sends the one person who
-      // can fix it looking for a role they already have.
-      loadError={
-        offersStatus === 403
-          ? "Offers are not visible here. Either billing is not enabled for this ecosystem, or your role does not include it."
-          : offersError
-            ? "Offers could not be loaded."
-            : null
-      }
+      loadError={offersProblem}
       emptyLabel="Select an offer, or create one."
+      // `RecordSettingsPane` passes `showDelete={false}` to ButtonBar, so the bar's own Delete
+      // never renders — but the confirm modal it drives sits OUTSIDE that guard, so a button
+      // here reuses the whole flow (`confirmDelete` → AlertModal → `remove`). Without it the
+      // form's `remove`/`confirmDelete` are unreachable and an offer can never be deleted.
+      trailing={
+        <Button
+          size="sm"
+          variant="destructive-ghost"
+          onClick={form.actions.onDelete}
+          disabled={!form.actions.canDelete}
+        >
+          <Trash2 data-icon="inline-start" />
+          Delete
+        </Button>
+      }
       renderDetail={(draft) => (
         <FieldGroup title="What this offer sells">
           {/* RecordSettingsPane renders only `loadError`; the save/delete failure lives in
@@ -188,16 +213,28 @@ export function OffersPane({
               errorStatus={pricesStatus}
               // The product id rides along from the chosen price rather than being typed: it is
               // Stripe's own join and there is nothing for an operator to decide about it.
+              //
+              // `null` price ⇒ `null` product, NOT the one already in the draft. PriceSelect hands
+              // back a null price on three paths — the degraded free-text input, the blank option,
+              // and the "missing in Stripe" option — and on all three the price has CHANGED while
+              // the product id in the draft still belongs to the price it replaced. Keeping it
+              // would store a product that does not own this price: a join Stripe would disagree
+              // with, written by us and never noticed, because the column is nullable and nothing
+              // reads it back. The column is denormalized convenience; unknown is a value it can
+              // hold, a wrong id is not.
               onChange={(priceId, price) =>
                 form.onChange({
                   ...draft,
                   stripePriceId: priceId,
-                  stripeProductId: price?.productId ?? draft.stripeProductId,
+                  stripeProductId: price ? price.productId : null,
                 })
               }
             />
           </Field>
-          <Field label="Stripe product" hint="Filled from the chosen price.">
+          <Field
+            label="Stripe product"
+            hint="Filled from the chosen price; blank when the price was entered by hand."
+          >
             <Input value={draft.stripeProductId ?? ""} readOnly />
           </Field>
           <Field label="Collection">
