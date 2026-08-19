@@ -29,9 +29,12 @@ describe("HomeBarHost", () => {
     expect(strip).toContainElement(screen.getByRole("button", { name: "Add" }));
     // And the strip precedes the page content in document order — the bar sits
     // above what it acts on, which is the whole point of hoisting it.
-    expect(strip.compareDocumentPosition(screen.getByText("page"))).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    // MASKED, not `toBe`: `compareDocumentPosition` returns a bitmask, and a strict compare
+    // holds only while neither node contains the other. The day the strip wraps the content
+    // (or vice versa) `toBe` would fail reporting "order wrong" for a containment change.
+    expect(
+      strip.compareDocumentPosition(screen.getByText("page")) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("drops the strip again when the last publisher unmounts", () => {
@@ -69,7 +72,9 @@ describe("HomeBar", () => {
     );
     const left = screen.getByLabelText("Filter");
     const right = screen.getByRole("button", { name: "Add" });
-    expect(left.compareDocumentPosition(right)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    // Masked for the same reason as the strip/content assertion above: a containment change
+    // must not be reported as an ordering failure.
+    expect(left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("pushes the right cluster to the far edge", () => {
@@ -81,6 +86,17 @@ describe("HomeBar", () => {
 
   it("renders only the side it was given", () => {
     render(<HomeBar left={<input aria-label="Filter" />} />);
+    expect(screen.queryByTestId("home-bar-right")).toBeNull();
+  });
+
+  // The case an omitted prop cannot reach. A caller's natural `right={condition && <X/>}` hands
+  // this `false`, not `undefined` — and under the old `right !== undefined` check that drew an
+  // empty `ml-auto` div inside a `gap-2` flex row: phantom trailing space, silent, visible only
+  // by measuring. `false` (not `null`) is the value JSX's `&&` actually produces, so it is the
+  // one worth pinning; the check is truthiness, which covers `null` and `""` alike.
+  it("renders no slot wrapper for a FALSY side, not an empty one", () => {
+    render(<HomeBar left={<input aria-label="Filter" />} right={false} />);
+    expect(screen.getByTestId("home-bar-left")).toBeInTheDocument();
     expect(screen.queryByTestId("home-bar-right")).toBeNull();
   });
 });

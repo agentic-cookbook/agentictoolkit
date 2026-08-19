@@ -24,7 +24,7 @@ import { createPortal } from "react-dom";
  * that context would tell every feature site that one is — so each would skip its own
  * {@link StandaloneRailHost} and lose its rails entirely.
  * The second is that the bar and the rail host answer to different owners: the bar belongs to the
- * page's chrome (the home shell, the hub's workspace chrome), the rail host to whatever is drawing
+ * page's chrome (the home shell, the hub's workspace shell), the rail host to whatever is drawing
  * rails underneath it.
  */
 export interface HomeBarRegistry {
@@ -48,9 +48,11 @@ export function useHomeBarSlot(): HTMLElement | null {
  * Hosts the home bar: draws the strip above `children` and hands out its node.
  *
  * Mounted by the two components that already draw the workspace bar — SiteHomeShell for the
- * templated fleet, and the hub's WorkspaceChromeProvider for the same features at the hub's own
- * routes. A feature must not mount one: two hosts in one page would give the nearer one the
- * claims and leave the outer strip empty.
+ * templated fleet, and WorkspaceShellInner for the same features at the hub's own routes. A
+ * feature must not mount one: two hosts in one page would give every claim below to the nearer
+ * one, and a host with no claims draws NOTHING (see the `claims.size > 0` guard below) — so the
+ * outer host would silently stop drawing a strip at all, and the bar would appear in the inner
+ * host's position instead of the page's.
  */
 export function HomeBarHost({ children }: { children: ReactNode }): ReactElement {
   const [claims, setClaims] = useState<ReadonlySet<string>>(() => new Set());
@@ -132,12 +134,20 @@ export function HomeBar({
 }): ReactElement {
   return (
     <>
-      {left !== undefined && (
+      {/* Truthiness, not `!== undefined`: a caller's natural `side={condition && <X/>}` hands
+          this `false` when `condition` is false, and an empty slot div is NOT nothing — it is a
+          flex item in a `gap-2` row, so an empty `left` pushes the right cluster over by the gap,
+          and an empty `right` puts an `ml-auto` spacer where no control is. Silent, and visible
+          only by measuring. Every caller reaches these slots through this same API — the two in
+          this package (`ResourceExplorer`, `ResourceLanding`) and anyone downstream, since
+          `HomeBar` is exported from the barrel — so the check belongs here, once, rather than in
+          each caller's own gate. */}
+      {left && (
         <div data-testid="home-bar-left" className="flex min-w-0 items-center gap-2">
           {left}
         </div>
       )}
-      {right !== undefined && (
+      {right && (
         <div data-testid="home-bar-right" className="ml-auto flex shrink-0 items-center gap-2">
           {right}
         </div>

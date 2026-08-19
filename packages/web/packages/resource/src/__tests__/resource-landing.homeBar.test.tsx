@@ -8,7 +8,7 @@
 // breadcrumb bar — the home bar sits directly under the workspace bar here).
 //
 // Harness reused from `resource-explorer.homeBar.test.tsx`: a `HomeBarHost` mounted above the
-// component under test, exactly like `SiteHomeShell`/`WorkspaceChromeProvider` mount it in the
+// component under test, exactly like `SiteHomeShell`/`WorkspaceShellInner` mount it in the
 // real fleet, so `HomeBarPortal` finds a real slot instead of taking its no-host inline fallback.
 //
 // The field is queried by role (`getByRole("searchbox")`) — the selector
@@ -87,9 +87,13 @@ describe("ResourceLanding publishes its toolbar into the home bar", () => {
     });
     const filter = await screen.findByLabelText("Filter");
     const add = screen.getByRole("button", { name: /New Ecosystem/ });
-    expect(filter.compareDocumentPosition(add)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
+    // MASKED, not `toBe`: `compareDocumentPosition` returns a bitmask, and a strict compare
+    // against `DOCUMENT_POSITION_FOLLOWING` holds only while neither node contains the other.
+    // The day `HomeBar` nests one slot inside the other, `toBe` would fail reporting "order
+    // wrong" for what is actually a containment change.
+    expect(
+      filter.compareDocumentPosition(add) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("omits the filter and toggle from the bar when there are no items yet", async () => {

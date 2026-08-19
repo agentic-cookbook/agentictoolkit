@@ -465,25 +465,40 @@ export function ResourceExplorer<T>({
   // is noise, and over a list that has not loaded it is a control that cannot work yet — the
   // same reasons the rail header applied before the field moved here. `!promoteTopics` preserves
   // an invariant the OLD code got for free: `resourceLevel` — the object this field used to live
-  // on — was only ever spliced into `levels` when `!promoteTopics` (see `levels` below), so its
-  // `headerSlot` never rendered in promoteTopics mode regardless of this condition. A filter field
+  // on — was only ever spliced into `levels` when `!promoteTopics` (see the `levels` array built
+  // ABOVE, `promoteTopics ? [topicLevel] : [resourceLevel, topicLevel]`), so its `headerSlot`
+  // never rendered in promoteTopics mode regardless of this condition. A filter field
   // wired to `filter`/`setFilter` narrows a `resourceLevel` no promoteTopics host ever renders.
   const hasEntities = !promoteTopics && loaded && allEntityItems.length > 0;
+  // The create affordance's own condition, and deliberately NOT `hasEntities`: this is the exact
+  // condition the pre-bar code used — `resourceLevel.onNew` was set whenever `newLabel != null`,
+  // and `resourceLevel` was spliced into `levels` only when `!promoteTopics` (see `levels` above).
+  // An empty list is precisely when a first create matters most, and a still-loading one resolves
+  // to a button that works; tying this to `hasEntities` left a brand-new tenant with no way to
+  // create anything at all. `!promoteTopics` stays for the reason above it: in that mode the
+  // "New …" affordance lives on the promoted resource-list topic, which owns its own dialog (see
+  // the `renderDialog` prop doc above), so a second one here would be a duplicate.
+  const canCreate = !promoteTopics && newLabel != null;
   const published = (
     <>
-      {/* The bar publishes whenever there is something to filter (`hasEntities`) OR the host has
-          handed us its own right-side control (`homeBarRight`) — a host that creates by
-          navigation, like games, has no OTHER place to put that control, so the bar must appear
-          even with zero items or before the list has loaded. `hasEntities` alone still gates the
-          FILTER FIELD below: an empty/loading list has nothing to filter, `homeBarRight` or not.
+      {/* Three INDEPENDENT reasons to publish the bar, each gating its own slot: there is
+          something to filter (`hasEntities` → the field on the left), there is a create
+          affordance (`canCreate` → the button on the right), or the host handed us its own
+          right-side control (`homeBarRight`, which takes that same slot). None of the three
+          implies another, and that is the point: a brand-new tenant's list is empty and is
+          exactly when the first create matters most, and a host that creates by navigation, like
+          games, has no OTHER place to put its control, so its bar must appear with zero items or
+          before the list has loaded. `hasEntities` gates ONLY the filter field: an empty or
+          still-loading list has nothing to filter, whatever the other two say.
 
           `Boolean(homeBarRight)`, not `homeBarRight != null`: a host writing the natural
           `homeBarRight={condition && <X/>}` hands this `false` when `condition` is false, and
-          `false != null` is true — that would publish a bar whose `right` slot is empty (see the
-          `right` assignment below, and `home-bar.tsx`'s `right !== undefined` check, which draws
-          the `ml-auto` wrapper for `false` same as for a real node). Truthiness treats that
-          exactly like the prop being omitted. */}
-      {(hasEntities || Boolean(homeBarRight)) && (
+          `false != null` is true — with `hasEntities` and `canCreate` both false that would
+          publish a bar with nothing whatsoever in it. (`HomeBar` skips a slot whose content is
+          falsy, so the empty-SLOT half of this hazard is handled there now, once for every
+          caller; what these operators still buy is not publishing an empty BAR at all.)
+          Truthiness treats a falsy `homeBarRight` exactly like the prop being omitted. */}
+      {(hasEntities || canCreate || Boolean(homeBarRight)) && (
         <HomeBarPortal>
           <HomeBar
             left={
@@ -491,11 +506,12 @@ export function ResourceExplorer<T>({
                 // A bare field, NOT `ListHeader`: that block IS a `ButtonBar` — the same recessed
                 // strip (border-y + bg + px-6/py-2) every rail toolbar uses — and `HomeBar` already
                 // draws that exact strip. Nesting one inside the other doubled the border and the
-                // padding on all eleven sites that get this bar. `NoteButtonBar`'s search field
-                // (the fleet's other bare-field-in-a-home-bar-shaped-strip) is the precedent this
-                // mirrors: a plain positioning div around the field and nothing else. The `Input`
-                // keeps its own border and padding — those are the FIELD's, and always were; what
-                // goes away is the second toolbar strip around it, which the bar already draws.
+                // padding on every site whose home feature runs through `ResourceExplorer`.
+                // `NoteButtonBar`'s search field (the fleet's other bare field in a strip shaped
+                // like this one) is the precedent this mirrors: a plain positioning div around
+                // the field and nothing else. The `Input` keeps its own border and padding —
+                // those are the FIELD's, and always were; what goes away is the second toolbar
+                // strip around it, which the bar already draws.
                 //
                 // The width is deliberate, not incidental: `ListHeader`'s own field wrapper is
                 // `flex-1 max-w-xs`, which read predictably inside the rail's fixed-width header but
@@ -527,9 +543,9 @@ export function ResourceExplorer<T>({
               //
               // `||`, not `??`: mirrors the gate above — a falsy `homeBarRight` (most likely
               // `false`, from a host's own `condition && <X/>`) falls through to `newLabel`'s
-              // button instead of rendering as an empty `ml-auto` wrapper.
+              // button instead of suppressing it, which `??` would do for `false`.
               homeBarRight ||
-              (newLabel != null ? (
+              (canCreate ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
                   <Plus size={16} aria-hidden />
                   {newButtonLabel}

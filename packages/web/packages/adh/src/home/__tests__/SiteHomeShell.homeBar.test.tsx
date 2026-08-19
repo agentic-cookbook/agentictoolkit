@@ -10,9 +10,10 @@ import { render, screen, cleanup } from '@testing-library/react'
  *
  * `HomeBarHost` and `HomeBarPortal` themselves are exercised in
  * `packages/resource/src/__tests__/home-bar.test.tsx` — this file is not re-proving that
- * mechanism, only that the shell actually wires it in. What it DOES need is a workspace to
- * resolve, because the shell holds `children` (and now, everything `HomeBarHost` wraps) until
- * one has — so the harness below borrows the resolution mocks from `siteHomeShell.test.tsx`
+ * mechanism, only that the shell actually wires it in, and wires it in at the right PLACE (the
+ * last test asserts document order against the workspace bar above and the content below).
+ * What it DOES need is a workspace to resolve, because the shell holds `children` (and now,
+ * everything `HomeBarHost` wraps) until one has — so the harness below borrows the resolution mocks from `siteHomeShell.test.tsx`
  * next door (the router double, the `@agentic-toolkit/data` stub, the WorkspacePicker stub —
  * mocked there, and here, because its trigger is a Base UI menu needing pointer plumbing this
  * package does not have as a devDependency) rather than inventing a second way to get a
@@ -154,5 +155,38 @@ describe('SiteHomeShell home bar', () => {
     )
     const strip = await screen.findByTestId('home-bar')
     expect(strip).toContainElement(screen.getByRole('button', { name: 'New Thing' }))
+  })
+
+  // "The button is inside the strip" is not the property that matters — WHERE the strip lands is,
+  // and the test above stays green wherever the host is mounted. On the hub the same mechanism was
+  // hosted one component too high for a whole round of this branch and rendered ABOVE the workspace
+  // switcher; nothing was red. This is the mirror of the hub's own order test
+  // (`sites/hub/src/components/workspace/__tests__/workspaceShellHomeBar.test.tsx`): the strip
+  // follows the workspace bar and precedes the content the site renders below it. Hoist
+  // `HomeBarHost` to wrap `<WorkspaceBar>` too and the first comparison flips.
+  it('draws the strip below the workspace bar and above the content', async () => {
+    renderShell(
+      <>
+        <HomeBarPortal>
+          <button type="button">New Thing</button>
+        </HomeBarPortal>
+        <p>content</p>
+      </>,
+    )
+    const strip = await screen.findByTestId('home-bar')
+    // The workspace bar itself carries no test id (`WorkspaceBar` is a pair of plain
+    // `adh-home__toolbar*` divs), so this test points at it through the WorkspacePicker mocked
+    // above, which renders inside it — a node in the bar is enough to fix the bar's position.
+    const picker = screen.getByTestId('picker')
+    const content = screen.getByText('content')
+    // MASKED, not `toBe`: `compareDocumentPosition` returns a bitmask, and a strict compare holds
+    // only while neither node contains the other — it would report a containment change as an
+    // ordering failure.
+    expect(
+      picker.compareDocumentPosition(strip) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      strip.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })

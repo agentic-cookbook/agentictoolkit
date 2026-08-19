@@ -47,7 +47,7 @@ export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-h
 
 // The HOME BAR: the strip between the workspace bar and the breadcrumb bar. `HomeBarHost` is
 // mounted by the two components that draw the workspace bar (the toolkit's SiteHomeShell and the
-// hub's WorkspaceChromeProvider); every feature with a page-level control publishes into it with
+// hub's WorkspaceShellInner); every feature with a page-level control publishes into it with
 // `HomeBarPortal`, and `HomeBar` is the shared left/right layout so the fleet's placement rule —
 // filters left, primary action right — is written once.
 export { HomeBarContext, HomeBarHost, HomeBarPortal, HomeBar, useHomeBarSlot } from "./home-bar";

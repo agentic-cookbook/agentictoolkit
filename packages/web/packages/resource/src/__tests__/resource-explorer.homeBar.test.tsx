@@ -2,10 +2,12 @@
 //
 // Pins Task 4: the resource rail's filter and its "New …" button move OUT of the rail header
 // (`headerSlot`/`onNew` on the top-level `resourceLevel`) and into the home bar — the strip a
-// `HomeBarHost` draws above the rails, shared by eleven fleet sites. The important test is the
-// last one: it proves the field the bar renders is still the SAME `filter` state that narrows the
-// rail's rows, i.e. that `HomeBarPortal` moved the control's DOM position without cutting it out
-// of ResourceExplorer's React tree.
+// `HomeBarHost` draws above the rails, shared by every site whose home feature runs through
+// `ResourceExplorer`. Two tests carry most of the weight. The LAST one in the first describe block
+// proves the field the bar renders is still the SAME `filter` state that narrows the rail's rows,
+// i.e. that `HomeBarPortal` moved the control's DOM position without cutting it out of
+// ResourceExplorer's React tree. The EMPTY-list one earlier in that block proves the create button
+// survives a list with nothing in it, the regression the final review caught — see its own comment.
 //
 // Harness reused from `resource-explorer-standalone.test.tsx` (the router mock + minimal
 // ResourceExplorer props) and `home-bar.test.tsx` (mounting a `HomeBarHost` above the publisher so
@@ -20,12 +22,14 @@
 // Also pins Task 6 fix round 1's Critical #1: `homeBarRight` is the seam a host that creates by
 // NAVIGATION (games) uses instead of a second `HomeBarPortal` of its own — the bug round 1 shipped
 // was exactly that second portal, landing two `HomeBar`s in the one slot div. The `homeBarRight`
-// describe block below exercises the widened publish gate this prop required: the bar must appear
-// even with zero/unloaded items (a navigating host has no OTHER way to show its control), but the
-// FILTER FIELD must not — there is nothing loaded to filter yet.
+// describe block below exercises one of the three independent publish conditions: the bar must
+// appear even with zero/unloaded items (a navigating host has no OTHER way to show its control),
+// but the FILTER FIELD must not — there is nothing loaded to filter yet. The other two conditions
+// are `hasEntities` (the field) and `canCreate` (the `newLabel` button), and the empty/loading
+// tests in the first describe block are what pin `canCreate` being independent of `hasEntities`.
 import type { ReactNode } from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ResourceExplorer, type ResourceTopic } from "../resource-explorer";
 import { HomeBarHost } from "../home-bar";
@@ -63,7 +67,7 @@ function renderExplorer({
   /** A host's own right-side control — see the `homeBarRight` describe block below. */
   homeBarRight?: ReactNode;
 }) {
-  // A HomeBarHost above the explorer, exactly like SiteHomeShell/WorkspaceChromeProvider mount in
+  // A HomeBarHost above the explorer, exactly like SiteHomeShell/WorkspaceShellInner mount in
   // the real fleet: without one HomeBarPortal takes its no-host inline fallback and every
   // assertion about `home-bar` below would fail for the wrong reason (no host, not a bug in the
   // explorer's publish).
@@ -100,18 +104,52 @@ describe("ResourceExplorer publishes into the home bar", () => {
     expect(screen.queryByRole("button", { name: /New/ })).toBeNull();
   });
 
-  it("claims no bar at all before the list has loaded", () => {
-    renderExplorer({ items: null });
+  // THE REGRESSION CASE, and one of the two tests this file leans on hardest. An empty list is
+  // precisely when a first create matters most — a brand-new tenant lands on `/home` with nothing
+  // — and for one round of this branch the bar's only gate was `hasEntities` (`loaded &&
+  // length > 0`), which meant that user got NO create affordance anywhere on the page:
+  // `setNewOpen(true)` has exactly one call site, the button below (the component's other two
+  // `setNewOpen` calls both CLOSE the dialog). `canCreate` (`!promoteTopics && newLabel != null`)
+  // is what restores the pre-bar condition, and this test fails the moment someone folds it back
+  // into `hasEntities`.
+  //
+  // Every assertion is scoped `within(strip)` on purpose. An unscoped `screen.getByRole` is
+  // satisfied by `HomeBarPortal`'s no-host inline fallback, so it cannot tell a working publish
+  // from a broken one — that exact vacuity shipped twice on this branch.
+  it("publishes the bar with its New button, and no searchbox, on a loaded but EMPTY list", async () => {
+    renderExplorer({ items: [], newLabel: "New Project…" });
+    const strip = await screen.findByTestId("home-bar");
+    // `newButtonLabel` strips the trailing ellipsis, so the rendered name is "New Project", not
+    // "New Project…" — an exact-string query here also pins that stripping.
+    expect(within(strip).getByRole("button", { name: "New Project" })).toBeInTheDocument();
+    // The filter field is the one thing `hasEntities` still gates: an empty list has nothing to
+    // filter, and the create button appearing must not drag it along.
+    expect(within(strip).queryByRole("searchbox")).toBeNull();
+  });
+
+  // The same regression one beat earlier: `items === null` is how this component expresses "not
+  // loaded" (`loaded = items !== null`, resource-explorer.tsx:235). Before the fix the create
+  // button flickered in only once the list resolved; the pre-bar `resourceLevel.onNew` had no
+  // `loaded` term at all, and a button that opens a dialog works perfectly well while the list
+  // behind it is still arriving.
+  it("publishes the bar with its New button, and no searchbox, while the list is still LOADING", async () => {
+    renderExplorer({ items: null, newLabel: "New Project…" });
+    const strip = await screen.findByTestId("home-bar");
+    expect(within(strip).getByRole("button", { name: "New Project" })).toBeInTheDocument();
+    expect(within(strip).queryByRole("searchbox")).toBeNull();
+  });
+
+  // The other side of the same coin, and the case this file used to cover here: with creation
+  // SUPPRESSED (`newLabel` omitted) and no `homeBarRight`, none of the three publish conditions
+  // holds, so there is no bar at all — not an empty one. Guards against a fix to the two tests
+  // above that widened the gate to "always publish".
+  it("claims no bar at all with a loaded but empty list, no newLabel and no homeBarRight", () => {
+    renderExplorer({ items: [] });
     expect(screen.queryByTestId("home-bar")).toBeNull();
   });
 
-  // Pins the OTHER half of the widened gate (`hasEntities || Boolean(homeBarRight)`): a loaded
-  // but EMPTY list, with no `homeBarRight` to keep the bar open. This is the test the comment
-  // inside the `homeBarRight` describe block below (on the zero-items-WITH-homeBarRight case)
-  // means by "without homeBarRight this state claims no bar at all" — it fails if someone later
-  // drops `hasEntities` from that `||` and leaves only the `homeBarRight` clause.
-  it("claims no bar at all with a loaded but empty list and no homeBarRight", () => {
-    renderExplorer({ items: [] });
+  it("claims no bar at all before the list has loaded, with no newLabel and no homeBarRight", () => {
+    renderExplorer({ items: null });
     expect(screen.queryByTestId("home-bar")).toBeNull();
   });
 
@@ -122,18 +160,24 @@ describe("ResourceExplorer publishes into the home bar", () => {
   // `renderDialog`, so a button that opened nothing is exactly what dropping this guard would have
   // shipped for the field/newLabel case this test covers.
   //
-  // That guard is narrower than this test's title suggests, though: it is on `hasEntities`, which
-  // gates the FILTER FIELD (and, via `hasEntities ||`, the bar as a whole when nothing else keeps
-  // it open) — not on `homeBarRight`, which bypasses it on purpose (see that prop's doc in
-  // resource-explorer.tsx). A promoteTopics host that passes `homeBarRight` DOES get a bar; this
-  // render passes none, so it stays green and still pins the field/newLabel half of the invariant.
-  it("claims no bar at all in promoteTopics mode, even with items and a newLabel", () => {
+  // `!promoteTopics` is a term in BOTH conditions — `hasEntities` (the field) and `canCreate`
+  // (the button) — and nothing else in this suite would notice either copy being deleted, so this
+  // test asserts the button's absence explicitly and not just the bar's. It does NOT cover
+  // `homeBarRight`, which carries no such term and bypasses both on purpose (see that prop's doc
+  // in resource-explorer.tsx): a promoteTopics host passing `homeBarRight` DOES get a bar. This
+  // render passes none, so the assertions below are about the field/newLabel half only.
+  it("claims no bar and no create button in promoteTopics mode, even with items and a newLabel", () => {
     renderExplorer({
       promoteTopics: true,
       newLabel: "New Ecosystem…",
       items: [{ id: "a", label: "Alpha" }],
     });
     expect(screen.queryByTestId("home-bar")).toBeNull();
+    // Unscoped deliberately, and the strictly stronger claim: with no bar there is nothing to
+    // scope to, and dropping `!promoteTopics` from `canCreate` would publish this button — into
+    // the strip if the host is above (as here), inline through `HomeBarPortal`'s fallback if not.
+    // An unscoped query catches it either way.
+    expect(screen.queryByRole("button", { name: "New Ecosystem" })).toBeNull();
   });
 
   it("still filters the rail's rows from the bar's field", async () => {
@@ -169,10 +213,10 @@ describe("ResourceExplorer's homeBarRight — a host's own right-side control", 
       items: [],
       homeBarRight: <button type="button">Host Action</button>,
     });
-    // Without homeBarRight this state claims no bar at all (see "claims no bar at all with a
-    // loaded but empty list and no homeBarRight" above) — an empty list has nothing to filter.
-    // With it, the bar must still appear: a host that creates by navigation, like games, has no
-    // other way to show its control on an empty workspace.
+    // This render passes no `newLabel` either, so without `homeBarRight` it claims no bar at all
+    // (see "claims no bar at all with a loaded but empty list, no newLabel and no homeBarRight"
+    // above). With it, the bar must still appear: a host that creates by navigation, like games,
+    // has no other way to show its control on an empty workspace.
     const strip = await screen.findByTestId("home-bar");
     expect(strip).toContainElement(screen.getByRole("button", { name: "Host Action" }));
     // But the FILTER FIELD stays gated on there being something loaded to filter — homeBarRight
@@ -208,13 +252,12 @@ describe("ResourceExplorer's homeBarRight — a host's own right-side control", 
   });
 
   // A host is most likely to reach `homeBarRight` naturally as `homeBarRight={condition &&
-  // <X/>}`, which hands this `false` — not `undefined` — when `condition` is false. Before the
-  // truthiness fix, `false != null` and `homeBarRight ?? …` both treat `false` as "given": the
-  // gate publishes and `right` renders `false`, which `home-bar.tsx`'s `right !== undefined`
-  // check still draws as an empty `ml-auto` div. With zero items (so `hasEntities` is also
-  // false), the corrected code treats a falsy `homeBarRight` the same as an omitted one: no bar
-  // at all, same as the "claims no bar at all with a loaded but empty list and no homeBarRight"
-  // case above.
+  // <X/>}`, which hands this `false` — not `undefined` — when `condition` is false. With
+  // `homeBarRight != null` and `??` the gate would publish and `right` would receive `false`,
+  // i.e. a BAR with nothing in it. (`HomeBar` now skips a falsy slot, so the empty-SLOT half is
+  // handled there for every caller — this test pins the half that is still this component's: not
+  // publishing the bar at all.) With zero items and no `newLabel`, none of the three conditions
+  // holds, so a falsy `homeBarRight` must behave exactly like an omitted one.
   it("does not publish an empty bar for a falsy homeBarRight", () => {
     renderExplorer({ items: [], homeBarRight: false });
     expect(screen.queryByTestId("home-bar")).toBeNull();

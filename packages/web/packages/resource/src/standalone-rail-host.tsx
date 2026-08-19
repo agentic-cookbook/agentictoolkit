@@ -31,7 +31,7 @@ import { useHostBusyReports, useHostMissingAlert, useHostPopStack } from "./host
  * workspace/feature levels above the feature's own. It owns the rails and the exit gate only — the
  * page's own controls (search, filters, its primary action) go through the HOME bar instead
  * (`HomeBarPortal`/`HomeBarHost`, `./home-bar`), hosted above this component by `SiteHomeShell`
- * on a feature site, or by the hub's `WorkspaceChromeProvider` inside the hub shell.
+ * on a feature site, or by the hub's `WorkspaceShellInner` inside the hub shell.
  * Extracted from ResourceExplorer (which always self-hosted this way) so the
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
