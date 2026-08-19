@@ -9504,6 +9504,438 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/billing/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The ecosystem’s payer accounts, newest first
+         * @description Scoped to the acting identity’s ecosystem and to `deleted_at IS NULL`, ordered by `createdAt` descending and capped at 500 rows. There is no pagination and no filter: this is an operator’s payer list, not a reporting API. `claimTokenHash` is never selected — it is the receipt half of a credential, and a list endpoint is the last place it should be reachable from.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Up to 500 accounts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingAccount"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/accounts/{id}/resend-claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The `billing.accounts` row to re-issue a claim link for */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mint a fresh claim token for one account and mail it again
+         * @description It MINTS rather than resends: the stored value is a one-way hash, so the original token is unrecoverable and there is nothing to re-send. A fresh token restarts the claim TTL — which is what an expired link needs — and invalidates the previous one by overwriting the hash, which is what an operator who suspects the first link leaked wants. Delivery happens after the transaction commits and cannot fail the call: the mailer never throws and logs every path that does not send, so a second failure is visible in the logs and this route can simply be called again. A 200 therefore means "a new token exists", not "the payer received it".
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The `billing.accounts` row to re-issue a claim link for */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description A new claim token was minted and delivery attempted */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingResendClaim"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/prices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active prices on the ecosystem’s connected Stripe account
+         * @description The list the offer editor picks a `stripe_price_id` from. Active prices only, with their product expanded, walked to a hard cap of 1000 — high enough that no plausible catalog of things an operator SELLS reaches it, low enough that one HTTP request cannot turn into an unbounded series of round-trips against a third party. Nothing is cached or stored: adh configures the OFFER, Stripe owns the money.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The active price catalog */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingPriceOption"][];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/events/redrive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Re-apply stored Stripe events the receiver could not apply
+         * @description The receiver STORES every verified event before it tries to apply it, so an event that arrived before its offer existed — or that hit a transient failure — is still on disk. This re-applies a batch of 100 in `receivedAt` order and reports what happened to each. `nextOffset` is the cursor: it is non-null exactly when the batch came back full, and passing it as `offset` is what makes the second call a DIFFERENT batch. Without it the fixed limit was not pagination at all — a row the redrive examines but cannot advance stays in the first hundred forever, and everything behind it was unreachable through this API.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    includeProcessed?: string;
+                    offset?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description What the batch did */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingRedriveResult"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/billing/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Redeem a claim token, binding a paid account to the caller
+         * @description Authenticated, and on the billing base rather than `/public`, because redeeming BINDS an adh identity to a paid account and there is nothing to bind without a session — a claim route mounted on `/public` would read the principal as undefined on every request and refuse every claim. The page that collects the token is the public half and lives in the frontend; it posts here once the visitor is signed in. A delegated (acting) principal is refused outright: delegation means "act on their behalf", and irreversibly claiming ownership of something they paid for is not that.
+         *
+         *     IDEMPOTENT FOR THE CLAIMANT, single-use for everyone else. A repeat presentation by the identity that already claimed it returns the same body as the first call, so a prefetching mail client or a retried POST does not tell the payer their link is invalid; a DIFFERENT identity presenting the same token still gets the 404.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["BillingClaimRequest"];
+                };
+            };
+            responses: {
+                /** @description The account this token was bound to */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingClaimResult"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/public/webhooks/stripe/{ecosystemId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The ecosystem whose Stripe webhook secret authenticates this call */
+                ecosystemId: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stripe event receiver (HMAC over the raw body, not a JWT)
+         * @description The only writer of `billing.accounts`. The signature is computed over the EXACT raw bytes, so the body is read as text and never re-serialized. Every stored secret for the ecosystem is tried in turn, which is what makes a secret rotation a non-event.
+         *
+         *     It STORES the event before it does anything that can fail, keyed uniquely on `(ecosystem_id, stripe_event_id)` — one Stripe account can serve two ecosystems under BYOK, so the Stripe event id alone is not a deduplication key. A replay of an already-stored event short-circuits to the same 200 without re-applying it.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description The ecosystem whose Stripe webhook secret authenticates this call */
+                    ecosystemId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["StripeWebhookEvent"];
+                };
+            };
+            responses: {
+                /** @description Accepted (or already handled) */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingAck"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/bucket/buckets/{bucketId}/types/{typeId}/rows": {
         parameters: {
             query?: never;
@@ -63733,6 +64165,18 @@ export interface components {
             /** @description the raw `adh_…` secret — shown once, never again */
             token: string;
         };
+        /** @description The provider's declared config fields (configFields), keyed by field key; validated + split into the secret vs non-secret config against the spec. */
+        IntegrationConnectFields: {
+            [key: string]: string;
+        };
+        IntegrationActionMediaItem: {
+            url: string;
+            altText?: string;
+        };
+        /** @description Provider merge/custom fields — flat string, number, or boolean values */
+        IntegrationActionFields: {
+            [key: string]: unknown;
+        };
         ProblemDetails: {
             /** @description URI identifying the problem type; 'about:blank' when unspecified */
             type?: string;
@@ -63857,10 +64301,7 @@ export interface components {
             serviceType: string;
             /** @description Target ecosystem id (the caller must manage it) */
             ecosystemId: string;
-            /** @description The provider's declared config fields (configFields), keyed by field key; validated + split into the secret vs non-secret config against the spec. */
-            fields: {
-                [key: string]: string;
-            };
+            fields: components["schemas"]["IntegrationConnectFields"];
         } | {
             /** @enum {string} */
             type: "app_password";
@@ -63898,10 +64339,7 @@ export interface components {
             bodyHtml?: string;
         } | {
             text?: string;
-            media?: {
-                url: string;
-                altText?: string;
-            }[];
+            media?: components["schemas"]["IntegrationActionMediaItem"][];
             replyTo?: string;
         } | {
             /** @description E.164 phone number (e.g. +15551234567) */
@@ -63917,10 +64355,7 @@ export interface components {
             text?: string;
         } | {
             text?: string;
-            media?: {
-                url: string;
-                altText?: string;
-            }[];
+            media?: components["schemas"]["IntegrationActionMediaItem"][];
             /** @description The t1_/t3_ fullname being replied to */
             replyTo?: string;
         } | {
@@ -63931,10 +64366,7 @@ export interface components {
             firstName?: string;
             lastName?: string;
             tags?: string[];
-            /** @description Provider merge/custom fields — flat string, number, or boolean values */
-            fields?: {
-                [key: string]: unknown;
-            };
+            fields?: components["schemas"]["IntegrationActionFields"];
         } | {
             /** @description Provider list id */
             audienceId: string;
@@ -64157,6 +64589,63 @@ export interface components {
         RotateKeyResult: {
             /** @description the list's NEW embed key. The old key stops working immediately — any page still embedding it must be updated. */
             publicKey: string;
+        };
+        BillingAccount: {
+            id: string;
+            offerId: string;
+            stripeCustomerId?: string | null;
+            stripeCheckoutSessionId?: string | null;
+            stripeSubscriptionId?: string | null;
+            payerEmail?: string | null;
+            status: string;
+            currentPeriodEnd?: string | null;
+            lapsedAt?: string | null;
+            claimedCustomerId?: string | null;
+            claimedAt?: string | null;
+            createdAt: string;
+        };
+        BillingResendClaim: {
+            ok: boolean;
+            accountId: string;
+            expiresAt: string;
+        };
+        BillingPriceOption: {
+            id: string;
+            productId: string;
+            productName?: string | null;
+            unitAmount?: number | null;
+            currency: string;
+            interval?: string | null;
+        };
+        BillingRedriveResult: {
+            examined: number;
+            applied: number;
+            terminal: number;
+            stillPending: number;
+            unreadable: number;
+            failed: number;
+            nextOffset: number | null;
+        };
+        BillingClaimRequest: {
+            token: string;
+        };
+        BillingClaimResult: {
+            ok: boolean;
+            ecosystemId: string;
+            offerId: string;
+        };
+        StripeWebhookEvent: {
+            id: string;
+            type: string;
+            created?: number;
+            data?: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        BillingAck: {
+            ok: boolean;
         };
         /** @description A bucket-table row. Intentionally open — the column set is defined at runtime by the developer-managed table this bucket points at, so no fixed property schema applies. */
         BucketRow: {
@@ -65859,41 +66348,43 @@ export interface components {
                 [key: string]: unknown;
             } | null;
         };
+        ProviderConnectionUrlVar: {
+            name: string;
+            label?: string;
+            example?: string;
+            secret?: boolean;
+        };
+        ProviderConnectionHeaderVar: {
+            header: string;
+            label?: string;
+            example?: string;
+            secret?: boolean;
+        };
+        ProviderConnectionStringMap: {
+            [key: string]: string;
+        };
+        ProviderConnectionAuth: {
+            /** @enum {string} */
+            type: "bearer" | "header" | "sigv4" | "oauth2";
+            /** @description header auth: the header name (e.g. api-key) */
+            header?: string;
+            /** @enum {string} */
+            scheme?: "bearer" | "raw";
+            /** @description sigv4 (reserved) */
+            region?: string;
+            /** @description oauth2 (reserved) */
+            tokenUrl?: string;
+        };
         ProviderConnectionSpec: {
             /** @enum {integer} */
             specVersion: 1;
             /** @description base_url placeholders the connect UI prompts for and substitutes. */
-            urlVars?: {
-                name: string;
-                label?: string;
-                example?: string;
-                secret?: boolean;
-            }[];
+            urlVars?: components["schemas"]["ProviderConnectionUrlVar"][];
             /** @description headers the connect UI prompts a per-connection value for and writes into extraHeaders. */
-            headerVars?: {
-                header: string;
-                label?: string;
-                example?: string;
-                secret?: boolean;
-            }[];
-            auth?: {
-                /** @enum {string} */
-                type: "bearer" | "header" | "sigv4" | "oauth2";
-                /** @description header auth: the header name (e.g. api-key) */
-                header?: string;
-                /** @enum {string} */
-                scheme?: "bearer" | "raw";
-                /** @description sigv4 (reserved) */
-                region?: string;
-                /** @description oauth2 (reserved) */
-                tokenUrl?: string;
-            };
-            defaultQuery?: {
-                [key: string]: string;
-            };
-            extraHeaders?: {
-                [key: string]: string;
-            };
+            headerVars?: components["schemas"]["ProviderConnectionHeaderVar"][];
+            auth?: components["schemas"]["ProviderConnectionAuth"];
+            defaultQuery?: components["schemas"]["ProviderConnectionStringMap"];
+            extraHeaders?: components["schemas"]["ProviderConnectionStringMap"];
         } | null;
         ProviderTemplateList: {
             items: components["schemas"]["ProviderTemplate"][];
