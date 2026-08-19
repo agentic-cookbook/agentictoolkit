@@ -198,6 +198,17 @@ export function IntegrationsPane({
     () => (providerFilterKey === null ? null : new Set(providerFilterKey.split(","))),
     [providerFilterKey],
   );
+
+  // The same filter, for a config resolved by ADDRESS rather than read off a list. A leaf naming a
+  // config outside `providerIds` has to behave exactly like an address that does not exist —
+  // otherwise a filtered host (the billing site passes `["stripe"]`) either falls through to the
+  // generic "select an integration" hint with no explanation, or, for a config the list never
+  // carried, fetches it by id and lets `mergeFetchedRow` splice the foreign provider into `rows`.
+  const inFilter = useCallback(
+    (c: MaskedProviderConfig | null | undefined): MaskedProviderConfig | null =>
+      c && (providerFilter === null || providerFilter.has(c.providerId)) ? c : null,
+    [providerFilter],
+  );
   const visibleConfigRows = useMemo(
     () =>
       configRows === null || providerFilter === null
@@ -245,7 +256,10 @@ export function IntegrationsPane({
     loadById,
   );
 
-  const cfg = selectedInList ?? fetchedCfg;
+  // Both routes pass through `inFilter`: the list one because the leaf may name a config the
+  // filter hides, the by-id one because that read is keyed by address and knows nothing of it.
+  const visibleFetchedCfg = inFilter(fetchedCfg);
+  const cfg = inFilter(selectedInList) ?? visibleFetchedCfg;
   const provider = cfg ? providerById.get(cfg.providerId) : undefined;
 
   // One row per instance, sorted by name. The deep-linked instance is kept present even before
@@ -266,8 +280,8 @@ export function IntegrationsPane({
     if (visibleConfigRows === null || providerRows === null) return null;
     // On `addressOf` again — `c.rdid === fetchedCfg.rdid` would read `null === null` as a match
     // and swallow the deep-linked row whenever any OTHER unmapped config is in the list.
-    return mergeFetchedRow(visibleConfigRows, fetchedCfg);
-  }, [visibleConfigRows, providerRows, fetchedCfg]);
+    return mergeFetchedRow(visibleConfigRows, visibleFetchedCfg);
+  }, [visibleConfigRows, providerRows, visibleFetchedCfg]);
 
   const urlSelection = leaf
     ? { selectedId: leaf.leafId, onSelect: leaf.onSelect }

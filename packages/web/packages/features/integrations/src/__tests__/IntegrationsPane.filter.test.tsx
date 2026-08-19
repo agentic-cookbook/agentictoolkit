@@ -4,11 +4,12 @@ import { RailHostBoundary } from "@agentic-toolkit/resource";
 
 const listProviderConfigs = vi.fn();
 const listProviders = vi.fn();
+const getProviderConfigById = vi.fn(async () => null as unknown);
 vi.mock("@agentic-toolkit/data/integrations", () => ({
   integrationsApi: {
     listProviderConfigs: (...a: unknown[]) => listProviderConfigs(...a),
     listProviders: (...a: unknown[]) => listProviders(...a),
-    getProviderConfigById: vi.fn(async () => null),
+    getProviderConfigById: (...a: unknown[]) => getProviderConfigById(...(a as [])),
   },
 }));
 
@@ -52,6 +53,37 @@ describe("IntegrationsPane providerIds", () => {
 
     const handed = modalProviders.mock.calls.at(-1)?.[0] as { providerId: string }[] | null;
     expect(handed?.map((p) => p.providerId)).toEqual(["stripe"]);
+  });
+
+  // The filter has to reach the config resolved by ADDRESS, not just the two list-derived values.
+  // A leaf naming a config the list never carried arms the by-id read, whose answer is spliced
+  // back into the rows — so without filtering that answer, a bookmarked or typed URL naming some
+  // other provider's config puts that provider on screen on a host that asked for only one.
+  it("ignores a deep-linked config whose provider is filtered out", async () => {
+    listProviders.mockResolvedValue(CATALOG);
+    listProviderConfigs.mockResolvedValue([CONFIGS[0]]);
+    getProviderConfigById.mockResolvedValue({
+      id: "c9",
+      rdid: null,
+      ecosystemId: "e1",
+      providerId: "postmark",
+      name: "Postmark deep link",
+      config: {},
+      hasSecret: true,
+    });
+
+    render(
+      <RailHostBoundary>
+        <IntegrationsPane
+          ecosystemId="e1"
+          providerIds={["stripe"]}
+          leaf={{ leafId: "c9", onSelect: vi.fn() }}
+        />
+      </RailHostBoundary>,
+    );
+
+    expect(await screen.findByText("Stripe live")).toBeInTheDocument();
+    expect(screen.queryByText("Postmark deep link")).not.toBeInTheDocument();
   });
 
   it("lists the whole catalog when providerIds is omitted", async () => {
