@@ -20,6 +20,16 @@
       "development": "./src/parse-path.ts",
       "import": "./dist/parse-path.js"
     },
+    "./context": {
+      "types": "./dist/useBillingContext.d.ts",
+      "development": "./src/useBillingContext.ts",
+      "import": "./dist/useBillingContext.js"
+    },
+    "./claim": {
+      "types": "./dist/claim.d.ts",
+      "development": "./src/claim.ts",
+      "import": "./dist/claim.js"
+    },
     "./sources.css": "./sources.css"
   },
   "scripts": {
