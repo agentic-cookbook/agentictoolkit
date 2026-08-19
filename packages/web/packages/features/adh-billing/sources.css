@@ -13,7 +13,10 @@
  * so HMR sees source edits); `dist` covers prod builds, where `files` ships only
  * `dist` + this file and the `src` glob simply matches nothing.
  *
- * Unlike the sibling adh-products, this package composes no other package's panes,
- * so a host needs no further @import lines on its account. */
+ * Unlike before, this package DOES compose other packages' panes — the Stripe topic is
+ * @agentic-toolkit/integrations' own pane, and the rail is @agentic-toolkit/resource's — so a
+ * host importing this file gets their sources too and needs no further lines on their account. */
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";
+@import "@agentic-toolkit/resource/sources.css";
+@import "@agentic-toolkit/integrations/sources.css";
