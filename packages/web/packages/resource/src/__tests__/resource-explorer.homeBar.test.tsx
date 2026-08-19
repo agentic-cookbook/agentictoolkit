@@ -29,8 +29,7 @@
 // tests in the first describe block are what pin `canCreate` being independent of `hasEntities`.
 import type { ReactNode } from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, cleanup, within, fireEvent } from "@testing-library/react";
 import { ResourceExplorer, type ResourceTopic } from "../resource-explorer";
 import { HomeBarHost } from "../home-bar";
 
@@ -192,7 +191,7 @@ describe("ResourceExplorer publishes into the home bar", () => {
     // below can't tell a real portal apart from HomeBarPortal's no-host inline fallback: both
     // leave the field in the explorer's React tree, so both would filter the rows identically.
     expect(await screen.findByTestId("home-bar")).toContainElement(field);
-    await userEvent.type(field, "Alph");
+    fireEvent.change(field, { target: { value: "Alph" } });
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.queryByText("Beta")).toBeNull();
   });

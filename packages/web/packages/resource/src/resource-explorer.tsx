@@ -21,7 +21,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Plus, Search } from "lucide-react";
 import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";
-import { HomeBar, HomeBarPortal } from "./home-bar";
+import { HomeBar, HomeBarPortal, HomeBarTaken } from "./home-bar";
 
 /** The deep-linkable LEAF inside a topic (e.g. the selected application within the
  *  Applications topic): the id lives in the URL, and `onSelect` re-routes to it. Topics
@@ -519,7 +519,19 @@ export function ResourceExplorer<T>({
                 // item, not a sized column) — the field would collapse to its intrinsic min-content
                 // width instead. `w-64 min-w-40 shrink`, copied from `NoteButtonBar`, is the fleet's
                 // existing answer to sizing a field in this exact kind of strip.
-                <div role="search" className="relative w-64 min-w-40 shrink">
+                //
+                // `role="search"` is a LANDMARK, and an unnamed landmark is announced as bare
+                // "search" — indistinguishable from any other on the page, and this page can hold
+                // more than one (an explorer standing down under `HomeBarTaken` renders its field
+                // inline below the outer one's). The name is the resource, so the two announce as
+                // "Organizations search" and "Teams search" rather than twice as "search". It sits
+                // on the landmark, not the field: the `Input`'s own `aria-label` names the CONTROL
+                // and is what every test queries by.
+                <div
+                  role="search"
+                  aria-label={rail?.title ?? nameSuffix}
+                  className="relative w-64 min-w-40 shrink"
+                >
                   <Search
                     aria-hidden
                     className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
@@ -547,7 +559,14 @@ export function ResourceExplorer<T>({
               homeBarRight ||
               (canCreate ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
-                  <Plus size={16} aria-hidden />
+                  {/* `data-icon="inline-start"`, and no `size`: `Button` sizes its own icons
+                      (`[&_svg:not([class*='size-'])]:size-3.5`) and tightens the padding on the
+                      side the icon sits (`has-data-[icon=inline-start]:pl-1.5`). A `size={16}`
+                      here was already dead — the class wins over lucide's width/height attributes
+                      — while the missing `data-icon` left this button wearing symmetric padding,
+                      so it did not match the fleet's other icon buttons (games' `CreateGameAction`
+                      is the pattern). */}
+                  <Plus data-icon="inline-start" aria-hidden />
                   {newButtonLabel}
                 </Button>
               ) : undefined)
@@ -555,8 +574,19 @@ export function ResourceExplorer<T>({
           />
         </HomeBarPortal>
       )}
-      <StackLevels levels={levels}>{content}</StackLevels>
-      {dialog}
+      {/* Everything below the bar stands under this explorer's claim. Organizations renders a whole
+          TeamsFeature inside its teams topic, and the hub's Products list mounts ProjectsFeature the
+          same way — each with its own `ResourceExplorer` and its own bar. Two publishers, one strip:
+          the controls interleave and the outer `ml-auto` shoves the inner filter against the right
+          edge. `HomeBarTaken` makes the nested one render its controls inline instead, where the
+          nested feature actually is.
+
+          `taken` mirrors the publish gate exactly, so an explorer that publishes NOTHING (no items,
+          no create, no host control) leaves the bar for whatever it hosts rather than blocking it. */}
+      <HomeBarTaken taken={hasEntities || canCreate || Boolean(homeBarRight)}>
+        <StackLevels levels={levels}>{content}</StackLevels>
+        {dialog}
+      </HomeBarTaken>
     </>
   );
   return <RailHostBoundary>{published}</RailHostBoundary>;

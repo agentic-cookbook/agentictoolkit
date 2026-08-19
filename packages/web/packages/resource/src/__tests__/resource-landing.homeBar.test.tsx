@@ -17,8 +17,7 @@
 // in this component, so `getByLabelText("Filter")` is also unambiguous here; both are used below
 // to cross-check the strip's contents.
 import { describe, it, expect, afterEach, beforeEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { ResourceLanding } from "../resource-landing";
 import { HomeBarHost } from "../home-bar";
 
@@ -123,7 +122,7 @@ describe("ResourceLanding publishes its toolbar into the home bar", () => {
       ],
     });
     const field = await screen.findByRole("searchbox");
-    await userEvent.type(field, "zzz-no-match");
+    fireEvent.change(field, { target: { value: "zzz-no-match" } });
     expect(screen.getByText(/No matches for/)).toBeInTheDocument();
     expect(screen.getByRole("searchbox")).toBeInTheDocument();
     expect(await screen.findByTestId("home-bar")).toContainElement(
@@ -140,7 +139,7 @@ describe("ResourceLanding publishes its toolbar into the home bar", () => {
     });
     const field = await screen.findByRole("searchbox");
     expect(await screen.findByTestId("home-bar")).toContainElement(field);
-    await userEvent.type(field, "Alph");
+    fireEvent.change(field, { target: { value: "Alph" } });
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.queryByText("Beta")).toBeNull();
   });
@@ -157,7 +156,7 @@ describe("ResourceLanding publishes its toolbar into the home bar", () => {
     // ("List") — `aria-label` wins the accessible-name computation, so that is what the query
     // below has to match.
     expect(screen.queryByRole("list")).toBeNull();
-    await userEvent.click(screen.getByRole("button", { name: "View as list" }));
+    fireEvent.click(screen.getByRole("button", { name: "View as list" }));
     expect(screen.getByRole("list")).toBeInTheDocument();
   });
 });

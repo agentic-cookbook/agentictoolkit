@@ -91,7 +91,16 @@ export function ResourceLanding<T>({
               left={
                 hasItems ? (
                   <>
-                    <div role="search" className="relative w-64 min-w-40 shrink">
+                    {/* Named landmark: an unnamed `role="search"` is announced as a bare
+                        "search", and a page can hold more than one (a nested feature standing
+                        down under `HomeBarTaken` renders its own field inline). The name is the
+                        collection. The `Input` keeps its own `aria-label` — that names the
+                        CONTROL, and is what the tests query by. */}
+                    <div
+                      role="search"
+                      aria-label={title}
+                      className="relative w-64 min-w-40 shrink"
+                    >
                       <Search
                         aria-hidden
                         className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
@@ -127,7 +136,9 @@ export function ResourceLanding<T>({
               right={
                 onNew ? (
                   <Button variant="outline" size="sm" onClick={onNew}>
-                    <Plus size={16} aria-hidden />
+                    {/* `data-icon="inline-start"` and no `size`: `Button` sizes its own icons and
+                        tightens the padding on the icon's side. See `resource-explorer.tsx`. */}
+                    <Plus data-icon="inline-start" aria-hidden />
                     {newLabel ?? "New"}
                   </Button>
                 ) : undefined

@@ -49,8 +49,10 @@ export type { RailHostRegistry, RegisteredLevels, PaneExitGuard } from "./rail-h
 // mounted by the two components that draw the workspace bar (the toolkit's SiteHomeShell and the
 // hub's WorkspaceShellInner); every feature with a page-level control publishes into it with
 // `HomeBarPortal`, and `HomeBar` is the shared left/right layout so the fleet's placement rule —
-// filters left, primary action right — is written once.
-export { HomeBarContext, HomeBarHost, HomeBarPortal, HomeBar, useHomeBarSlot } from "./home-bar";
+// filters left, primary action right — is written once. `HomeBarTaken` is how a publisher that
+// hosts OTHER features marks its subtree, so a nested publisher stands down instead of sharing the
+// page's one strip with it.
+export { HomeBarContext, HomeBarHost, HomeBarPortal, HomeBar, HomeBarTaken } from "./home-bar";
 export type { HomeBarRegistry } from "./home-bar";
 
 // One cached item, wired to the stack's missing-item report. The query layer itself

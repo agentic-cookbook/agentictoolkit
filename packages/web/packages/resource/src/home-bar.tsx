@@ -39,9 +39,42 @@ export interface HomeBarRegistry {
 
 export const HomeBarContext = createContext<HomeBarRegistry | null>(null);
 
-/** The strip's node, or null when there is no host above (then a publisher renders inline). */
-export function useHomeBarSlot(): HTMLElement | null {
-  return useContext(HomeBarContext)?.slot ?? null;
+/**
+ * Is the bar already spoken for by a publisher ABOVE this point in the tree?
+ *
+ * The bar is the PAGE's strip, and a page has one. But features nest: an organizations
+ * {@link ResourceExplorer} renders a teams one inside its topic pane, and the hub's Products list
+ * mounts a whole projects feature under itself. Without this, both explorers claim, both portal
+ * into the same node, and their controls interleave — the outer one's `ml-auto` eats every pixel of
+ * slack, so the inner one's filter lands hard against the right edge next to a create button for a
+ * different resource. Nothing errors and nothing is missing; it just reads as one incoherent bar.
+ *
+ * The OUTER publisher wins, because the bar acts on the page and the page is the outer list. The
+ * winner cannot be settled by claim order: layout effects run child-first, so the inner publisher
+ * always claims first, and a Set of ids does not remember who was there before. Depth is the only
+ * thing the tree knows at render time, hence a context rather than a registry rule.
+ */
+const HomeBarTakenContext = createContext(false);
+
+/**
+ * Marks a subtree as standing below a publisher, so any {@link HomeBarPortal} inside it stands down
+ * to its inline fallback rather than claiming the page's bar.
+ *
+ * A publisher wraps whatever it renders BELOW its own portal — never the portal itself, which is
+ * its sibling. `taken={false}` passes through unchanged, which is what lets a conditional publisher
+ * (an explorer with nothing to publish yet) leave the bar to the feature it hosts.
+ */
+export function HomeBarTaken({
+  taken = true,
+  children,
+}: {
+  taken?: boolean;
+  children: ReactNode;
+}): ReactElement {
+  const above = useContext(HomeBarTakenContext);
+  // `above || taken`, not `taken`: a nested provider must never HAND BACK a bar an ancestor holds.
+  const value = above || taken;
+  return <HomeBarTakenContext.Provider value={value}>{children}</HomeBarTakenContext.Provider>;
 }
 
 /**
@@ -100,21 +133,28 @@ export function HomeBarHost({ children }: { children: ReactNode }): ReactElement
  * Note what a portal does and does not move: the children leave the feature's DOM subtree but
  * stay in its REACT tree, so they still read its context and still share its state. That is what
  * lets a control in the bar drive a list below it without lifting anything.
+ *
+ * Under a {@link HomeBarTaken} subtree it neither claims nor portals: the outer publisher owns the
+ * page's bar, so these controls render INLINE where the feature sits — the same fallback a page
+ * with no host gets. Nested controls stay reachable; they just stop fighting for the strip.
  */
 export function HomeBarPortal({ children }: { children: ReactNode }): ReactNode {
   const ctx = useContext(HomeBarContext);
-  const claim = ctx?.claim;
+  const taken = useContext(HomeBarTakenContext);
+  const claim = taken ? undefined : ctx?.claim;
   const id = useId();
   useLayoutEffect(() => {
     if (!claim) return;
     claim(id, true);
     return () => claim(id, false);
   }, [claim, id]);
-  const slot = ctx?.slot ?? null;
+  const slot = claim ? (ctx?.slot ?? null) : null;
   if (slot) return createPortal(children, slot);
-  // A host exists but has not handed out the node yet — this very render is the one that claims
-  // it. Rendering inline for that beat would mount the bar in the wrong place and remount it
-  // immediately. Only a page with NO host gets the inline fallback.
+  // A host exists, we are claiming it, and it has not handed out the node yet — this very render
+  // is the one that claims. Rendering inline for that beat would mount the bar in the wrong place
+  // and remount it immediately. The inline fallback is for the two cases where we never claim at
+  // all: no host above, or the bar already taken by a publisher above (`claim` is undefined for
+  // both, which is why the one check covers them).
   return claim ? null : <>{children}</>;
 }
 
@@ -133,7 +173,13 @@ export function HomeBar({
   right?: ReactNode;
 }): ReactElement {
   return (
-    <>
+    // Its OWN row, rather than trusting the strip it lands in to be one. Inside the host the strip
+    // is already a flex row, so this changes nothing there; but a publisher standing down under
+    // {@link HomeBarTaken}, or one on a page with no host at all, renders these same children into
+    // whatever container the feature happens to sit in — usually a `flex-col`, which stacks the two
+    // sides vertically and leaves `ml-auto` doing nothing. The rule the component exists to own —
+    // filters left, primary action right — has to travel with the markup, not with the host.
+    <div className="flex w-full min-w-0 items-center gap-2">
       {/* Truthiness, not `!== undefined`: a caller's natural `side={condition && <X/>}` hands
           this `false` when `condition` is false, and an empty slot div is NOT nothing — it is a
           flex item in a `gap-2` row, so an empty `left` pushes the right cluster over by the gap,
@@ -158,6 +204,6 @@ export function HomeBar({
           {right}
         </div>
       ) : null}
-    </>
+    </div>
   );
 }

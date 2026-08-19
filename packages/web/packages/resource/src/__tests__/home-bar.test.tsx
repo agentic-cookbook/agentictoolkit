@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { HomeBar, HomeBarHost, HomeBarPortal } from "../home-bar";
+import { HomeBar, HomeBarHost, HomeBarPortal, HomeBarTaken } from "../home-bar";
 
 describe("HomeBarHost", () => {
   it("renders no strip while nothing claims the bar", () => {
@@ -62,6 +62,74 @@ describe("HomeBarPortal", () => {
   });
 });
 
+// The nesting rule. Features mount features — organizations renders TeamsFeature inside a topic,
+// the hub's Products list mounts ProjectsFeature — and each brings its own explorer and its own
+// bar. Both used to claim, both portalled into the same node, and the two sets of controls
+// interleaved with the outer `ml-auto` eating all the slack. The OUTER one wins, and it has to be
+// settled by depth: layout effects run child-first, so the inner publisher always claims first.
+describe("HomeBarTaken", () => {
+  it("keeps a nested publisher out of the strip and renders it inline instead", () => {
+    render(
+      <HomeBarHost>
+        <HomeBarPortal>
+          <button type="button">Outer Add</button>
+        </HomeBarPortal>
+        <HomeBarTaken>
+          <p>topic pane</p>
+          <HomeBarPortal>
+            <button type="button">Inner Add</button>
+          </HomeBarPortal>
+        </HomeBarTaken>
+      </HomeBarHost>,
+    );
+    const strip = screen.getByTestId("home-bar");
+    const inner = screen.getByRole("button", { name: "Inner Add" });
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Outer Add" }));
+    // Present — standing down must not DELETE the nested feature's controls…
+    expect(inner).toBeInTheDocument();
+    // …but not in the bar.
+    expect(strip).not.toContainElement(inner);
+  });
+
+  it("leaves the bar to the nested publisher when the outer one publishes nothing", () => {
+    render(
+      <HomeBarHost>
+        <HomeBarTaken taken={false}>
+          <HomeBarPortal>
+            <button type="button">Inner Add</button>
+          </HomeBarPortal>
+        </HomeBarTaken>
+      </HomeBarHost>,
+    );
+    expect(screen.getByTestId("home-bar")).toContainElement(
+      screen.getByRole("button", { name: "Inner Add" }),
+    );
+  });
+
+  // `above || taken`, not `taken`: a nested provider must never HAND BACK a bar an ancestor holds.
+  // Organizations publishes, its teams explorer does not, and the teams explorer's own topic pane
+  // must still not reach the strip.
+  it("does not release a bar an ancestor holds", () => {
+    render(
+      <HomeBarHost>
+        <HomeBarPortal>
+          <button type="button">Outer Add</button>
+        </HomeBarPortal>
+        <HomeBarTaken>
+          <HomeBarTaken taken={false}>
+            <HomeBarPortal>
+              <button type="button">Inner Add</button>
+            </HomeBarPortal>
+          </HomeBarTaken>
+        </HomeBarTaken>
+      </HomeBarHost>,
+    );
+    expect(screen.getByTestId("home-bar")).not.toContainElement(
+      screen.getByRole("button", { name: "Inner Add" }),
+    );
+  });
+});
+
 describe("HomeBar", () => {
   it("puts left before right in document order", () => {
     render(
@@ -75,6 +143,17 @@ describe("HomeBar", () => {
     // Masked for the same reason as the strip/content assertion above: a containment change
     // must not be reported as an ordering failure.
     expect(left.compareDocumentPosition(right) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  // The layout rule has to travel with the markup: a publisher standing down under
+  // `HomeBarTaken`, or one on a page with no host, renders these same children into whatever
+  // container the feature sits in — usually a `flex-col`, which stacks the two sides vertically and
+  // leaves `ml-auto` doing nothing.
+  it("carries its own flex row rather than trusting the strip it lands in", () => {
+    render(<HomeBar left={<input aria-label="Filter" />} />);
+    const row = screen.getByTestId("home-bar-left").parentElement;
+    expect(row?.className).toContain("flex");
+    expect(row?.className).toContain("items-center");
   });
 
   it("pushes the right cluster to the far edge", () => {

@@ -90,7 +90,7 @@ function sameFilters(a: FilterState, b: FilterState): boolean {
  *     notes, not an empty pane demanding a folder.
  *
  * Everything that acts on the LIST rather than on one note lives in {@link NoteButtonBar},
- * published into the host's feature-bar slot — search, the two filters, the two taxonomy
+ * published into the HOME BAR (`HomeBarPortal`) — search, the two filters, the two taxonomy
  * editors and Create Note. The rail's headers hold nothing but navigation, so the only `+`
  * left in the notebook is the one that creates a category from inside the category editor.
  *

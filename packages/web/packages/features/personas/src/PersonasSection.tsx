@@ -347,7 +347,9 @@ export function PersonasSection({
       <HomeBar
         right={
           <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
-            <Plus size={16} aria-hidden />
+            {/* `data-icon="inline-start"` and no `size`: `Button` sizes its own icons and tightens
+                the padding on the icon's side. See `resource-explorer.tsx`. */}
+            <Plus data-icon="inline-start" aria-hidden />
             New Persona
           </Button>
         }
