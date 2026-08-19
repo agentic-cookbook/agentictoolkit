@@ -74,7 +74,9 @@ export async function listRailwayProjects(token: string, signal: AbortSignal): P
   } catch (err) {
     // Same rule as the domains lookup below: an abort is the CALLER's own time box, and
     // only the caller knows whether it will retry. Reporting it here made a transient loss
-    // that the very next attempt won look like a Railway outage.
+    // that the very next attempt won look like a Railway outage. Silence here is a DEBT
+    // the caller has to settle — `enumerateDeployProjectsVerified` logs the aborted case
+    // where it degrades to the configured list, because nothing else would.
     if (!signal.aborted) {
       console.error(`Railway project listing failed: ${err instanceof Error ? err.message : String(err)}`);
     }

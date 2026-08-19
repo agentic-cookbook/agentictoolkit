@@ -92,9 +92,21 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
   // are the ones somebody wrote down". Only the former licenses reading an absence.
   const railwayListingP: Promise<{ projects: { id: string; name: string }[]; live: boolean }> = (
     conn.railway.token
-      ? listRailwayProjects(conn.railway.token, railwayTimer.signal).then((r) =>
-          r ? { projects: r, live: true } : { projects: conn.railway.projects ?? [], live: false },
-        )
+      ? listRailwayProjects(conn.railway.token, railwayTimer.signal).then((r) => {
+          if (!r && railwayTimer.signal.aborted) {
+            // `listRailwayProjects` suppresses its own log when the signal aborted, on the
+            // theory that the caller owns the time box and knows whether it will retry.
+            // THIS is that caller, and it does neither — so without this line an aborted
+            // listing degrades to the written-down list and suppresses the retirement pass
+            // with nothing said anywhere. Say only what this side can see: the box had
+            // fired and no list came back, not which of the two caused the other.
+            console.error(
+              "Railway project listing came back empty with its 6s box already fired; " +
+                "falling back to the configured project list (live=false), so this pass cannot read an absence",
+            );
+          }
+          return r ? { projects: r, live: true } : { projects: conn.railway.projects ?? [], live: false };
+        })
       : Promise.resolve({ projects: [] as { id: string; name: string }[], live: false })
   ).finally(() => railwayTimer.done());
   const railwayProjectsP = railwayListingP.then((l) => l.projects);
@@ -250,11 +262,15 @@ export async function enumerateDeployProjectsVerified(db: DeployDb): Promise<Dep
  *
  * The tail is INDEPENDENT per request rather than sticky to a slow project (one project
  * measured slow on 2 of 20 samples and fast on the other 18), so a second attempt lands
- * in the 83ms median. That is why this is a retry and NOT a longer box: widening the box
- * would make a genuinely stuck project hold one of the four slots for twice as long,
- * spending the fan-out on the project least likely to answer. It also matters that these
- * losses are not free — a lost lookup clears `complete`, which is what tells every caller
- * "we never saw this project", suppressing the whole retirement pass for the platform.
+ * in the 83ms median. That independence is the whole reason this is a retry and not a
+ * longer box: a 12s box spends its extra 6s on the SAME unlucky request, while a second
+ * 6s attempt draws a fresh sample from a distribution whose median is 83ms. Be honest
+ * about what it does not buy — a genuinely stuck project now holds one of the four slots
+ * for 2 × 6s, exactly the slot-time a 12s box would cost. That is the accepted price,
+ * paid only by projects that fail their first attempt; it is not avoided. It also matters
+ * that these losses are not free — a lost lookup clears `complete`, which is what tells
+ * every caller "we never saw this project", suppressing the whole retirement pass for the
+ * platform.
  */
 const RAILWAY_DOMAINS_TIMEOUT_MS = 6_000;
 const RAILWAY_DOMAINS_ATTEMPTS = 2;
@@ -300,9 +316,21 @@ async function resolveRailwayDomains(
           // Only OUR box firing earns a second try. A project that ANSWERED with a
           // failure (unauthorized, a GraphQL error) gave a real verdict, and asking it
           // the identical question again would only spend the fan-out twice.
+          //
+          // This flag is read AFTER the await, so it cannot fully separate the two: a
+          // real failure arriving just under the box (`listRailwayProjectDomains` has
+          // real I/O between its two awaits) can have the timer fire before the
+          // continuation resumes, and looks from here exactly like our own abort. We take
+          // that trade deliberately — re-asking a real verdict costs one request, while
+          // skipping a genuine timeout costs a project's domains and clears `complete`
+          // for the whole platform — and the log below is worded so it never asserts the
+          // cause this side cannot see.
           if (timer.signal.aborted && attempt < RAILWAY_DOMAINS_ATTEMPTS) continue;
           if (timer.signal.aborted) {
-            console.error(`Railway project ${p.id} domains timed out on all ${RAILWAY_DOMAINS_ATTEMPTS} attempts`);
+            console.error(
+              `Railway project ${p.id} domains unresolved on all ${RAILWAY_DOMAINS_ATTEMPTS} attempts, ` +
+                `each with its ${RAILWAY_DOMAINS_TIMEOUT_MS}ms box fired (a timeout, or a failure that landed as the box fired)`,
+            );
           }
           complete = false;
           return;
