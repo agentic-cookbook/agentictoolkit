@@ -9,13 +9,14 @@
 // clickable) and it hands the test the level OBJECTS, because half of what this change is about
 // is which affordances a level no longer carries — and an absent `+` has no DOM to assert on.
 // The button bar publishes into the home bar instead (a separate context — see
-// `resource/src/home-bar.tsx`), which the harness provides no host for; it renders inline via
-// HomeBarPortal's no-host fallback, which is enough for these tests since `screen` queries read
-// the whole document regardless of where a portal target lands.
+// `resource/src/home-bar.tsx`); the harness mounts a real `HomeBarHost` so that move is pinned by
+// an assertion against `home-bar`'s own DOM node, not just exercised through the portal's
+// no-host fallback.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  HomeBarHost,
   RailHostContext,
   type RailHostRegistry,
   type RegisteredLevels,
@@ -180,11 +181,10 @@ function Rail({ published }: { published: TopicLevel[] }) {
   );
 }
 
-/** A minimal rail host. `toolbarSlot` is `null` since no test here opens an editor; the
- *  feature-bar fields that used to sit beside it are gone from `RailHostRegistry` entirely — the
- *  button bar now publishes through `HomeBarPortal`'s own context instead (see the file header),
- *  which this harness mounts no host for, so it renders inline where the same test drives it
- *  from. */
+/** A minimal rail host, plus a real `HomeBarHost` so the button bar's move onto the home bar is
+ *  actually pinned (see the file header) rather than merely exercised via its no-host fallback.
+ *  `toolbarSlot` is `null` since no test here opens an editor; the feature-bar fields that used
+ *  to sit beside it are gone from `RailHostRegistry` entirely. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
   const registry: RailHostRegistry = useMemo(
@@ -212,8 +212,10 @@ function Harness({ children }: { children: ReactNode }) {
   levels = [...entries.values()].sort((a, b) => a.depth - b.depth).flatMap((e) => e.levels);
   return (
     <RailHostContext.Provider value={registry}>
-      <Rail published={levels} />
-      {children}
+      <HomeBarHost>
+        <Rail published={levels} />
+        {children}
+      </HomeBarHost>
     </RailHostContext.Provider>
   );
 }
@@ -318,6 +320,18 @@ describe("the button bar", () => {
         { workspace: "acme" },
       ),
     );
+  });
+
+  it("publishes into the home bar, not inline where the pane sits", async () => {
+    renderPane();
+    await screen.findByRole("button", { name: "Standup" });
+
+    // The bar's own DOM node, not just "somewhere in the document" — pins the move onto the
+    // home bar (`HomeBarPortal` in NotebookPane.tsx) rather than the portal's no-host fallback,
+    // which this same query would satisfy either way.
+    const strip = await screen.findByTestId("home-bar");
+    expect(strip).toContainElement(screen.getByLabelText("Search notes"));
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Create Note" }));
   });
 
   it("asks for nothing when the rail and the filter name different categories", async () => {

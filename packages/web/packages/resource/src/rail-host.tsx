@@ -39,8 +39,8 @@ export interface RegisteredLevels {
  * The host-side contract this package OWNS and a host (the hub's workspace shell) provides. Trimmed
  * to exactly the members the publisher hooks below read: level (un)registration, exit-guard
  * registration, and the editor toolbar slot. The host keeps its own internal state (the merged
- * stack, the composite guard, the slot setter) private. `toolbarSlot` is `null` with no host, and
- * the publisher that reads it ({@link ToolbarPortal}) degrades to rendering inline.
+ * stack, the composite guard) private. `toolbarSlot` is `null` with no host, and the publisher
+ * that reads it ({@link ToolbarPortal}) degrades to rendering inline.
  */
 export interface RailHostRegistry {
   /** Register (or replace) a publisher's rail levels at a depth. Keyed by a stable id so the

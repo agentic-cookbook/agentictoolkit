@@ -70,10 +70,11 @@ export function HomeBarHost({ children }: { children: ReactNode }): ReactElement
 
   return (
     <HomeBarContext.Provider value={value}>
-      {/* The strip's own classes are the ones the HTDV's feature bar wore, unchanged, so the
-          bar keeps its exact appearance while changing owner. `w-full` on the inner row because
-          the row is a flex container and a bar with a flexible space in it has to own the whole
-          width to place anything at its right edge. */}
+      {/* The strip wears the classes the HTDV's `toolbar` strip wears
+          (`hierarchical-topic-detail.tsx:196`), unchanged, so the bar keeps its exact appearance
+          while changing owner. `w-full` on the inner row because the row is a flex container and
+          a bar with a flexible space in it has to own the whole width to place anything at its
+          right edge. */}
       {claims.size > 0 && (
         <div
           data-testid="home-bar"
