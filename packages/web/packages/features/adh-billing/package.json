@@ -32,7 +32,11 @@
   },
   "dependencies": {
     "@agentic-toolkit/auth": "workspace:*",
-    "@agentic-toolkit/data": "workspace:*"
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/integrations": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
+    "lucide-react": "^1.16.0"
   },
   "peerDependencies": {
     "next": ">=15",
