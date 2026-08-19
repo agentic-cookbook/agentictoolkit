@@ -196,6 +196,24 @@ describe("ProjectsFeature", () => {
     expect(list).toHaveBeenCalled();
   });
 
+  // No other test in this file queries the filter field, and the two "creates a project…" tests
+  // below query the "New Project" button with an unscoped `screen.*` — which HomeBarPortal's
+  // inline fallback satisfies just as well as a real bar would, so neither can tell a working
+  // publish from a broken one. This test is the one that can: it scopes into the strip itself,
+  // so it fails if the home bar host above ever stops being the thing that draws these controls.
+  it("publishes the filter field and the New Project button into the home bar, not inline", async () => {
+    render(
+      <Harness>
+        <ProjectsFeature basePath="/w1/projects" all />
+      </Harness>,
+    );
+
+    expect(await screen.findByText("Website relaunch")).not.toBeNull();
+    const strip = await screen.findByTestId("home-bar");
+    expect(within(strip).getByRole("searchbox")).toBeTruthy();
+    expect(within(strip).getByRole("button", { name: "New Project" })).toBeTruthy();
+  });
+
   it("creates a project through the New Project dialog", async () => {
     render(
       <Harness>

@@ -8,7 +8,7 @@
 // a page-level control published into the home bar (home-bar.tsx), so the harness also wraps
 // in HomeBarHost to draw that strip, the same way the hub's workspace shell does.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
   HomeBarHost,
@@ -158,6 +158,22 @@ describe("TeamsFeature host-scoping states", () => {
     expect(idForSlugMock).toHaveBeenCalledWith("acme");
     await waitFor(() => expect(listMock).toHaveBeenCalledWith("eco1"));
     expect(screen.getByText(/new team/i)).toBeTruthy();
+  });
+
+  // The assertion above queries "new team" with an unscoped `screen.*`, which HomeBarPortal's
+  // inline fallback satisfies just as well as a real bar would — it cannot tell a working
+  // publish from a broken one. This test scopes into the strip itself, so it fails if the home
+  // bar host above ever stops being the thing that draws the filter field and the create button.
+  it("publishes the filter field and the New Team… button into the home bar, not inline", async () => {
+    render(
+      <Harness>
+        <TeamsFeature basePath="/acme/teams" workspaceSlug="acme" all />
+      </Harness>,
+    );
+    expect((await screen.findAllByText("Core Team")).length).toBeGreaterThan(0);
+    const strip = await screen.findByTestId("home-bar");
+    expect(within(strip).getByRole("searchbox")).toBeTruthy();
+    expect(within(strip).getByRole("button", { name: "New Team" })).toBeTruthy();
   });
 
   it("scoped host whose slug resolves to NO ecosystem: defined empty state, creation suppressed", async () => {
