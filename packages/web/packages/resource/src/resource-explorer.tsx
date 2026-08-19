@@ -10,7 +10,6 @@ import {
 import { useRouter } from "next/navigation";
 import {
   HierarchicalTopicDetail,
-  ListHeader,
   TopicSelectHint,
   type TopicDetailItem,
   type TopicLevel,
@@ -18,7 +17,8 @@ import {
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Button } from "@agentic-toolkit/ui/components/button";
-import { Plus } from "lucide-react";
+import { Input } from "@agentic-toolkit/ui/components/input";
+import { Plus, Search } from "lucide-react";
 import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";
 import { HomeBar, HomeBarPortal } from "./home-bar";
@@ -298,10 +298,10 @@ export function ResourceExplorer<T>({
     //
     // Gated on the UNFILTERED list, like the home bar's filter/New pair (in the component's
     // return, below): "there is nothing to pick" is a fact about the tenant's data, not about the
-    // box the user just typed in. Reading the filtered
-    // count here suppressed the blurb — and with it the whole nudge, since the frame's gate is
-    // `items.length > 0 || overviewHelp != null` — the moment a query matched nothing, and this
-    // pane's other branch is `null`, so a mistyped filter blanked the entire detail pane.
+    // box the user just typed in. Reading the filtered count here suppressed the blurb — and with
+    // it the whole nudge, since the frame's gate is `items.length > 0 || overviewHelp != null` —
+    // the moment a query matched nothing, and this pane's other branch is `null`, so a mistyped
+    // filter blanked the entire detail pane.
     itemNoun: nameSuffix.toLowerCase(),
     overviewHelp: allEntityItems.length > 0 ? rail?.help : undefined,
     selectedId: isAll ? null : (scopedId ?? null),
@@ -330,9 +330,11 @@ export function ResourceExplorer<T>({
         : (rail?.emptyLabel ?? ""),
     // The filter field and the "New …" button are NOT on this level any more — both are page-level
     // controls over the whole list, so both are published into the home bar (below) rather than
-    // drawn inside the rail this level renders. `headerSlot` and `onNew` stay on TopicLevel: the
-    // DEEPER levels a feature publishes still use them, and those are contextual to the level in a
-    // way the top-level pair never was.
+    // drawn inside the rail this level renders. Both stay on TopicLevel, but not for the same
+    // reason: `onNew` stays IN USE — 20+ deeper levels a feature publishes still call it (e.g. a
+    // topic's own master/detail list), and those are contextual to their level in a way the
+    // top-level pair never was. `headerSlot` stays on the type too, as a supported seam, but this
+    // was its last producer in the repo — nothing currently sets it.
   };
   const topicLevel: TopicLevel = {
     id: "topic",
@@ -464,15 +466,33 @@ export function ResourceExplorer<T>({
         <HomeBarPortal>
           <HomeBar
             left={
-              <ListHeader
-                ariaLabel={`Filter ${rail?.title ?? nameSuffix}`}
-                search={{
-                  value: filter,
-                  onChange: setFilter,
-                  label: `Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`,
-                  grow: false,
-                }}
-              />
+              // A bare field, NOT `ListHeader`: that block IS a `ButtonBar` — the same recessed
+              // strip (border-y + bg + px-6/py-2) every rail toolbar uses — and `HomeBar` already
+              // draws that exact strip. Nesting one inside the other doubled the border and the
+              // padding on all eleven sites that get this bar. `NoteButtonBar`'s search field
+              // (the fleet's other bare-field-in-a-home-bar-shaped-strip) is the precedent this
+              // mirrors: unstyled input, no border, no background, no padding — the bar owns those.
+              //
+              // The width is deliberate, not incidental: `ListHeader`'s own field wrapper is
+              // `flex-1 max-w-xs`, which read predictably inside the rail's fixed-width header but
+              // has nothing to grow against inside `HomeBar`'s `left` slot (a shrink-to-fit flex
+              // item, not a sized column) — the field would collapse to its intrinsic min-content
+              // width instead. `w-64 min-w-40 shrink`, copied from `NoteButtonBar`, is the fleet's
+              // existing answer to sizing a field in this exact kind of strip.
+              <div role="search" className="relative w-64 min-w-40 shrink">
+                <Search
+                  aria-hidden
+                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
+                />
+                <Input
+                  type="search"
+                  value={filter}
+                  aria-label={`Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`}
+                  placeholder="Filter…"
+                  className="pl-8"
+                  onChange={(e) => setFilter(e.target.value)}
+                />
+              </div>
             }
             right={
               newLabel != null ? (
