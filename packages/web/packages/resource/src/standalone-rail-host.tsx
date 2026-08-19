@@ -28,9 +28,10 @@ import { useHostBusyReports, useHostMissingAlert, useHostPopStack } from "./host
  * re-click prompts Discard/Stay instead of silently discarding). Mirrors the hub's
  * WorkspaceChromeProvider semantics (local registry + composite guard + depth-merged stack + the
  * breadcrumb bar), trimmed to the standalone case: no editor toolbar slot, and no shell
- * workspace/feature levels above the feature's own. It does own the FEATURE bar — the full-width
- * strip above the rails a feature fills via `FeatureBarPortal` — since on a feature site there is
- * no shell above it to own one.
+ * workspace/feature levels above the feature's own. It owns the rails and the exit gate only — the
+ * page's own controls (search, filters, its primary action) go through the HOME bar instead
+ * (`HomeBarPortal`/`HomeBarHost`, `./home-bar`), hosted above this component by `SiteHomeShell`
+ * on a feature site, or by the hub's `WorkspaceChromeProvider` inside the hub shell.
  * Extracted from ResourceExplorer (which always self-hosted this way) so the
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
@@ -58,11 +59,6 @@ export function StandaloneRailHost({
 }): ReactElement {
   const [registry, setRegistry] = useState<ReadonlyMap<string, RegisteredLevels>>(new Map());
   const [guards, setGuards] = useState<ReadonlyMap<string, PaneExitGuard>>(new Map());
-  // The feature bar: who wants the strip, and the strip's node once it exists. Two pieces of state
-  // and not one, because the node cannot be created until something claims it — a strip rendered
-  // unconditionally would put an empty bordered band above every feature site's rail.
-  const [barClaims, setBarClaims] = useState<ReadonlySet<string>>(new Set());
-  const [featureBarSlot, setFeatureBarSlot] = useState<HTMLElement | null>(null);
 
   const registerLevels = useCallback((id: string, entry: RegisteredLevels) => {
     setRegistry((prev) => {
@@ -87,16 +83,6 @@ export function StandaloneRailHost({
       const next = new Map(prev);
       if (guard === null) next.delete(id);
       else next.set(id, guard);
-      return next;
-    });
-  }, []);
-
-  const claimFeatureBar = useCallback((id: string, claimed: boolean) => {
-    setBarClaims((prev) => {
-      if (prev.has(id) === claimed) return prev;
-      const next = new Set(prev);
-      if (claimed) next.add(id);
-      else next.delete(id);
       return next;
     });
   }, []);
@@ -142,7 +128,8 @@ export function StandaloneRailHost({
   const { reportMissing, missingAlert } = useHostMissingAlert(popStack, guards.size > 0);
 
   // `toolbarSlot` stays null: an editor's action bar keeps rendering inside its own pane here, as
-  // it always has. Only the FEATURE bar is hoisted, and only when a feature asks for one.
+  // it always has. The page-level strip is the home bar, which this host does not own — see the
+  // component doc above.
   const host = useMemo<RailHostRegistry>(
     () => ({
       registerLevels,
@@ -152,19 +139,8 @@ export function StandaloneRailHost({
       reportMissing,
       reportBusy,
       toolbarSlot: null,
-      claimFeatureBar,
-      featureBarSlot,
     }),
-    [
-      registerLevels,
-      unregisterLevels,
-      registerExitGuard,
-      popStack,
-      reportMissing,
-      reportBusy,
-      claimFeatureBar,
-      featureBarSlot,
-    ],
+    [registerLevels, unregisterLevels, registerExitGuard, popStack, reportMissing, reportBusy],
   );
 
   return (
@@ -180,12 +156,7 @@ export function StandaloneRailHost({
           `onNavigate` is forwarded straight through, unmodified, to whatever this host's caller
           supplied — see the prop's doc above. */}
       <UnsavedChangesGuard when={guards.size > 0} onNavigate={onNavigate} />
-      {/* `toolbar` is the strip the stack already draws full-width above the rails — exactly where a
-          feature bar belongs. It is rendered only while claimed, and the ref hands its node to
-          FeatureBarPortal; `w-full` because the strip is a flex row and a bar with a flexible
-          space in it has to own the whole width to place anything at its right edge.
-
-          `rootLabel` is the leading crumb, and passing it is what makes the breadcrumb bar EXIST
+      {/* `rootLabel` is the leading crumb, and passing it is what makes the breadcrumb bar EXIST
           here: the bar draws only when the trail is non-empty, and a standalone host's trail is
           empty until something is selected — so without a root the bar would appear on click and
           vanish on Back, which is worse than never having one. The first published level's own
@@ -200,11 +171,6 @@ export function StandaloneRailHost({
         levels={mergedLevels}
         rootLabel={mergedLevels[0]?.title || undefined}
         exitGuard={exitGuard}
-        toolbar={
-          barClaims.size > 0 ? (
-            <div ref={setFeatureBarSlot} className="flex w-full items-center gap-2" />
-          ) : undefined
-        }
       >
         {children}
       </HierarchicalDetailView>

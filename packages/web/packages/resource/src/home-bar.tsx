@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
  * page-level controls live: its search and filters on the left, its primary "Add" on the right.
  *
  * It is deliberately its OWN context rather than a field on {@link RailHostRegistry}, which is
- * where this mechanism started life as the "feature bar" ({@link FeatureBarPortal} in
+ * where this mechanism started life as the "feature bar" (`FeatureBarPortal`, formerly in
  * `rail-host.tsx`). Two reasons, and the first is fatal: {@link RailHostBoundary} reads
  * {@link RailHostContext} to answer "is a host already above me?", and a shell-level provider of
  * that context would tell every feature site that one is — so each would skip its own

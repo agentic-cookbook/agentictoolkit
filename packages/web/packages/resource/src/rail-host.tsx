@@ -38,10 +38,9 @@ export interface RegisteredLevels {
 /**
  * The host-side contract this package OWNS and a host (the hub's workspace shell) provides. Trimmed
  * to exactly the members the publisher hooks below read: level (un)registration, exit-guard
- * registration, the editor toolbar slot, and the feature bar. The host keeps its own internal state
- * (the merged stack, the composite guard, the slot setters) private. The two bar members are
- * optional — a host that renders no feature bar supplies neither, and the publishers degrade to
- * rendering inline.
+ * registration, and the editor toolbar slot. The host keeps its own internal state (the merged
+ * stack, the composite guard, the slot setter) private. `toolbarSlot` is `null` with no host, and
+ * the publisher that reads it ({@link ToolbarPortal}) degrades to rendering inline.
  */
 export interface RailHostRegistry {
   /** Register (or replace) a publisher's rail levels at a depth. Keyed by a stable id so the
@@ -67,21 +66,12 @@ export interface RailHostRegistry {
    *  a host that quietly dropped these would show no spinner anywhere, and nothing would say so. */
   reportBusy: (id: string, levelId: string, busy: boolean) => void;
   /** The DOM node of the shell's full-width button-bar slot; feature editors portal their action
-   *  bar here so it spans the top instead of sitting inside the detail. Null with no host. */
+   *  bar here so it spans the top instead of sitting inside the detail. Null with no host.
+   *  Deliberately not the home bar (`HomeBarPortal`/`HomeBarHost`, `./home-bar`): that strip
+   *  belongs to the PAGE's own controls, this one to whichever EDITOR is open (its save/cancel
+   *  bar) — the two can be on screen together, and sharing one strip would have each silently
+   *  displace the other. */
   toolbarSlot: HTMLElement | null;
-  /** Claim (true) / release (false) the host's FEATURE bar, keyed by a stable publisher id. The
-   *  host renders that strip — and so hands out {@link featureBarSlot} — only while some publisher
-   *  claims it, which is what keeps a feature that mounts no bar from leaving an empty strip above
-   *  every rail. OMITTED by a host that renders no such strip — its absence is how
-   *  {@link FeatureBarPortal} knows to fall back to rendering the bar inline rather than waiting
-   *  for a node that will never arrive. */
-  claimFeatureBar?: (id: string, claimed: boolean) => void;
-  /** The DOM node of the host's full-width FEATURE bar — the strip under the workspace bar where a
-   *  FEATURE mounts its own controls (search, filters, its primary action). Deliberately not
-   *  {@link toolbarSlot}: that one belongs to whichever EDITOR is open (its save/cancel bar), the
-   *  two are on screen together, and sharing one strip would have each silently displace the other.
-   *  Null until a publisher claims it, and on a host that renders no such strip. */
-  featureBarSlot?: HTMLElement | null;
 }
 
 /** The context a host provides (via {@link RailHostContext.Provider}, owning `value`) to publish its
@@ -334,31 +324,4 @@ export function useToolbarPortal(): HTMLElement | null {
 export function ToolbarPortal({ children }: { children: ReactNode }) {
   const slot = useToolbarPortal();
   return slot ? createPortal(children, slot) : <>{children}</>;
-}
-
-/**
- * Renders a FEATURE's own bar — search, filters, its primary action — into the host's full-width
- * strip under the workspace bar, above the rails. Claims the strip while mounted (the host renders
- * no strip for a feature that has no bar) and portals into it once the host hands out the node.
- * Outside a host, or under a host with no such strip, it renders inline where the feature sits,
- * which is the same fallback {@link ToolbarPortal} takes.
- *
- * The claim runs in a LAYOUT effect: claim → host renders the strip → ref → portal all settle in
- * one commit, so the bar is never painted inline first and then moved.
- */
-export function FeatureBarPortal({ children }: { children: ReactNode }) {
-  const ctx = useContext(RailHostContext);
-  const claim = ctx?.claimFeatureBar;
-  const id = useId();
-  useLayoutEffect(() => {
-    if (!claim) return;
-    claim(id, true);
-    return () => claim(id, false);
-  }, [claim, id]);
-  const slot = ctx?.featureBarSlot ?? null;
-  if (slot) return createPortal(children, slot);
-  // A host that owns a strip has simply not handed out the node yet (this render is the one that
-  // claims it) — rendering inline for that beat would mount the bar in the wrong place and remount
-  // it a tick later. Only a host with NO strip, or no host at all, gets the inline fallback.
-  return claim ? null : <>{children}</>;
 }

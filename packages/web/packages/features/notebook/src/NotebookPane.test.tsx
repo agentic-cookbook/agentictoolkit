@@ -4,11 +4,14 @@
 // (@agentic-toolkit/data/notes, .../ecosystems) and @agentic-toolkit/auth's telemetry are
 // mocked, so the level-publish → filter → create → save wiring is exercised, not the transport.
 //
-// The pane PUBLISHES its lists as rail levels rather than rendering them, and publishes the
-// button bar into the host's feature-bar slot. The harness below stands in for that host twice
-// over: it renders the published levels (so their rows are clickable) and it hands the test the
-// level OBJECTS, because half of what this change is about is which affordances a level no
-// longer carries — and an absent `+` has no DOM to assert on.
+// The pane PUBLISHES its lists as rail levels rather than rendering them. The harness below
+// stands in for the rail host twice over: it renders the published levels (so their rows are
+// clickable) and it hands the test the level OBJECTS, because half of what this change is about
+// is which affordances a level no longer carries — and an absent `+` has no DOM to assert on.
+// The button bar publishes into the home bar instead (a separate context — see
+// `resource/src/home-bar.tsx`), which the harness provides no host for; it renders inline via
+// HomeBarPortal's no-host fallback, which is enough for these tests since `screen` queries read
+// the whole document regardless of where a portal target lands.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
@@ -177,9 +180,11 @@ function Rail({ published }: { published: TopicLevel[] }) {
   );
 }
 
-/** A minimal rail host. `claimFeatureBar`/`featureBarSlot` are deliberately absent, which is
- *  the degrade path `FeatureBarPortal` documents: with no host slot the bar renders inline, so
- *  the same test can drive it. */
+/** A minimal rail host. `toolbarSlot` is `null` since no test here opens an editor; the
+ *  feature-bar fields that used to sit beside it are gone from `RailHostRegistry` entirely — the
+ *  button bar now publishes through `HomeBarPortal`'s own context instead (see the file header),
+ *  which this harness mounts no host for, so it renders inline where the same test drives it
+ *  from. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
   const registry: RailHostRegistry = useMemo(

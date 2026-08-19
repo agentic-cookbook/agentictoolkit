@@ -13,7 +13,7 @@ import {
   MasterDetailLeaf,
   useRecordAffordance,
   CreateResourceDialog,
-  FeatureBarPortal,
+  HomeBarPortal,
   useResourceItem,
   type MasterDetailActions,
 } from "@agentic-toolkit/resource";
@@ -650,10 +650,9 @@ export function NotebookPane({
 
   return (
     <>
-      {/* Published into the host's feature-bar slot, under the workspace bar. It sits outside
-          the rail because it acts on the LIST as a whole, not on the level the rail happens
-          to be showing. */}
-      <FeatureBarPortal>
+      {/* Published into the home bar, the strip under the workspace bar. It sits outside the rail
+          because it acts on the LIST as a whole, not on the level the rail happens to be showing. */}
+      <HomeBarPortal>
         <NoteButtonBar
           filters={filters}
           onChange={setFilters}
@@ -663,7 +662,7 @@ export function NotebookPane({
           onEditTags={() => setEditingTags(true)}
           onCreateNote={() => setNewNoteOpen(true)}
         />
-      </FeatureBarPortal>
+      </HomeBarPortal>
 
       {/* Every level in one publication: the ecosystems, the category chain, then the notes.
           StackLevels (not useStackLevel) because the count VARIES with the depth walked into,
