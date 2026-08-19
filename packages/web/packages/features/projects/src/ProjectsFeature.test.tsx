@@ -8,13 +8,17 @@
 //
 // ResourceExplorer PUBLISHES its resource + topic rail levels into a rail HOST (via
 // StackLevels) rather than rendering them itself, so a tiny <Rail> harness backed by the
-// toolkit's RailHostContext renders the published "New Project" rail affordance the same way
-// the hub's workspace shell would. Selection is driven by props (the URL state the route shell
-// would supply), since navigation is mocked.
+// toolkit's RailHostContext renders the published rows the same way the hub's workspace shell
+// would. The filter field and the "New Project" button are NOT on those levels — both are
+// page-level controls ResourceExplorer publishes into the home bar instead (home-bar.tsx), so
+// the harness also wraps in HomeBarHost to draw that strip, the same way the hub's workspace
+// shell does. Selection is driven by props (the URL state the route shell would supply), since
+// navigation is mocked.
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup, within } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  HomeBarHost,
   RailHostContext,
   type RailHostRegistry,
   type RegisteredLevels,
@@ -107,9 +111,11 @@ beforeEach(() => {
 // local statement of intent; do not "fix" the config to match the claim that was here.
 afterEach(cleanup);
 
-/** Renders the published rail — its rows, its empty label, and its affordances (e.g. the "New
- *  Project" button) — the way the workspace shell would. The rows matter since the "All" card
- *  landing was removed: the rail is now the only surface listing the projects. */
+/** Renders the published rail — its rows, its empty label, and any deeper level's own `onNew`
+ *  affordance — the way the workspace shell would. The rows matter since the "All" card landing
+ *  was removed: the rail is now the only surface listing the projects. The top-level resource
+ *  list's own "New Project" affordance is NOT among these — it is a page-level control published
+ *  into the home bar (see `Harness` below), not onto this level. */
 function Rail({ levels }: { levels: TopicLevel[] }) {
   return (
     <div>
@@ -134,8 +140,13 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
 
 /** A minimal rail HOST: it registers ResourceExplorer's published levels and exposes the merged
  *  stack the way the hub's workspace shell would (the shell owns `mergedLevels`; this package owns
- *  only the RailHostContext contract). Stands in for the host so the published "New Project" rail
- *  affordance is drivable. */
+ *  only the RailHostContext contract). Stands in for the host so the rail rows are drivable.
+ *
+ *  Also wraps in `HomeBarHost`: ResourceExplorer's filter field and its "New Project" button are
+ *  no longer on the published rail level at all — both are page-level controls published into the
+ *  home bar (`home-bar.tsx`) instead. Without a host drawing that strip, `HomeBarPortal` falls back
+ *  to rendering them inline, which is not the path the hub's workspace shell (which mounts a real
+ *  `HomeBarHost`) actually takes. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
   const registry: RailHostRegistry = useMemo(
@@ -164,10 +175,12 @@ function Harness({ children }: { children: ReactNode }) {
     .sort((a, b) => a.depth - b.depth)
     .flatMap((e) => e.levels);
   return (
-    <RailHostContext.Provider value={registry}>
-      <Rail levels={mergedLevels} />
-      {children}
-    </RailHostContext.Provider>
+    <HomeBarHost>
+      <RailHostContext.Provider value={registry}>
+        <Rail levels={mergedLevels} />
+        {children}
+      </RailHostContext.Provider>
+    </HomeBarHost>
   );
 }
 

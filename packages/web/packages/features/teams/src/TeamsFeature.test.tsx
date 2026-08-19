@@ -4,11 +4,14 @@
 // worked hardest on. Only the data subpaths (teams, ecosystems) and next/navigation are
 // mocked; the list/rail wiring (useResourceList + ResourceExplorer + the rail-host
 // publish path) runs for real inside the same minimal host harness the sibling features'
-// tests use.
+// tests use. ResourceExplorer's "New Team…" button is not on the published rail level — it is
+// a page-level control published into the home bar (home-bar.tsx), so the harness also wraps
+// in HomeBarHost to draw that strip, the same way the hub's workspace shell does.
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
 import {
+  HomeBarHost,
   RailHostContext,
   type RailHostRegistry,
   type RegisteredLevels,
@@ -114,10 +117,12 @@ function Harness({ children }: { children: ReactNode }) {
     .sort((a, b) => a.depth - b.depth)
     .flatMap((e) => e.levels);
   return (
-    <RailHostContext.Provider value={registry}>
-      <Rail levels={mergedLevels} />
-      {children}
-    </RailHostContext.Provider>
+    <HomeBarHost>
+      <RailHostContext.Provider value={registry}>
+        <Rail levels={mergedLevels} />
+        {children}
+      </RailHostContext.Provider>
+    </HomeBarHost>
   );
 }
 
