@@ -471,7 +471,9 @@ export function ResourceExplorer<T>({
               // draws that exact strip. Nesting one inside the other doubled the border and the
               // padding on all eleven sites that get this bar. `NoteButtonBar`'s search field
               // (the fleet's other bare-field-in-a-home-bar-shaped-strip) is the precedent this
-              // mirrors: unstyled input, no border, no background, no padding — the bar owns those.
+              // mirrors: a plain positioning div around the field and nothing else. The `Input`
+              // keeps its own border and padding — those are the FIELD's, and always were; what
+              // goes away is the second toolbar strip around it, which the bar already draws.
               //
               // The width is deliberate, not incidental: `ListHeader`'s own field wrapper is
               // `flex-1 max-w-xs`, which read predictably inside the rail's fixed-width header but
