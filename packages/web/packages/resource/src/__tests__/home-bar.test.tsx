@@ -99,4 +99,14 @@ describe("HomeBar", () => {
     expect(screen.getByTestId("home-bar-left")).toBeInTheDocument();
     expect(screen.queryByTestId("home-bar-right")).toBeNull();
   });
+
+  // The falsy value `&&` does NOT discard. `count && <Chip/>` yields `0` when the count is zero,
+  // and React renders `0` as text — under an `&&` gate that text lands in the strip itself,
+  // outside both slot divs. The ternary drops it. Asserting the absent TEXT as well as the absent
+  // wrapper is the point: the wrapper is already absent under `&&`, so only the text discriminates.
+  it("renders neither a wrapper nor a stray character for a numeric-zero side", () => {
+    const { container } = render(<HomeBar left={<input aria-label="Filter" />} right={0} />);
+    expect(screen.queryByTestId("home-bar-right")).toBeNull();
+    expect(container.textContent).not.toContain("0");
+  });
 });

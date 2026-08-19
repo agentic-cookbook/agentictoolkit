@@ -84,8 +84,14 @@ function sameFilters(a: FilterState, b: FilterState): boolean {
  *
  * DUAL SELECTION MODE (mirrors PersonasSection): pass `urlSelection` and the open document lives in
  * the URL + is deep-linkable — the `/<slug>/research` route wires this via {@link ResearchFeature}.
- * Omit it — as the embedded ecosystem topic rail does (`renderFeaturePanel("research")`) — and
- * selection is internal state, so opening a document happens IN PLACE without navigating away.
+ * Omit it and selection is internal state, so opening a document happens IN PLACE without
+ * navigating away. NOTHING mounts that second mode today: the hub's `renderFeaturePanel("research")`
+ * arm (`sites/hub/src/components/workspace/feature-panels.tsx`) is unreached — `research` is in no
+ * ecosystem or product topic list and is off the hub's workspace feature rail — so this pane is a
+ * LEVEL-0 surface in practice, which is what lets it publish into the page's home bar
+ * unconditionally (see the `HomeBarPortal` below). An embedded mount would put a deeper,
+ * selection-scoped pane's filters into the HOST page's bar beside that page's own controls; if one
+ * is ever added, gate the publish on `urlSelection` before wiring it.
  */
 export function ResearchPane({
   urlSelection,

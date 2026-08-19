@@ -9,9 +9,9 @@ import { ResearchPane } from "./ResearchPane";
  * URL and is deep-linkable (like personas/ecosystems). Feature links are workspace-relative:
  * `<basePath>/<docId>`, the base held constant while navigating within the workspace.
  *
- * Embedded uses of ResearchPane (the hub's ecosystem topic rail via renderFeaturePanel) render it
- * directly, WITHOUT this entry, so selection stays internal and opening a document never navigates
- * the surface away.
+ * ResearchPane also supports being rendered directly, WITHOUT this entry, so selection stays
+ * internal and opening a document never navigates the surface away — but no host does that today
+ * (the hub's `renderFeaturePanel("research")` arm is unreached). See ResearchPane's header.
  */
 export function ResearchFeature({
   basePath,

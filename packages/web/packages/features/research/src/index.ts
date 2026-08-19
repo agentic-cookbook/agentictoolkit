@@ -9,8 +9,8 @@ export { ResearchFeature } from "./ResearchFeature";
 // re-exported here: this barrel's dist is a "use client" module, so an RSC page that
 // imported the parse helper from it would throw in prod (render-only client refs).
 
-// The embedded pane, exported for the hub's ecosystem topic-rail usage
-// (`renderFeaturePanel("research")` in feature-panels.tsx), which renders it
-// directly — without ResearchFeature's basePath/URL wiring — so opening a document
-// happens in place instead of navigating the workspace away.
+// The pane itself, exported so a host CAN render it directly — without ResearchFeature's
+// basePath/URL wiring — with selection kept internal. The hub's
+// `renderFeaturePanel("research")` arm is the only such call site and it is unreached
+// (`research` is in no topic list), so today every render goes through ResearchFeature.
 export { ResearchPane } from "./ResearchPane";

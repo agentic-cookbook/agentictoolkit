@@ -141,17 +141,23 @@ export function HomeBar({
           only by measuring. Every caller reaches these slots through this same API — the two in
           this package (`ResourceExplorer`, `ResourceLanding`) and anyone downstream, since
           `HomeBar` is exported from the barrel — so the check belongs here, once, rather than in
-          each caller's own gate. */}
-      {left && (
+          each caller's own gate.
+
+          A ternary rather than `&&`, because `&&` does not discard every falsy value: `0` and
+          `NaN` are returned as-is and React renders them as a bare text node, here directly
+          inside the strip, outside both slot divs and outside the `ml-auto` arrangement this
+          component owns. A downstream `left={items.length && <Chip/>}` would print a `0` where
+          the filter belongs. The ternary renders nothing for all of them. */}
+      {left ? (
         <div data-testid="home-bar-left" className="flex min-w-0 items-center gap-2">
           {left}
         </div>
-      )}
-      {right && (
+      ) : null}
+      {right ? (
         <div data-testid="home-bar-right" className="ml-auto flex shrink-0 items-center gap-2">
           {right}
         </div>
-      )}
+      ) : null}
     </>
   );
 }
