@@ -62,7 +62,7 @@ export function SiteHomeRoute<View>({ model }: { model: SiteHomeModel<View> }): 
   const Shell = model.shell ?? SiteHomeShell
 
   return (
-    <Shell workspaceSlug={workspaceSlug} action={model.action}>
+    <Shell workspaceSlug={workspaceSlug}>
       {(scope) => model.render({ ...scope, view })}
     </Shell>
   )

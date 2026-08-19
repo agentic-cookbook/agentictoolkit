@@ -99,21 +99,8 @@ describe("SiteHomeRoute", () => {
     // under noUncheckedIndexedAccess, and a `!` would be asserting the call count a second
     // time. This shape says both things once — one call, and these two props.
     expect(shellProps.mock.calls.map(([props]) => Object.keys(props).sort())).toEqual([
-      ["action", "children", "workspaceSlug"],
+      ["children", "workspaceSlug"],
     ]);
-  });
-
-  it("passes the model's action through to the shell", () => {
-    const action = vi.fn(() => <button type="button">Create Game</button>);
-    const model = defineSiteHome({
-      parse: () => ({}),
-      render: () => <div />,
-      action,
-    });
-
-    render(<SiteHomeRoute model={model} />);
-
-    expect(shellProps.mock.calls[0]?.[0].action).toBe(action);
   });
 
   it("parses ABOVE the shell, so a refused path never mounts it", () => {

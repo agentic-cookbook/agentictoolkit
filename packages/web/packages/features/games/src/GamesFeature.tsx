@@ -10,6 +10,8 @@ import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import {
   ResourceExplorer,
   CreateResourceDialog,
+  HomeBar,
+  HomeBarPortal,
   type ResourceTopic,
 } from "@agentic-toolkit/resource";
 import { GameOverviewPane } from "./GameOverviewPane";
@@ -18,6 +20,7 @@ import { GameContentPane } from "./GameContentPane";
 import { GameConnectionsPane } from "./GameConnectionsPane";
 import { GameEffectsPane } from "./GameEffectsPane";
 import { GameIdentityFields, gameBlank, gameValidate, gameNormalize } from "./GameDetail";
+import { CreateGameAction } from "./CreateGameAction";
 
 /**
  * The games authoring workspace: the game catalog as the top-level rail, and five topics
@@ -28,10 +31,10 @@ import { GameIdentityFields, gameBlank, gameValidate, gameNormalize } from "./Ga
  * read path at all, so a topic for them would render permanently empty. This site builds
  * games; it never shows who is playing them.
  *
- * Creation is the workspace bar's Create Game button, which navigates to the reserved `/new`
- * segment — hence `creating` here rather than a `newLabel` on the rail. Passing both would
- * put two independent copies of the same dialog on screen, because the bar and this feature
- * cannot share state.
+ * Creation is the Create Game button this component publishes into the home bar, which navigates
+ * to the reserved `/new` segment — hence `creating` here rather than a `newLabel` on the rail.
+ * Passing both would put two independent copies of the same dialog on screen: one below the bar's
+ * button click, another below the rail's own "+".
  */
 export function GamesFeature({
   basePath,
@@ -169,6 +172,15 @@ export function GamesFeature({
 
   return (
     <>
+      {/* Create Game, in the home bar. It used to be the WORKSPACE bar's, handed over by the site's
+          home model — a sibling subtree that could see none of this component's state, which is why
+          `ResourceExplorer` here is given no `newLabel`: a rail "+" beside it would have opened a
+          SECOND, independent copy of the dialog. The bar is inside this component now, so that
+          hazard is gone, and creation has exactly one control again. */}
+      <HomeBarPortal>
+        <HomeBar right={<CreateGameAction basePath={basePath} />} />
+      </HomeBarPortal>
+
       <ResourceExplorer
         all={all}
         activeId={activeGameId}
@@ -183,9 +195,8 @@ export function GamesFeature({
         itemIcon={<Gamepad2 size={16} aria-hidden />}
         topics={topics}
         reload={reload}
-        // No `newLabel` ON PURPOSE. Creation is the workspace bar's Create Game button; a rail
-        // `+` beside it would open a SECOND, independent copy of the dialog below, since the
-        // bar and this subtree share no state.
+        // Still no `newLabel`: creation is the home bar's Create Game above, and a rail "+" beside
+        // it would be the same action twice on one page.
         rail={{
           title: "All games",
           help: "Pick a game to edit what it is, how it runs, and what it contains.",
@@ -204,11 +215,11 @@ export function GamesFeature({
         }}
       />
 
-      {/* Create Game is in the workspace BAR, a sibling subtree that cannot see the ecosystem
-          lookup — so the button is always live, and `/new` can be reached in a state that has
-          nowhere to put a game. Say so rather than rendering nothing: without this the click
-          changed the URL and produced no visible response at all. Acknowledging returns to the
-          workspace root, the same place Cancel goes. */}
+      {/* Create Game always links to `/new` — it does not consult `canCreate` before navigating,
+          and `/new` is a URL like any other: reachable by a bookmark, a typed address, or a
+          refresh, not only this button's click. Say so rather than rendering nothing: without
+          this a visit changed the URL and produced no visible response at all. Acknowledging
+          returns to the workspace root, the same place Cancel goes. */}
       {creating && !canCreate && (
         <AlertModal
           open
