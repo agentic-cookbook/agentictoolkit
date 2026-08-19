@@ -16,6 +16,14 @@
 // component under test before this file's fix, and still the shape a naive re-read of
 // `ListHeader`'s source might suggest — carries its OWN `aria-label` on a `role="toolbar"` div,
 // which also matches a loose `/filter/i` text query and makes `getByLabelText` ambiguous.
+//
+// Also pins Task 6 fix round 1's Critical #1: `homeBarRight` is the seam a host that creates by
+// NAVIGATION (games) uses instead of a second `HomeBarPortal` of its own — the bug round 1 shipped
+// was exactly that second portal, landing two `HomeBar`s in the one slot div. The `homeBarRight`
+// describe block below exercises the widened publish gate this prop required: the bar must appear
+// even with zero/unloaded items (a navigating host has no OTHER way to show its control), but the
+// FILTER FIELD must not — there is nothing loaded to filter yet.
+import type { ReactNode } from "react";
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -46,11 +54,14 @@ function renderExplorer({
   items,
   newLabel,
   promoteTopics = false,
+  homeBarRight,
 }: {
   items: Row[] | null;
   newLabel?: string;
   /** Exercises the `!promoteTopics` guard — see the last test below. */
   promoteTopics?: boolean;
+  /** A host's own right-side control — see the `homeBarRight` describe block below. */
+  homeBarRight?: ReactNode;
 }) {
   // A HomeBarHost above the explorer, exactly like SiteHomeShell/WorkspaceChromeProvider mount in
   // the real fleet: without one HomeBarPortal takes its no-host inline fallback and every
@@ -67,6 +78,7 @@ function renderExplorer({
         nameSuffix="Project"
         topics={NO_TOPICS}
         newLabel={newLabel}
+        homeBarRight={homeBarRight}
         rail={{ title: "All", help: "help", emptyLabel: "None yet." }}
       />
     </HomeBarHost>,
@@ -122,5 +134,58 @@ describe("ResourceExplorer publishes into the home bar", () => {
     await userEvent.type(field, "Alph");
     expect(screen.getByText("Alpha")).toBeInTheDocument();
     expect(screen.queryByText("Beta")).toBeNull();
+  });
+});
+
+describe("ResourceExplorer's homeBarRight — a host's own right-side control", () => {
+  it("renders homeBarRight in the bar", async () => {
+    renderExplorer({
+      items: [{ id: "a", label: "Alpha" }],
+      homeBarRight: <button type="button">Host Action</button>,
+    });
+    const strip = await screen.findByTestId("home-bar");
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Host Action" }));
+  });
+
+  it("publishes the bar even with zero items, and with NO searchbox, when homeBarRight is given", async () => {
+    renderExplorer({
+      items: [],
+      homeBarRight: <button type="button">Host Action</button>,
+    });
+    // Without homeBarRight this state claims no bar at all (the third test above) — an empty
+    // list has nothing to filter. With it, the bar must still appear: a host that creates by
+    // navigation, like games, has no other way to show its control on an empty workspace.
+    const strip = await screen.findByTestId("home-bar");
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Host Action" }));
+    // But the FILTER FIELD stays gated on there being something loaded to filter — homeBarRight
+    // widens the BAR's gate, not the field's.
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("keeps left (filter) before right (homeBarRight) in ONE HomeBar call, not two", async () => {
+    renderExplorer({
+      items: [{ id: "a", label: "Alpha" }],
+      newLabel: "New Project…",
+      homeBarRight: <button type="button">Host Action</button>,
+    });
+    const strip = await screen.findByTestId("home-bar");
+    // `HomeBarHost` draws exactly one `home-bar` div by construction (one slot, shared by every
+    // claimant — see home-bar.tsx), so a `getAllByTestId("home-bar")` count can never tell a
+    // single combined `<HomeBar left right>` apart from two separate `<HomeBar>` calls both
+    // portaling into that one slot: round 1's actual bug (a second, host-mounted `HomeBarPortal`
+    // beside this component's own) produced one `home-bar` div either way. What DID differ, and
+    // is what broke the layout, is ORDER: the second portal's `right` (an `ml-auto` cluster)
+    // mounted BEFORE this component's own `left`, which put the filter after an `ml-auto` and
+    // flushed it right too. So the real guard is that `left` precedes `right` in the DOM — true
+    // only when a single `<HomeBar left right>` call decides both slots at once, as `homeBarRight`
+    // now guarantees by routing through here rather than a second portal.
+    const field = screen.getByRole("searchbox");
+    const hostAction = screen.getByRole("button", { name: "Host Action" });
+    expect(strip).toContainElement(field);
+    expect(strip).toContainElement(hostAction);
+    expect(field.compareDocumentPosition(hostAction) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // homeBarRight also wins the right slot outright over newLabel's own button — see the
+    // component's own comment on why passing both would ask for two create controls at once.
+    expect(screen.queryByRole("button", { name: /New Project/ })).toBeNull();
   });
 });

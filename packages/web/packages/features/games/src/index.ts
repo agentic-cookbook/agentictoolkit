@@ -80,4 +80,3 @@ export { IntegerInput, OptionalIntegerInput } from "./IntegerInput";
 export { inlineUrlSelection } from "./inlineSelection";
 export { sortByGroup } from "./group";
 export { GamesFeature } from "./GamesFeature";
-export { CreateGameAction } from "./CreateGameAction";

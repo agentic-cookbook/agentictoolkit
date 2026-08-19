@@ -117,6 +117,7 @@ export function ResourceExplorer<T>({
   renderDialog,
   reload,
   prefetchItem,
+  homeBarRight,
 }: {
   all?: boolean;
   /** Promote the TOPICS to the first (and only) rail: no resource list, no "All" state. The
@@ -171,6 +172,14 @@ export function ResourceExplorer<T>({
    *  Write-only, like the route half: it must return nothing and never throw, or resting on a
    *  row becomes a user-visible event. */
   prefetchItem?: (id: string) => void;
+  /** The host's OWN control for the home bar's right side, for a host that creates by
+   *  NAVIGATION rather than through `newLabel`/`renderDialog` (e.g. games' Create Game link,
+   *  which pushes a reserved URL segment and opens the host's own dialog off it, never this
+   *  component's `newOpen`). Takes over the bar's right slot instead of a `newLabel` button —
+   *  see the render below for why passing both would be asking for two create controls in the
+   *  same slot — and, unlike `newLabel`, keeps the bar published even while `items` is empty or
+   *  still loading, since a host publishing this way has no OTHER way to show the control. */
+  homeBarRight?: ReactNode;
 }): ReactElement {
   const router = useRouter();
   // Every SELECT in this explorer routes through here, so `{ replace: true }` — which the stack
@@ -446,63 +455,69 @@ export function ResourceExplorer<T>({
   // and publish through the SAME StackLevels path, so a topic pane's publishers — the master/detail
   // list level AND, crucially, its leaf editor's unsaved-work guard — reach the HTD exactly as they
   // do in the hub shell (without a host they silently no-op and edits are discarded unprompted).
+  // The filter field's own condition, separate from the bar's: a filter over nothing to filter
+  // is noise, and over a list that has not loaded it is a control that cannot work yet — the
+  // same reasons the rail header applied before the field moved here. `!promoteTopics` preserves
+  // an invariant the OLD code got for free: `resourceLevel` — the object this field used to live
+  // on — was only ever spliced into `levels` when `!promoteTopics` (see `levels` below), so its
+  // `headerSlot` never rendered in promoteTopics mode regardless of this condition. A filter field
+  // wired to `filter`/`setFilter` narrows a `resourceLevel` no promoteTopics host ever renders.
+  const hasEntities = !promoteTopics && loaded && allEntityItems.length > 0;
   const published = (
     <>
-      {/* Shown only once the list has ARRIVED with something in it — the same condition the rail
-          header applied before the move, and for the same reasons: a filter over nothing to filter
-          is noise, and over a list that has not loaded it is a control that cannot work yet. The
-          "New …" button rides the same condition so the bar appears once as one row, rather than a
-          button appearing first and growing a field beside it a moment later.
-
-          `!promoteTopics` preserves an invariant the OLD code got for free: `resourceLevel` — the
-          object these controls used to live on — was only ever spliced into `levels` when
-          `!promoteTopics` (see `levels` below), so its `headerSlot`/`onNew` never rendered in
-          promoteTopics mode regardless of this condition. Dropping the guard here would put a
-          "New …" button in the bar whose `renderDialog` a promoteTopics host typically omits
-          (the promoted resource-list TOPIC owns its own create dialog instead — see `newLabel`'s
-          doc), and a filter field wired to `filter`/`setFilter` that narrows a `resourceLevel` no
-          host ever renders in that mode. */}
-      {!promoteTopics && loaded && allEntityItems.length > 0 && (
+      {/* The bar publishes whenever there is something to filter (`hasEntities`) OR the host has
+          handed us its own right-side control (`homeBarRight`) — a host that creates by
+          navigation, like games, has no OTHER place to put that control, so the bar must appear
+          even with zero items or before the list has loaded. `hasEntities` alone still gates the
+          FILTER FIELD below: an empty/loading list has nothing to filter, `homeBarRight` or not. */}
+      {(hasEntities || homeBarRight != null) && (
         <HomeBarPortal>
           <HomeBar
             left={
-              // A bare field, NOT `ListHeader`: that block IS a `ButtonBar` — the same recessed
-              // strip (border-y + bg + px-6/py-2) every rail toolbar uses — and `HomeBar` already
-              // draws that exact strip. Nesting one inside the other doubled the border and the
-              // padding on all eleven sites that get this bar. `NoteButtonBar`'s search field
-              // (the fleet's other bare-field-in-a-home-bar-shaped-strip) is the precedent this
-              // mirrors: a plain positioning div around the field and nothing else. The `Input`
-              // keeps its own border and padding — those are the FIELD's, and always were; what
-              // goes away is the second toolbar strip around it, which the bar already draws.
-              //
-              // The width is deliberate, not incidental: `ListHeader`'s own field wrapper is
-              // `flex-1 max-w-xs`, which read predictably inside the rail's fixed-width header but
-              // has nothing to grow against inside `HomeBar`'s `left` slot (a shrink-to-fit flex
-              // item, not a sized column) — the field would collapse to its intrinsic min-content
-              // width instead. `w-64 min-w-40 shrink`, copied from `NoteButtonBar`, is the fleet's
-              // existing answer to sizing a field in this exact kind of strip.
-              <div role="search" className="relative w-64 min-w-40 shrink">
-                <Search
-                  aria-hidden
-                  className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
-                />
-                <Input
-                  type="search"
-                  value={filter}
-                  aria-label={`Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`}
-                  placeholder="Filter…"
-                  className="pl-8"
-                  onChange={(e) => setFilter(e.target.value)}
-                />
-              </div>
+              hasEntities ? (
+                // A bare field, NOT `ListHeader`: that block IS a `ButtonBar` — the same recessed
+                // strip (border-y + bg + px-6/py-2) every rail toolbar uses — and `HomeBar` already
+                // draws that exact strip. Nesting one inside the other doubled the border and the
+                // padding on all eleven sites that get this bar. `NoteButtonBar`'s search field
+                // (the fleet's other bare-field-in-a-home-bar-shaped-strip) is the precedent this
+                // mirrors: a plain positioning div around the field and nothing else. The `Input`
+                // keeps its own border and padding — those are the FIELD's, and always were; what
+                // goes away is the second toolbar strip around it, which the bar already draws.
+                //
+                // The width is deliberate, not incidental: `ListHeader`'s own field wrapper is
+                // `flex-1 max-w-xs`, which read predictably inside the rail's fixed-width header but
+                // has nothing to grow against inside `HomeBar`'s `left` slot (a shrink-to-fit flex
+                // item, not a sized column) — the field would collapse to its intrinsic min-content
+                // width instead. `w-64 min-w-40 shrink`, copied from `NoteButtonBar`, is the fleet's
+                // existing answer to sizing a field in this exact kind of strip.
+                <div role="search" className="relative w-64 min-w-40 shrink">
+                  <Search
+                    aria-hidden
+                    className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
+                  />
+                  <Input
+                    type="search"
+                    value={filter}
+                    aria-label={`Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`}
+                    placeholder="Filter…"
+                    className="pl-8"
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                </div>
+              ) : undefined
             }
             right={
-              newLabel != null ? (
+              // `homeBarRight` wins outright rather than sitting beside `newLabel`'s button: a
+              // host that passed both would be asking for two create controls in the same slot,
+              // the exact hazard `homeBarRight` exists to avoid (see its doc above). No current
+              // host passes both — games, the only `homeBarRight` caller, passes no `newLabel`.
+              homeBarRight ??
+              (newLabel != null ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
                   <Plus size={16} aria-hidden />
                   {newButtonLabel}
                 </Button>
-              ) : undefined
+              ) : undefined)
             }
           />
         </HomeBarPortal>

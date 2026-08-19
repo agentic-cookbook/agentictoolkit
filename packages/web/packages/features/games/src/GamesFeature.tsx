@@ -10,8 +10,6 @@ import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import {
   ResourceExplorer,
   CreateResourceDialog,
-  HomeBar,
-  HomeBarPortal,
   type ResourceTopic,
 } from "@agentic-toolkit/resource";
 import { GameOverviewPane } from "./GameOverviewPane";
@@ -31,10 +29,11 @@ import { CreateGameAction } from "./CreateGameAction";
  * read path at all, so a topic for them would render permanently empty. This site builds
  * games; it never shows who is playing them.
  *
- * Creation is the Create Game button this component publishes into the home bar, which navigates
- * to the reserved `/new` segment — hence `creating` here rather than a `newLabel` on the rail.
- * Passing both would put two independent copies of the same dialog on screen: one below the bar's
- * button click, another below the rail's own "+".
+ * Creation is the Create Game button this component hands to `ResourceExplorer` as
+ * `homeBarRight`, which publishes it into the home bar. The button navigates to the reserved
+ * `/new` segment — hence `creating` here rather than a `newLabel` on the rail — because a
+ * `newLabel` button would open `ResourceExplorer`'s own independent create dialog instead of
+ * this feature's, putting two unrelated create flows on screen at once.
  */
 export function GamesFeature({
   basePath,
@@ -172,15 +171,6 @@ export function GamesFeature({
 
   return (
     <>
-      {/* Create Game, in the home bar. It used to be the WORKSPACE bar's, handed over by the site's
-          home model — a sibling subtree that could see none of this component's state, which is why
-          `ResourceExplorer` here is given no `newLabel`: a rail "+" beside it would have opened a
-          SECOND, independent copy of the dialog. The bar is inside this component now, so that
-          hazard is gone, and creation has exactly one control again. */}
-      <HomeBarPortal>
-        <HomeBar right={<CreateGameAction basePath={basePath} />} />
-      </HomeBarPortal>
-
       <ResourceExplorer
         all={all}
         activeId={activeGameId}
@@ -195,8 +185,13 @@ export function GamesFeature({
         itemIcon={<Gamepad2 size={16} aria-hidden />}
         topics={topics}
         reload={reload}
-        // Still no `newLabel`: creation is the home bar's Create Game above, and a rail "+" beside
-        // it would be the same action twice on one page.
+        // Create Game, in the home bar: handed to `ResourceExplorer` as `homeBarRight` rather
+        // than as a `newLabel`, because the two are different creation mechanisms, not one
+        // guarded one. This feature creates by NAVIGATING to the reserved `/new` segment (see
+        // `creating` below) and opens its OWN dialog off that URL; a `newLabel` button instead
+        // opens `ResourceExplorer`'s independent `newOpen` dialog. Passing both would put two
+        // unrelated create flows in the same bar.
+        homeBarRight={<CreateGameAction basePath={basePath} />}
         rail={{
           title: "All games",
           help: "Pick a game to edit what it is, how it runs, and what it contains.",
@@ -237,8 +232,8 @@ export function GamesFeature({
         />
       )}
 
-      {/* The URL is the dialog's only trigger: `/<workspace>/new`, pushed by the workspace
-          bar's button. Closing returns to the workspace root; creating routes to the new game. */}
+      {/* The URL is the dialog's only trigger: `/<workspace>/new`, pushed by Create Game in the
+          home bar. Closing returns to the workspace root; creating routes to the new game. */}
       {creating && canCreate && (
         <CreateResourceDialog
           ariaLabel="New game"

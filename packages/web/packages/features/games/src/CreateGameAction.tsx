@@ -5,14 +5,16 @@ import { Plus } from "lucide-react";
 import { buttonVariants } from "@agentic-toolkit/ui/components/button";
 
 /**
- * The home bar's right-justified Create Game control, published by `GamesFeature` via
- * `HomeBarPortal`.
+ * The home bar's right-justified Create Game control. `GamesFeature` renders it and hands it to
+ * `ResourceExplorer` as `homeBarRight`, which publishes it into the bar.
  *
- * It NAVIGATES rather than opening a dialog by state. `ResourceExplorer`'s create dialog opens
- * only from its own internal `useState` — there is no external signal to send it. So the button
- * pushes `<basePath>/new`, the reserved first segment `parseGamesPath` understands, and the
- * feature opens the dialog from the parsed URL. Deep-linkable and refresh-surviving, which is
- * how the rest of the fleet addresses state anyway.
+ * It NAVIGATES rather than opening GamesFeature's own create dialog (`CreateResourceDialog`)
+ * directly: `creating` is `GamesFeature`'s `creating` PROP, derived upstream from the URL by
+ * `parseGamesPath` — not component state this button could set, even though it ends up in the
+ * same React tree as the dialog. So the button pushes `<basePath>/new`, the reserved first
+ * segment `parseGamesPath` understands, and `GamesFeature` opens its dialog once it reads
+ * `creating` off the parsed URL. A URL like any other: reachable by a bookmark, a typed
+ * address, or a refresh, not only this button's click.
  *
  * A <Link>, not an onClick push: it is a navigation, so it should be middle-clickable and
  * copyable like one.
