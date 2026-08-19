@@ -19,6 +19,7 @@ import {
 } from "@agentic-toolkit/ui/components/toggle-group";
 import { FeatureTitle } from "./master-detail/MasterDetailLayout";
 import { readViewMode, writeViewMode, type ViewMode } from "@agentic-toolkit/data";
+import { HomeBar, HomeBarPortal } from "./home-bar";
 
 /**
  * The "All" landing for a resource tab: a filterable index of every resource,
@@ -82,51 +83,58 @@ export function ResourceLanding<T>({
       <FeatureTitle title={title} help={help} />
       <div className="flex flex-col gap-4 px-6 pt-2 pb-6">
         {(onNew || hasItems) && (
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              {onNew && (
-                <Button variant="outline" size="sm" onClick={onNew}>
-                  <Plus size={16} aria-hidden />
-                  {newLabel ?? "New"}
-                </Button>
-              )}
-            </div>
-            {hasItems && (
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search
-                    size={14}
-                    aria-hidden
-                    className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-apt-text-dim"
-                  />
-                  <Input
-                    type="search"
-                    aria-label="Filter"
-                    placeholder="Filter…"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    className="h-8 w-44 pl-8 sm:w-56"
-                  />
-                </div>
-                <ToggleGroup
-                  aria-label="View as"
-                  value={[view]}
-                  onValueChange={(next: string[]) => {
-                    const v = next[0];
-                    // Single-select: ignore the empty array from re-clicking the active item.
-                    if (v === "cards" || v === "list") chooseView(v);
-                  }}
-                >
-                  <ToggleGroupItem value="cards" aria-label="View as cards" title="Cards">
-                    <LayoutGrid size={16} aria-hidden />
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="list" aria-label="View as list" title="List">
-                    <List size={16} aria-hidden />
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              </div>
-            )}
-          </div>
+          <HomeBarPortal>
+            {/* The sides SWAP here relative to the row this replaces. That row put Add on the left
+                and search on the right; the fleet rule is the other way round, and this landing was
+                the fleet's only exception to it. */}
+            <HomeBar
+              left={
+                hasItems ? (
+                  <>
+                    <div className="relative">
+                      <Search
+                        size={14}
+                        aria-hidden
+                        className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-apt-text-dim"
+                      />
+                      <Input
+                        type="search"
+                        aria-label="Filter"
+                        placeholder="Filter…"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        className="h-8 w-44 pl-8 sm:w-56"
+                      />
+                    </div>
+                    <ToggleGroup
+                      aria-label="View as"
+                      value={[view]}
+                      onValueChange={(next: string[]) => {
+                        const v = next[0];
+                        // Single-select: ignore the empty array from re-clicking the active item.
+                        if (v === "cards" || v === "list") chooseView(v);
+                      }}
+                    >
+                      <ToggleGroupItem value="cards" aria-label="View as cards" title="Cards">
+                        <LayoutGrid size={16} aria-hidden />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="list" aria-label="View as list" title="List">
+                        <List size={16} aria-hidden />
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </>
+                ) : undefined
+              }
+              right={
+                onNew ? (
+                  <Button variant="outline" size="sm" onClick={onNew}>
+                    <Plus size={16} aria-hidden />
+                    {newLabel ?? "New"}
+                  </Button>
+                ) : undefined
+              }
+            />
+          </HomeBarPortal>
         )}
 
         {items === null ? (
