@@ -2,7 +2,7 @@
 
 import { useId, type ReactNode } from 'react'
 
-import { noAutofillProps } from '../../internal/autofill'
+import { noAutofillProps, noAutofillPropsFor } from '../../internal/autofill'
 
 interface BaseTextFieldProps {
   label?: ReactNode
@@ -18,6 +18,15 @@ interface BaseTextFieldProps {
 
 export interface TextFieldProps extends BaseTextFieldProps {
   type?: 'text' | 'email' | 'url' | 'tel'
+  /**
+   * A real autofill token (`email`, `tel`, `url`, `name`, …) when this field holds the
+   * READER'S own detail rather than a record's — a settings panel asking for their own
+   * contact address is the case this exists for. Naming one hands the field back to the
+   * browser and to every password manager; leaving it out (or passing `"off"`) keeps the
+   * fleet default, which is to keep all of them out. The prop interface here is closed,
+   * so this is the only way a caller can say so.
+   */
+  autoComplete?: string
 }
 
 export function TextField({
@@ -31,6 +40,7 @@ export function TextField({
   className,
   id,
   type = 'text',
+  autoComplete,
 }: TextFieldProps) {
   const generatedId = useId()
   const fieldId = id ?? generatedId
@@ -52,7 +62,8 @@ export function TextField({
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
           rows={4}
-          {...noAutofillProps}
+          autoComplete={autoComplete}
+          {...noAutofillPropsFor(autoComplete)}
         />
       ) : (
         <input
@@ -63,7 +74,10 @@ export function TextField({
           placeholder={placeholder}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}
-          {...noAutofillProps}
+          // Written before the spread, so a real token wins: the helper returns an empty
+          // bag for one, and the full six attributes for `undefined` or `"off"`.
+          autoComplete={autoComplete}
+          {...noAutofillPropsFor(autoComplete)}
         />
       )}
       {hint && <p className="aws-field__hint">{hint}</p>}

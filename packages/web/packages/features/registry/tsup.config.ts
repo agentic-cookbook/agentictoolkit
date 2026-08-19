@@ -1,9 +1,9 @@
 import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
-// Six entries so the built output lands at the exact paths package.json's `exports` map
-// promises (`dist/profile.js`, `dist/types.js`, `dist/client.js`, `dist/editors/index.js`,
-// `dist/contact/index.js`, `dist/viewer/index.js`). `profile.ts` and `types.ts` are
+// Seven entries so the built output lands at the exact paths package.json's `exports` map
+// promises (`dist/profile.js`, `dist/types.js`, `dist/autofill.js`, `dist/client.js`,
+// `dist/editors/index.js`, `dist/contact/index.js`, `dist/viewer/index.js`). `profile.ts` and `types.ts` are
 // re-export-only and carry no directive, but `editors/index.ts`, `contact/index.ts` and
 // `viewer/index.ts` all re-export 'use client' components — bitbag's config is the template
 // (see its comment) rather than the shared `featureTsup` preset, because that preset's
@@ -16,6 +16,8 @@ export default defineConfig({
   entry: {
     profile: 'src/profile.ts',
     types: 'src/types.ts',
+    // Plain string constants, no directive and no React — see src/autofill.ts.
+    autofill: 'src/autofill.ts',
     client: 'src/client.ts',
     'editors/index': 'src/editors/index.ts',
     'contact/index': 'src/contact/index.ts',

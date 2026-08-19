@@ -12,6 +12,11 @@
       "development": "./src/profile.ts",
       "import": "./dist/profile.js"
     },
+    "./autofill": {
+      "types": "./dist/autofill.d.ts",
+      "development": "./src/autofill.ts",
+      "import": "./dist/autofill.js"
+    },
     "./types": {
       "types": "./dist/types.d.ts",
       "development": "./src/types.ts",

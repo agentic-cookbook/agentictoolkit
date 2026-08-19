@@ -238,9 +238,18 @@ export function ContactsCard({ rowExtra }: ContactsCardProps = {}): ReactElement
                 <Label htmlFor="add-value" className="text-xs text-apt-text-muted">
                   {type === "email" ? "Email address" : "Phone number (E.164)"}
                 </Label>
+                {/* This field holds the READER'S own address, not a record's — it is
+                    where their verification codes will be sent — so it is one of the few
+                    in the fleet that genuinely wants the browser to offer to fill it.
+                    Naming the standard token is the whole of that request: `Input` opts a
+                    field out only while it names none, so this both restores autofill here
+                    and states why, in the one attribute a browser already reads. The token
+                    follows the Type select, because a field that says `email` while showing
+                    a phone number offers the wrong thing. */}
                 <Input
                   id="add-value"
                   value={value}
+                  autoComplete={type === "email" ? "email" : "tel"}
                   onChange={(e) => setValue(e.target.value)}
                   placeholder={type === "email" ? "you@example.com" : "+15555550123"}
                   required

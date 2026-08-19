@@ -4,6 +4,7 @@
 
 // src/details/DetailsRail.tsx
 import { useRef, useState } from "react";
+import { noAutofillProps } from "@agentic-toolkit/ui/lib/autofill";
 import { cn } from "@agentic-toolkit/ui/lib/utils";
 import { railLinkVariants } from "@agentic-toolkit/ui/lib/nav-rail";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
@@ -46,7 +47,8 @@ function DetailsRail({ topics, siteLabel }) {
         onChange: (e) => setQuery(e.target.value),
         onKeyDown: onInputKey,
         "aria-label": `Filter ${siteLabel} topics`,
-        "aria-controls": "adh-details-rail-nav"
+        "aria-controls": "adh-details-rail-nav",
+        ...noAutofillProps
       }
     ),
     /* @__PURE__ */ jsxs(

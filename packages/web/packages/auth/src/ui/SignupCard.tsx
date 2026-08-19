@@ -116,15 +116,19 @@ export function SignupCard({
           {error && <div className="auth-card__error">{error}</div>}
           <div className="auth-card__field">
             <label htmlFor="signup-name" className="auth-card__label">Name</label>
-            <input id="signup-name" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="auth-card__input" />
+            <input id="signup-name" type="text" autoComplete="name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="auth-card__input" />
           </div>
           <div className="auth-card__field">
             <label htmlFor="signup-email" className="auth-card__label">Email</label>
-            <input id="signup-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="auth-card__input" />
+            <input id="signup-email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="auth-card__input" />
           </div>
           <div className="auth-card__field">
             <label htmlFor="signup-password" className="auth-card__label">Password</label>
-            <input id="signup-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="auth-card__input" />
+            {/* `new-password` (not `current-password`): it tells a manager to OFFER a
+                generated password and to save the pair, which is the whole point of the
+                token on a sign-up form — and it is what keeps this field, and the two
+                above it, on the manager-friendly side of the fleet's opt-out rule. */}
+            <input id="signup-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} className="auth-card__input" />
           </div>
           <button type="submit" disabled={isSubmitting} className="auth-card__submit">
             {isSubmitting ? 'Creating account…' : emailButtonLabel}

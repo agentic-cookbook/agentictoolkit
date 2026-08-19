@@ -72,10 +72,47 @@ describe('Input / Textarea password-manager opt-out', () => {
   it('lets a caller clear one attribute without giving up the rest', () => {
     // The spread goes in BEFORE `{...props}` precisely so this works: a field
     // fighting one manager's heuristic can drop that one attribute and keep the
-    // other four.
+    // other five.
     render(<Input aria-label="Odd one" data-1p-ignore={undefined} />)
     const field = screen.getByLabelText('Odd one')
     expect(field).not.toHaveAttribute('data-1p-ignore')
-    expect(field).toHaveAttribute('data-lpignore', 'true')
+    for (const [attr, value] of OPT_OUT_ATTRS) {
+      if (attr === 'data-1p-ignore') continue
+      expect(field).toHaveAttribute(attr, value)
+    }
+  })
+
+  it('is not degraded by an explicit autoComplete={undefined}', () => {
+    // The one prop that must NOT be clearable that way, because clearing it is
+    // never what the caller meant. `<Input autoComplete={x}/>` with an optional
+    // `x` that happens to be absent passes the key explicitly as `undefined` —
+    // a wrapper forwarding its own optional prop does this without meaning
+    // anything by it — and that used to reach `{...props}` and delete the bag's
+    // own `off`, leaving five vendor attributes and nothing said to the browser.
+    render(<Input aria-label="Forwarded" autoComplete={undefined} />)
+    const field = screen.getByLabelText('Forwarded')
+    for (const [attr, value] of OPT_OUT_ATTRS) {
+      expect(field).toHaveAttribute(attr, value)
+    }
+  })
+
+  it('reads a token case-insensitively, so "Off" is still no token', () => {
+    // The HTML attribute is case-insensitive, so `"Off"` is the same instruction
+    // as `"off"`. A raw `!== 'off'` read it as a real token and handed the field
+    // back to every manager — with the field still rendering, still saying off.
+    render(<Input aria-label="Shouty" autoComplete=" Off " />)
+    const field = screen.getByLabelText('Shouty')
+    for (const [attr, value] of OPT_OUT_ATTRS) {
+      expect(field).toHaveAttribute(attr, value)
+    }
+  })
+
+  it('still emits nothing for a token that only differs in case', () => {
+    render(<Input aria-label="Shouty password" type="password" autoComplete="Current-Password" />)
+    const field = screen.getByLabelText('Shouty password')
+    for (const [attr] of OPT_OUT_ATTRS) {
+      if (attr === 'autocomplete') continue
+      expect(field).not.toHaveAttribute(attr)
+    }
   })
 })

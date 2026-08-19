@@ -99,22 +99,32 @@ export function FilteredList<T>(props: FilteredListProps<T>) {
 
   return (
     <div className={rootClass}>
-      <input
-        type="text"
-        className="fl-input"
-        value={inputValue}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        autoFocus={autoFocus}
-        role="combobox"
-        aria-expanded={visible.length > 0}
-        aria-controls={listId}
-        aria-activedescendant={
-          highlighted !== undefined ? `${listId}-${getId(highlighted)}` : undefined
-        }
-        {...noAutofillProps}
-      />
+      {/* A form around the field, for the reason ChatInput.tsx in the persona toolkit
+          records from an iOS 26 measurement: a field with no form ancestor is scoped
+          for autofill against the whole DOCUMENT, so Safari classifies it from whatever
+          else the page says and offers the reader's own contact card over it. The form
+          is a plain block in `.fl-root`'s column flex and the input is still
+          `width: 100%`, so it draws identically; `onSubmit` stops the navigation an
+          implicit submit would perform, since Enter is already handled by
+          `handleKeyDown`. */}
+      <form role="search" onSubmit={(e) => e.preventDefault()}>
+        <input
+          type="text"
+          className="fl-input"
+          value={inputValue}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          autoFocus={autoFocus}
+          role="combobox"
+          aria-expanded={visible.length > 0}
+          aria-controls={listId}
+          aria-activedescendant={
+            highlighted !== undefined ? `${listId}-${getId(highlighted)}` : undefined
+          }
+          {...noAutofillProps}
+        />
+      </form>
       {total === 0 ? (
         <div className="fl-empty">No items.</div>
       ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@agentic-toolkit/ui/components/input";
+import { noAutofillProps } from "@agentic-toolkit/ui/lib/autofill";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
@@ -318,9 +319,19 @@ export function ApiKeyFields({ provider, draft, onChange, config }: IntegrationF
         return (
           <div key={f.key} className="flex flex-col gap-2">
             <Label htmlFor={fieldId}>{f.label}</Label>
+            {/* The one place in the fleet that names an autofill token DEFENSIVELY
+                rather than because it wants a manager. `new-password` is what stops
+                Chrome offering the reader's saved site password here — but a token is
+                also how a field asks `noAutofillPropsFor` to hand it back, so on its
+                own it would opt this field IN, and every manager would offer to save
+                an ecosystem's third-party provider secret as the account credential.
+                Spreading the bag first and re-asserting the token after is both:
+                `Input` sees a token and adds nothing of its own, and the five vendor
+                ignore attributes arrive from here. */}
             <Input
               id={fieldId}
               type={f.secret ? "password" : "text"}
+              {...noAutofillProps}
               autoComplete={f.secret ? "new-password" : "off"}
               value={draft.fields[f.key] ?? ""}
               placeholder={
@@ -385,9 +396,12 @@ export function OAuthFields({ provider, draft, onChange, config }: IntegrationFi
 
       <div className="flex flex-col gap-2">
         <Label htmlFor={secretId}>Client secret</Label>
+        {/* Defensive token, bag spread first — see the note on the spec-driven
+            secret field above. */}
         <Input
           id={secretId}
           type="password"
+          {...noAutofillProps}
           autoComplete="new-password"
           value={draft.clientSecret}
           placeholder={

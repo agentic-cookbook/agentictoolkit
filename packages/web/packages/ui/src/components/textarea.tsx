@@ -5,14 +5,15 @@ import { cn } from "../lib/utils"
 import { fieldShellClass } from "./input"
 
 // Themed with the family `apt-*` token utilities to match the sibling Input/Card.
-function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {
+function Textarea({ className, autoComplete, ...props }: React.ComponentProps<"textarea">) {
   return (
     <textarea
       data-slot="textarea"
-      // Same opt-out as Input — see lib/autofill. A textarea is never a
-      // credential, but managers still decorate one when the page reads like a
-      // form to them.
-      {...noAutofillPropsFor(props.autoComplete)}
+      // Same opt-out as Input, destructured for the same reason — see
+      // lib/autofill and Input's comment. A textarea is never a credential, but
+      // managers still decorate one when the page reads like a form to them.
+      autoComplete={autoComplete}
+      {...noAutofillPropsFor(autoComplete)}
       className={cn(
         fieldShellClass,
         "flex min-h-16 w-full px-3 py-2 text-sm text-apt-text transition-colors outline-none",

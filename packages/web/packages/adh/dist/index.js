@@ -163,7 +163,7 @@ function NavLinkItem({ link }) {
 }
 
 // src/header/NavigationPopover.tsx
-import { cn } from "@agentic-toolkit/ui";
+import { cn, noAutofillProps } from "@agentic-toolkit/ui";
 import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
 import {
   DropdownMenu as DropdownMenu2,
@@ -510,7 +510,7 @@ function NavigationPopover({
                   "aria-expanded": true,
                   "aria-controls": `${uid}-list`,
                   "aria-activedescendant": activeId,
-                  autoComplete: "off",
+                  ...noAutofillProps,
                   spellCheck: false,
                   value: query,
                   onChange: (event) => {

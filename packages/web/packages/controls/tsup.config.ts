@@ -50,6 +50,15 @@ export default defineConfig({
   clean: true,
   dts: false,
   bundle: true,
+  // Splitting stays ON here, unlike features/registry and bitbag, which turn it off
+  // because splitting + preserve-directives can strip the `'use client'` banner off a
+  // hoisted shared chunk. `src/internal/autofill.ts` is this package's first module
+  // shared across entries, so that combination is now live — and the built output was
+  // checked rather than assumed: every entry's directive matches its source (38/38), the
+  // chunk the autofill constants landed in carries no directive at all (they are plain
+  // strings, correctly server-safe), and the only directive-carrying chunks are imported
+  // by the client entries and the barrels that re-export them, which is what those
+  // barrels already did before this package shared anything.
   splitting: true,
   outExtension: () => ({ js: '.js' }),
   external: [

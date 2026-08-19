@@ -58,7 +58,8 @@
     "build:css": "node ../../copy-css.mjs",
     "dev": "tsup --watch",
     "clean": "rm -rf dist .turbo",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@agentic-toolkit/model": "workspace:*",
@@ -69,12 +70,15 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@agentic-toolkit/themes": "workspace:*",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
     "jsdom": "^29.0.2",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"

@@ -435,9 +435,14 @@ export function LoginCard({
           </div>
           <div className="auth-card__field">
             <label htmlFor="auth-password" className="auth-card__label">{passwordLabel}</label>
+            {/* The one field on this card that WANTS a password manager. It says so with
+                the standard token, which is also the fleet's single declaration of intent:
+                everything built on the shared Input opts managers OUT unless a real
+                autofill token is named (see @agentic-toolkit/ui lib/autofill). */}
             <input
               id="auth-password"
               type="password"
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
