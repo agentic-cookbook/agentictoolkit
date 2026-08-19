@@ -11,17 +11,23 @@
 // component under test, exactly like `SiteHomeShell`/`WorkspaceChromeProvider` mount it in the
 // real fleet, so `HomeBarPortal` finds a real slot instead of taking its no-host inline fallback.
 //
-// The field is queried by role (`getByRole("searchbox")`), the settled selector per the task
-// brief — `getByLabelText("Filter")` is also unambiguous here (nothing else in this component
-// carries that exact accessible name), and both are used below to cross-check the strip's
-// contents against the brief's own assertions.
-import { describe, it, expect, afterEach } from "vitest";
+// The field is queried by role (`getByRole("searchbox")`) — the selector
+// `resource-explorer.homeBar.test.tsx` settled on after `getByLabelText` proved ambiguous there
+// (a `role="toolbar"` wrapper carrying its own overlapping `aria-label`). No such wrapper exists
+// in this component, so `getByLabelText("Filter")` is also unambiguous here; both are used below
+// to cross-check the strip's contents.
+import { describe, it, expect, afterEach, beforeEach } from "vitest";
 import { render, screen, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ResourceLanding } from "../resource-landing";
 import { HomeBarHost } from "../home-bar";
 
 afterEach(cleanup);
+// `chooseView` persists the chosen view mode to `localStorage` keyed by `basePath`
+// (`ftd-storage.ts`), and every test in this file shares the same basePath. Without clearing it,
+// the last test's click on "View as list" would leak into whichever test runs after it and break
+// the assumption that "cards" is the default view.
+beforeEach(() => localStorage.clear());
 
 interface Row {
   id: string;
@@ -140,7 +146,7 @@ describe("ResourceLanding publishes its toolbar into the home bar", () => {
       items: [{ id: "a", label: "Alpha" }],
     });
     await screen.findByTestId("home-bar");
-    // The card view renders the label inside an article-shaped card; the list view renders a
+    // The card view renders the label inside a card `<div>`; the list view renders a
     // plain `<ul>`. Cards is the default, so asserting the list markup appears after the click is
     // enough to prove the toggle in the bar still drives this component's own `view` state. The
     // toggle item's accessible name is its `aria-label` ("View as list"), not its `title`

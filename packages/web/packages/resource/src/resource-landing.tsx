@@ -91,11 +91,10 @@ export function ResourceLanding<T>({
               left={
                 hasItems ? (
                   <>
-                    <div className="relative">
+                    <div role="search" className="relative w-64 min-w-40 shrink">
                       <Search
-                        size={14}
                         aria-hidden
-                        className="pointer-events-none absolute top-1/2 left-2.5 -translate-y-1/2 text-apt-text-dim"
+                        className="pointer-events-none absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted"
                       />
                       <Input
                         type="search"
@@ -103,7 +102,7 @@ export function ResourceLanding<T>({
                         placeholder="Filter…"
                         value={query}
                         onChange={(e) => setQuery(e.target.value)}
-                        className="h-8 w-44 pl-8 sm:w-56"
+                        className="pl-8"
                       />
                     </div>
                     <ToggleGroup
