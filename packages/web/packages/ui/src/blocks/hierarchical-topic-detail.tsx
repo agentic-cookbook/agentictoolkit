@@ -205,9 +205,12 @@ function TopBar({
                 const last = i === trail.length - 1
                 return (
                   <li key={`${i}-${c.label}`} className="flex min-w-0 items-center gap-1">
-                    {i > 0 && (
-                      <ChevronRight size={12} aria-hidden className="shrink-0 text-apt-text-dim" />
-                    )}
+                    {/* Drawn before EVERY crumb, the root included. A trail of one — which is what
+                        a feature's landing shows before anything is selected — read as a plain
+                        heading without a leading mark; the chevron is what says "this is a path,
+                        and there is more of it below". aria-hidden as the separators between
+                        crumbs always were, so nothing changes for a screen reader. */}
+                    <ChevronRight size={12} aria-hidden className="shrink-0 text-apt-text-dim" />
                     {last || !c.interactive || !onNavigate ? (
                       <span
                         aria-current={last ? "page" : undefined}
