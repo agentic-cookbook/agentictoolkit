@@ -17,8 +17,11 @@ import {
   type TopicSelectOptions,
 } from "@agentic-toolkit/ui/blocks";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { Button } from "@agentic-toolkit/ui/components/button";
+import { Plus } from "lucide-react";
 import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";
+import { HomeBar, HomeBarPortal } from "./home-bar";
 
 /** The deep-linkable LEAF inside a topic (e.g. the selected application within the
  *  Applications topic): the id lives in the URL, and `onSelect` re-routes to it. Topics
@@ -200,7 +203,9 @@ export function ResourceExplorer<T>({
   const [newOpen, setNewOpen] = useState(false);
   // The resource rail's filter. The removed card landing carried the only search over this
   // list (docs/ui/fleet-ui-audit.md §1.5 took the landing, not the FUNCTION), so the field
-  // moves to the rail's own `headerSlot` — the stack's documented hook for exactly this.
+  // moved on to the rail's own `headerSlot` — and from there into the home bar (below), a
+  // page-level strip above every rail. The state itself never moved: it is still read by
+  // `query`/`entityItems` below, exactly as before either move.
   const [filter, setFilter] = useState("");
 
   const validTopics = new Set(topics.map((t) => t.id));
@@ -291,8 +296,9 @@ export function ResourceExplorer<T>({
     // but only while there is something to pick: `overviewHelp` also FORCES the hint onto an
     // EMPTY list, and "Select a team" beside a rail reading "No teams yet." is a dead end.
     //
-    // Gated on the UNFILTERED list, like the `headerSlot` below: "there is nothing to pick" is a
-    // fact about the tenant's data, not about the box the user just typed in. Reading the filtered
+    // Gated on the UNFILTERED list, like the home bar's filter/New pair (in the component's
+    // return, below): "there is nothing to pick" is a fact about the tenant's data, not about the
+    // box the user just typed in. Reading the filtered
     // count here suppressed the blurb — and with it the whole nudge, since the frame's gate is
     // `items.length > 0 || overviewHelp != null` — the moment a query matched nothing, and this
     // pane's other branch is `null`, so a mistyped filter blanked the entire detail pane.
@@ -322,25 +328,11 @@ export function ResourceExplorer<T>({
       : query
         ? `No matches for “${filter.trim()}”.`
         : (rail?.emptyLabel ?? ""),
-    // The filter field, in the level's own pinned header strip. Shown only once the list has
-    // arrived with something in it: a filter over nothing to filter is noise, and over a list
-    // that has not loaded it is a control that cannot work yet.
-    headerSlot:
-      loaded && allEntityItems.length > 0 ? (
-        <ListHeader
-          ariaLabel={`Filter ${rail?.title ?? nameSuffix}`}
-          search={{
-            value: filter,
-            onChange: setFilter,
-            label: `Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`,
-            grow: true,
-          }}
-        />
-      ) : undefined,
-    // "New …" is a right-justified `+` in the resource list header — absent entirely
-    // when the host suppressed creation (newLabel omitted).
-    onNew: newLabel != null ? () => setNewOpen(true) : undefined,
-    newLabel: newButtonLabel,
+    // The filter field and the "New …" button are NOT on this level any more — both are page-level
+    // controls over the whole list, so both are published into the home bar (below) rather than
+    // drawn inside the rail this level renders. `headerSlot` and `onNew` stay on TopicLevel: the
+    // DEEPER levels a feature publishes still use them, and those are contextual to the level in a
+    // way the top-level pair never was.
   };
   const topicLevel: TopicLevel = {
     id: "topic",
@@ -454,6 +446,45 @@ export function ResourceExplorer<T>({
   // do in the hub shell (without a host they silently no-op and edits are discarded unprompted).
   const published = (
     <>
+      {/* Shown only once the list has ARRIVED with something in it — the same condition the rail
+          header applied before the move, and for the same reasons: a filter over nothing to filter
+          is noise, and over a list that has not loaded it is a control that cannot work yet. The
+          "New …" button rides the same condition so the bar appears once as one row, rather than a
+          button appearing first and growing a field beside it a moment later.
+
+          `!promoteTopics` preserves an invariant the OLD code got for free: `resourceLevel` — the
+          object these controls used to live on — was only ever spliced into `levels` when
+          `!promoteTopics` (see `levels` below), so its `headerSlot`/`onNew` never rendered in
+          promoteTopics mode regardless of this condition. Dropping the guard here would put a
+          "New …" button in the bar whose `renderDialog` a promoteTopics host typically omits
+          (the promoted resource-list TOPIC owns its own create dialog instead — see `newLabel`'s
+          doc), and a filter field wired to `filter`/`setFilter` that narrows a `resourceLevel` no
+          host ever renders in that mode. */}
+      {!promoteTopics && loaded && allEntityItems.length > 0 && (
+        <HomeBarPortal>
+          <HomeBar
+            left={
+              <ListHeader
+                ariaLabel={`Filter ${rail?.title ?? nameSuffix}`}
+                search={{
+                  value: filter,
+                  onChange: setFilter,
+                  label: `Filter ${(rail?.title ?? nameSuffix).toLowerCase()}`,
+                  grow: false,
+                }}
+              />
+            }
+            right={
+              newLabel != null ? (
+                <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
+                  <Plus size={16} aria-hidden />
+                  {newButtonLabel}
+                </Button>
+              ) : undefined
+            }
+          />
+        </HomeBarPortal>
+      )}
       <StackLevels levels={levels}>{content}</StackLevels>
       {dialog}
     </>
