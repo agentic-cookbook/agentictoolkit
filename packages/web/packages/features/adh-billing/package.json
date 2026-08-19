@@ -15,6 +15,11 @@
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
+    "./parse": {
+      "types": "./dist/parse-path.d.ts",
+      "development": "./src/parse-path.ts",
+      "import": "./dist/parse-path.js"
+    },
     "./sources.css": "./sources.css"
   },
   "scripts": {
