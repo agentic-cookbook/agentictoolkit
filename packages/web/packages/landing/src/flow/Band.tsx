@@ -17,7 +17,9 @@ export interface BandProps {
    *
    * False for the first band under a hero that already ends on an angle, and
    * for a band whose neighbour above is the same tone — a seam between two
-   * identical grounds is invisible geometry that still costs the overlap.
+   * identical grounds is invisible geometry that still costs the overlap. On
+   * `tone="paper"`, which cuts its own foot regardless, this controls the top
+   * edge only.
    */
   seam?: boolean
   className?: string

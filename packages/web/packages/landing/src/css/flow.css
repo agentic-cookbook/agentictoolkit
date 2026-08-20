@@ -58,28 +58,39 @@
   color: var(--lp-ink, #ededed);
 }
 
-/* The light band. It carries its own ink values because inverting the page's
- * two text colours is not a tint of them — a dim ivory that reads as "quiet" on
- * near-black reads as "broken" on paper. The host supplies both.
+/* The light band. It carries its own ink values (including `--lp-ink-dim`,
+ * for the blocks that reach for it directly, scoped here so it cannot leak
+ * onto the dark tones) because inverting the page's two text colours is not
+ * a tint of them — a dim ivory that reads as "quiet" on near-black reads as
+ * "broken" on paper. The host supplies both.
  *
- * It is cut on BOTH edges: it is an inserted card rather than a step down, so
- * it wants a matching angle at its foot. That is the one asymmetry with the
- * other tones, and it is why the paper rule restates the clip rather than
- * composing with `.lp-band--seam`.
+ * It cuts its own foot regardless of `seam`: it is an inserted card rather
+ * than a step down, so it always wants a matching angle at its base. The rule
+ * below is the flat-topped form — the top edge is left to `.lp-band` (or to
+ * `.lp-band--seam` on its own, at (0,1,0)) so a seamless paper band sits flush
+ * under whatever precedes it, the same as any other tone.
  */
 .lp-band--paper {
   background: var(--lp-tone-paper, #f4f4f4);
   color: var(--lp-paper-ink, #171717);
-  clip-path: polygon(0 var(--lp-seam, 4.5vw), 100% 0, 100% 100%, 0 calc(100% - var(--lp-seam, 4.5vw)));
-  margin-top: calc(var(--lp-seam, 4.5vw) * -1);
+  --lp-ink: var(--lp-paper-ink, #171717);
+  --lp-ink-dim: var(--lp-paper-dim, #5c5c5c);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - var(--lp-seam, 4.5vw)));
   margin-bottom: calc(var(--lp-seam, 4.5vw) * -1);
-  padding-top: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
   padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw) + var(--lp-dock-clear, 0px));
 }
 
-/* A paper band's own dim ink, for the blocks that reach for `--lp-ink-dim`
- * directly. Scoped to the band so it cannot leak onto the dark ones. */
-.lp-band--paper {
-  --lp-ink: var(--lp-paper-ink, #171717);
-  --lp-ink-dim: var(--lp-paper-dim, #5c5c5c);
+/* The top cut, added only when `Band` also put `lp-band--seam` on the
+ * element. Two classes (0,2,0) so this beats BOTH `.lp-band--seam` and the
+ * bare `.lp-band--paper` above on specificity rather than on source order —
+ * `seam={false}` on a paper band must not be a silent no-op, and composing
+ * this way is what makes that true regardless of where either rule sits in
+ * the file. Still reads `--lp-seam` with the same fallback as every other cut
+ * here, so the two edges and the margins that compensate for them cannot
+ * drift apart.
+ */
+.lp-band--paper.lp-band--seam {
+  clip-path: polygon(0 var(--lp-seam, 4.5vw), 100% 0, 100% 100%, 0 calc(100% - var(--lp-seam, 4.5vw)));
+  margin-top: calc(var(--lp-seam, 4.5vw) * -1);
+  padding-top: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
 }

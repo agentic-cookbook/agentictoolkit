@@ -66,4 +66,14 @@ describe('flow.css', () => {
   it('declares no snapping', () => {
     expect(FLOW_RULES).not.toContain('scroll-snap')
   })
+
+  it("composes the paper band's top cut onto a two-class selector, not the bare tone", () => {
+    expect(FLOW_RULES).toContain('.lp-band--paper.lp-band--seam')
+  })
+
+  it('cuts only its own foot on the bare paper rule, leaving the top edge flat', () => {
+    const bare = FLOW_RULES.match(/\.lp-band--paper\s*\{([^}]*)\}/)
+    expect(bare).not.toBeNull()
+    expect(bare![1]).toMatch(/clip-path:\s*polygon\(\s*0\s+0,/)
+  })
 })
