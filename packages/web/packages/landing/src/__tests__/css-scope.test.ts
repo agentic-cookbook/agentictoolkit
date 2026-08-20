@@ -136,6 +136,53 @@ describe('the document-level rules are gated on a layout root, at their original
     .filter((s) => isLayoutRoot(s) && !s.startsWith('.lp-deck') && !s.startsWith('.lp-flow'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
 
+  // A CLOSED SET, and the one assertion here that is a list on purpose.
+  //
+  // Every other check in this file asks whether the document rules that exist
+  // are gated. None asks which rules are allowed to exist. A correctly gated
+  // `:where(html:has(.lp-deck, .lp-flow)) img` passes all of them — it names
+  // `.lp-`, it is properly gated, it matches a flow and not a bare host route —
+  // and it silently restyles every image on the page. That is a document-level
+  // rule reaching an element the package did not put there, which is the exact
+  // class of defect this file exists to prevent, arriving through the front
+  // door rather than around the gate.
+  //
+  // So the SUBJECTS are pinned, not just the gates. Adding a document rule is a
+  // decision that has to be made deliberately and reviewed; this test is what
+  // turns it from an edit nobody notices into a failure with a name on it.
+  // Swept across EVERY sheet, not just base.css. "base.css is the only sheet
+  // that addresses the document" is a constraint this package states and has
+  // never actually checked — a gated `html`-reaching rule dropped into
+  // flow.css or blocks.css would satisfy every other assertion in this file,
+  // and a base.css-only sweep would not look at it.
+  const strip = (s: string) =>
+    s
+      .replace(/:where\(:has\([^)]*\)\)/, '')
+      .replace(/^:where\(html:has\([^)]*\)\)\s*/, '')
+      .trim()
+
+  it('adds no document-level rule beyond the sanctioned subjects', () => {
+    const documentRules = SHEETS.flatMap((sheet) =>
+      selectors(sheet)
+        .map((s) => ({ sheet, subject: strip(s) }))
+        // A subject that still names `.lp-` reaches only what the package put
+        // on the page — that is an ordinary rule, whatever gate precedes it.
+        .filter(({ subject }) => !subject.includes('.lp-')),
+    )
+
+    expect([...new Set(documentRules.map((r) => r.sheet))]).toEqual(['base.css'])
+    expect([...new Set(documentRules.map((r) => r.subject))].sort()).toEqual([
+      '*',
+      '*::after',
+      '*::before',
+      '::selection',
+      'body',
+      'html',
+      'html[data-smooth]',
+      'html[data-snap]',
+    ])
+  })
+
   // Partitioned, never listed: which document rules a flow page inherits is the
   // whole point of the widened gate, and a hand-kept list of them would go stale
   // the moment a rule is added — silently, and in the direction that passes.
@@ -195,7 +242,8 @@ describe('the document-level rules are gated on a layout root, at their original
     // A client-side navigation off `/` unmounts the deck and runs no cleanup —
     // `data-snap` in particular is stamped on <html> by ARM_SNAPPING and never
     // removed, so every armed attribute is left set here deliberately. The deck
-    // is the only thing gone, which is the point: the gate is `:has(.lp-deck)`.
+    // is the only thing gone, which is the point: the gate is structural, and
+    // this fixture holds neither `.lp-deck` nor `.lp-flow`.
     document.body.innerHTML = '<main><h1>Privacy</h1><p>Some prose.</p></main>'
     arm()
     for (const sel of gates) expect(document.querySelector(sel), sel).toBeNull()
