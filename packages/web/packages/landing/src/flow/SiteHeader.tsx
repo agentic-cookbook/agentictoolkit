@@ -6,7 +6,15 @@ import { NavChrome } from '../chrome/NavChrome'
 import type { NavChromeProps } from '../chrome/types'
 
 export interface SiteHeaderProps extends NavChromeProps {
-  /** A call to action pinned to the right of the bar. */
+  /**
+   * A call to action pinned to the right of the bar, ABOVE the breakpoint only
+   * — the same rule the inline nav follows, and not a cosmetic one: below it
+   * the burger is fixed in the identical right gutter and would paint over this
+   * and take its clicks. `flow.css`'s `.lp-site-action` carries the full
+   * account. A host whose action is a link to a section should therefore make
+   * sure that section is also in `links`, since the drawer is the narrow
+   * viewport's only route to it.
+   */
   action?: ReactNode
   /**
    * The inline bar's own link list, shorter than `links`. Defaults to

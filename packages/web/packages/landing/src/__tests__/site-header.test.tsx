@@ -65,6 +65,31 @@ describe('SiteHeader', () => {
     expect(screen.getByRole('link', { name: 'Get it' })).toBeTruthy()
   })
 
+  it('hides the action below the breakpoint, where the fixed burger owns that corner', () => {
+    // `.lp-bar` is `position: fixed` with `--lp-bar-pad-x`'s 1.25rem right
+    // gutter, and `.lp-site-bar`'s `min(100% - 2.5rem, …)` centred is the same
+    // 1.25rem inset — two right-aligned controls on one line with nothing
+    // reserving space for either. The burger is z-index 40 against this bar's
+    // 30, so it painted over a host's CTA and took the clicks on its right
+    // third: a tap there opened the drawer instead of following the link.
+    //
+    // Asserted on the DECLARATION, not just the selector: a `.lp-site-action`
+    // rule setting something else would satisfy a substring search while
+    // leaving the overlap exactly where it was.
+    const rules = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
+    const bare = /(^|[},])\s*\.lp-site-action\s*\{([^}]*)\}/m.exec(rules)
+    expect(bare).not.toBeNull()
+    expect(bare![2]).toMatch(/display:\s*none/)
+
+    // …and comes back above it, where the burger is gone. Two `62rem` blocks
+    // exist (the other is `.lp-bleed`'s) and the header's is the later one;
+    // nothing after it touches `.lp-site-action`, so searching from there is
+    // enough — but the hiding rule must come FIRST or the cascade inverts.
+    const mediaAt = rules.lastIndexOf('@media (min-width: 62rem)')
+    expect(mediaAt).toBeGreaterThan(bare!.index)
+    expect(rules.slice(mediaAt)).toMatch(/\.lp-site-action\s*\{[^}]*display:\s*block/)
+  })
+
   it('scrolls away rather than sticking — nothing fixes the bar', () => {
     const rule = FLOW.slice(FLOW.indexOf('.lp-site-bar {'))
     expect(rule.slice(0, rule.indexOf('}'))).not.toMatch(/position:\s*(fixed|sticky)/)

@@ -14,7 +14,12 @@ export interface FlowHeroProps {
   headline: ReactNode
   /** One line under the headline. Not a blurb — the bands are the blurb. */
   sub: ReactNode
-  /** `Cta`, `Btn` — in the host's own order. */
+  /**
+   * The buttons — bare `Btn`s, in the host's own order. NOT wrapped in a `Cta`:
+   * `.lp-hero-actions` is already the centred, wrapping flex row, so a `Cta`
+   * inside it nests a second one and its 0.75rem gap wins, leaving the hero's
+   * own spacing inert and unfixable from `flow.css`.
+   */
   children?: ReactNode
   /**
    * The line under the buttons: price, platform floor, availability. Uppercased

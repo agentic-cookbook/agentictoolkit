@@ -16,21 +16,47 @@
 }
 
 /* ---- a band ----
- * `--lp-band-pad` is the vertical rhythm; the dock clearance is ADDED to the
- * foot rather than substituted into it, because a band has no spare viewport
- * to absorb it the way `min-height: 100vh` did on a screen. Without the
- * addition the last line of a long band sits behind the host's fixed chrome.
+ * `--lp-band-pad` is the vertical rhythm, and it is the WHOLE of a band's foot.
+ * The dock clearance is not added here — see the `:last-child` rule below for
+ * where it went and why.
  */
 .lp-band {
   position: relative;
   z-index: 1;
   padding-top: var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem));
-  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-dock-clear, 0px));
+  padding-bottom: var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem));
   /* A bleeding child runs past the content column toward the page edge; without
    * this it widens the DOCUMENT, and mobile Chrome and Safari answer an
    * over-wide document by zooming out. `clip` and not `hidden` so a band never
    * becomes a scroll container in its own right. */
   overflow-x: clip;
+}
+
+/* ---- the dock clearance, and why exactly one band pays it ----
+ * A host's dock — a chat composer, a cookie bar — is `position: fixed`, so it
+ * covers the same strip of the VIEWPORT no matter where the reader is. Content
+ * mid-page is therefore only transiently behind it: one more scroll lifts a
+ * band's last line out from under, and the next band's first line passes under
+ * it whatever the previous band's padding was. The only content that can be
+ * TRAPPED is content that cannot be scrolled any further, which is the last
+ * thing in the document and nothing else.
+ *
+ * So the clearance belongs to the tail, not to the rhythm. `.lp-site-foot`
+ * carries it (a host with a footer ends there); this pair carries it for a host
+ * with none. On a host that has both, the last band pays a clearance it does
+ * not strictly need — one band's worth of slack, against the eleven bands of
+ * dead scroll and visibly bottom-heavy rhythm that putting it on `.lp-band`
+ * bought. Erring toward the padding is also the safe direction: the failure it
+ * guards against is unreachable copy.
+ *
+ * Two rules because the paper tone's foot cut has to survive: `.lp-band--paper`
+ * sets its own `padding-bottom` at (0,1,0) and both selectors here are (0,2,0),
+ * so a single generic rule would win and silently drop the seam allowance from
+ * a paper band that happened to be last. The paper form repeats that allowance
+ * and, being later in the file, takes the tie.
+ */
+.lp-band:last-child {
+  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-dock-clear, 0px));
 }
 
 /* The seam. `clip-path` cuts the diagonal off the band's own top edge, and the
@@ -91,7 +117,20 @@
   --lp-ink-dim: var(--lp-paper-dim, #5c5c5c);
   clip-path: polygon(0 0, 100% 0, 100% 100%, 0 calc(100% - var(--lp-seam, 4.5vw)));
   margin-bottom: calc(var(--lp-seam, 4.5vw) * -1);
-  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw) + var(--lp-dock-clear, 0px));
+  /* The seam allowance, not the dock clearance: the foot cut removes real
+   * estate from the bottom-left corner exactly as the top cut does from the
+   * top-left, so the last line needs the same wedge back. See the
+   * `:last-child` rule above for where the dock clearance lives. */
+  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
+}
+
+/* The paper form of the `:last-child` rule above — see that comment. Same
+ * (0,2,0) weight, later in the file, so it takes the tie and keeps the foot
+ * cut's allowance while adding the clearance. */
+.lp-band--paper:last-child {
+  padding-bottom: calc(
+    var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw) + var(--lp-dock-clear, 0px)
+  );
 }
 
 /* The top cut, added only when `Band` also put `lp-band--seam` on the
@@ -185,6 +224,10 @@
   text-wrap: pretty;
 }
 
+/* This is the hero's button row, and it OWNS the spacing — it is already a
+ * centred, wrapping flex line, so a `Cta` inside it is a second one whose own
+ * 0.75rem gap silently wins and leaves the value below inert. `FlowHero`'s
+ * `children` doc says to pass bare `Btn`s for that reason. */
 .lp-hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -260,6 +303,29 @@
   color: var(--lp-ink, #ededed);
 }
 
+/* The action is wide-viewport chrome, like `.lp-site-nav` above — and for a
+ * harder reason than "it does not fit".
+ *
+ * Below the breakpoint `NavChrome`'s burger is `position: fixed` in the very
+ * gutter this bar right-aligns to: `.lp-bar`'s `--lp-bar-pad-x` default is
+ * 1.25rem, and `width: min(100% - 2.5rem, …)` centred is the same 1.25rem inset
+ * (see `.lp-site-drawer-only` below, which relies on exactly that). Two
+ * right-aligned controls on one line, neither reserving space for the other, is
+ * an overlap — and the burger is z-index 40 against this bar's 30, so it both
+ * paints over the action and takes its clicks. A host's CTA rendered clipped
+ * under the menu chip, and a tap on its right third opened the drawer.
+ *
+ * Reserving the burger's width on the bar instead would fix the same viewport
+ * and break at the next one, since it holds only while the brand and the
+ * action's label are short enough; hiding cannot fail at any width. What makes
+ * it safe rather than merely tidy is that below the breakpoint the drawer IS
+ * the navigation — an action pointing in-page is still one tap away through the
+ * link list a host passes as `links`. See SiteHeader's `action` doc.
+ */
+.lp-site-action {
+  display: none;
+}
+
 /* The package's chrome is built to sit under a host's own header, and this is
  * that host — `chrome.css` names both of these tokens for exactly this case.
  *
@@ -298,6 +364,10 @@
 @media (min-width: 62rem) {
   .lp-site-nav {
     display: flex;
+  }
+  /* The burger is gone above here, so the corner is the action's alone. */
+  .lp-site-action {
+    display: block;
   }
   .lp-site-drawer-only {
     display: none;

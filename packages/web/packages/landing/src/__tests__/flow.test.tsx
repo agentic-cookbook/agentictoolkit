@@ -15,6 +15,12 @@ const FLOW = readFileSync(join(__dirname, '..', 'css', 'flow.css'), 'utf8')
 // fail the sheet for saying what it does. Strip comments, then match.
 const FLOW_RULES = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
 
+/** The declarations of the first rule with exactly this selector, or null. */
+function body(selector: string): string | null {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|[},])\\s*${escaped}\\s*\\{([^}]*)\\}`, 'm').exec(FLOW_RULES)?.[2] ?? null
+}
+
 describe('Flow', () => {
   it('is a <main> that does not scroll itself', () => {
     const { container } = render(<Flow>content</Flow>)
@@ -57,8 +63,33 @@ describe('Band', () => {
 })
 
 describe('flow.css', () => {
-  it('reserves the host dock on every band, as the deck did', () => {
-    expect(FLOW).toContain('var(--lp-dock-clear, 0px)')
+  it('reserves the host dock at the tail only, never on every band', () => {
+    // A fixed dock covers a strip of the VIEWPORT, so mid-page content is only
+    // transiently behind it — one more scroll clears it. The only content that
+    // can be trapped is content with nothing left to scroll, i.e. the last
+    // element. On every band the reservation was ~1460px of dead scroll and a
+    // visibly bottom-heavy rhythm; here it is asserted off the shared rule and
+    // onto the three places a document can actually end.
+    for (const selector of ['.lp-band', '.lp-band--paper']) {
+      const rule = body(selector)
+      expect(rule, selector).not.toBeNull()
+      expect(rule!, selector).not.toContain('--lp-dock-clear')
+    }
+
+    for (const selector of ['.lp-band:last-child', '.lp-band--paper:last-child', '.lp-site-foot']) {
+      const rule = body(selector)
+      expect(rule, selector).not.toBeNull()
+      expect(rule!, selector).toContain('var(--lp-dock-clear, 0px)')
+    }
+  })
+
+  it("keeps the paper band's foot-cut allowance when it is also the last band", () => {
+    // Different concern, same declaration: the foot cut removes real estate the
+    // last line needs back. A single generic `:last-child` rule would outweigh
+    // `.lp-band--paper` (0,2,0 against 0,1,0) and silently drop it.
+    const rule = body('.lp-band--paper:last-child')
+    expect(rule).not.toBeNull()
+    expect(rule!).toContain('var(--lp-seam, 4.5vw)')
   })
 
   it('never sets a fixed viewport height — a band is as tall as its content', () => {
