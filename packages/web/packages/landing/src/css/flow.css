@@ -69,8 +69,22 @@
  * below is the flat-topped form — the top edge is left to `.lp-band` (or to
  * `.lp-band--seam` on its own, at (0,1,0)) so a seamless paper band sits flush
  * under whatever precedes it, the same as any other tone.
+ *
+ * The negative `margin-bottom` pulls the FOLLOWING band up underneath this
+ * one's own clipped foot, which only reveals that band in the wedge if this
+ * one paints on top of it. Every other seam in this file is cut by the band
+ * that comes LATER in the DOM, so `.lp-band`'s shared `z-index: 1` already
+ * puts the clipper on top through document order alone — nothing extra is
+ * needed there. A foot cut is the one seam cut by the EARLIER band, so
+ * document order works against it: without a lift here, the following band
+ * paints over the whole overlap as a flat rectangle and the diagonal never
+ * renders. `z-index: 2` is that lift, scoped to this tone alone (the page
+ * carries exactly one paper band) rather than raised on `.lp-band` itself,
+ * which would just move the same problem onto whichever band follows next.
  */
 .lp-band--paper {
+  position: relative;
+  z-index: 2;
   background: var(--lp-tone-paper, #f4f4f4);
   color: var(--lp-paper-ink, #171717);
   --lp-ink: var(--lp-paper-ink, #171717);
