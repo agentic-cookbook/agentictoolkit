@@ -277,8 +277,33 @@
   background: transparent;
 }
 
+/* Centred below the breakpoint, not left-aligned: down there the burger is
+ * `position: fixed` in the left gutter this element would otherwise start in
+ * (see `.lp-site-drawer-only .lp-burger`), and a wordmark under the chip is the
+ * same overlap the action rule below is about, one corner over.
+ *
+ * `margin-inline: auto` is what centres it, and it works because the brand is
+ * the row's only visible item down here — `.lp-site-nav` and `.lp-site-action`
+ * are both `display: none`. The centre it lands on is therefore the bar's, and
+ * the bar's is the viewport's: `min(100% - 2.5rem, …)` with `margin-inline:
+ * auto` is a symmetric 1.25rem inset on each side.
+ *
+ * The `max-width` reserves the burger's column on BOTH sides so the centring
+ * stays honest — reserving only the left would shift the wordmark right by half
+ * the chip. The chip is 32px (chrome.css) and its `--lp-bar-pad-x` default,
+ * 1.25rem, is the same inset as this bar's own gutter, so relative to this
+ * content box the chip starts at 0 and the reserve is the chip plus a gap. That
+ * token cannot be read from here — it is set inside `.lp-site-drawer-only`, a
+ * SIBLING, and custom properties inherit down rather than sideways — so a host
+ * that moves it has to re-measure this number. Same arithmetic as
+ * `.lp-brand`'s in chrome.css, minus the 1.25rem that element pays because it
+ * is measured against the full-bleed `.lp-bar` instead.
+ *
+ * Above the breakpoint the burger is gone and the nav needs the room, so the
+ * media block at the foot of this section puts the wordmark back on the left. */
 .lp-site-brand {
-  margin-right: auto;
+  margin-inline: auto;
+  max-width: calc(100% - 2 * (32px + 0.75rem));
   font-family: var(--lp-font-display, var(--lp-font, ui-monospace, "SF Mono", monospace));
   font-size: 1.02rem;
   letter-spacing: -0.01em;
@@ -306,21 +331,25 @@
 /* The action is wide-viewport chrome, like `.lp-site-nav` above — and for a
  * harder reason than "it does not fit".
  *
- * Below the breakpoint `NavChrome`'s burger is `position: fixed` in the very
- * gutter this bar right-aligns to: `.lp-bar`'s `--lp-bar-pad-x` default is
- * 1.25rem, and `width: min(100% - 2.5rem, …)` centred is the same 1.25rem inset
- * (see `.lp-site-drawer-only` below, which relies on exactly that). Two
- * right-aligned controls on one line, neither reserving space for the other, is
- * an overlap — and the burger is z-index 40 against this bar's 30, so it both
- * paints over the action and takes its clicks. A host's CTA rendered clipped
- * under the menu chip, and a tap on its right third opened the drawer.
+ * The original reason was a collision: the burger was sent to the bar's right
+ * gutter and painted over a host's CTA there (z-index 40 against this bar's
+ * 30), so a tap on the button's right third opened the drawer instead of
+ * following the link. That collision is gone — the burger is in the LEFT gutter
+ * now — and the rule stays anyway, because the arrangement that replaced it
+ * needs the room more than the collision needed the gap.
  *
- * Reserving the burger's width on the bar instead would fix the same viewport
- * and break at the next one, since it holds only while the brand and the
- * action's label are short enough; hiding cannot fail at any width. What makes
- * it safe rather than merely tidy is that below the breakpoint the drawer IS
- * the navigation — an action pointing in-page is still one tap away through the
- * link list a host passes as `links`. See SiteHeader's `action` doc.
+ * `.lp-site-brand` centres itself below the breakpoint, and it centres by
+ * `margin-inline: auto` on the row's only visible item. Show the action and the
+ * row has two items: the auto margins then centre the wordmark in what is left
+ * BESIDE the action rather than in the bar, and the arrangement a phone was
+ * given — chip left, wordmark centred — quietly stops being true. The two are
+ * alternatives on one line, not neighbours: a third control on a 390px row is
+ * also within a few px of touching a 136px wordmark at 320px.
+ *
+ * What makes hiding safe rather than merely tidy is unchanged: below the
+ * breakpoint the drawer IS the navigation — an action pointing in-page is still
+ * one tap away through the link list a host passes as `links`. See SiteHeader's
+ * `action` doc.
  */
 .lp-site-action {
   display: none;
@@ -348,20 +377,33 @@
   --lp-bar-pad-y: 0.61rem;
 }
 
-/* The burger is `.lp-bar`'s FIRST child, so it lands in the top-left corner —
- * the corner `.lp-site-brand` already occupies. Sent to the other end, the two
- * compose into one row: wordmark left, burger right, which is what a narrow
- * viewport expects anyway. Set here rather than in chrome.css because it is
- * true of this header's arrangement, not of the burger. */
-.lp-site-drawer-only .lp-burger {
-  margin-left: auto;
-}
+/* The burger is `.lp-bar`'s FIRST child, so untouched it lands in the top-left
+ * corner, and that is where it stays: chip left, wordmark centred beside it
+ * (`.lp-site-brand` above reserves its column and centres between the two).
+ * There is deliberately no rule here sending it to the other end.
+ *
+ * It was sent right once, when the brand still started at the left gutter and
+ * the two would have overlapped there. Centring the brand is the better half of
+ * that trade for one reason a rule cannot express: the drawer's own ✕
+ * (`.lp-drawer-close`) reads the SAME `--lp-bar-pad-*` pair as the bar, so it
+ * opens at the burger's coordinates. With the burger right, pressing it moved
+ * the control to the opposite corner and the ✕ appeared somewhere the finger
+ * was not; left, the chip becomes the ✕ in place. Nothing in chrome.css needed
+ * changing for that — it is the arrangement's default, restored. */
 
 /* Above the breakpoint the inline nav is the navigation, so the burger goes.
  * `.lp-site-drawer-only` wraps NavChrome rather than the package restyling
  * `.lp-bar` from here: chrome.css owns that class, and two sheets setting
  * `display` on one selector is a race decided by import order. */
 @media (min-width: 62rem) {
+  /* No burger up here, so no column to reserve and no reason to centre: the
+   * wordmark goes back to the left end and pushes the nav and the action to the
+   * right. `margin-left: 0` rather than dropping `margin-inline` — the shorthand
+   * set both sides, and only the left one is wrong now. */
+  .lp-site-brand {
+    margin-left: 0;
+    max-width: none;
+  }
   .lp-site-nav {
     display: flex;
   }

@@ -9,11 +9,13 @@ export interface SiteHeaderProps extends NavChromeProps {
   /**
    * A call to action pinned to the right of the bar, ABOVE the breakpoint only
    * — the same rule the inline nav follows, and not a cosmetic one: below it
-   * the burger is fixed in the identical right gutter and would paint over this
-   * and take its clicks. `flow.css`'s `.lp-site-action` carries the full
-   * account. A host whose action is a link to a section should therefore make
-   * sure that section is also in `links`, since the drawer is the narrow
-   * viewport's only route to it.
+   * the bar is the burger and the wordmark, and the wordmark is centred by
+   * being the row's only visible item. A third control on that line moves the
+   * centre off the viewport's, on the one viewport where the arrangement is
+   * load-bearing. `flow.css`'s `.lp-site-action` carries the full account. A
+   * host whose action is a link to a section should therefore make sure that
+   * section is also in `links`, since the drawer is the narrow viewport's only
+   * route to it.
    */
   action?: ReactNode
   /**
