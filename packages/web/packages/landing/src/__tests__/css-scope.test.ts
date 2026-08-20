@@ -178,11 +178,62 @@ describe('the document-level rules are gated on a layout root, at their original
   // one than the text checks have — those are defeated by any selector
   // containing `.lp-` anywhere, which is all of them. Widen the list when the
   // package starts styling a tag that is not here.
+  // `code`, `em`, `video` and `table` are here because the package renders those
+  // tags BARE — `blocks/Code.tsx`, `blocks/TourStrip.tsx`, `blocks/Clip.tsx` —
+  // which makes a document-gated rule aimed at the package's own code or
+  // emphasis the likeliest leak an author would actually write. That shape got
+  // past an earlier version of this fixture.
   const FOREIGN =
-    '<section><h1>t</h1><h2>t</h2><p>t</p><a href="#x">t</a><img alt="t" src="#">' +
+    '<section><h1>t</h1><h2>t</h2><h3>t</h3><p>t</p><a href="#x">t</a><img alt="t" src="#">' +
     '<ul><li>t</li></ul><dl><dt>t</dt><dd>t</dd></dl><button>t</button>' +
     '<details><summary>t</summary></details><small>t</small><span>t</span>' +
+    '<code>t</code><pre>t</pre><em>t</em><strong>t</strong><blockquote>t</blockquote>' +
+    '<figure><figcaption>t</figcaption></figure><video></video><hr>' +
+    '<table><thead><tr><th>t</th></tr></thead><tbody><tr><td>t</td></tr></tbody></table>' +
+    '<label>t<input></label><select><option>t</option></select><textarea></textarea>' +
     '<div><footer>t</footer><header>t</header><nav>t</nav></div></section>'
+
+  // THE OTHER HALF, and the two are kept together because each is blind exactly
+  // where the other sees.
+  //
+  // This one strips a recognised gate spelling and checks the residual subject
+  // against the allow-list, so it is unbounded in TAG — `code`, `video`, a tag
+  // nobody has invented yet — and bounded in SPELLING: it does not recognise
+  // `html:has(…)` written without the `:where()` wrapper, which is how the
+  // round-2 escape got through. The probe below is the mirror image: unbounded
+  // in spelling, bounded to the tags its fixture builds.
+  //
+  // Deleting this one in favour of the probe was a mistake caught in review —
+  // `:where(html:has(.lp-deck, .lp-flow)) code` then passed everything, and the
+  // package renders bare `<code>`, so that is a rule an author would plausibly
+  // write. Neither test is sufficient. Do not collapse them again.
+  const strip = (s: string) =>
+    s
+      .replace(/:where\(:has\([^)]*\)\)/, '')
+      .replace(/^:where\(html:has\([^)]*\)\)\s*/, '')
+      .trim()
+
+  it('adds no document-level rule beyond the sanctioned subjects', () => {
+    const documentRules = SHEETS.flatMap((sheet) =>
+      selectors(sheet)
+        .map((s) => ({ sheet, subject: strip(s) }))
+        // A subject still naming `.lp-` reaches only what the package put on
+        // the page — an ordinary rule, whatever gate precedes it.
+        .filter(({ subject }) => !subject.includes('.lp-')),
+    )
+
+    expect([...new Set(documentRules.map((r) => r.sheet))]).toEqual(['base.css'])
+    expect([...new Set(documentRules.map((r) => r.subject))].sort()).toEqual([
+      '*',
+      '*::after',
+      '*::before',
+      '::selection',
+      'body',
+      'html',
+      'html[data-smooth]',
+      'html[data-snap]',
+    ])
+  })
 
   it('every sanctioned document rule is present, and none has been respelled', () => {
     // The allow-list is only meaningful if it describes the sheet. A rule
