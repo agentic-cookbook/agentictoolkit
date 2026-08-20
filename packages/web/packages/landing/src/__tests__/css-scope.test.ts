@@ -300,7 +300,7 @@ describe('the document-level rules are gated on a layout root, at their original
         const src = readFileSync(join(SRC_DIR, f), 'utf8')
         return [
           // A tag written literally in JSX.
-          ...[...src.matchAll(/<([a-z][a-z0-9]*)[\s>/]/g)].map((m) => m[1]),
+          ...[...src.matchAll(/<([a-z][a-z0-9-]*)[\s>/]/g)].map((m) => m[1]),
           // And a tag chosen at RUNTIME. `Screen` takes `as?: 'section' | 'div'`
           // and renders `<Tag>`, which is capitalised because it is a JS
           // identifier — so the literal-JSX regex above cannot see it, and both
@@ -310,7 +310,7 @@ describe('the document-level rules are gated on a layout root, at their original
           // `'article'` is caught rather than silently uncovered. This is the
           // package's only dynamic-tag idiom; a second one needs a line here.
           ...[...src.matchAll(/\bas\??\s*[:=][^\n]*/g)].flatMap((m) =>
-            [...m[0].matchAll(/'([a-z][a-z0-9]*)'/g)].map((q) => q[1]),
+            [...m[0].matchAll(/'([a-z][a-z0-9-]*)'/g)].map((q) => q[1]),
           ),
         ]
       }),
@@ -402,11 +402,29 @@ describe('the document-level rules are gated on a layout root, at their original
     // A foreign element placed *inside* a `.lp-band` is deliberately not tested:
     // hosts put their own content in bands, and `.lp-faq details p` styling it
     // is the package working as intended, not reaching past itself.
+    //
+    // BOTH layout roots are mounted, and that is what makes this probe the
+    // half of the pair that is unbounded in SPELLING. Every document-level rule
+    // in `base.css` is gated on `:has(.lp-deck)` or `:has(.lp-deck, .lp-flow)`,
+    // so a fixture carrying only a flow leaves every deck-gated rule unable to
+    // match ANYTHING — and a rule that cannot match cannot be caught reaching a
+    // host. The probe passed for that reason rather than for the intended one.
+    //
+    // With both mounted, the gate arms whatever its subject is *spelled* — it is
+    // the browser resolving the selector, not this file recognising a keyword.
+    // Verified in jsdom: `html`, `HTML`, `:root` and `:scope` all reach
+    // `#outside-host` from here, and all four are caught. That is the division
+    // of labour with `adds no document-level rule beyond the sanctioned
+    // subjects` above, which strips a known set of root spellings and is
+    // therefore unbounded in TAG but not in spelling. Do NOT answer a new root
+    // spelling by teaching `isDocumentRoot` about it — that is the enumeration
+    // this pairing exists to avoid. Answer it here, or it is already answered.
     document.body.innerHTML =
       '<div class="lp-flow">' +
       '<section class="lp-band"><p>own</p></section>' +
       `<aside id="sibling-host">${FOREIGN}</aside>` +
       '</div>' +
+      '<div class="lp-deck"><section class="lp-screen"><p>own</p></section></div>' +
       `<main id="outside-host">${FOREIGN}</main>`
     arm()
     const hosts = ['sibling-host', 'outside-host'].map((id) => document.getElementById(id)!)
