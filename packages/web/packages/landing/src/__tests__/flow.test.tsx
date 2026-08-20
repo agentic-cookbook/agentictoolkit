@@ -160,6 +160,10 @@ describe('the barrels', () => {
     // dist/index.js and turns every block into a Client Component.
     expect(INDEX).not.toMatch(/export\s*\{[^}]*\bSiteHeader\b/)
     expect(INDEX).not.toMatch(/export\s*\{[^}]*\bReveal\b/)
+    // A named re-export is not the only way in. `export * from './flow/Reveal'`
+    // hoists the directive just as thoroughly and matches neither pattern
+    // above, so bar the star form by module path as well.
+    expect(INDEX).not.toMatch(/export\s*\*\s*from\s*['"][^'"]*\/(SiteHeader|Reveal|NavChrome|Clip)['"]/)
     expect(CLIENT).toContain('SiteHeader')
     expect(CLIENT).toContain('Reveal')
   })
@@ -170,19 +174,39 @@ describe('the barrels', () => {
   })
 })
 
+/** The body of the first rule with this exact selector, without its braces. */
+function ruleBody(css: string, selector: string): string {
+  const at = css.indexOf(`${selector} {`)
+  expect(at).toBeGreaterThan(-1)
+  const rest = css.slice(at)
+  return rest.slice(rest.indexOf('{') + 1, rest.indexOf('}'))
+}
+
 describe('SiteFooter', () => {
   it('dresses its own links — nothing else in this stack styles a bare <a>', () => {
     // No sheet here may write a bare `a` selector (every selector must carry a
     // `.lp-` class), and the consuming site has no `a` rule either. Without
     // this, a footer credit and a mailto render as user-agent blue.
-    expect(FLOW).toContain('.lp-site-foot a')
+    //
+    // Read the rule's BODY, not just its selector. A regression that kept the
+    // selector and dropped the declarations would reintroduce the exact bug
+    // this rule exists to prevent, and a substring search for the selector
+    // would sail straight past it.
+    const body = ruleBody(FLOW, '.lp-site-foot a')
+    expect(body).toContain('color:')
+    expect(body).toContain('text-decoration: none')
   })
 })
 
 describe('Reveal', () => {
   it('rests VISIBLE, so no-JS and reduced-motion readers see a finished page', () => {
-    const rule = FLOW.slice(FLOW.indexOf('.lp-reveal {'))
-    expect(rule.slice(0, rule.indexOf('}'))).not.toContain('opacity: 0')
-    expect(FLOW).toContain('.lp-reveal--armed')
+    expect(ruleBody(FLOW, '.lp-reveal')).not.toContain('opacity: 0')
+  })
+
+  it('puts the hidden state on the armed class, which only JS adds', () => {
+    // The pair is the whole mechanism: the resting rule is visible and the
+    // armed one is not, so a page whose JS never runs shows finished content.
+    // Asserting only that the class NAME appears would pass on an empty rule.
+    expect(ruleBody(FLOW, '.lp-reveal--armed')).toContain('opacity: 0')
   })
 })
