@@ -136,51 +136,93 @@ describe('the document-level rules are gated on a layout root, at their original
     .filter((s) => isLayoutRoot(s) && !s.startsWith('.lp-deck') && !s.startsWith('.lp-flow'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
 
-  // A CLOSED SET, and the one assertion here that is a list on purpose.
+  // THE INVARIANT, ASKED OF A SELECTOR ENGINE RATHER THAN OF A STRING.
   //
-  // Every other check in this file asks whether the document rules that exist
-  // are gated. None asks which rules are allowed to exist. A correctly gated
-  // `:where(html:has(.lp-deck, .lp-flow)) img` passes all of them — it names
-  // `.lp-`, it is properly gated, it matches a flow and not a bare host route —
-  // and it silently restyles every image on the page. That is a document-level
-  // rule reaching an element the package did not put there, which is the exact
-  // class of defect this file exists to prevent, arriving through the front
-  // door rather than around the gate.
+  // Everything above this line reasons about selector TEXT, and every such
+  // check dies the same death: it keys off whether the string contains `.lp-`,
+  // and `.lp-deck` inside a gate satisfies that no matter what the rule goes on
+  // to select. Two selectors got past the text checks during this task alone —
+  // `:where(html:has(.lp-deck, .lp-flow)) img`, and the ungated-`:where` form
+  // `html:has(.lp-deck, .lp-flow) section` that base.css's own header comment
+  // warns authors not to write. Both are properly gated, both name `.lp-`, and
+  // both restyle host elements the package never rendered. Patching the parser
+  // for each shape is a losing game; the shapes are unbounded.
   //
-  // So the SUBJECTS are pinned, not just the gates. Adding a document rule is a
-  // decision that has to be made deliberately and reviewed; this test is what
-  // turns it from an edit nobody notices into a failure with a name on it.
-  // Swept across EVERY sheet, not just base.css. "base.css is the only sheet
-  // that addresses the document" is a constraint this package states and has
-  // never actually checked — a gated `html`-reaching rule dropped into
-  // flow.css or blocks.css would satisfy every other assertion in this file,
-  // and a base.css-only sweep would not look at it.
-  const strip = (s: string) =>
-    s
-      .replace(/:where\(:has\([^)]*\)\)/, '')
-      .replace(/^:where\(html:has\([^)]*\)\)\s*/, '')
-      .trim()
+  // So this asks the real question directly: mount a layout root next to a tree
+  // of foreign elements no package component renders, and require that no
+  // selector matches anything in that tree. A rule that reaches into the host
+  // fails here whatever its spelling, and the sanctioned document rules — the
+  // only ones allowed to — are listed by exact text below.
+  //
+  // The list is the one deliberate allow-list in this file. Adding to it is how
+  // a new document-level rule gets reviewed instead of merely noticed.
+  const SANCTIONED = [
+    'html:where(:has(.lp-deck, .lp-flow))',
+    'html[data-snap]:where(:has(.lp-deck))',
+    'html[data-smooth]:where(:has(.lp-deck, .lp-flow))',
+    ':where(html:has(.lp-deck, .lp-flow)) body',
+    ':where(html:has(.lp-deck, .lp-flow)) ::selection',
+    ':where(html:has(.lp-deck, .lp-flow)) *',
+    ':where(html:has(.lp-deck, .lp-flow)) *::before',
+    ':where(html:has(.lp-deck, .lp-flow)) *::after',
+  ]
 
-  it('adds no document-level rule beyond the sanctioned subjects', () => {
-    const documentRules = SHEETS.flatMap((sheet) =>
-      selectors(sheet)
-        .map((s) => ({ sheet, subject: strip(s) }))
-        // A subject that still names `.lp-` reaches only what the package put
-        // on the page — that is an ordinary rule, whatever gate precedes it.
-        .filter(({ subject }) => !subject.includes('.lp-')),
-    )
+  // Every element type a host might put on a page beside this package's own,
+  // including the ones the package styles INSIDE its blocks (`p`, `li`, `dt`,
+  // `summary`) — those are the ones a descendant selector is likeliest to
+  // over-reach on.
+  //
+  // The honest limit of this approach: it catches a leak only if the leak
+  // reaches a tag in THIS list, in one of the two positions the fixture builds.
+  // A rule reaching `<video>` would pass. That is a real gap and a much smaller
+  // one than the text checks have — those are defeated by any selector
+  // containing `.lp-` anywhere, which is all of them. Widen the list when the
+  // package starts styling a tag that is not here.
+  const FOREIGN =
+    '<section><h1>t</h1><h2>t</h2><p>t</p><a href="#x">t</a><img alt="t" src="#">' +
+    '<ul><li>t</li></ul><dl><dt>t</dt><dd>t</dd></dl><button>t</button>' +
+    '<details><summary>t</summary></details><small>t</small><span>t</span>' +
+    '<div><footer>t</footer><header>t</header><nav>t</nav></div></section>'
 
-    expect([...new Set(documentRules.map((r) => r.sheet))]).toEqual(['base.css'])
-    expect([...new Set(documentRules.map((r) => r.subject))].sort()).toEqual([
-      '*',
-      '*::after',
-      '*::before',
-      '::selection',
-      'body',
-      'html',
-      'html[data-smooth]',
-      'html[data-snap]',
-    ])
+  it('every sanctioned document rule is present, and none has been respelled', () => {
+    // The allow-list is only meaningful if it describes the sheet. A rule
+    // removed or respelled would otherwise sit here forever, permitting a
+    // selector that no longer exists while the real one goes unchecked.
+    for (const sel of SANCTIONED) expect(base, sel).toContain(sel)
+  })
+
+  it('no unsanctioned rule reaches an element the package did not render', () => {
+    // The foreign tree sits in BOTH positions a leak can reach it from, because
+    // one position alone leaves a combinator untested: `.lp-band ~ main p` is
+    // invisible to a fixture whose host tree is not a sibling of a band, and
+    // that mutation passed until this fixture grew its second host.
+    //
+    // Both hosts are OUTSIDE any package block, which is the line that matters.
+    // A foreign element placed *inside* a `.lp-band` is deliberately not tested:
+    // hosts put their own content in bands, and `.lp-faq details p` styling it
+    // is the package working as intended, not reaching past itself.
+    document.body.innerHTML =
+      '<div class="lp-flow">' +
+      '<section class="lp-band"><p>own</p></section>' +
+      `<aside id="sibling-host">${FOREIGN}</aside>` +
+      '</div>' +
+      `<main id="outside-host">${FOREIGN}</main>`
+    arm()
+    const hosts = ['sibling-host', 'outside-host'].map((id) => document.getElementById(id)!)
+
+    for (const sheet of SHEETS) {
+      for (const sel of selectors(sheet)) {
+        if (SANCTIONED.includes(sel)) continue
+        // `querySelectorAll` cannot match a pseudo-element; probe the element
+        // the rule originates on, which is what a leak would reach anyway.
+        const probe = sel.replace(/::[a-z-]+/g, '').trim()
+        if (!probe) continue
+        const reached = [...document.querySelectorAll(probe)].filter((el) =>
+          hosts.some((h) => h.contains(el)),
+        )
+        expect(reached.map((el) => el.tagName), `${sheet}: ${sel}`).toEqual([])
+      }
+    }
   })
 
   // Partitioned, never listed: which document rules a flow page inherits is the
