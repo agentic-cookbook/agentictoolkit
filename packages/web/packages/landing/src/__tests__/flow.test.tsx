@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { Flow } from '../flow/Flow'
 import { Band } from '../flow/Band'
 import { Bleed } from '../flow/Bleed'
+import { FlowHero } from '../flow/FlowHero'
 
 const FLOW = readFileSync(join(__dirname, '..', 'css', 'flow.css'), 'utf8')
 
@@ -95,5 +96,39 @@ describe('Bleed', () => {
     const media = FLOW.lastIndexOf('@media', at)
     expect(media).toBeGreaterThan(-1)
     expect(FLOW.slice(media, at)).toContain('min-width')
+  })
+})
+
+describe('FlowHero', () => {
+  it('renders the headline as the page h1', () => {
+    const { container } = render(<FlowHero headline="A claim" sub="A sub" />)
+    expect(container.querySelector('h1')!.textContent).toBe('A claim')
+  })
+
+  it('is not a landmark section — the bands are', () => {
+    const { container } = render(<FlowHero headline="A claim" sub="A sub" />)
+    expect(container.querySelector('section')).toBeNull()
+    expect(container.querySelector('.lp-hero-flow')).not.toBeNull()
+  })
+
+  it('omits the meta line and the shot when not given one', () => {
+    const { container } = render(<FlowHero headline="A claim" sub="A sub" />)
+    expect(container.querySelector('.lp-hero-meta')).toBeNull()
+    expect(container.querySelector('.lp-hero-shot')).toBeNull()
+  })
+
+  it('renders the mark, meta and shot when given them', () => {
+    const { container } = render(
+      <FlowHero
+        mark={<img alt="mark" src="/m.png" />}
+        headline="A claim"
+        sub="A sub"
+        meta="Free"
+        shot={<div data-testid="shot" />}
+      />,
+    )
+    expect(container.querySelector('.lp-hero-meta')!.textContent).toBe('Free')
+    expect(container.querySelector('.lp-hero-shot [data-testid="shot"]')).not.toBeNull()
+    expect(container.querySelector('img[alt="mark"]')).not.toBeNull()
   })
 })

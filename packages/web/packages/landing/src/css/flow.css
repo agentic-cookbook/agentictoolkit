@@ -121,3 +121,71 @@
     margin-left: calc(-1 * var(--lp-bleed, clamp(2.5rem, 10vw, 9rem)));
   }
 }
+
+/* ---- the hero ----
+ * The ground is the host's, as one `--lp-hero-wash` value, because a hero
+ * gradient is the single most site-specific surface on the page and a package
+ * default for it would be a package opinion about a brand.
+ *
+ * It reserves no dock clearance and no viewport. The hero is followed by a band
+ * whose seam pulls up over it, so a hero sized to the viewport would leave the
+ * first band's diagonal biting into an empty screen; and nothing fixed sits
+ * over the TOP of the page.
+ */
+.lp-hero-flow {
+  position: relative;
+  padding-top: var(--lp-hero-pad-top, 8.5rem);
+  padding-bottom: var(--lp-hero-pad-bottom, 6rem);
+  text-align: center;
+  background: var(--lp-hero-wash, var(--lp-ground, #101010));
+}
+
+.lp-hero-flow h1 {
+  margin: 0 auto;
+  max-width: 22ch;
+  font-family: var(--lp-font-display, var(--lp-font, ui-monospace, "SF Mono", monospace));
+  font-size: clamp(2.4rem, 5.4vw, 4.1rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+/* The second half of a two-tone headline. `<b>` in the host's markup, so the
+ * emphasis survives with styles off and is not an empty span. */
+.lp-hero-flow h1 b {
+  color: var(--lp-accent, #d8d8d8);
+  font-weight: inherit;
+}
+
+.lp-hero-sub {
+  margin: 1.5rem auto 0;
+  max-width: 62ch;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-size: 1.05rem;
+  text-wrap: pretty;
+}
+
+.lp-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  justify-content: center;
+  margin-top: 2.2rem;
+}
+
+/* Uppercased, letter-spaced, small. A host putting a product name here opts out
+ * of the transform on its own element — see the `meta` prop's doc comment. */
+.lp-hero-meta {
+  margin-top: 1.6rem;
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-family: var(--lp-font-mono, ui-monospace, "SF Mono", monospace);
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.lp-hero-shot {
+  margin-top: clamp(2.5rem, 6vw, 4.5rem);
+}
