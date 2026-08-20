@@ -94,3 +94,30 @@
   margin-top: calc(var(--lp-seam, 4.5vw) * -1);
   padding-top: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
 }
+
+/* ---- bleeding a shot past the column ----
+ * Behind a breakpoint, and that is the whole subtlety: below it the content
+ * column is already most of the viewport, so a negative margin does not crop a
+ * frame against the page edge, it drags it off-screen. Under the breakpoint a
+ * bleed is a no-op and the frame sits in the column like anything else.
+ *
+ * `62rem` matches `.lp-split`'s breakpoint in base.css deliberately — a bleed
+ * is nearly always the shot half of a split, and two different breakpoints
+ * would give a window that goes full-width one step before it stops bleeding.
+ *
+ * The depth is capped in `rem` as well as `vw`: unclamped, a very wide monitor
+ * bleeds so far that the frame's own content — an axis label, a window title —
+ * is what gets cropped rather than its edge.
+ */
+.lp-bleed {
+  min-width: 0;
+}
+
+@media (min-width: 62rem) {
+  .lp-bleed--right {
+    margin-right: calc(-1 * var(--lp-bleed, clamp(2.5rem, 10vw, 9rem)));
+  }
+  .lp-bleed--left {
+    margin-left: calc(-1 * var(--lp-bleed, clamp(2.5rem, 10vw, 9rem)));
+  }
+}

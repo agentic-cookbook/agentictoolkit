@@ -4,6 +4,7 @@ import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { Flow } from '../flow/Flow'
 import { Band } from '../flow/Band'
+import { Bleed } from '../flow/Bleed'
 
 const FLOW = readFileSync(join(__dirname, '..', 'css', 'flow.css'), 'utf8')
 
@@ -75,5 +76,24 @@ describe('flow.css', () => {
     const bare = FLOW_RULES.match(/\.lp-band--paper\s*\{([^}]*)\}/)
     expect(bare).not.toBeNull()
     expect(bare![1]).toMatch(/clip-path:\s*polygon\(\s*0\s+0,/)
+  })
+})
+
+describe('Bleed', () => {
+  it('bleeds right by default', () => {
+    const { container } = render(<Bleed>shot</Bleed>)
+    expect(container.querySelector('.lp-bleed--right')).not.toBeNull()
+  })
+
+  it('takes a side', () => {
+    const { container } = render(<Bleed side="left">shot</Bleed>)
+    expect(container.querySelector('.lp-bleed--left')).not.toBeNull()
+  })
+
+  it('only bleeds once there is room — the offset is behind a breakpoint', () => {
+    const at = FLOW.indexOf('.lp-bleed--right')
+    const media = FLOW.lastIndexOf('@media', at)
+    expect(media).toBeGreaterThan(-1)
+    expect(FLOW.slice(media, at)).toContain('min-width')
   })
 })
