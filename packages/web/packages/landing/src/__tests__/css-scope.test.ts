@@ -75,7 +75,50 @@ function topLevelParts(sel: string): string[] {
   return out
 }
 
-/** Drop every balanced `(…)` group: `html:has(.lp-screen)` → `html:has`. */
+/**
+ * Splice out every `:where()` / `:is()`, promoting its ARGUMENT into the
+ * compound: `:where(html):has(.lp-screen)` → `html:has(.lp-screen)`, and
+ * `:where(html:has(.lp-deck, .lp-flow))` → `html:has(.lp-deck, .lp-flow)`.
+ *
+ * The distinction this draws is the whole reason `isDocumentRoot` works. CSS
+ * has two kinds of functional pseudo-class and they are opposites here:
+ *
+ * - `:where()` and `:is()` are TRANSPARENT. Their argument is part of what the
+ *   compound selects — `:where(html)` selects `html`. They exist to move
+ *   specificity around, not to change the subject.
+ * - `:has()`, `:not()`, `:nth-child()` and friends are FILTERS. Their argument
+ *   is a condition the subject must satisfy, and is not itself selected.
+ *
+ * Treating both kinds alike is what let the round-5 escape through: dropping
+ * every parenthesised group blindly deleted the `html` inside `:where(html)`.
+ *
+ * Each pass removes at least the wrapper's own characters, so this terminates.
+ */
+function inlineTransparent(s: string): string {
+  const opener = /:(?:where|is)\(/
+  let out = s
+  for (;;) {
+    const found = opener.exec(out)
+    if (!found) return out
+    const start = found.index
+    let depth = 0
+    let end = start + found[0].length - 1
+    for (; end < out.length; end++) {
+      if (out[end] === '(') depth++
+      else if (out[end] === ')' && --depth === 0) break
+    }
+    // Unbalanced — not a selector this file can reason about. Leave it whole
+    // rather than corrupting it; the probe still gets a say.
+    if (end >= out.length) return out
+    out = out.slice(0, start) + out.slice(start + found[0].length, end) + out.slice(end + 1)
+  }
+}
+
+/**
+ * Drop every remaining balanced `(…)` group — by this point they are all
+ * filters: `html:has(.lp-screen)` → `html:has`. Square brackets are untouched,
+ * so `html[data-snap]` keeps its attribute.
+ */
 function withoutArgs(s: string): string {
   let out = ''
   let depth = 0
@@ -87,31 +130,18 @@ function withoutArgs(s: string): string {
   return out
 }
 
-/**
- * Unwrap a `:where()` / `:is()` that encloses the WHOLE compound, repeatedly:
- * `:where(html:has(.lp-deck, .lp-flow))` → `html:has(.lp-deck, .lp-flow)`. A
- * wrapper that merely starts the compound (`:where(a) b`) or that ends before
- * it does is left alone — it is not the same shape.
- */
-function unwrapWhole(part: string): string {
-  const open = /^:(?:where|is)\(/.exec(part)
-  if (!open) return part
-  let depth = 0
-  for (let i = open[0].length - 1; i < part.length; i++) {
-    if (part[i] === '(') depth++
-    else if (part[i] === ')' && --depth === 0)
-      return i === part.length - 1 ? unwrapWhole(part.slice(open[0].length, i)) : part
-  }
-  return part
-}
+/** What a compound actually selects, with every gate and wrapper resolved. */
+const subjectOf = (part: string) => withoutArgs(inlineTransparent(part))
 
 /**
  * Does this compound select the document root itself, however it is spelled?
- * `html`, `html:has(…)`, `html[data-snap]:where(:has(…))`,
- * `:where(html:has(…))` and `body` all do. Asked structurally, because the
- * spellings are unbounded and enumerating them is what failed twice.
+ * `html`, `html:has(…)`, `html[data-snap]:where(:has(…))`, `:where(html:has(…))`,
+ * `:where(html):has(…)`, `:is(:where(html)):has(…)`, `body` and a bare `*` all
+ * do. Asked structurally, because the spellings are unbounded — enumerating
+ * them has now failed three times, and the last two escapes were both new
+ * spellings of a defect an earlier round had "fixed".
  */
-const isDocumentRoot = (part: string) => /^(html|body|:root)\b/.test(withoutArgs(unwrapWhole(part)))
+const isDocumentRoot = (part: string) => /^(?:\*|(?:html|body|:root)\b)/.test(subjectOf(part))
 
 /** Every selector list in a sheet, with comments and at-rule preludes dropped. */
 function selectors(sheet: string): string[] {
@@ -266,11 +296,24 @@ describe('the document-level rules are gated on a layout root, at their original
     )
     expect(files.length).toBeGreaterThan(10)
     const rendered = new Set(
-      files.flatMap((f) =>
-        [...readFileSync(join(SRC_DIR, f), 'utf8').matchAll(/<([a-z][a-z0-9]*)[\s>/]/g)].map(
-          (m) => m[1],
-        ),
-      ),
+      files.flatMap((f) => {
+        const src = readFileSync(join(SRC_DIR, f), 'utf8')
+        return [
+          // A tag written literally in JSX.
+          ...[...src.matchAll(/<([a-z][a-z0-9]*)[\s>/]/g)].map((m) => m[1]),
+          // And a tag chosen at RUNTIME. `Screen` takes `as?: 'section' | 'div'`
+          // and renders `<Tag>`, which is capitalised because it is a JS
+          // identifier — so the literal-JSX regex above cannot see it, and both
+          // its values are covered here only because other files happen to
+          // render them bare. Harvest the quoted names out of the `as`
+          // annotation and its destructuring default, so a union that grows an
+          // `'article'` is caught rather than silently uncovered. This is the
+          // package's only dynamic-tag idiom; a second one needs a line here.
+          ...[...src.matchAll(/\bas\??\s*[:=][^\n]*/g)].flatMap((m) =>
+            [...m[0].matchAll(/'([a-z][a-z0-9]*)'/g)].map((q) => q[1]),
+          ),
+        ]
+      }),
     )
     // The document shell itself — `DeckScript` renders `<script>`, and `html` /
     // `head` / `body` appear in the inline script it emits. None can be nested
@@ -295,21 +338,29 @@ describe('the document-level rules are gated on a layout root, at their original
   // write. Neither test is sufficient. Do not collapse them again.
   //
   // The gate is recognised STRUCTURALLY, and that is the whole lesson of this
-  // file. Two earlier versions matched gate spellings with a regex — first one
-  // spelling, then two — and each was beaten by a third: `html:has(.lp-deck,
-  // .lp-flow) section`, then `html:has(.lp-screen) b`, which is worse because
-  // `.lp-screen` is a real always-present descendant of a deck, so the gate
-  // WORKS and only the test is fooled. An author reaching for the most-named
-  // class in the package instead of `.lp-deck` writes it by accident. Spellings
-  // are unbounded; "is this compound the document root" is not.
+  // file. Three earlier versions matched gate spellings with a regex — one
+  // spelling, then two, then a parser that special-cased a wrapper enclosing
+  // the whole compound — and each was beaten by the next spelling:
+  //
+  //   html:has(.lp-deck, .lp-flow) section   the ungated-`:where()` form
+  //   html:has(.lp-screen) b                 a WORKING gate on a different class
+  //   :where(html):has(.lp-screen) b         the wrapper around `html` alone
+  //
+  // The last two are the instructive ones. Both gates work — `.lp-screen` is an
+  // always-present descendant of a deck — so the rule does what its author
+  // meant and only the test is fooled, and `.lp-screen` is the class this
+  // package names most often, so reaching for it is an unforced substitution
+  // rather than a trick. Spellings are unbounded; "does this compound select
+  // the document root" is not, and `subjectOf` answers it by resolving the
+  // selector rather than by recognising it.
   const strip = (s: string) => {
     const parts = topLevelParts(s)
     if (!isDocumentRoot(parts[0])) return s
     const selected = parts.slice(1).join(' ')
     // Nothing after the gate means the rule paints the root itself. Report it
-    // under its own name — `html`, `html[data-snap]` — by dropping the gating
+    // under its own name — `html`, `html[data-snap]` — by dropping the filtering
     // pseudo-classes now that their arguments are gone.
-    return selected || withoutArgs(unwrapWhole(parts[0])).replace(/(:[a-z-]+)+$/, '')
+    return selected || subjectOf(parts[0]).replace(/(:[a-z-]+)+$/, '')
   }
 
   it('adds no document-level rule beyond the sanctioned subjects', () => {
