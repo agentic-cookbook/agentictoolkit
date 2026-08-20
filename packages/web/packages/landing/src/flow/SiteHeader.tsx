@@ -8,6 +8,13 @@ import type { NavChromeProps } from '../chrome/types'
 export interface SiteHeaderProps extends NavChromeProps {
   /** A call to action pinned to the right of the bar. */
   action?: ReactNode
+  /**
+   * The inline bar's own link list, shorter than `links`. Defaults to
+   * `links` — a host with few enough links to fit the bar and the drawer
+   * both need not supply two lists. The drawer always renders the full
+   * `links`; only the bar substitutes this one.
+   */
+  barLinks?: NavChromeProps['links']
 }
 
 /**
@@ -28,7 +35,7 @@ export interface SiteHeaderProps extends NavChromeProps {
  * only its BAR above the breakpoint, so the burger and drawer keep working
  * below it and nothing is reimplemented here.
  */
-export function SiteHeader({ brand, links, footer, action, ...nav }: SiteHeaderProps): ReactElement {
+export function SiteHeader({ brand, links, barLinks = links, footer, action, ...nav }: SiteHeaderProps): ReactElement {
   const drawerRef = useRef<HTMLDivElement>(null)
   // Bumped to remount NavChrome, which is the only way to reset its `open`
   // state from out here — it owns that state and exposes no way to close.
@@ -65,7 +72,7 @@ export function SiteHeader({ brand, links, footer, action, ...nav }: SiteHeaderP
       <header className="lp-site-bar">
         {brand !== undefined && <div className="lp-site-brand">{brand}</div>}
         <nav className="lp-site-nav" aria-label={nav.navLabel ?? 'Site'}>
-          {links.map(({ href, label }) => (
+          {barLinks.map(({ href, label }) => (
             <a key={href} href={href}>
               {label}
             </a>

@@ -44,6 +44,22 @@ describe('SiteHeader', () => {
     expect(container.querySelector('.lp-site-drawer-only')).not.toBeNull()
   })
 
+  it('renders barLinks in the bar while the drawer still renders all of links', () => {
+    const BAR = [LINKS[0]!]
+    const { container } = render(<SiteHeader brand={<span>Brand</span>} links={LINKS} barLinks={BAR} />)
+    const nav = container.querySelector('.lp-site-nav')!
+    expect(nav.querySelectorAll('a').length).toBe(BAR.length)
+    expect(nav.textContent).toContain('One')
+    expect(nav.textContent).not.toContain('Two')
+
+    // The drawer is NavChrome's own <nav>, not `.lp-site-nav` — it keeps the
+    // full list regardless of what the bar was given.
+    const drawer = container.querySelector('.lp-site-drawer-only')!
+    const drawerLinks = drawer.querySelectorAll('a[href]')
+    expect(drawerLinks.length).toBe(LINKS.length)
+    expect(drawer.textContent).toContain('Two')
+  })
+
   it('renders an action slot when given one', () => {
     render(<SiteHeader brand={<span>Brand</span>} links={LINKS} action={<a href="#x">Get it</a>} />)
     expect(screen.getByRole('link', { name: 'Get it' })).toBeTruthy()
