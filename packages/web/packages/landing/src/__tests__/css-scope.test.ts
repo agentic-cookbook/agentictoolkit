@@ -23,7 +23,7 @@ import { describe, expect, it } from 'vitest'
  * person edits; `build:css` copies them to `dist/` verbatim.
  */
 const CSS_DIR = join(__dirname, '..', 'css')
-const SHEETS = ['base.css', 'chrome.css', 'blocks.css'] as const
+const SHEETS = ['base.css', 'chrome.css', 'blocks.css', 'flow.css'] as const
 
 /** Every selector list in a sheet, with comments and at-rule preludes dropped. */
 function selectors(sheet: string): string[] {
@@ -45,8 +45,13 @@ function selectors(sheet: string): string[] {
 describe('the package never styles anything it did not put on the page', () => {
   it.each(SHEETS)('%s names .lp- in every selector', (sheet) => {
     const found = selectors(sheet)
-    // Guard the guard: a regex that matched nothing would pass vacuously.
-    expect(found.length).toBeGreaterThan(10)
+    // Guard the guard: a regex that matched nothing would pass vacuously. The
+    // floor guards the PARSER, not a sheet's size — it was `>10` when every
+    // sheet here was 300+ lines, which flow.css (7 selectors at birth, ~20 by
+    // the time bands, drift and depth land) would have failed for several
+    // tasks and then started passing on its own. `>3` is the smallest sheet
+    // this package ships setting the number, not an aesthetic choice.
+    expect(found.length).toBeGreaterThan(3)
     expect(found.filter((s) => !s.includes('.lp-'))).toEqual([])
   })
 })

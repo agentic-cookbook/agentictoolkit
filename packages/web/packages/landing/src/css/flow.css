@@ -1,0 +1,85 @@
+/* ---- the flow page ----
+ * A continuous scroll of bands, each as tall as its content. The counterpart
+ * to base.css's deck, and deliberately a SIBLING of it rather than a
+ * replacement: a host picks one layout or the other, and both ship.
+ *
+ * Nothing here touches <html> or <body>. base.css owns the document — the root
+ * size, the Dynamic Type block, `overflow-x: clip`, `scroll-behavior` — and a
+ * host loads both sheets, so restating any of it here would be two rules
+ * racing on import order. What base.css does NOT set when nothing snaps is
+ * `scroll-snap-type`, which it leaves at `none` until a script arms it; a flow
+ * host simply never renders that script.
+ */
+
+.lp-flow:focus-visible {
+  outline: none;
+}
+
+/* ---- a band ----
+ * `--lp-band-pad` is the vertical rhythm; the dock clearance is ADDED to the
+ * foot rather than substituted into it, because a band has no spare viewport
+ * to absorb it the way `min-height: 100vh` did on a screen. Without the
+ * addition the last line of a long band sits behind the host's fixed chrome.
+ */
+.lp-band {
+  position: relative;
+  z-index: 1;
+  padding-top: var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem));
+  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-dock-clear, 0px));
+  /* A bleeding child runs past the content column toward the page edge; without
+   * this it widens the DOCUMENT, and mobile Chrome and Safari answer an
+   * over-wide document by zooming out. `clip` and not `hidden` so a band never
+   * becomes a scroll container in its own right. */
+  overflow-x: clip;
+}
+
+/* The seam. `clip-path` cuts the diagonal off the band's own top edge, and the
+ * negative margin pulls the band up by exactly the depth of that cut so the
+ * triangle it vacates is filled by the band above rather than by the page
+ * ground. Both read `--lp-seam`, so they cannot drift apart.
+ *
+ * The extra top padding is not decoration: the clip removes real estate from
+ * the top-left corner, and content that starts at the old offset would sit
+ * inside the removed wedge on a narrow viewport.
+ */
+.lp-band--seam {
+  clip-path: polygon(0 var(--lp-seam, 4.5vw), 100% 0, 100% 100%, 0 100%);
+  margin-top: calc(var(--lp-seam, 4.5vw) * -1);
+  padding-top: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
+}
+
+.lp-band--dark {
+  background: var(--lp-ground, #101010);
+  color: var(--lp-ink, #ededed);
+}
+
+.lp-band--soft {
+  background: var(--lp-tone-soft, #171717);
+  color: var(--lp-ink, #ededed);
+}
+
+/* The light band. It carries its own ink values because inverting the page's
+ * two text colours is not a tint of them — a dim ivory that reads as "quiet" on
+ * near-black reads as "broken" on paper. The host supplies both.
+ *
+ * It is cut on BOTH edges: it is an inserted card rather than a step down, so
+ * it wants a matching angle at its foot. That is the one asymmetry with the
+ * other tones, and it is why the paper rule restates the clip rather than
+ * composing with `.lp-band--seam`.
+ */
+.lp-band--paper {
+  background: var(--lp-tone-paper, #f4f4f4);
+  color: var(--lp-paper-ink, #171717);
+  clip-path: polygon(0 var(--lp-seam, 4.5vw), 100% 0, 100% 100%, 0 calc(100% - var(--lp-seam, 4.5vw)));
+  margin-top: calc(var(--lp-seam, 4.5vw) * -1);
+  margin-bottom: calc(var(--lp-seam, 4.5vw) * -1);
+  padding-top: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw));
+  padding-bottom: calc(var(--lp-band-pad, clamp(4.5rem, 9vw, 8rem)) + var(--lp-seam, 4.5vw) + var(--lp-dock-clear, 0px));
+}
+
+/* A paper band's own dim ink, for the blocks that reach for `--lp-ink-dim`
+ * directly. Scoped to the band so it cannot leak onto the dark ones. */
+.lp-band--paper {
+  --lp-ink: var(--lp-paper-ink, #171717);
+  --lp-ink-dim: var(--lp-paper-dim, #5c5c5c);
+}
