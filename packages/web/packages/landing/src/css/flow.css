@@ -204,7 +204,13 @@
  */
 .lp-site-bar {
   position: relative;
-  z-index: 50;
+  /* 30, deliberately, and below the package's chrome tier rather than above it.
+   * `.lp-bar` is 40, `.lp-scrim` 50 and `.lp-drawer` 60; at 50 this header tied
+   * the scrim and won only on DOM order, and it sat ABOVE the fixed burger —
+   * which, since this element takes pointer events, made the one control a
+   * narrow viewport has for navigation unclickable. Bands are z-index 1, so 30
+   * still lifts the header clear of the page it scrolls over. */
+  z-index: 30;
   display: flex;
   align-items: center;
   gap: 1.5rem;
@@ -221,9 +227,12 @@
   letter-spacing: -0.01em;
 }
 
+/* Pushes the nav and the action to the right whatever precedes them, so the row
+ * does not depend on `.lp-site-brand` existing to carry `margin-right: auto`. */
 .lp-site-nav {
   display: none;
   gap: 1.75rem;
+  margin-left: auto;
 }
 
 .lp-site-nav a {
@@ -235,6 +244,37 @@
 
 .lp-site-nav a:hover {
   color: var(--lp-ink, #ededed);
+}
+
+/* The package's chrome is built to sit under a host's own header, and this is
+ * that host — `chrome.css` names both of these tokens for exactly this case.
+ *
+ * `--lp-bar-bg: none` because the default is a gradient from the page ground,
+ * whose job is to lift a floating burger off the content behind it. Here there
+ * is a real header doing that at the top, and below it the gradient is a solid
+ * strip laid permanently across the top of every band that scrolls under it —
+ * covering the diagonal seam this layout is built on. The burger keeps its own
+ * translucent chip (`--lp-burger-bg`), which is what makes it readable alone.
+ *
+ * `--lp-bar-pad-y` centres the 32px burger on the header's line box instead of
+ * top-aligning it: the site bar's own `padding-block` is 1.15rem above a ~17px
+ * line, so the burger has to start (32 - 17) / 2 higher to share that centre.
+ * Measured at 1440x900 and 390x667; re-measure it if `.lp-site-bar`'s padding
+ * or `.lp-site-brand`'s font-size moves. `--lp-bar-pad-x` is left at its 1.25rem
+ * default, which already lines the burger up with `.lp-site-bar`'s gutter —
+ * `min(100% - 2.5rem, …)` is the same 1.25rem inset on each side. */
+.lp-site-drawer-only {
+  --lp-bar-bg: none;
+  --lp-bar-pad-y: 0.61rem;
+}
+
+/* The burger is `.lp-bar`'s FIRST child, so it lands in the top-left corner —
+ * the corner `.lp-site-brand` already occupies. Sent to the other end, the two
+ * compose into one row: wordmark left, burger right, which is what a narrow
+ * viewport expects anyway. Set here rather than in chrome.css because it is
+ * true of this header's arrangement, not of the burger. */
+.lp-site-drawer-only .lp-burger {
+  margin-left: auto;
 }
 
 /* Above the breakpoint the inline nav is the navigation, so the burger goes.
