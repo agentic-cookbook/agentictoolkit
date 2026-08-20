@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { SiteHeader } from '../flow/SiteHeader'
 
@@ -11,10 +11,15 @@ const LINKS = [
 const SRC = readFileSync(join(__dirname, '..', 'flow', 'SiteHeader.tsx'), 'utf8')
 const FLOW = readFileSync(join(__dirname, '..', 'css', 'flow.css'), 'utf8')
 
-// jsdom ships no ResizeObserver. SiteHeader only uses it to notice the drawer
-// wrapper being hidden, which no test here exercises, so a no-op stub is the
-// whole requirement.
-globalThis.ResizeObserver ??= class {
+// jsdom ships no ResizeObserver, and the workspace setup file installs a no-op
+// shim for every test. That shim is not enough here: the remount test has to
+// FIRE the observer, so this one hands the callback back. Assigned rather than
+// `??=`d, precisely because the shim is already there and would win.
+const observers: ResizeObserverCallback[] = []
+globalThis.ResizeObserver = class {
+  constructor(cb: ResizeObserverCallback) {
+    observers.push(cb)
+  }
   observe(): void {}
   unobserve(): void {}
   disconnect(): void {}
@@ -66,8 +71,12 @@ describe('SiteHeader', () => {
 
   it('sends the burger to the far end, away from the wordmark', () => {
     // NavChrome renders the burger as .lp-bar's first child, so untouched it
-    // lands in the same top-left corner as .lp-site-brand.
-    expect(FLOW).toContain('.lp-site-drawer-only .lp-burger')
+    // lands in the same top-left corner as .lp-site-brand. Read the rule's
+    // BODY, not just its selector: a rule with this selector and some other
+    // property would satisfy a bare substring search while leaving the burger
+    // exactly where the bug put it.
+    const rule = FLOW.slice(FLOW.indexOf('.lp-site-drawer-only .lp-burger {'))
+    expect(rule.slice(0, rule.indexOf('}'))).toContain('margin-left: auto')
   })
 
   it('omits the brand element entirely when there is no brand', () => {
@@ -79,12 +88,50 @@ describe('SiteHeader', () => {
     // NavChrome's Tab trap is keyed on `open`, not on visibility. Left open
     // across a resize past the breakpoint it preventDefault()s every Tab over a
     // display:none subtree — Tab does nothing on the page until Escape.
-    expect(SRC).toContain('ResizeObserver')
-    expect(SRC).toMatch(/key=\{generation\}/)
-    // The breakpoint must NOT be restated in JS; flow.css is its one home.
-    // Comments come out first: the one above the observer NAMES matchMedia in
-    // order to say why it is not used, and a bare substring search cannot tell
-    // an anti-pattern being ruled out from one being written.
+    //
+    // Drive the observer rather than pinning the source text: "the file
+    // mentions ResizeObserver" passes on a component that observes the wrong
+    // element or never raises `generation`. A remount is observable as the
+    // drawer's DOM node being replaced, which is exactly what drops the old
+    // instance's listener.
+    //
+    // jsdom lays nothing out, so every box is already 0x0 — which is what the
+    // component reads as "hidden". The width has to be real BEFORE the effect
+    // runs, because that is where the observer's first `visible` is read; a
+    // stub applied after render leaves it already false and no transition
+    // happens. Hence the prototype patch around the render, restored after.
+    const real = Element.prototype.getBoundingClientRect
+    let width = 320
+    Element.prototype.getBoundingClientRect = function (this: Element): DOMRect {
+      return { ...real.call(this), width } as DOMRect
+    }
+    // `observers` is module-scoped and every earlier render in this file has
+    // already pushed one, so count the delta rather than the total.
+    const seen = observers.length
+    try {
+      const { container } = render(<SiteHeader links={LINKS} />)
+      const before = container.querySelector('.lp-drawer')
+      expect(before).not.toBeNull()
+      expect(observers.length).toBe(seen + 1)
+
+      width = 0
+      act(() => {
+        observers[seen]?.([], {} as ResizeObserver)
+      })
+
+      const after = container.querySelector('.lp-drawer')
+      expect(after).not.toBeNull()
+      expect(after).not.toBe(before)
+    } finally {
+      Element.prototype.getBoundingClientRect = real
+    }
+  })
+
+  it('does not restate the breakpoint in JavaScript', () => {
+    // flow.css is the breakpoint's one home. Comments come out first: the one
+    // above the observer NAMES matchMedia in order to say why it is not used,
+    // and a bare substring search cannot tell an anti-pattern being ruled out
+    // from one being written.
     const code = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
     expect(code).not.toContain('matchMedia')
   })
