@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
@@ -22,7 +22,8 @@ import { describe, expect, it } from 'vitest'
  * holds a deck. It is asserted over the SOURCE files because that is what a
  * person edits; `build:css` copies them to `dist/` verbatim.
  */
-const CSS_DIR = join(__dirname, '..', 'css')
+const SRC_DIR = join(__dirname, '..')
+const CSS_DIR = join(SRC_DIR, 'css')
 const SHEETS = ['base.css', 'chrome.css', 'blocks.css', 'flow.css'] as const
 
 /**
@@ -49,6 +50,68 @@ function topLevel(list: string): string[] {
   if (current) out.push(current)
   return out
 }
+
+/**
+ * Split ONE selector on its top-level descendant spaces, so the compounds a
+ * complex selector is built from can be examined one at a time. Spaces inside
+ * `:has()` / `:is()` / `:where()` arguments are not combinators and are left
+ * alone. `selectors()` has already collapsed runs of whitespace to one space.
+ */
+function topLevelParts(sel: string): string[] {
+  const out: string[] = []
+  let current = ''
+  let depth = 0
+  for (const char of sel) {
+    if (char === '(') depth++
+    else if (char === ')') depth--
+    else if (char === ' ' && depth === 0) {
+      if (current) out.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  if (current) out.push(current)
+  return out
+}
+
+/** Drop every balanced `(…)` group: `html:has(.lp-screen)` → `html:has`. */
+function withoutArgs(s: string): string {
+  let out = ''
+  let depth = 0
+  for (const char of s) {
+    if (char === '(') depth++
+    else if (char === ')') depth--
+    else if (depth === 0) out += char
+  }
+  return out
+}
+
+/**
+ * Unwrap a `:where()` / `:is()` that encloses the WHOLE compound, repeatedly:
+ * `:where(html:has(.lp-deck, .lp-flow))` → `html:has(.lp-deck, .lp-flow)`. A
+ * wrapper that merely starts the compound (`:where(a) b`) or that ends before
+ * it does is left alone — it is not the same shape.
+ */
+function unwrapWhole(part: string): string {
+  const open = /^:(?:where|is)\(/.exec(part)
+  if (!open) return part
+  let depth = 0
+  for (let i = open[0].length - 1; i < part.length; i++) {
+    if (part[i] === '(') depth++
+    else if (part[i] === ')' && --depth === 0)
+      return i === part.length - 1 ? unwrapWhole(part.slice(open[0].length, i)) : part
+  }
+  return part
+}
+
+/**
+ * Does this compound select the document root itself, however it is spelled?
+ * `html`, `html:has(…)`, `html[data-snap]:where(:has(…))`,
+ * `:where(html:has(…))` and `body` all do. Asked structurally, because the
+ * spellings are unbounded and enumerating them is what failed twice.
+ */
+const isDocumentRoot = (part: string) => /^(html|body|:root)\b/.test(withoutArgs(unwrapWhole(part)))
 
 /** Every selector list in a sheet, with comments and at-rule preludes dropped. */
 function selectors(sheet: string): string[] {
@@ -174,44 +237,80 @@ describe('the document-level rules are gated on a layout root, at their original
   //
   // The honest limit of this approach: it catches a leak only if the leak
   // reaches a tag in THIS list, in one of the two positions the fixture builds.
-  // A rule reaching `<video>` would pass. That is a real gap and a much smaller
-  // one than the text checks have — those are defeated by any selector
-  // containing `.lp-` anywhere, which is all of them. Widen the list when the
-  // package starts styling a tag that is not here.
-  // `code`, `em`, `video` and `table` are here because the package renders those
-  // tags BARE — `blocks/Code.tsx`, `blocks/TourStrip.tsx`, `blocks/Clip.tsx` —
-  // which makes a document-gated rule aimed at the package's own code or
-  // emphasis the likeliest leak an author would actually write. That shape got
-  // past an earlier version of this fixture.
+  // The tags that matter most are the ones the package renders BARE, because a
+  // document-gated rule aimed at the package's own code, emphasis or bold is the
+  // likeliest leak an author actually writes — and one of those, `<b>`, got past
+  // a hand-kept version of this list. So the list is no longer trusted to be
+  // right by inspection: `the fixture covers every tag the package renders bare`
+  // below reads them off the JSX and fails if one is missing.
   const FOREIGN =
-    '<section><h1>t</h1><h2>t</h2><h3>t</h3><p>t</p><a href="#x">t</a><img alt="t" src="#">' +
-    '<ul><li>t</li></ul><dl><dt>t</dt><dd>t</dd></dl><button>t</button>' +
+    '<section><h1>t</h1><h2>t</h2><h3>t</h3><h4>t</h4><p>t</p><a href="#x">t</a>' +
+    '<img alt="t" src="#"><ul><li>t</li></ul><ol><li>t</li></ol>' +
+    '<dl><dt>t</dt><dd>t</dd></dl><button>t</button>' +
     '<details><summary>t</summary></details><small>t</small><span>t</span>' +
-    '<code>t</code><pre>t</pre><em>t</em><strong>t</strong><blockquote>t</blockquote>' +
+    '<code>t</code><pre>t</pre><em>t</em><b>t</b><strong>t</strong><blockquote>t</blockquote>' +
     '<figure><figcaption>t</figcaption></figure><video></video><hr>' +
-    '<table><thead><tr><th>t</th></tr></thead><tbody><tr><td>t</td></tr></tbody></table>' +
+    '<table><caption>t</caption><thead><tr><th>t</th></tr></thead>' +
+    '<tbody><tr><td>t</td></tr></tbody></table>' +
     '<label>t<input></label><select><option>t</option></select><textarea></textarea>' +
-    '<div><footer>t</footer><header>t</header><nav>t</nav></div></section>'
+    '<div><footer>t</footer><header>t</header><nav>t</nav><main>t</main></div></section>'
+
+  it('the fixture covers every tag the package renders bare', () => {
+    // DERIVED, never hand-kept. The fixture's tag list is the probe's only
+    // bound, and a hand-kept one goes stale in the direction that passes: the
+    // package grows a bare `<b>`, nobody widens the fixture, and a rule reaching
+    // every `<b>` on the host site is invisible to the probe. That is not
+    // hypothetical — it is exactly how `html:has(.lp-screen) b` survived.
+    const files = readdirSync(SRC_DIR, { recursive: true, encoding: 'utf8' }).filter(
+      (f) => f.endsWith('.tsx') && !f.includes('__tests__'),
+    )
+    expect(files.length).toBeGreaterThan(10)
+    const rendered = new Set(
+      files.flatMap((f) =>
+        [...readFileSync(join(SRC_DIR, f), 'utf8').matchAll(/<([a-z][a-z0-9]*)[\s>/]/g)].map(
+          (m) => m[1],
+        ),
+      ),
+    )
+    // The document shell itself — `DeckScript` renders `<script>`, and `html` /
+    // `head` / `body` appear in the inline script it emits. None can be nested
+    // inside a host element, so none can be part of a fixture that models one.
+    for (const tag of ['html', 'head', 'body', 'script']) rendered.delete(tag)
+    expect(rendered.size).toBeGreaterThan(20)
+    const missing = [...rendered].filter((t) => !new RegExp(`<${t}[\\s>/]`).test(FOREIGN))
+    expect(missing).toEqual([])
+  })
 
   // THE OTHER HALF, and the two are kept together because each is blind exactly
   // where the other sees.
   //
-  // This one strips a recognised gate spelling and checks the residual subject
-  // against the allow-list, so it is unbounded in TAG — `code`, `video`, a tag
-  // nobody has invented yet — and bounded in SPELLING: it does not recognise
-  // `html:has(…)` written without the `:where()` wrapper, which is how the
-  // round-2 escape got through. The probe below is the mirror image: unbounded
-  // in spelling, bounded to the tags its fixture builds.
+  // This one drops a document-root gate and checks what the rule then SELECTS,
+  // so it is unbounded in TAG — `code`, `video`, `<b>`, a tag nobody has
+  // invented yet. The probe below is its mirror: it asks a real selector engine,
+  // so no spelling escapes it, but it only sees what its fixture builds.
   //
   // Deleting this one in favour of the probe was a mistake caught in review —
   // `:where(html:has(.lp-deck, .lp-flow)) code` then passed everything, and the
   // package renders bare `<code>`, so that is a rule an author would plausibly
   // write. Neither test is sufficient. Do not collapse them again.
-  const strip = (s: string) =>
-    s
-      .replace(/:where\(:has\([^)]*\)\)/, '')
-      .replace(/^:where\(html:has\([^)]*\)\)\s*/, '')
-      .trim()
+  //
+  // The gate is recognised STRUCTURALLY, and that is the whole lesson of this
+  // file. Two earlier versions matched gate spellings with a regex — first one
+  // spelling, then two — and each was beaten by a third: `html:has(.lp-deck,
+  // .lp-flow) section`, then `html:has(.lp-screen) b`, which is worse because
+  // `.lp-screen` is a real always-present descendant of a deck, so the gate
+  // WORKS and only the test is fooled. An author reaching for the most-named
+  // class in the package instead of `.lp-deck` writes it by accident. Spellings
+  // are unbounded; "is this compound the document root" is not.
+  const strip = (s: string) => {
+    const parts = topLevelParts(s)
+    if (!isDocumentRoot(parts[0])) return s
+    const selected = parts.slice(1).join(' ')
+    // Nothing after the gate means the rule paints the root itself. Report it
+    // under its own name — `html`, `html[data-snap]` — by dropping the gating
+    // pseudo-classes now that their arguments are gone.
+    return selected || withoutArgs(unwrapWhole(parts[0])).replace(/(:[a-z-]+)+$/, '')
+  }
 
   it('adds no document-level rule beyond the sanctioned subjects', () => {
     const documentRules = SHEETS.flatMap((sheet) =>
