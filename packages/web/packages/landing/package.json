@@ -23,7 +23,8 @@
     },
     "./css/base.css": "./dist/css/base.css",
     "./css/chrome.css": "./dist/css/chrome.css",
-    "./css/blocks.css": "./dist/css/blocks.css"
+    "./css/blocks.css": "./dist/css/blocks.css",
+    "./css/flow.css": "./dist/css/flow.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css && pnpm run check:directives",

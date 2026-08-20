@@ -289,3 +289,69 @@
     display: none;
   }
 }
+
+/* ---- the footer ---- */
+.lp-site-foot {
+  padding-top: clamp(3rem, 6vw, 5rem);
+  padding-bottom: calc(clamp(3rem, 6vw, 5rem) + var(--lp-dock-clear, 0px));
+  border-top: 1px solid var(--lp-hairline, rgba(255, 255, 255, 0.1));
+  background: var(--lp-ground, #101010);
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-size: 0.86rem;
+}
+
+/* The footer has to dress its own links. Every other link on a page built from
+ * this package is styled by the block that owns it — `.lp-mail`, the drawer's,
+ * `.lp-contact .lp-colophon a` — and no sheet here may write a bare `a`
+ * selector, because every selector in this package must carry a `.lp-` class.
+ * Without these, the two links a footer actually holds (a credit and a mailto)
+ * render as the user agent's blue underline on a near-black ground.
+ *
+ * Deliberately the same treatment as `.lp-contact .lp-colophon a` rather than a
+ * new one: on a host that shows its credit line in both places, two different
+ * link styles for the same sentence is the drift, not the consistency. */
+.lp-site-foot a {
+  color: var(--lp-ink, #ededed);
+  text-decoration: none;
+  border-bottom: 1px solid var(--lp-hairline, rgba(255, 255, 255, 0.1));
+}
+
+.lp-site-foot a:hover {
+  border-color: var(--lp-accent, #9a9a9a);
+}
+
+/* Sub-lines of a credit notice — a copyright year, a trademark attribution.
+ * Matches `.lp-contact .lp-colophon small` for the reason above. */
+.lp-site-foot small {
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+}
+
+/* ---- reveals ----
+ * `.lp-reveal` is the RESTING state and it is visible; `--armed` is what the
+ * component adds after mount to hide it again. Written this way round so that
+ * no-JS, no-observer and crawler all get a finished page — see Reveal.tsx.
+ */
+.lp-reveal {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.2, 0.7, 0.3, 1),
+    transform 0.7s cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.lp-reveal--armed {
+  opacity: 0;
+  transform: translateY(22px);
+}
+
+/* base.css already kills every transition under reduced motion with a `*`
+ * reset, but that reset cannot undo the TRANSFORM — an armed element with its
+ * transition removed is simply stuck 22px down and invisible. Neutralising the
+ * armed state itself is what makes the preference safe here. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-reveal--armed {
+    opacity: 1;
+    transform: none;
+  }
+}

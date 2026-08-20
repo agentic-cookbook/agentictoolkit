@@ -144,3 +144,45 @@ describe('FlowHero', () => {
     expect(container.querySelector('img[alt="mark"]')).not.toBeNull()
   })
 })
+
+describe('the barrels', () => {
+  const INDEX = readFileSync(join(__dirname, '..', 'index.ts'), 'utf8')
+  const CLIENT = readFileSync(join(__dirname, '..', 'client.ts'), 'utf8')
+
+  it('exports the server-safe flow components from the main barrel', () => {
+    for (const name of ['Flow', 'Band', 'Bleed', 'FlowHero', 'SiteFooter']) {
+      expect(INDEX).toContain(name)
+    }
+  })
+
+  it('keeps the client modules OUT of the main barrel', () => {
+    // A `'use client'` module re-exported here hoists its directive onto
+    // dist/index.js and turns every block into a Client Component.
+    expect(INDEX).not.toMatch(/export\s*\{[^}]*\bSiteHeader\b/)
+    expect(INDEX).not.toMatch(/export\s*\{[^}]*\bReveal\b/)
+    expect(CLIENT).toContain('SiteHeader')
+    expect(CLIENT).toContain('Reveal')
+  })
+
+  it('ships flow.css as an entry point', () => {
+    const pkg = JSON.parse(readFileSync(join(__dirname, '..', '..', 'package.json'), 'utf8'))
+    expect(pkg.exports['./css/flow.css']).toBe('./dist/css/flow.css')
+  })
+})
+
+describe('SiteFooter', () => {
+  it('dresses its own links — nothing else in this stack styles a bare <a>', () => {
+    // No sheet here may write a bare `a` selector (every selector must carry a
+    // `.lp-` class), and the consuming site has no `a` rule either. Without
+    // this, a footer credit and a mailto render as user-agent blue.
+    expect(FLOW).toContain('.lp-site-foot a')
+  })
+})
+
+describe('Reveal', () => {
+  it('rests VISIBLE, so no-JS and reduced-motion readers see a finished page', () => {
+    const rule = FLOW.slice(FLOW.indexOf('.lp-reveal {'))
+    expect(rule.slice(0, rule.indexOf('}'))).not.toContain('opacity: 0')
+    expect(FLOW).toContain('.lp-reveal--armed')
+  })
+})

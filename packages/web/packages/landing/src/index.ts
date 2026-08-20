@@ -52,3 +52,14 @@ export { Hero } from './blocks/Hero'
 export type { HeroProps } from './blocks/Hero'
 export { TourStrip } from './blocks/TourStrip'
 export type { TourStripProps, TourStep, TourPillar } from './blocks/TourStrip'
+// ---- the flow layout ----
+// A sibling of the deck above, not a replacement: a host picks one, and both
+// ship. `SiteHeader` and `Reveal` are `'use client'` and are therefore in
+// src/client.ts, for the reason the comment at the top of this file gives.
+export { Flow } from './flow/Flow'
+export { Band } from './flow/Band'
+export type { BandProps, BandTone } from './flow/Band'
+export { Bleed } from './flow/Bleed'
+export { FlowHero } from './flow/FlowHero'
+export type { FlowHeroProps } from './flow/FlowHero'
+export { SiteFooter } from './flow/SiteFooter'
