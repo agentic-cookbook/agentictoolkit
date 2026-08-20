@@ -25,29 +25,37 @@ import { describe, expect, it } from 'vitest'
 const CSS_DIR = join(__dirname, '..', 'css')
 const SHEETS = ['base.css', 'chrome.css', 'blocks.css', 'flow.css'] as const
 
+/**
+ * Split a selector LIST on its top-level commas, leaving commas inside
+ * `:has()` / `:is()` / `:where()` arguments alone — `:has(.lp-deck, .lp-flow)`
+ * is one selector, not two fragments. The naive `.split(',')` this replaced
+ * cut that gate in half and neither half was a selector any assertion below
+ * could match.
+ */
+function topLevel(list: string): string[] {
+  const out: string[] = []
+  let current = ''
+  let depth = 0
+  for (const char of list) {
+    if (char === '(') depth++
+    else if (char === ')') depth--
+    else if (char === ',' && depth === 0) {
+      out.push(current)
+      current = ''
+      continue
+    }
+    current += char
+  }
+  if (current) out.push(current)
+  return out
+}
+
 /** Every selector list in a sheet, with comments and at-rule preludes dropped. */
 function selectors(sheet: string): string[] {
   const css = readFileSync(join(CSS_DIR, sheet), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   const out: string[] = []
   for (const [, , list] of css.matchAll(/(^|[}\n])\s*([^{}@][^{}]*?)\s*\{/g)) {
-    // Split on commas, but respect parentheses nesting (e.g., :has() with multiple arguments)
-    const sels: string[] = []
-    let current = ''
-    let parenDepth = 0
-    for (let i = 0; i < list.length; i++) {
-      const char = list[i]
-      if (char === '(') parenDepth++
-      else if (char === ')') parenDepth--
-      else if (char === ',' && parenDepth === 0) {
-        sels.push(current)
-        current = ''
-        continue
-      }
-      current += char
-    }
-    if (current) sels.push(current)
-
-    for (const one of sels) {
+    for (const one of topLevel(list)) {
       const sel = one.replace(/\s+/g, ' ').trim()
       // An at-rule PRELUDE — `@media (min-width: 62rem)` — is not a selector
       // and has nothing to scope; the rules nested inside it are matched
@@ -69,7 +77,15 @@ describe('the package never styles anything it did not put on the page', () => {
     // tasks and then started passing on its own. `>3` is the smallest sheet
     // this package ships setting the number, not an aesthetic choice.
     expect(found.length).toBeGreaterThan(3)
-    expect(found.filter((s) => !s.includes('.lp-'))).toEqual([])
+    // Asserted over EVERY comma-separated part, at any nesting depth, and not
+    // over the whole selector — `topLevel` deliberately keeps a functional
+    // pseudo-class's arguments joined, and `:where(.lp-card, div)` contains
+    // `.lp-` as a whole while reaching every bare `<div>` the host ships. Each
+    // argument of an `:is()` / `:where()` / `:has()` list is a selector in its
+    // own right and has to name `.lp-` on its own, so the check splits on all
+    // commas even though the parsing above does not.
+    const parts = found.flatMap((s) => s.split(',').map((p) => p.trim()))
+    expect(parts.filter((s) => !s.includes('.lp-'))).toEqual([])
   })
 })
 
@@ -115,9 +131,16 @@ describe('the document-level rules are gated on a layout root, at their original
   // `… *`. Dropping the pseudo rather than skipping the rule keeps ::selection
   // and the reduced-motion reset — two of the four rules that leaked — in the
   // set being checked.
+  const isLayoutRoot = (s: string) => s.includes('.lp-deck') || s.includes('.lp-flow')
   const gates = base
-    .filter((s) => (s.includes('.lp-deck') || s.includes('.lp-flow')) && !s.startsWith('.lp-deck') && !s.startsWith('.lp-flow'))
+    .filter((s) => isLayoutRoot(s) && !s.startsWith('.lp-deck') && !s.startsWith('.lp-flow'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
+
+  // Partitioned, never listed: which document rules a flow page inherits is the
+  // whole point of the widened gate, and a hand-kept list of them would go stale
+  // the moment a rule is added — silently, and in the direction that passes.
+  const flowGates = gates.filter((s) => s.includes('.lp-flow'))
+  const deckOnlyGates = gates.filter((s) => !s.includes('.lp-flow'))
 
   // The gated rules that also need an ARMED attribute — `data-snap` from
   // ARM_SNAPPING, `data-smooth` from ARM_SMOOTH on the first interaction — are
@@ -142,6 +165,30 @@ describe('the document-level rules are gated on a layout root, at their original
     // The fixture has to be the FULLY armed document, not a half-armed one.
     arm()
     for (const sel of gates) expect(document.querySelector(sel), sel).not.toBeNull()
+  })
+
+  // The reason this task exists, asserted against a selector engine rather than
+  // against the text of base.css. Every text assertion in this file passed while
+  // a flow page was getting NONE of these rules: the gate was spelled correctly,
+  // it just named a class that page never renders.
+  it('matches the document while a flow is mounted', () => {
+    expect(flowGates.length).toBeGreaterThan(5)
+    document.body.innerHTML =
+      '<main><div class="lp-flow"><section class="lp-band"></section></div></main>'
+    arm()
+    for (const sel of flowGates) expect(document.querySelector(sel), sel).not.toBeNull()
+  })
+
+  it('withholds the deck-only rules from a flow', () => {
+    // Snapping is the one document rule a flow must not inherit — it has no snap
+    // points, and nothing stamps `data-snap` on a page that renders no
+    // DeckScript. `arm()` stamps it anyway, so this fails if the gate widened.
+    expect(deckOnlyGates.length).toBeGreaterThan(0)
+    expect(deckOnlyGates.every((s) => s.includes('[data-snap]'))).toBe(true)
+    document.body.innerHTML =
+      '<main><div class="lp-flow"><section class="lp-band"></section></div></main>'
+    arm()
+    for (const sel of deckOnlyGates) expect(document.querySelector(sel), sel).toBeNull()
   })
 
   it('matches nothing once the deck leaves the DOM', () => {
