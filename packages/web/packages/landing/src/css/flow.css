@@ -194,3 +194,58 @@
 .lp-hero-shot {
   margin-top: clamp(2.5rem, 6vw, 4.5rem);
 }
+
+/* ---- the site header ----
+ * Static, in flow, and it scrolls away with the hero — see SiteHeader.tsx for
+ * why a flow page cannot afford a fixed one.
+ *
+ * `background: transparent` so the hero's wash runs up behind it and the bar
+ * reads as part of the composition rather than a strip laid over it.
+ */
+.lp-site-bar {
+  position: relative;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: min(100% - 2.5rem, var(--lp-measure, 70rem));
+  margin-inline: auto;
+  padding-block: 1.15rem;
+  background: transparent;
+}
+
+.lp-site-brand {
+  margin-right: auto;
+  font-family: var(--lp-font-display, var(--lp-font, ui-monospace, "SF Mono", monospace));
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+}
+
+.lp-site-nav {
+  display: none;
+  gap: 1.75rem;
+}
+
+.lp-site-nav a {
+  color: var(--lp-ink-dim, #a0a0a0);
+  font-size: 0.88rem;
+  text-decoration: none;
+  transition: color 0.18s ease;
+}
+
+.lp-site-nav a:hover {
+  color: var(--lp-ink, #ededed);
+}
+
+/* Above the breakpoint the inline nav is the navigation, so the burger goes.
+ * `.lp-site-drawer-only` wraps NavChrome rather than the package restyling
+ * `.lp-bar` from here: chrome.css owns that class, and two sheets setting
+ * `display` on one selector is a race decided by import order. */
+@media (min-width: 62rem) {
+  .lp-site-nav {
+    display: flex;
+  }
+  .lp-site-drawer-only {
+    display: none;
+  }
+}
