@@ -1,38 +1,41 @@
-/* ---- EVERY DOCUMENT-LEVEL RULE IN THIS FILE IS GATED ON THE DECK ----
+/* ---- EVERY DOCUMENT-LEVEL RULE IN THIS FILE IS GATED ON A LAYOUT ROOT ----
  * `html`, `body`, `::selection` and the reduced-motion `*` reset below all
  * address the DOCUMENT, and a host imports this sheet once, site-wide, from its
  * `globals.css`. Ungated they therefore repaint every route the host has — a
- * privacy page, a docs reader, a dashboard — in the deck's root size, face and
- * leading, on sites where only `/` and `/tour` are decks. That shipped: the
+ * privacy page, a docs reader, a dashboard — in the layout's root size, face and
+ * leading, on sites where only `/` and `/tour` are layouts. That shipped: the
  * three pilot sites' non-landing routes went to 87.5% root size and the
  * `--lp-font` stack while the host's own `<main>` left them at the browser
  * default and the theme face.
  *
- * The gate is STRUCTURAL — `:has(.lp-deck)`, the class `Deck` puts on its own
- * element — and not a class the host sets or a route it tests. A deck on
- * screen means the rules apply; the deck leaving the DOM switches them off,
- * client-side navigation included, with no effect to run and nothing to clean
- * up. It also makes the one piece of state this package leaks inert:
- * `ARM_SNAPPING` stamps `data-snap` on `<html>` and never removes it, so
- * without the gate a reader who scrolled the deck and then navigated away would
- * carry mandatory snapping onto a page with no snap points.
+ * The gate is STRUCTURAL — `:has(.lp-deck, .lp-flow)`, the classes that `Deck`
+ * and `Flow` put on their own elements respectively — and not a class the host
+ * sets or a route it tests. A layout root on screen means the rules apply; the
+ * layout leaving the DOM switches them off, client-side navigation included,
+ * with no effect to run and nothing to clean up. It also makes the one piece of
+ * state this package leaks inert: `ARM_SNAPPING` stamps `data-snap` on `<html>`
+ * and never removes it, so without the gate a reader who scrolled the deck and
+ * then navigated away would carry mandatory snapping onto a page with no snap
+ * points. Snapping stays deck-only; a flow page has no snap points.
  *
  * SPECIFICITY IS PRESERVED EXACTLY, rule by rule, and that is why the two
- * spellings below differ. `html:where(:has(.lp-deck))` keeps `html`'s (0,0,1)
- * because `:where()` contributes nothing; `:where(html:has(.lp-deck)) body`
- * keeps `body`'s (0,0,1) for the same reason, with the ancestor test costing
- * zero. Written the obvious way — `html:has(.lp-deck)` — the html rules would
- * RISE to (0,1,1) and start winning against host overrides they lose to today;
- * written `:where(html:has(.lp-deck))` alone they would FALL to (0,0,0) and
- * lose to rules they currently beat. Either is a cascade change disguised as a
- * scoping change, and neither is visible to a test that only checks the rules
- * still apply on the deck.
+ * spellings below differ. `html:where(:has(.lp-deck, .lp-flow))` keeps `html`'s
+ * (0,0,1) because `:where()` contributes nothing; `:where(html:has(.lp-deck,
+ * .lp-flow)) body` keeps `body`'s (0,0,1) for the same reason, with the ancestor
+ * test costing zero. Written the obvious way — `html:has(.lp-deck, .lp-flow)` —
+ * the html rules would RISE to (0,1,1) and start winning against host overrides
+ * they lose to today; written `:where(html:has(.lp-deck, .lp-flow))` alone they
+ * would FALL to (0,0,0) and lose to rules they currently beat. `:has()` takes its
+ * specificity from its most specific argument; both arguments are classes, so the
+ * argument list's contribution is unchanged. Either is a cascade change disguised
+ * as a scoping change, and neither is visible to a test that only checks the
+ * rules still apply on the layout.
  *
  * `chrome.css` and `blocks.css` need no such gate: every selector in both is
  * already `.lp-*`-prefixed. This file is the only one that addresses the
  * document, which is why `cookbook` — the only other consumer — could import
  * `chrome.css` alone and be unaffected either way. */
-html:where(:has(.lp-deck)) {
+html:where(:has(.lp-deck, .lp-flow)) {
   /* Everything on the page is sized in rem, so the root size is the site's one
    * type dial: a touch under the browser's default takes ~2pt off every run of
    * text at once, and carries the rhythm (gaps, padding, the section column)
@@ -75,7 +78,7 @@ html:where(:has(.lp-deck)) {
  * this element was already at — body is where line-height 1.7 is declared. */
 @media (pointer: coarse) {
   @supports (font: -apple-system-subheadline) {
-    html:where(:has(.lp-deck)) {
+    html:where(:has(.lp-deck, .lp-flow)) {
       font: -apple-system-subheadline;
       font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
     }
@@ -122,7 +125,7 @@ html:where(:has(.lp-deck)) {
  * drawer link needs no script of its own — the browser does it, and honours
  * `prefers-reduced-motion` through the override at the foot of this file. It is
  * armed rather than declared here; see the rule below. */
-html:where(:has(.lp-deck)) {
+html:where(:has(.lp-deck, .lp-flow)) {
   scroll-snap-type: none;
   scrollbar-gutter: stable;
 }
@@ -146,18 +149,18 @@ html[data-snap]:where(:has(.lp-deck)) {
  * bug: `scroll-behavior` then stays at its initial `auto`, which is the correct
  * unconfigured behaviour for a stylesheet whose script half is missing.
  *
- * Deck-gated like every rule around it, so the sheet still governs nothing on a
- * host route that draws no deck. */
-html[data-smooth]:where(:has(.lp-deck)) {
+ * Layout-gated like every rule around it, so the sheet still governs nothing on a
+ * host route that draws neither a deck nor a flow. */
+html[data-smooth]:where(:has(.lp-deck, .lp-flow)) {
   scroll-behavior: smooth;
 }
 
-html:where(:has(.lp-deck)),
-:where(html:has(.lp-deck)) body {
+html:where(:has(.lp-deck, .lp-flow)),
+:where(html:has(.lp-deck, .lp-flow)) body {
   overflow-x: clip;
 }
 
-:where(html:has(.lp-deck)) body {
+:where(html:has(.lp-deck, .lp-flow)) body {
   background: var(--lp-ground, #101010);
   color: var(--lp-ink, #ededed);
   font-family: var(--lp-font, ui-monospace, "SF Mono", monospace);
@@ -305,7 +308,7 @@ html:where(:has(.lp-deck)),
   align-content: safe center;
 }
 
-:where(html:has(.lp-deck)) ::selection {
+:where(html:has(.lp-deck, .lp-flow)) ::selection {
   background: var(--lp-accent-dim, rgba(216, 216, 216, 0.14));
   color: var(--lp-accent-bright, #d8d8d8);
 }
@@ -405,16 +408,16 @@ html:where(:has(.lp-deck)),
    * without it this sits at (0,0,1) against that rule's (0,1,1) and loses, and
    * a reduced-motion override that loses is worse than none. Matched exactly,
    * it wins on order — this is the foot of the sheet. */
-  html[data-smooth]:where(:has(.lp-deck)) {
+  html[data-smooth]:where(:has(.lp-deck, .lp-flow)) {
     scroll-behavior: auto;
   }
   /* Gated for the same reason as everything above, and this one is the reason
    * the gate cannot be "only the type rules": an ungated `!important` reset
    * silences every animation and transition the HOST wrote, on every route it
-   * has, the moment it imports this sheet. */
-  :where(html:has(.lp-deck)) *,
-  :where(html:has(.lp-deck)) *::before,
-  :where(html:has(.lp-deck)) *::after {
+   * has, the moment it imports this sheet. A flow page gets this reset too. */
+  :where(html:has(.lp-deck, .lp-flow)) *,
+  :where(html:has(.lp-deck, .lp-flow)) *::before,
+  :where(html:has(.lp-deck, .lp-flow)) *::after {
     animation: none !important;
     transition: none !important;
   }

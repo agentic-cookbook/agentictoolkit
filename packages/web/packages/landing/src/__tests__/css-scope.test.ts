@@ -30,7 +30,24 @@ function selectors(sheet: string): string[] {
   const css = readFileSync(join(CSS_DIR, sheet), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
   const out: string[] = []
   for (const [, , list] of css.matchAll(/(^|[}\n])\s*([^{}@][^{}]*?)\s*\{/g)) {
-    for (const one of list.split(',')) {
+    // Split on commas, but respect parentheses nesting (e.g., :has() with multiple arguments)
+    const sels: string[] = []
+    let current = ''
+    let parenDepth = 0
+    for (let i = 0; i < list.length; i++) {
+      const char = list[i]
+      if (char === '(') parenDepth++
+      else if (char === ')') parenDepth--
+      else if (char === ',' && parenDepth === 0) {
+        sels.push(current)
+        current = ''
+        continue
+      }
+      current += char
+    }
+    if (current) sels.push(current)
+
+    for (const one of sels) {
       const sel = one.replace(/\s+/g, ' ').trim()
       // An at-rule PRELUDE — `@media (min-width: 62rem)` — is not a selector
       // and has nothing to scope; the rules nested inside it are matched
@@ -56,31 +73,32 @@ describe('the package never styles anything it did not put on the page', () => {
   })
 })
 
-describe('the document-level rules are gated on the deck, at their original weight', () => {
+describe('the document-level rules are gated on a layout root, at their original weight', () => {
   const base = selectors('base.css')
 
   // Asserted as whole selectors rather than as substrings of the file: the
   // gated spellings all CONTAIN the ungated ones, so `not.toContain('body')`
-  // would fail on the fix and `toContain('body')` passes on the defect.
+  // would fail on the fix and `toContain('body')` passes on the defect. The
+  // gate now admits `.lp-flow` alongside `.lp-deck`, so selectors include both.
   it.each([
-    // `html:where(:has(.lp-deck))` is (0,0,1) — what a bare `html` was.
-    // `html:has(.lp-deck)` would be (0,1,1) and start beating host overrides
-    // it loses to today; `:where(html:has(.lp-deck))` alone would be (0,0,0)
-    // and lose to rules it currently beats. Both look like scoping and are
-    // cascade changes, and neither is visible to a test that only asks whether
-    // the rules still apply on a deck.
-    ['html', 'html:where(:has(.lp-deck))'],
+    // `html:where(:has(.lp-deck, .lp-flow))` is (0,0,1) — what a bare `html` was.
+    // `html:has(.lp-deck, .lp-flow)` would be (0,1,1) and start beating host
+    // overrides it loses to today; `:where(html:has(.lp-deck, .lp-flow))` alone
+    // would be (0,0,0) and lose to rules it currently beats. Both look like
+    // scoping and are cascade changes, and neither is visible to a test that
+    // only asks whether the rules still apply on a layout root.
+    ['html', 'html:where(:has(.lp-deck, .lp-flow))'],
     ['html[data-snap]', 'html[data-snap]:where(:has(.lp-deck))'],
-    // `:where(html:has(.lp-deck)) body` is (0,0,1) — what a bare `body` was.
-    ['body', ':where(html:has(.lp-deck)) body'],
-    ['::selection', ':where(html:has(.lp-deck)) ::selection'],
+    // `:where(html:has(.lp-deck, .lp-flow)) body` is (0,0,1) — what a bare `body` was.
+    ['body', ':where(html:has(.lp-deck, .lp-flow)) body'],
+    ['::selection', ':where(html:has(.lp-deck, .lp-flow)) ::selection'],
     // `* { animation: none !important }` from a package a host imported for
     // one route is the loudest rule in this file: it cancels every animation
     // and transition the HOST wrote, everywhere, and `!important` means no
     // host rule can win it back.
-    ['*', ':where(html:has(.lp-deck)) *'],
-    ['*::before', ':where(html:has(.lp-deck)) *::before'],
-    ['*::after', ':where(html:has(.lp-deck)) *::after'],
+    ['*', ':where(html:has(.lp-deck, .lp-flow)) *'],
+    ['*::before', ':where(html:has(.lp-deck, .lp-flow)) *::before'],
+    ['*::after', ':where(html:has(.lp-deck, .lp-flow)) *::after'],
   ])('%s is written %s', (ungated, gated) => {
     expect(base).toContain(gated)
     expect(base).not.toContain(ungated)
@@ -89,8 +107,8 @@ describe('the document-level rules are gated on the deck, at their original weig
   // The two above are assertions about the TEXT. These run the gated selectors
   // through a real selector engine against a real document, because a gate that
   // is spelled right and matches nothing is the same defect the other way up:
-  // the deck would lose its own type, snapping and ground, and every assertion
-  // in this file would still pass.
+  // the layout root would lose its own type, snapping (deck only) and ground,
+  // and every assertion in this file would still pass.
   //
   // `querySelector` cannot match a pseudo-element, so each gate is probed for
   // its ORIGINATING element: `… ::selection` and `… *::before` both ask about
@@ -98,7 +116,7 @@ describe('the document-level rules are gated on the deck, at their original weig
   // and the reduced-motion reset — two of the four rules that leaked — in the
   // set being checked.
   const gates = base
-    .filter((s) => s.includes('.lp-deck') && !s.startsWith('.lp-deck'))
+    .filter((s) => (s.includes('.lp-deck') || s.includes('.lp-flow')) && !s.startsWith('.lp-deck') && !s.startsWith('.lp-flow'))
     .map((s) => s.replace(/::[a-z-]+/g, '').replace(/(^|\s)$/, '$1*'))
 
   // The gated rules that also need an ARMED attribute — `data-snap` from

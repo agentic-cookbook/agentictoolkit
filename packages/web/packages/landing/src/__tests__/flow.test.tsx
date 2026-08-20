@@ -210,3 +210,22 @@ describe('Reveal', () => {
     expect(ruleBody(FLOW, '.lp-reveal--armed')).toContain('opacity: 0')
   })
 })
+
+describe('the document gate', () => {
+  const BASE = readFileSync(join(__dirname, '..', 'css', 'base.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+  const gated = BASE.split('\n').filter((line) => line.includes(':has(.lp-deck'))
+
+  it('lets a flow page through every document rule the deck gets', () => {
+    // base.css is the only sheet here that addresses the document. Gated on the
+    // deck alone, a flow page gets no root type size, no Dynamic Type, no
+    // reduced-motion reset — see this task's brief for the full list.
+    const deckOnly = gated.filter((line) => !line.includes('.lp-flow'))
+    // Snapping is the one thing a flow page must NOT inherit: it has no snap
+    // points, and `[data-snap]` is set by DeckScript, which it does not render.
+    expect(deckOnly.every((line) => line.includes('[data-snap]'))).toBe(true)
+  })
+
+  it('still gates them — an ungated document rule repaints the whole host site', () => {
+    expect(gated.length).toBeGreaterThan(8)
+  })
+})
