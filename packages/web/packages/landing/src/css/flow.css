@@ -138,6 +138,11 @@
   padding-bottom: var(--lp-hero-pad-bottom, 6rem);
   text-align: center;
   background: var(--lp-hero-wash, var(--lp-ground, #101010));
+  /* The hero is the one place this package tells a host to put a `Bleed` (see
+   * FlowHero's `shot` prop), so it has to be the clipping box for it — exactly
+   * as `.lp-band` is for the bands. `clip` and not `hidden`, for the same
+   * reason as there: `hidden` would make the hero a scroll container. */
+  overflow-x: clip;
 }
 
 .lp-hero-flow h1 {

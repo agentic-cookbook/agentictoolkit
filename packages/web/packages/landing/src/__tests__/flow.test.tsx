@@ -117,6 +117,18 @@ describe('FlowHero', () => {
     expect(container.querySelector('.lp-hero-shot')).toBeNull()
   })
 
+  it('wraps children in the actions row, and omits the row without them', () => {
+    const { container: bare } = render(<FlowHero headline="A claim" sub="A sub" />)
+    expect(bare.querySelector('.lp-hero-actions')).toBeNull()
+
+    const { container } = render(
+      <FlowHero headline="A claim" sub="A sub">
+        <a href="#get">Get it</a>
+      </FlowHero>,
+    )
+    expect(container.querySelector('.lp-hero-actions a')!.textContent).toBe('Get it')
+  })
+
   it('renders the mark, meta and shot when given them', () => {
     const { container } = render(
       <FlowHero
