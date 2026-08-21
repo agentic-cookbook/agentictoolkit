@@ -18,6 +18,24 @@ export type { MarkdownRendererProps } from './components/MarkdownRenderer'
 export { MarkdownContent } from './components/MarkdownContent'
 export type { MarkdownContentProps } from './components/MarkdownContent'
 
+// The shared document EDITING view — body editor + live preview + layout choice. The default
+// markdown editor for document surfaces; `@agentic-toolkit/ui`'s MarkdownEditor remains the
+// bare textarea this composes.
+export { MarkdownDocumentEditor, SPLIT_MIN_WIDTH } from './components/MarkdownDocumentEditor'
+export type {
+  MarkdownDocumentEditorProps,
+  MarkdownEditorLayout,
+  MarkdownEditorTab,
+} from './components/MarkdownDocumentEditor'
+
+// The reading-palette wrapper (data-mdv-theme + data-mdv-shiki-variant + the --mdv-* palette)
+// applied around markdown content. NO "use client" — a plain server-safe wrapper, same as
+// MarkdownContent, so an async RSC can render it. This is the package's own knowledge about
+// its own palette; PaperRenderer (research site) and MarkdownPreview (search package) each
+// hand-roll the same 5 lines today and are not migrated to this by this change.
+export { MarkdownReadingPalette } from './components/MarkdownReadingPalette'
+export type { MarkdownReadingPaletteProps } from './components/MarkdownReadingPalette'
+
 export { MarkdownThemeSwitcher } from './components/MarkdownThemeSwitcher'
 export type { MarkdownThemeSwitcherProps } from './components/MarkdownThemeSwitcher'
 
