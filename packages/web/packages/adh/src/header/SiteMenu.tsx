@@ -28,7 +28,8 @@ import { menuIcon } from './menu-icons'
 // The section number only — this base renders the Recents flyout that HEADS the fleet
 // block, so it has to agree with the rows underneath it or a divider appears between
 // them. The tree itself is the subclasses' to supply (see SiteMenuProps.groups).
-import { FLEET_SECTION } from './fleetMenuGroups'
+import { ADMIN_MENU_GROUPS, FLEET_SECTION } from './fleetMenuGroups'
+import { StudioWordmark } from './StudioWordmark'
 // Package path (the external help entry) so no bundling cost — this pulls only the light
 // HelpContext hook, never the code-split window. Safe no-op outside a HelpProvider.
 //
@@ -112,6 +113,16 @@ export type SiteMenuChromeProps = {
   /** Whether a user is signed in. Gates the settings affordance only (the trigger
    *  label is always the hub brand, regardless of route or auth state). */
   authenticated?: boolean
+  /** Whether the signed-in user is an adh admin. The ONLY flag that changes which
+   *  destinations this menu offers: true appends {@link ADMIN_MENU_GROUPS} (the
+   *  operations consoles) below the family tree. Resolves asynchronously with the
+   *  session, so `undefined` and `false` must behave identically — the section
+   *  appears when the answer arrives, and a build that never resolves one shows the
+   *  same menu as it does to a visitor.
+   *
+   *  ⚠️ Showing a link is not granting access. Each console does its own
+   *  authorization; this decides who is shown the door, nothing more. */
+  userIsAdmin?: boolean
   /** Replaces the trigger's default "Agentic Developer Hub ⌄" content — e.g. a
    *  site's own logo. Used by bitbag.ai to surface the family menu behind its
    *  wordmark. */
@@ -181,6 +192,7 @@ export function SiteMenu({
   groups,
   currentSiteId,
   authenticated,
+  userIsAdmin,
   triggerContent,
   triggerClassName,
   resolveHref,
@@ -198,10 +210,18 @@ export function SiteMenu({
   const hub = getSite('hub')
   const label = hub ? siteHeaderTitle(hub) : 'Agentic Developer Hub'
 
+  // The tree this render actually shows: the subclass's groups, plus the admin
+  // consoles for an admin. Memoized on the flag so the array identity is stable
+  // between renders — {@link useSiteMenu} memoizes its rows on it.
+  const tree = useMemo(
+    () => (userIsAdmin === true ? [...groups, ...ADMIN_MENU_GROUPS] : groups),
+    [groups, userIsAdmin],
+  )
+
   // The resolved Hub-core rows + navigation + the Home destination — env-aware,
   // SSO-wrapped, `current`-marked, via the shared {@link useSiteMenu} engine (single
   // source of truth for the link logic).
-  const { entries, navigate, homeHref } = useSiteMenu(groups, {
+  const { entries, navigate, homeHref } = useSiteMenu(tree, {
     currentSiteId,
     resolveHref,
     personalSlug,
@@ -317,11 +337,13 @@ export function SiteMenu({
   // top section closing on the Help row, then the fleet block — Recents at its head,
   // then the tree the subclass supplied.
   //
-  // Every row here is unconditional in the sense that matters: nothing in this list is
-  // gated on the build env or on an admin capability, so the menu a developer opens is
+  // Nothing in this list is gated on the BUILD ENV, so the menu a developer opens is
   // the menu that ships. The dev-only rows this list used to end with (the
   // Marketing/Main site flyouts, Routes, Debug Options) are their own dropdown now —
-  // see {@link DevToolsMenu}.
+  // see {@link DevToolsMenu}. The single conditional row-set is the admin consoles,
+  // gated on the signed-in user's capability rather than on the build (see `tree`
+  // above and `userIsAdmin`) — a fact about who is looking, not about which bundle
+  // this is.
   //
   // The site's nav goes FIRST because on a phone this menu IS the site's navigation —
   // that is the whole of what the bar handed over. Reaching a page on the site you are
@@ -387,6 +409,9 @@ export function SiteMenu({
       triggerClassName={triggerClassName}
       placeholder="Search sites, or browse topics"
       emptyLabel="No matching sites"
+      // The studio the whole family sits under, closing the menu below its own
+      // divider. Not a row: it is the signature on the tree, not a place in it.
+      footer={<StudioWordmark />}
       // Typing "help" surfaces a command that opens the family-overview popover.
       searchCommand={{
         matches: (q) => q.toLowerCase() === 'help',

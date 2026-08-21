@@ -133,6 +133,13 @@ export type NavigationPopoverProps = {
   commandTrailing?: (api: { close: PopoverClose }) => ReactNode
   /** Optional special search command (see {@link PopoverSearchCommand}). */
   searchCommand?: PopoverSearchCommand
+  /** Content pinned below the list, under a divider — a signature line rather than
+   *  a row (SiteMenu puts the studio wordmark here). Outside `entries` on purpose:
+   *  it is not keyboard-navigable, not searchable and never highlighted, so it can
+   *  neither be reached by the arrow keys nor swallow an Enter meant for a
+   *  destination. It sits outside the scrolling list too, so it stays visible on a
+   *  menu long enough to scroll. */
+  footer?: ReactNode
 }
 
 /** Wrap every case-insensitive occurrence of `query` in `text` so the matched
@@ -238,6 +245,7 @@ export function NavigationPopover({
   onChoose,
   commandTrailing,
   searchCommand,
+  footer,
 }: NavigationPopoverProps): ReactElement {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -884,6 +892,12 @@ export function NavigationPopover({
           <p className="adh-nav-popover__empty" role="status" aria-live="polite">
             {emptyLabel}
           </p>
+        )}
+        {footer && (
+          <>
+            <div className="adh-dropdown-menu__separator" role="separator" />
+            <div className="adh-nav-popover__footer">{footer}</div>
+          </>
         )}
       </DropdownMenuContent>
     </DropdownMenu>

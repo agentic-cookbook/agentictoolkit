@@ -230,9 +230,9 @@ export function makeSmartHeaderAuth(cfg: SmartHeaderAuthConfig = {}): HeaderAuth
     return {
       user: user ? toAvatarUser(user, avatarFallback) : null,
       // Unlocks the dev-tools menu (Routes, site families, Debug Options) in every
-      // env for a signed-in adh admin — see AdhHeaderAuthProps. It reaches only that
-      // menu: the site menu beside it is deliberately flag-free, so it renders the
-      // same rows for an admin as for anyone else.
+      // env for a signed-in adh admin — see AdhHeaderAuthProps — and appends the
+      // admin consoles section to the site menu beside it. Those are the only two
+      // things it does; every other row of both menus is the same for everyone.
       userIsAdmin: isAdmin(user),
       // Spinner while the session resolves, not a flash of the signed-out buttons.
       authLoading: isLoading,

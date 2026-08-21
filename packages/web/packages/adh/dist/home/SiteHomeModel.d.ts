@@ -41,14 +41,15 @@ export interface SiteHomeShellProps {
     workspaceSlug?: string;
     /** The site's view. Called — not rendered — once a workspace is resolved AND in the URL. */
     children: (scope: SiteHomeScope) => ReactNode;
-    /** The model's workspace-bar action, forwarded by SiteHomeRoute. The shell owns WHEN it is
-     *  called: only once `resolved` is non-null, because the bar renders before resolution
-     *  completes and this callback is documented as never seeing an absent workspace. */
-    action?: (scope: SiteHomeScope) => ReactNode;
 }
 /**
  * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
  * it.
+ *
+ * There is no slot here for a page's controls. A site's search, filters, and its primary "Add"
+ * go in the HOME BAR — the strip between the workspace bar and the breadcrumb bar — which the
+ * FEATURE publishes into with `HomeBarPortal`, from inside `render`. That keeps a control in the
+ * same React tree as the state it drives, which the model's own slot could never do.
  */
 export interface SiteHomeModel<View> {
     /**
@@ -73,9 +74,6 @@ export interface SiteHomeModel<View> {
     /** This site's workspace landing view. Called only once a workspace has resolved, so nothing
      *  here has to cope with an absent one. */
     render: (ctx: SiteHomeContext<View>) => ReactNode;
-    /** An optional right-justified control in the workspace bar. Called only once a workspace
-     *  has resolved, so nothing here copes with an absent one. */
-    action?: (scope: SiteHomeScope) => ReactNode;
     /**
      * This site's own shell around `render`, in place of the shared `<SiteHomeShell>`.
      *

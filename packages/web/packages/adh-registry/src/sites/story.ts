@@ -111,6 +111,18 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   // Gamification is a property OF a product, so its story continues into products.
   gamification: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'products' },
   games: { tier: 'chapter', pillar: 'build', funnelStage: 'ship', nextStep: 'products' },
+  // --- selling, testing, finding people, and filing what you write down ---
+  // The hub's own merch shop: physical goods, so its story hands straight back to
+  // the hub rather than into any product chapter.
+  store: { tier: 'chapter', pillar: 'backend', funnelStage: 'adopt', nextStep: 'hub' },
+  // Stores is the storefront ON a product, so its story continues into products.
+  stores: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'products' },
+  // Testing is the other half of shipping quality, beside code review.
+  testing: { tier: 'chapter', pillar: 'build', funnelStage: 'ship', nextStep: 'codereviews' },
+  // The developer directory — the people layer beside the consultant directory.
+  registry: { tier: 'chapter', pillar: 'build', funnelStage: 'adopt', nextStep: 'consultants' },
+  // Docs is research with the publishing stripped out, so it hands off to research.
+  docs: { tier: 'chapter', pillar: 'build', funnelStage: 'learn', nextStep: 'research' },
   // --- studio & consulting. FishLamp Design is the studio the family sits under
   // (it replaced Agentic Developer Studio, whose site is gone); consulting points
   // at it as the absorbing site. fishlampdesign is the same site on its second
@@ -148,14 +160,16 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour> managed by landing — do not edit by hand
   hub: 'narratives',
   narratives: 'news',
-  news: 'academy',
+  news: 'store',
+  store: 'academy',
   academy: 'education',
   education: 'recipes',
   recipes: 'research',
   research: 'authentication',
   authentication: 'knowledgebases',
   knowledgebases: 'notebook',
-  notebook: 'personabuilder',
+  notebook: 'docs',
+  docs: 'personabuilder',
   personabuilder: 'personas',
   personas: 'projects',
   projects: 'sites',
@@ -165,7 +179,8 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   toolkit: 'tools',
   tools: 'billing',
   billing: 'codereviews',
-  codereviews: 'communities',
+  codereviews: 'testing',
+  testing: 'communities',
   communities: 'customers',
   customers: 'dashboards',
   dashboards: 'devices',
@@ -177,10 +192,12 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   notifications: 'orgs',
   orgs: 'games',
   games: 'products',
-  products: 'registries',
+  products: 'stores',
+  stores: 'registries',
   registries: 'community',
   community: 'consultants',
-  consultants: 'consulting',
+  consultants: 'registry',
+  registry: 'consulting',
   consulting: 'devteam',
   devteam: 'cookbook',
   cookbook: 'personaregistry',

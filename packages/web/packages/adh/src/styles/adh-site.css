@@ -130,8 +130,8 @@
    from 375 to 1440. The breakpoint stays at the footer's existing 64rem rather
    than the ~830px the measurement alone would justify — the box is a fixed 560px
    centred, so what it reaches is the BRAND link's right edge, and that link is the
-   site's own name. It is 'FishLamp Design' here and longer elsewhere, which moves
-   the collision width per site; 64rem covers the spread.
+   site's own name. It is 'Agentic Development Studio' here and shorter or longer
+   elsewhere, which moves the collision width per site; 64rem covers the spread.
 
    Probe `a, button`, not `a`. 'Sites' is a `<button popovertarget>` while the
    other three are anchors, so an anchors-only sweep drops the ONE control that is
@@ -533,6 +533,38 @@
   padding: 0.6rem 0.75rem;
   font-size: 0.75rem;
   color: var(--color-text-dim);
+}
+
+/* The studio signature closing the menu. Outside the scrolling list (see
+   NavigationPopover's `footer`), so it stays put while the family scrolls past
+   it. `flex: 0 0 auto` keeps the flex column from squeezing it when the menu is
+   taller than the viewport allows. */
+.adh-nav-popover__footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  padding: 0.7rem 0.75rem 0.55rem;
+}
+
+/* Set in the page's own face and inheriting currentColor, so one rule covers both
+   themes (see StudioWordmark for why this is text rather than an asset). Wide
+   tracking + lowercase is the mark; it is small and dim until hovered, because it
+   names the studio rather than offering somewhere to go. */
+.adh-nav-popover__wordmark {
+  color: var(--color-text-dim);
+  font-size: 0.68rem;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  line-height: 1;
+  text-align: center;
+  text-decoration: none;
+  text-transform: lowercase;
+  transition: color calc(0.12s * var(--apt-anim-scale, 1)) ease-out;
+}
+
+.adh-nav-popover__wordmark:hover,
+.adh-nav-popover__wordmark:focus-visible {
+  color: var(--color-text);
 }
 
 /* Topic row in the top-level list — a sub-trigger that pops out a flyout. The

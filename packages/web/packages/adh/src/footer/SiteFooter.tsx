@@ -1,7 +1,6 @@
 'use client'
 
 import { AdhFooter as ToolkitFooter, type FooterLink } from '@agentic-toolkit/adh/footer'
-import { siteProdUrl } from '@agentic-toolkit/adh-registry'
 import { FooterChat } from './FooterChat'
 import { SitesPopover, SITES_OVERVIEW_POPOVER_ID } from './SitesOverview'
 import { openLegalModal, TermsModal, PrivacyModal, TERMS_DIALOG_ID, PRIVACY_DIALOG_ID } from './LegalModals'
@@ -23,8 +22,17 @@ export type SiteFooterProps = {
 }
 
 const COPYRIGHT_PREFIX = '© 2026 '
-const BRAND_LABEL = 'FishLamp Design'
-const BRAND_HREF = siteProdUrl('fishlamp', '/')
+// The company the copyright belongs to — Agentic Development Studio, which is also
+// the wordmark closing the site menu (see StudioWordmark). NOT FishLamp Design, which
+// this used to name and which is still a family site with its own footer row.
+//
+// A literal href rather than `siteProdUrl(...)`: the studio deliberately has no
+// registry entry (a `registry.test.ts` case pins that agenticdevelopmentstudio.com is
+// not a registry host, because an entry would re-add the origin to the OAuth
+// return-origin allowlist and to the generated route map). Same reason the menu's
+// studio row is an absolute `{ href }`.
+const BRAND_LABEL = 'Agentic Development Studio'
+const BRAND_HREF = 'https://agenticdevelopmentstudio.com/'
 
 // Sites + Terms + Privacy appear on EVERY footer — owned here so individual sites can't
 // drop them. "Sites" is a native popover trigger (no JS); the two legal links are real

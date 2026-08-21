@@ -102,6 +102,13 @@ export type NavigationPopoverProps = {
     }) => ReactNode;
     /** Optional special search command (see {@link PopoverSearchCommand}). */
     searchCommand?: PopoverSearchCommand;
+    /** Content pinned below the list, under a divider — a signature line rather than
+     *  a row (SiteMenu puts the studio wordmark here). Outside `entries` on purpose:
+     *  it is not keyboard-navigable, not searchable and never highlighted, so it can
+     *  neither be reached by the arrow keys nor swallow an Enter meant for a
+     *  destination. It sits outside the scrolling list too, so it stays visible on a
+     *  menu long enough to scroll. */
+    footer?: ReactNode;
 };
 /**
  * A header command menu: a trigger that opens a popover whose top level mixes
@@ -122,5 +129,5 @@ export type NavigationPopoverProps = {
  * navigate a chosen item, and any command-row trailing control / special search
  * command.
  */
-export declare function NavigationPopover({ entries, triggerLabel, triggerContent, triggerText, triggerIcon, triggerClassName, placeholder, emptyLabel, onChoose, commandTrailing, searchCommand, }: NavigationPopoverProps): ReactElement;
+export declare function NavigationPopover({ entries, triggerLabel, triggerContent, triggerText, triggerIcon, triggerClassName, placeholder, emptyLabel, onChoose, commandTrailing, searchCommand, footer, }: NavigationPopoverProps): ReactElement;
 //# sourceMappingURL=NavigationPopover.d.ts.map

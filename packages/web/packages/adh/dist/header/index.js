@@ -226,7 +226,8 @@ function NavigationPopover({
   emptyLabel = "No matches",
   onChoose,
   commandTrailing,
-  searchCommand
+  searchCommand,
+  footer
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -676,7 +677,11 @@ function NavigationPopover({
                 );
               })
             ] }),
-            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel })
+            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel }),
+            footer && /* @__PURE__ */ jsxs3(Fragment4, { children: [
+              /* @__PURE__ */ jsx4("div", { className: "adh-dropdown-menu__separator", role: "separator" }),
+              /* @__PURE__ */ jsx4("div", { className: "adh-nav-popover__footer", children: footer })
+            ] })
           ]
         }
       )
@@ -1120,6 +1125,7 @@ import {
   Building,
   ChefHat,
   CircleHelp,
+  ClipboardCheck,
   ClipboardList,
   Code,
   Contact,
@@ -1130,10 +1136,12 @@ import {
   FlaskConical,
   FolderKanban,
   Gamepad2,
+  Gauge,
   GitPullRequest,
   Globe,
   GraduationCap,
   Hammer,
+  HardHat,
   Handshake,
   HardDrive,
   Hexagon,
@@ -1162,7 +1170,9 @@ import {
   Server,
   Settings as Settings2,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
+  Store,
   Trophy,
   UserCircle,
   UserCog,
@@ -1246,13 +1256,11 @@ var MENU_ICONS = {
   // you decide before writing anything, blocks for the things you assemble after.
   plan: ClipboardList,
   build: Blocks,
-  // The one fleet destination with no registry entry at all: the family has no
-  // consultant-registry site, so Hire ▸ Registry is an absolute href that keys its
-  // own icon here (see fleetMenuGroups). Its three former neighbours — orgs,
-  // notebook and integrations — became registry sites, so they are keyed by site id
-  // among the marketing family below.
-  registry: BookMarked,
-  // hire's consultant registry
+  // The fleet monitor (lewis.agenticdeveloperhub.com), in the admin section — the
+  // one row left in the tree with no registry entry at all, so it keys its own icon
+  // here (see fleetMenuGroups). `registry` used to be such a row too; it is a real
+  // site now and is keyed by its site id among the marketing family below.
+  monitor: Gauge,
   // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
   // submenu already wears — a topic that duplicates one of its children's icons
   // reads as that child promoted, rather than as the group it is.
@@ -1273,8 +1281,8 @@ var MENU_ICONS = {
   admin: ShieldCheck,
   // operations console
   api: Code,
-  docs: BookText,
-  // guides & API reference
+  builds: HardHat,
+  // the build console
   status: Activity,
   // system status / pulse
   support: LifeBuoy,
@@ -1297,6 +1305,8 @@ var MENU_ICONS = {
   dashboards: LayoutDashboard,
   // matches FEATURE_META `dashboards`
   devices: MonitorSmartphone,
+  docs: BookText,
+  // documents you keep, filed and searchable
   domains: Globe,
   ecosystems: Network,
   // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
@@ -1323,15 +1333,23 @@ var MENU_ICONS = {
   // matches FEATURE_META `projects`
   recipes: NotebookText,
   registries: Library,
+  registry: BookMarked,
+  // the directory of registered hub developers
   research: FlaskConical,
   // matches FEATURE_META `research` (+ the '/research' route)
   sites: LayoutTemplate,
   // quick landing pages
   storage: HardDrive,
+  store: ShoppingBag,
+  // the hub's own merch shop — the one site that ships in a box
+  stores: Store,
+  // storefronts you open for YOUR products
   teambuilder: UsersRound,
   // matches FEATURE_META `teams`
   teamregistry: BookUser,
   // a directory of teams
+  testing: ClipboardCheck,
+  // test plans, runs, and the bugs they turn up
   tools: Hammer
 };
 function menuIcon(key) {
@@ -1509,7 +1527,9 @@ function buildSiteNavEntries(navLinks, { homeHref, pathname }) {
 }
 
 // src/header/fleetMenuGroups.ts
+import { ADMIN_SITE_IDS } from "@agentic-toolkit/adh-registry";
 var FLEET_SECTION = 1;
+var ADMIN_SECTION = FLEET_SECTION + 1;
 function leaf(link) {
   return { kind: "leaf", section: FLEET_SECTION, blurb: true, link };
 }
@@ -1534,6 +1554,7 @@ var FLEET_MENU_GROUPS = [
       // from the Help-MODAL action row SiteMenu adds to the chrome above.
       { site: "hub-help" },
       { site: "support" },
+      { site: "store" },
       { route: "/details", label: "Details", description: "What the hub does" }
     ]
   }),
@@ -1564,7 +1585,8 @@ var FLEET_MENU_GROUPS = [
       // The registry calls this site "Notebook"; the menu row is "Notes", so the
       // registry's own tagline ("Notes & notebooks") would echo the row's label.
       { site: "notebook", label: "Notes", description: "Your notebook" },
-      { site: "research" }
+      { site: "research" },
+      { site: "docs" }
     ]
   }),
   topic({
@@ -1577,7 +1599,8 @@ var FLEET_MENU_GROUPS = [
       { site: "cookbook" },
       { site: "recipes" },
       { site: "toolkit" },
-      { site: "tools" }
+      { site: "tools" },
+      { site: "testing" }
     ]
   }),
   topic({
@@ -1613,7 +1636,8 @@ var FLEET_MENU_GROUPS = [
       { site: "integrations" },
       { site: "registries" },
       { site: "gamification" },
-      { site: "games" }
+      { site: "games" },
+      { site: "stores" }
     ]
   }),
   topic({
@@ -1622,25 +1646,66 @@ var FLEET_MENU_GROUPS = [
     link: { site: "consulting" },
     links: [
       { site: "consultants" },
-      // The family has no consultant-registry site, so this row is an absolute href —
-      // the last one in the tree. See MenuLink's `href` variant for what it costs.
+      // Was an absolute href while the family had no registry site; it is a real
+      // registry entry now, so the row is env-aware and SSO-wrapped like the rest.
+      { site: "registry" },
+      // The studio the family sits under. An absolute href, not a `{ site }`: the
+      // Agentic Development Studio has no app in this repo and deliberately no
+      // registry entry (`registry.test.ts` pins that agenticdevelopmentstudio.com is
+      // NOT a registry host — a registry entry would silently re-add the origin to
+      // the OAuth return allowlist and to the generated route map). See MenuLink's
+      // `href` variant for the three things this row therefore does without.
       {
-        href: "https://agenticdeveloperregistry.com",
-        label: "Registry",
-        description: "The consultant registry",
-        iconKey: "registry"
+        href: "https://agenticdevelopmentstudio.com",
+        label: "Agentic Development Studio",
+        description: "The studio behind the Hub",
+        iconKey: "consulting"
       }
     ]
   })
 ];
+var ADMIN_MENU_GROUPS = [
+  {
+    kind: "topic",
+    section: ADMIN_SECTION,
+    label: "Admin",
+    description: "Operations consoles",
+    iconKey: "admin",
+    links: [
+      ...ADMIN_SITE_IDS.map((site) => ({ site })),
+      {
+        href: "https://lewis.agenticdeveloperhub.com",
+        label: "Fleet Monitor",
+        description: "What every service is doing",
+        iconKey: "monitor"
+      }
+    ]
+  }
+];
+
+// src/header/StudioWordmark.tsx
+import "react";
+import { jsx as jsx13 } from "react/jsx-runtime";
+function StudioWordmark() {
+  return /* @__PURE__ */ jsx13(
+    "a",
+    {
+      className: "adh-nav-popover__wordmark",
+      href: "https://agenticdevelopmentstudio.com",
+      rel: "noopener",
+      children: "agentic development studio"
+    }
+  );
+}
 
 // src/header/SiteMenu.tsx
 import { useHelp } from "@agentic-toolkit/adh/help";
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx14 } from "react/jsx-runtime";
 function SiteMenu({
   groups,
   currentSiteId,
   authenticated,
+  userIsAdmin,
   triggerContent,
   triggerClassName,
   resolveHref,
@@ -1653,7 +1718,11 @@ function SiteMenu({
 }) {
   const hub = getSite2("hub");
   const label = hub ? siteHeaderTitle(hub) : "Agentic Developer Hub";
-  const { entries, navigate, homeHref } = useSiteMenu(groups, {
+  const tree = useMemo3(
+    () => userIsAdmin === true ? [...groups, ...ADMIN_MENU_GROUPS] : groups,
+    [groups, userIsAdmin]
+  );
+  const { entries, navigate, homeHref } = useSiteMenu(tree, {
     currentSiteId,
     resolveHref,
     personalSlug,
@@ -1771,25 +1840,26 @@ function SiteMenu({
       el.addEventListener("toggle", onToggle);
     });
   }
-  return /* @__PURE__ */ jsx13(
+  return /* @__PURE__ */ jsx14(
     NavigationPopover2,
     {
       entries: allEntries,
       onChoose: navigate,
       triggerLabel: `${label} \u2014 switch site`,
       triggerText: label,
-      triggerIcon: /* @__PURE__ */ jsx13(HubMark2, { className: "adh-nav-popover__mark" }),
+      triggerIcon: /* @__PURE__ */ jsx14(HubMark2, { className: "adh-nav-popover__mark" }),
       triggerContent,
       triggerClassName,
       placeholder: "Search sites, or browse topics",
       emptyLabel: "No matching sites",
+      footer: /* @__PURE__ */ jsx14(StudioWordmark, {}),
       searchCommand: {
         matches: (q) => q.toLowerCase() === "help",
         label: "Help \u2014 about the sites",
         shortcut: "overview",
         onSelect: showOverview
       },
-      commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx13(
+      commandTrailing: ({ close }) => authenticated && onSettings ? /* @__PURE__ */ jsx14(
         "button",
         {
           type: "button",
@@ -1799,13 +1869,13 @@ function SiteMenu({
             close({ restoreFocus: false });
             requestAnimationFrame(() => onSettings());
           },
-          children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+          children: /* @__PURE__ */ jsx14(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
         }
       ) : authenticated && settingsHref ? (
         // A real link so middle-click / new-tab work; native nav tears down the
         // page, so no explicit close needed.
-        /* @__PURE__ */ jsx13("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx13(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
-      ) : /* @__PURE__ */ jsx13(
+        /* @__PURE__ */ jsx14("a", { className: "adh-site-switcher__help", "aria-label": "User settings", href: settingsHref, children: /* @__PURE__ */ jsx14(Settings3, { className: "adh-site-switcher__help-icon", "aria-hidden": true }) })
+      ) : /* @__PURE__ */ jsx14(
         "button",
         {
           type: "button",
@@ -1815,7 +1885,7 @@ function SiteMenu({
             close({ restoreFocus: false });
             showOverview();
           },
-          children: /* @__PURE__ */ jsx13(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
+          children: /* @__PURE__ */ jsx14(CircleHelp2, { className: "adh-site-switcher__help-icon", "aria-hidden": true })
         }
       )
     }
@@ -1824,16 +1894,16 @@ function SiteMenu({
 
 // src/header/MarketingSiteMenu.tsx
 import "react";
-import { jsx as jsx14 } from "react/jsx-runtime";
+import { jsx as jsx15 } from "react/jsx-runtime";
 function MarketingSiteMenu(props) {
-  return /* @__PURE__ */ jsx14(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
+  return /* @__PURE__ */ jsx15(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
 }
 
 // src/header/WorkspaceSiteMenu.tsx
 import "react";
-import { jsx as jsx15 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 function WorkspaceSiteMenu(props) {
-  return /* @__PURE__ */ jsx15(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
+  return /* @__PURE__ */ jsx16(SiteMenu, { groups: FLEET_MENU_GROUPS, ...props });
 }
 
 // src/header/activeMenuGroups.ts
@@ -1871,13 +1941,13 @@ function PrefetchSiblingSites() {
 }
 
 // src/header/SiteMenuSwitcher.tsx
-import { jsx as jsx16, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx17, jsxs as jsxs9 } from "react/jsx-runtime";
 function SiteMenuSwitcher(props) {
   const pathname = usePathname4() ?? "/";
   const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
   return /* @__PURE__ */ jsxs9(Fragment5, { children: [
-    /* @__PURE__ */ jsx16(PrefetchSiblingSites, {}),
-    onWorkspaceRoute ? /* @__PURE__ */ jsx16(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx16(MarketingSiteMenu, { ...props })
+    /* @__PURE__ */ jsx17(PrefetchSiblingSites, {}),
+    onWorkspaceRoute ? /* @__PURE__ */ jsx17(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx17(MarketingSiteMenu, { ...props })
   ] });
 }
 
@@ -2018,14 +2088,14 @@ function useEffectiveEnv(hostname) {
 }
 
 // src/header/DevToolsMenu.tsx
-import { Fragment as Fragment6, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx18, jsxs as jsxs10 } from "react/jsx-runtime";
 var DebugConsoleWindow = dynamic(
   () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
 );
 function DevToolsMenu({ userIsAdmin, ...rest }) {
   const unlocked = DEV_TOOLS_BUILD_ENABLED || userIsAdmin === true;
   if (!unlocked) return null;
-  return /* @__PURE__ */ jsx17(DevToolsMenuPopover, { ...rest, adminUnlocked: userIsAdmin === true });
+  return /* @__PURE__ */ jsx18(DevToolsMenuPopover, { ...rest, adminUnlocked: userIsAdmin === true });
 }
 function DevToolsMenuPopover({
   currentSiteId,
@@ -2078,25 +2148,25 @@ function DevToolsMenuPopover({
     [entries, devToolsSection]
   );
   return /* @__PURE__ */ jsxs10(Fragment6, { children: [
-    /* @__PURE__ */ jsx17(
+    /* @__PURE__ */ jsx18(
       NavigationPopover3,
       {
         entries: allEntries,
         onChoose: navigate,
         triggerLabel: "Debug tools",
-        triggerContent: /* @__PURE__ */ jsx17(Bug2, { className: "adh-nav-popover__mark", "aria-hidden": true }),
+        triggerContent: /* @__PURE__ */ jsx18(Bug2, { className: "adh-nav-popover__mark", "aria-hidden": true }),
         triggerClassName: "adh-nav-popover__trigger--icon",
         placeholder: "Search sites, routes and tools",
         emptyLabel: "No matching dev tools"
       }
     ),
-    debugOpen && /* @__PURE__ */ jsx17(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
+    debugOpen && /* @__PURE__ */ jsx18(DebugConsoleWindow, { open: true, onClose: () => setDebugOpen(false) })
   ] });
 }
 
 // src/header/SiteHeader.tsx
 import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
-import { jsx as jsx18 } from "react/jsx-runtime";
+import { jsx as jsx19 } from "react/jsx-runtime";
 var NotificationBell = dynamic2(
   () => import("@agentic-toolkit/messaging/components/notification-bell").then((m) => m.NotificationBell)
 );
@@ -2146,17 +2216,18 @@ function SiteHeader({
   const resolvedLoginHref = loginHref ?? (onLogin ? void 0 : hubAuthHref("/login"));
   const resolvedSignupHref = signupHref ?? (onSignup ? void 0 : hubAuthHref("/signup"));
   const switcherSettingsHref = resolvedOnSettings ? void 0 : settingsHref ?? resolveHubHref("/settings");
-  return /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsx19(
     AdhHeader2,
     {
       siteName,
-      siteSwitcher: /* @__PURE__ */ jsx18(
+      siteSwitcher: /* @__PURE__ */ jsx19(
         SiteMenuSwitcher,
         {
           currentSiteId: siteId,
           resolveHref: resolveSwitchHref,
           personalSlug,
           authenticated: user != null,
+          userIsAdmin,
           onSettings: resolvedOnSettings,
           settingsHref: switcherSettingsHref,
           loginHref: resolvedLoginHref,
@@ -2164,7 +2235,7 @@ function SiteHeader({
           navLinks: resolvedNavLinks
         }
       ),
-      debugMenu: /* @__PURE__ */ jsx18(
+      debugMenu: /* @__PURE__ */ jsx19(
         DevToolsMenu,
         {
           currentSiteId: siteId,
@@ -2186,8 +2257,8 @@ function SiteHeader({
       previewDetail,
       homeHref: siteHomePath(siteId),
       profileHref: user?.slug && hasProfileRoute(siteId) ? `/${encodeURIComponent(user.slug)}/profile` : void 0,
-      preAuthLinks: conceptSite && onLandingPage ? /* @__PURE__ */ jsx18("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
-      accountActions: user != null ? /* @__PURE__ */ jsx18(NotificationBell, {}) : void 0,
+      preAuthLinks: conceptSite && onLandingPage ? /* @__PURE__ */ jsx19("a", { href: "/details", className: "adh-header__nav-link adh-header__nav-link--details", children: "Details" }) : void 0,
+      accountActions: user != null ? /* @__PURE__ */ jsx19(NotificationBell, {}) : void 0,
       user,
       authLoading,
       loginHref: resolvedLoginHref,
@@ -2210,6 +2281,8 @@ import {
   useRecents as useRecents2
 } from "@agentic-toolkit/adh/header/recents";
 export {
+  ADMIN_MENU_GROUPS,
+  ADMIN_SECTION,
   AdhHeader,
   AuthButtons,
   AvatarMenu,
@@ -2229,6 +2302,7 @@ export {
   SiteMenuSwitcher,
   SiteOptionsMenu,
   SiteSwitcher,
+  StudioWordmark,
   WorkspaceSiteMenu,
   WorkspacesMenuProvider,
   buildDebugSiteGroups,

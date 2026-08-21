@@ -286,6 +286,10 @@ export function SiteHeader({
           resolveHref={resolveSwitchHref}
           personalSlug={personalSlug}
           authenticated={user != null}
+          // Appends the admin consoles to the family tree, and nothing else — the
+          // rest of the menu is identical for an admin. See SiteMenu's `userIsAdmin`
+          // for why showing the rows is not the same as granting the access.
+          userIsAdmin={userIsAdmin}
           onSettings={resolvedOnSettings}
           settingsHref={switcherSettingsHref}
           // Signed-out top section: the menu's Login / Sign up rows reuse the same
@@ -303,10 +307,12 @@ export function SiteHeader({
         />
       }
       // The dev-tools dropdown, beside the site menu and entirely separate from it.
-      // `routes` and `userIsAdmin` reach ONLY this: the site menu above is now the
-      // same menu in every build, and these two props are precisely what used to
-      // make it otherwise. DevToolsMenu renders nothing at all unless unlocked, so
-      // on a production site this slot is empty.
+      // `routes` reaches ONLY this: the site menu above is the same menu in every
+      // BUILD, and that prop is what used to make it otherwise. (`userIsAdmin` goes
+      // to both, because who is signed in is not a fact about the build — it adds
+      // the consoles section there and unlocks this whole dropdown here.)
+      // DevToolsMenu renders nothing at all unless unlocked, so on a production site
+      // this slot is empty.
       debugMenu={
         <DevToolsMenu
           currentSiteId={siteId}

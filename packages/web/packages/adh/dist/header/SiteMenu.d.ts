@@ -43,6 +43,16 @@ export type SiteMenuChromeProps = {
     /** Whether a user is signed in. Gates the settings affordance only (the trigger
      *  label is always the hub brand, regardless of route or auth state). */
     authenticated?: boolean;
+    /** Whether the signed-in user is an adh admin. The ONLY flag that changes which
+     *  destinations this menu offers: true appends {@link ADMIN_MENU_GROUPS} (the
+     *  operations consoles) below the family tree. Resolves asynchronously with the
+     *  session, so `undefined` and `false` must behave identically — the section
+     *  appears when the answer arrives, and a build that never resolves one shows the
+     *  same menu as it does to a visitor.
+     *
+     *  ⚠️ Showing a link is not granting access. Each console does its own
+     *  authorization; this decides who is shown the door, nothing more. */
+    userIsAdmin?: boolean;
     /** Replaces the trigger's default "Agentic Developer Hub ⌄" content — e.g. a
      *  site's own logo. Used by bitbag.ai to surface the family menu behind its
      *  wordmark. */
@@ -106,5 +116,5 @@ export type SiteMenuProps = SiteMenuChromeProps & {
  * The config-only subclasses (MarketingSiteMenu, WorkspaceSiteMenu) supply nothing
  * but their `groups`; the dispatcher (SiteMenuSwitcher) picks which to render by route.
  */
-export declare function SiteMenu({ groups, currentSiteId, authenticated, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, navLinks, }: SiteMenuProps): ReactElement;
+export declare function SiteMenu({ groups, currentSiteId, authenticated, userIsAdmin, triggerContent, triggerClassName, resolveHref, personalSlug, settingsHref, onSettings, loginHref, signupHref, navLinks, }: SiteMenuProps): ReactElement;
 //# sourceMappingURL=SiteMenu.d.ts.map

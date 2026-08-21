@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
-import { getSite, SITES } from '@agentic-toolkit/adh-registry'
+import { ADMIN_SITE_IDS, getSite, SITES } from '@agentic-toolkit/adh-registry'
 
 // The fleet tree — the family as nine top-level rows. Its contract is mostly about what
 // a reader SEES, so most of this resolves the config through the engine rather than
@@ -15,26 +15,29 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ push: vi.fn() }),
 }))
 
-import { FLEET_MENU_GROUPS, FLEET_SECTION } from '../fleetMenuGroups'
+import { ADMIN_MENU_GROUPS, ADMIN_SECTION, FLEET_MENU_GROUPS, FLEET_SECTION } from '../fleetMenuGroups'
 import { useSiteMenu, type UseSiteMenuOpts } from '../useSiteMenu'
-import { type MenuLink } from '../SiteMenu'
+import { type MenuGroup, type MenuLink } from '../SiteMenu'
 import { type PopoverEntry } from '@agentic-toolkit/adh/header'
 
-/** Resolve the tree as the hub's header would. Defaults to a signed-out visitor on the
- *  marketing landing; pass a `pathname` and the session bits to place them elsewhere. */
+/** Resolve a tree as the hub's header would. Defaults to the fleet tree seen by a
+ *  signed-out visitor on the marketing landing; pass a `pathname` and the session bits
+ *  to place them elsewhere, or `groups` to resolve the admin block instead. */
 function resolve(
-  { pathname = '/', ...opts }: { pathname?: string } & Partial<UseSiteMenuOpts> = {},
+  {
+    pathname = '/',
+    groups = FLEET_MENU_GROUPS,
+    ...opts
+  }: { pathname?: string; groups?: MenuGroup[] } & Partial<UseSiteMenuOpts> = {},
 ): PopoverEntry[] {
   mockPath = pathname
-  const { result } = renderHook(() =>
-    useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', ...opts }),
-  )
+  const { result } = renderHook(() => useSiteMenu(groups, { currentSiteId: 'hub', ...opts }))
   return result.current.entries
 }
 
-/** Every link in the tree, top-level rows and submenu children alike. */
-function allLinks(): MenuLink[] {
-  return FLEET_MENU_GROUPS.flatMap((g) =>
+/** Every link in a tree, top-level rows and submenu children alike. */
+function allLinks(groups: MenuGroup[] = FLEET_MENU_GROUPS): MenuLink[] {
+  return groups.flatMap((g) =>
     g.kind === 'topic' ? [...(g.link ? [g.link] : []), ...g.links] : [g.link],
   )
 }
@@ -126,7 +129,10 @@ describe('FLEET_MENU_GROUPS', () => {
   // quietly joins this list has lost its per-env host, its SSO wrap and its `current`.
   it('writes out an absolute URL only for the one destination with no site', () => {
     const raw = allLinks().filter((l): l is Extract<MenuLink, { href: string }> => 'href' in l)
-    expect(raw.map((l) => l.label)).toEqual(['Registry'])
+    // Hire ▸ Registry used to be here; it is `{ site: 'registry' }` now. What is left is
+    // the studio, which has no registry entry ON PURPOSE (see the row's comment) rather
+    // than not yet — so unlike its predecessor this one is not waiting to be promoted.
+    expect(raw.map((l) => l.label)).toEqual(['Agentic Development Studio'])
     for (const l of raw) {
       expect(l.href, l.label).toMatch(/^https:\/\//)
       // Nothing can key its icon off a registry id it does not have.
@@ -142,10 +148,55 @@ describe('FLEET_MENU_GROUPS', () => {
   // fails only when a row is ADDED; this fails when the registry catches one up.
   it('has no absolute row pointing at a site the registry now has', () => {
     const hosts = new Map(SITES.map((s) => [s.prodHost, s.id]))
-    for (const l of allLinks()) {
+    for (const l of [...allLinks(), ...allLinks(ADMIN_MENU_GROUPS)]) {
       if (!('href' in l)) continue
       const id = hosts.get(new URL(l.href).host)
       expect(id, `${l.label} is site '${id}' now — make it { site: '${id}' }`).toBeUndefined()
+    }
+  })
+})
+
+describe('ADMIN_MENU_GROUPS', () => {
+  it('is one topic, in its own section below the family', () => {
+    const entries = resolve({ groups: ADMIN_MENU_GROUPS })
+    expect(entries).toHaveLength(1)
+    expect(entries[0]!.kind).toBe('topic')
+    expect(entries[0]!.section).toBe(ADMIN_SECTION)
+    // Strictly after the fleet's, which is what puts a divider between the two.
+    expect(ADMIN_SECTION).toBeGreaterThan(FLEET_SECTION)
+  })
+
+  it('is a pure grouping header — the consoles are inside it, not the row itself', () => {
+    const [topic] = resolve({ groups: ADMIN_MENU_GROUPS })
+    expect(topic?.kind === 'topic' && topic.href).toBeUndefined()
+  })
+
+  // The rows are DERIVED from the registry's adminOnly flag, so the set an admin is
+  // shown and the set the footer overview hides cannot drift. A console added to the
+  // registry appears here with no edit to the menu; one that loses the flag leaves.
+  it('carries every adminOnly site, and only those, plus the fleet monitor', () => {
+    const sites = allLinks(ADMIN_MENU_GROUPS).flatMap((l) => ('site' in l ? [l.site] : []))
+    expect(sites).toEqual(ADMIN_SITE_IDS)
+    expect(sites.length).toBeGreaterThan(0) // non-vacuity: the flag is set on something
+    const raw = allLinks(ADMIN_MENU_GROUPS).filter(
+      (l): l is Extract<MenuLink, { href: string }> => 'href' in l,
+    )
+    // The monitor is a backend service, not a family site — there is no registry entry
+    // to derive it from, so it is written out. Same exception, same price.
+    expect(raw.map((l) => l.href)).toEqual(['https://lewis.agenticdeveloperhub.com'])
+    for (const l of raw) expect(l.iconKey, `${l.label} must name its own icon`).toBeTruthy()
+  })
+
+  it('gives every row an icon and a tagline, like the family tree above', () => {
+    for (const e of resolve({ groups: ADMIN_MENU_GROUPS })) {
+      const rows =
+        e.kind === 'topic'
+          ? [{ label: e.label, icon: e.icon, description: e.description }, ...e.items]
+          : [e.item]
+      for (const r of rows) {
+        expect(r.icon, `${r.label} has no icon`).toBeTruthy()
+        expect(r.description?.trim(), `${r.label} has no tagline`).toBeTruthy()
+      }
     }
   })
 })

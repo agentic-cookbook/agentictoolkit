@@ -141,7 +141,11 @@ describe('ssoReturnOrigins (central adh SSO client allowlist, per env)', () => {
     expect(origins).toContain('https://agenticdevelopercookbook.com')
     expect(origins).toContain('https://bitbag.ai')
     expect(origins.every((o) => /^https:\/\/[^/]+$/.test(o))).toBe(true)
-    expect(origins.some((o) => o.includes('staging.') || o.includes('testing.'))).toBe(false)
+    // No env PREFIX — a leading `staging.`/`testing.` label, anchored at the host's
+    // head rather than matched anywhere in the string. `agenticdevelopertesting.com`
+    // is a production host that contains "testing.", and a substring test calls it a
+    // testing origin.
+    expect(origins.some((o) => /^https:\/\/(staging|testing)\./.test(o))).toBe(false)
   })
 
   it('never allows an external link-out origin, in any env', () => {
@@ -241,11 +245,16 @@ describe('LISTED_SITES (the family roster)', () => {
       'integrations',
       'games',
       'gamification',
+      'store',
+      'stores',
+      'testing',
+      'registry',
+      'docs',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
-      'admin',
       'status',
+      'admin',
       'builds',
     ])
   })
@@ -307,14 +316,15 @@ describe('LISTED_SITES (the family roster)', () => {
       'https://testing.agenticdeveloperconsulting.com/',
     )
   })
-  it('features FishLamp Design (name-only, divider) ahead of the admin + status section', () => {
+  it('features FishLamp Design (name-only, divider) ahead of the status + admin section', () => {
     const ids = LISTED_SITES.map((s) => s.id)
     const fishlamp = ids.indexOf('fishlamp')
     const admin = ids.indexOf('admin')
     const status = ids.indexOf('status')
-    // the studio brand comes before the trailing console section
-    expect(fishlamp).toBeLessThan(admin)
-    expect(admin).toBeLessThan(status)
+    // the studio brand comes before the trailing console section, which the one
+    // PUBLIC console heads (see the comment on its registry entry)
+    expect(fishlamp).toBeLessThan(status)
+    expect(status).toBeLessThan(admin)
     const fishlampDef = getSite('fishlamp')!
     expect(fishlampDef.dividerBefore).toBe(true)
     // `featured` marks it as the brand the family sits under. Nothing renders it
@@ -323,7 +333,7 @@ describe('LISTED_SITES (the family roster)', () => {
     expect(fishlampDef.featured).toBe(true)
     // FishLamp carries a description — the overview popover shows one per row.
     expect(fishlampDef.description).toBeTruthy()
-    expect(getSite('admin')?.dividerBefore).toBe(true)
+    expect(getSite('status')?.dividerBefore).toBe(true)
   })
   it('resolves the external FishLamp domains directly in every env (no env prefix)', () => {
     // fishlamp.com has no staging/testing tier, so hostForEnv falls all the way
@@ -341,11 +351,15 @@ describe('LISTED_SITES (the family roster)', () => {
       }
     }
   })
-  it('ends with the admin + status + builds console section', () => {
+  it('ends with the status + admin + builds console section', () => {
     const ids = LISTED_SITES.map((s) => s.id)
+    // status heads the block, not admin: it is the one console anyone may read, and
+    // it carries the section's `dividerBefore`/`sectionLabel`. The two below it are
+    // `adminOnly`, so they are absent from FOOTER_SITES entirely — a section head
+    // that disappears from the overview would leave the rest of the block unlabelled.
     expect(ids[ids.length - 1]).toBe('builds')
-    expect(ids[ids.length - 2]).toBe('status')
-    expect(ids[ids.length - 3]).toBe('admin')
+    expect(ids[ids.length - 2]).toBe('admin')
+    expect(ids[ids.length - 3]).toBe('status')
   })
 })
 
@@ -663,20 +677,26 @@ describe('HUB_ROUTE_SEGMENTS (the same question, asked about the other root)', (
 })
 
 describe('SITE_CATEGORIES (menu + overview grouping)', () => {
-  it('covers every listed site exactly once (no orphans, no dupes)', () => {
+  it('covers every overview site exactly once (no orphans, no dupes)', () => {
     const inCats = SITE_CATEGORIES.flatMap((c) => c.ids)
     expect(new Set(inCats).size).toBe(inCats.length) // no dupes
     const listed = new Set(LISTED_SITES.map((s) => s.id))
     // every categorized id is a real listed site
     for (const id of inCats) expect(listed.has(id)).toBe(true)
-    // every listed site is categorized (groupSitesByCategory adds no "More")
-    const grouped = groupSitesByCategory(LISTED_SITES)
+    // FOOTER_SITES, not LISTED_SITES: the overview renders that roster, and the
+    // admin-only consoles are filtered out of it upstream, so categorizing them
+    // would declare membership of a group that can never render.
+    const grouped = groupSitesByCategory(FOOTER_SITES)
     expect(grouped.some((g) => g.label === 'More')).toBe(false)
-    expect(grouped.flatMap((g) => g.sites).length).toBe(LISTED_SITES.length)
+    expect(grouped.flatMap((g) => g.sites).length).toBe(FOOTER_SITES.length)
   })
-  it('groups in the declared order, Operations last', () => {
-    const labels = groupSitesByCategory(LISTED_SITES).map((g) => g.label)
-    expect(labels).toEqual(['Develop', 'Build', 'Sell', 'Learn & community', 'Studio & consulting', 'Operations'])
+  it('leaves the admin-only consoles uncategorized', () => {
+    const inCats = new Set(SITE_CATEGORIES.flatMap((c) => c.ids))
+    for (const s of SITES.filter((s) => s.adminOnly)) expect(inCats.has(s.id)).toBe(false)
+  })
+  it('mirrors the site menu: same labels, same order, Hire last', () => {
+    const labels = groupSitesByCategory(FOOTER_SITES).map((g) => g.label)
+    expect(labels).toEqual(['Hub', 'Learn', 'Plan', 'Build', 'Personas', 'Products', 'Hire'])
   })
 })
 
@@ -726,12 +746,17 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'integrations',
       'games',
       'gamification',
+      'store',
+      'stores',
+      'testing',
+      'registry',
+      'docs',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
-      'admin',
+      // admin and builds are adminOnly — registry sites, and on the roster, but
+      // never in this one.
       'status',
-      'builds',
     ])
   })
   it('excludes the non-HTML mcp endpoint and the delisted sites, but keeps the content sites', () => {
@@ -744,13 +769,18 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
     expect(ids).toContain('fishlamp')
     expect(ids).toContain('fishlampdesign')
   })
-  it('leads with bitbag and ends with FishLamp, then admin, status, builds', () => {
+  it('leads with bitbag and ends with FishLamp, then status', () => {
     const ids = FOOTER_SITES.map((s) => s.id)
     expect(ids[0]).toBe('bitbag')
-    expect(ids.indexOf('fishlamp')).toBeLessThan(ids.indexOf('admin'))
-    expect(ids.indexOf('admin')).toBeLessThan(ids.indexOf('status'))
-    expect(ids.indexOf('status')).toBeLessThan(ids.indexOf('builds'))
-    expect(ids[ids.length - 1]).toBe('builds')
+    expect(ids.indexOf('fishlamp')).toBeLessThan(ids.indexOf('status'))
+    expect(ids[ids.length - 1]).toBe('status')
+  })
+  it('drops the admin-only consoles, which stay on the roster', () => {
+    const ids = FOOTER_SITES.map((s) => s.id)
+    expect(ids).not.toContain('admin')
+    expect(ids).not.toContain('builds')
+    expect(LISTED_SITES.map((s) => s.id)).toContain('admin')
+    expect(LISTED_SITES.map((s) => s.id)).toContain('builds')
   })
   it('every footer site has a non-empty description for the overview popover', () => {
     for (const s of FOOTER_SITES) {

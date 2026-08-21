@@ -1,11 +1,14 @@
+import { ADMIN_SITE_IDS } from '@agentic-toolkit/adh-registry'
 import { type MenuGroup, type MenuLink } from './SiteMenu'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The fleet tree — the whole family as nine rows, used identically by BOTH the
-// marketing (logged-out) and workspace (logged-in) menus. Nothing here is
-// auth-conditional: every row is a site anyone may visit, and the rows that DO
-// depend on a session (Home, Workspaces, Recents, Login/Sign up) are the chrome
-// {@link SiteMenu} builds around this — Recents at the head of this very block.
+// marketing (logged-out) and workspace (logged-in) menus. Every row here is a
+// site anyone may visit; the rows that DO depend on a session (Home, Workspaces,
+// Recents, Login/Sign up) are the chrome {@link SiteMenu} builds around this —
+// Recents at the head of this very block. The one exception is
+// {@link ADMIN_MENU_GROUPS} below, which is a separate export precisely so that
+// this one stays unconditional.
 //
 // Shape: seven of the nine open a submenu, and five of those seven are a link as
 // well — "Hub" opens the hub's own pages and IS the hub. The other two ('Plan',
@@ -19,11 +22,27 @@ import { type MenuGroup, type MenuLink } from './SiteMenu'
 // label or a description only where the registry's would read wrong IN A MENU —
 // restating the registry's copy is how the two drift.
 //
-// The whole tree sits in ONE section (1), so it reads as a single block with one
-// divider above it (the chrome, section 0) and one below (the dev tail, section 2).
+// ⚠️ The groups MIRROR `SITE_CATEGORIES` in the registry (the footer "sites
+// overview"): same labels, same order, and the same site in the same group. They
+// are the same answer to "where does this site live?" on two surfaces. Change one,
+// change the other; a registry test pins the labels from its side.
+//
+// The two surfaces are not the same LIST, though, and neither is a subset of the
+// other: this tree promotes Bitbag and Organizations to top-level rows (the
+// overview has no such shape, so it files them under Hub) and adds the Studio's
+// absolute href, while the overview additionally carries the sites with no menu
+// row at all (fishlamp, fishlampdesign, mcp). Only the grouping is shared.
+//
+// The public tree sits in ONE section (1), so it reads as a single block with one
+// divider above it (the chrome, section 0); the admin block below it is section 2,
+// which is what puts a divider between them.
 
 /** The section every fleet row carries. See the module comment. */
 export const FLEET_SECTION = 1
+
+/** The section {@link ADMIN_MENU_GROUPS} carries — one more than the fleet's, so a
+ *  divider falls between the family and the consoles. */
+export const ADMIN_SECTION = FLEET_SECTION + 1
 
 /** A top-level row that is a destination and nothing else. `blurb` surfaces its
  *  description as the trailing tagline, matching every other row. */
@@ -68,6 +87,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       // from the Help-MODAL action row SiteMenu adds to the chrome above.
       { site: 'hub-help' },
       { site: 'support' },
+      { site: 'store' },
       { route: '/details', label: 'Details', description: 'What the hub does' },
     ],
   }),
@@ -99,6 +119,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       // registry's own tagline ("Notes & notebooks") would echo the row's label.
       { site: 'notebook', label: 'Notes', description: 'Your notebook' },
       { site: 'research' },
+      { site: 'docs' },
     ],
   }),
   topic({
@@ -112,6 +133,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'recipes' },
       { site: 'toolkit' },
       { site: 'tools' },
+      { site: 'testing' },
     ],
   }),
   topic({
@@ -148,6 +170,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'registries' },
       { site: 'gamification' },
       { site: 'games' },
+      { site: 'stores' },
     ],
   }),
   topic({
@@ -156,14 +179,57 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
     link: { site: 'consulting' },
     links: [
       { site: 'consultants' },
-      // The family has no consultant-registry site, so this row is an absolute href —
-      // the last one in the tree. See MenuLink's `href` variant for what it costs.
+      // Was an absolute href while the family had no registry site; it is a real
+      // registry entry now, so the row is env-aware and SSO-wrapped like the rest.
+      { site: 'registry' },
+      // The studio the family sits under. An absolute href, not a `{ site }`: the
+      // Agentic Development Studio has no app in this repo and deliberately no
+      // registry entry (`registry.test.ts` pins that agenticdevelopmentstudio.com is
+      // NOT a registry host — a registry entry would silently re-add the origin to
+      // the OAuth return allowlist and to the generated route map). See MenuLink's
+      // `href` variant for the three things this row therefore does without.
       {
-        href: 'https://agenticdeveloperregistry.com',
-        label: 'Registry',
-        description: 'The consultant registry',
-        iconKey: 'registry',
+        href: 'https://agenticdevelopmentstudio.com',
+        label: 'Agentic Development Studio',
+        description: 'The studio behind the Hub',
+        iconKey: 'consulting',
       },
     ],
   }),
+]
+
+/**
+ * The consoles, for admins only — rendered by {@link SiteMenu} beneath the fleet
+ * tree when (and ONLY when) the header resolves the signed-in user as an adh
+ * admin. A separate export rather than a flag on a row in the tree above, because
+ * the tree above is what every visitor sees and is worth being able to read as
+ * exactly that.
+ *
+ * The two site rows are derived from the registry's {@link ADMIN_SITE_IDS} — the
+ * sites marked `adminOnly`, the same fact that keeps them out of the footer's
+ * sites overview — so the set an admin is shown and the set everyone else is
+ * denied cannot drift apart. The third row is the fleet monitor, which is a
+ * backend service rather than a family site and so has no registry entry to
+ * derive from.
+ *
+ * ⚠️ Gating a MENU is not authorization. Each console does its own; this only
+ * decides who is shown the door.
+ */
+export const ADMIN_MENU_GROUPS: MenuGroup[] = [
+  {
+    kind: 'topic',
+    section: ADMIN_SECTION,
+    label: 'Admin',
+    description: 'Operations consoles',
+    iconKey: 'admin',
+    links: [
+      ...ADMIN_SITE_IDS.map((site): MenuLink => ({ site })),
+      {
+        href: 'https://lewis.agenticdeveloperhub.com',
+        label: 'Fleet Monitor',
+        description: 'What every service is doing',
+        iconKey: 'monitor',
+      },
+    ],
+  },
 ]

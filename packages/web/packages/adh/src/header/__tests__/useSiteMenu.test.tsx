@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { Users, Hexagon, BookMarked } from 'lucide-react'
+import { Users, Hexagon, Handshake } from 'lucide-react'
 import { DEV_DEPLOYMENT_ENVS } from '@agentic-toolkit/adh-registry/deployment-env'
 
 // useSiteMenu resolves the declarative config into PopoverEntry rows: icons from the
@@ -56,8 +56,10 @@ describe('useSiteMenu', () => {
     expect(row(entries, 'community')?.icon).toBe(Users)
     // A topic that IS a site wears that site's glyph without restating it.
     expect(topic(entries, 'Hub')?.icon).toBe(Hexagon)
-    // A row with no registry site keys its own (see MenuLink's `href` variant).
-    expect(row(entries, 'href:https://agenticdeveloperregistry.com')?.icon).toBe(BookMarked)
+    // A row with no registry site keys its own (see MenuLink's `href` variant). The
+    // Studio is the family's one such row: it is a real destination the menu points at,
+    // and deliberately NOT a registry entry, so it names its own `iconKey`.
+    expect(row(entries, 'href:https://agenticdevelopmentstudio.com')?.icon).toBe(Handshake)
   })
 
   it('marks the current site, and points its row at a bare same-origin path', () => {
@@ -72,14 +74,14 @@ describe('useSiteMenu', () => {
     const { result } = renderHook(() =>
       useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', resolveHref }),
     )
-    const registry = row(result.current.entries, 'href:https://agenticdeveloperregistry.com')
-    expect(registry?.href).toBe('https://agenticdeveloperregistry.com')
-    expect(registry?.current).toBeUndefined()
+    const studio = row(result.current.entries, 'href:https://agenticdevelopmentstudio.com')
+    expect(studio?.href).toBe('https://agenticdevelopmentstudio.com')
+    expect(studio?.current).toBeUndefined()
     // Verbatim means verbatim: the wrap DID run for its neighbour in the same submenu —
     // Hire ▸ Consultants, asserted here rather than pointed at, so this reads as the row
     // opting out and can never be the wrap being off for the whole render.
     expect(row(result.current.entries, 'consultants')?.href).toContain('https://as.test/authorize?return=')
-    expect(resolveHref).not.toHaveBeenCalledWith('https://agenticdeveloperregistry.com')
+    expect(resolveHref).not.toHaveBeenCalledWith('https://agenticdevelopmentstudio.com')
   })
 
   // ── The workspace carry ────────────────────────────────────────────────────────

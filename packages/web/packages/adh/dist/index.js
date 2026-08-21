@@ -226,7 +226,8 @@ function NavigationPopover({
   emptyLabel = "No matches",
   onChoose,
   commandTrailing,
-  searchCommand
+  searchCommand,
+  footer
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -676,7 +677,11 @@ function NavigationPopover({
                 );
               })
             ] }),
-            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel })
+            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel }),
+            footer && /* @__PURE__ */ jsxs3(Fragment4, { children: [
+              /* @__PURE__ */ jsx4("div", { className: "adh-dropdown-menu__separator", role: "separator" }),
+              /* @__PURE__ */ jsx4("div", { className: "adh-nav-popover__footer", children: footer })
+            ] })
           ]
         }
       )

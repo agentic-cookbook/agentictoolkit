@@ -244,20 +244,21 @@ describe('SiteHeader auth source injection', () => {
       expect(opts).toEqual({ clientId: 'demo', siteId: 'hub', onAfterLogout })
     }
     // ...and everything it returned crossed into the bar: `user` to the toolkit header,
-    // the derived signed-in flag on to adh's own switcher, and `userIsAdmin` to the
-    // dev-tools menu. Both menus are stubbed above, so what is observable here is the
-    // value each was handed — the avatar stub prints the name — not the bar's printed
-    // copy, which is now the avatar alone (pinned in the toolkit's own
+    // the derived signed-in flag on to adh's own switcher, and `userIsAdmin` to BOTH
+    // menus. Both menus are stubbed above, so what is observable here is the value
+    // each was handed — the avatar stub prints the name — not the bar's printed copy,
+    // which is now the avatar alone (pinned in the toolkit's own
     // header-contract.test.tsx).
     expect(screen.getByTestId('adh-avatar-menu').textContent).toBe('Ada')
     expect(headerProps.current?.user).toEqual({ name: 'Ada' })
     expect(switcherProps.current?.authenticated).toBe(true)
     expect(devToolsProps.current?.userIsAdmin).toBe(true)
-    // ...and NOT to the switcher. This is the constraint the second menu exists for: the
-    // site menu must render the same rows in a dev build, a shipped build, and for an
-    // admin, so no capability flag may reach it at all. An admin unlock that leaked back
-    // into the switcher would be invisible in any screenshot and in every other test here.
-    expect(switcherProps.current).not.toHaveProperty('userIsAdmin')
+    // The site menu gets it too — it is what adds the admin consoles section. What
+    // must NOT reach it is `routes`, the dev-tools list: that is a fact about the
+    // BUILD, and the constraint the second menu exists for is that the site menu
+    // renders the same rows in a dev build and a shipped one. Who is signed in is a
+    // different question, and it is allowed to change the menu.
+    expect(switcherProps.current?.userIsAdmin).toBe(true)
     expect(switcherProps.current).not.toHaveProperty('routes')
   })
 

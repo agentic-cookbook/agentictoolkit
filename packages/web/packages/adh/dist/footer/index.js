@@ -40,7 +40,6 @@ function AdhFooter({ links = [], copyright, version, trailing }) {
 
 // src/footer/SiteFooter.tsx
 import { AdhFooter as ToolkitFooter } from "@agentic-toolkit/adh/footer";
-import { siteProdUrl as siteProdUrl2 } from "@agentic-toolkit/adh-registry";
 
 // src/footer/FooterChat.tsx
 import dynamic from "next/dynamic";
@@ -171,8 +170,8 @@ function openLegalModal(dialogId) {
 // src/footer/SiteFooter.tsx
 import { Fragment, jsx as jsx6, jsxs as jsxs5 } from "react/jsx-runtime";
 var COPYRIGHT_PREFIX = "\xA9 2026 ";
-var BRAND_LABEL = "FishLamp Design";
-var BRAND_HREF = siteProdUrl2("fishlamp", "/");
+var BRAND_LABEL = "Agentic Development Studio";
+var BRAND_HREF = "https://agenticdevelopmentstudio.com/";
 var SITES_LINK = {
   label: "Sites",
   popoverTarget: SITES_OVERVIEW_POPOVER_ID,

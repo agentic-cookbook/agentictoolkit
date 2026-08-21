@@ -42,6 +42,7 @@ import {
   Building,
   ChefHat,
   CircleHelp,
+  ClipboardCheck,
   ClipboardList,
   Code,
   Contact,
@@ -52,10 +53,12 @@ import {
   FlaskConical,
   FolderKanban,
   Gamepad2,
+  Gauge,
   GitPullRequest,
   Globe,
   GraduationCap,
   Hammer,
+  HardHat,
   Handshake,
   HardDrive,
   Hexagon,
@@ -84,7 +87,9 @@ import {
   Server,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
+  Store,
   Trophy,
   UserCircle,
   UserCog,
@@ -163,12 +168,11 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   // you decide before writing anything, blocks for the things you assemble after.
   plan: ClipboardList,
   build: Blocks,
-  // The one fleet destination with no registry entry at all: the family has no
-  // consultant-registry site, so Hire ▸ Registry is an absolute href that keys its
-  // own icon here (see fleetMenuGroups). Its three former neighbours — orgs,
-  // notebook and integrations — became registry sites, so they are keyed by site id
-  // among the marketing family below.
-  registry: BookMarked, // hire's consultant registry
+  // The fleet monitor (lewis.agenticdeveloperhub.com), in the admin section — the
+  // one row left in the tree with no registry entry at all, so it keys its own icon
+  // here (see fleetMenuGroups). `registry` used to be such a row too; it is a real
+  // site now and is keyed by its site id among the marketing family below.
+  monitor: Gauge,
   // The "Learn" topic. Not the `help` site's glyph, which its own row inside that
   // submenu already wears — a topic that duplicates one of its children's icons
   // reads as that child promoted, rather than as the group it is.
@@ -190,7 +194,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   //     among the Hub-core rows above. ---
   admin: ShieldCheck, // operations console
   api: Code,
-  docs: BookText, // guides & API reference
+  builds: HardHat, // the build console
   status: Activity, // system status / pulse
   support: LifeBuoy,
 
@@ -208,6 +212,7 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   customers: Contact,
   dashboards: LayoutDashboard, // matches FEATURE_META `dashboards`
   devices: MonitorSmartphone,
+  docs: BookText, // documents you keep, filed and searchable
   domains: Globe,
   ecosystems: Network, // matches FEATURE_META `ecosystems` (+ the '/ecosystems' route)
   education: School,
@@ -224,11 +229,15 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   projects: FolderKanban, // matches FEATURE_META `projects`
   recipes: NotebookText,
   registries: Library,
+  registry: BookMarked, // the directory of registered hub developers
   research: FlaskConical, // matches FEATURE_META `research` (+ the '/research' route)
   sites: LayoutTemplate, // quick landing pages
   storage: HardDrive,
+  store: ShoppingBag, // the hub's own merch shop — the one site that ships in a box
+  stores: Store, // storefronts you open for YOUR products
   teambuilder: UsersRound, // matches FEATURE_META `teams`
   teamregistry: BookUser, // a directory of teams
+  testing: ClipboardCheck, // test plans, runs, and the bugs they turn up
   tools: Hammer,
 }
 

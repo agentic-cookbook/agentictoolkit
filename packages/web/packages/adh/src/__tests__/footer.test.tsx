@@ -13,15 +13,14 @@ vi.mock('next/link', () => ({
 }))
 
 describe('adh SiteFooter', () => {
-  it('always renders the FishLamp brand line', () => {
+  it('always renders the studio brand line', () => {
     render(<SiteFooter />)
-    // Scoped to the link role (not a bare getByText): the registry's own
-    // "Studio & consulting" group lists FishLamp Design among the family sites
-    // too (see @agentic-toolkit/adh-registry SITES), so the copyright's brand link is not the
-    // only element carrying this text — pre-existing, unrelated to this task.
-    expect(screen.getByRole('link', { name: 'FishLamp Design' })).toHaveAttribute(
+    // Agentic Development Studio, which replaced FishLamp Design in the copyright.
+    // FishLamp is still a family site with its own row in the sites overview — this
+    // is scoped to the link role and to this exact name so the two stay distinct.
+    expect(screen.getByRole('link', { name: 'Agentic Development Studio' })).toHaveAttribute(
       'href',
-      'https://fishlamp.com/',
+      'https://agenticdevelopmentstudio.com/',
     )
   })
 

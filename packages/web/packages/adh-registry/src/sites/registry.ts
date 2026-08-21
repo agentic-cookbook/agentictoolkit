@@ -57,6 +57,11 @@ export type SiteId =
   | 'integrations'
   | 'games'
   | 'gamification'
+  | 'store'
+  | 'stores'
+  | 'testing'
+  | 'registry'
+  | 'docs'
   // </gen:union>
   | 'narratives'
   // fishlamp / fishlampdesign: FishLamp Design, the studio that publishes the whole
@@ -165,6 +170,13 @@ export interface SiteDef {
    *  aren't an indexable web page (e.g. the MCP server endpoint) so they're
    *  excluded from the SEO interlink row in the footer. */
   crawlable?: boolean
+  /** An operations console only an adh admin has any use for. Two effects, both
+   *  from this one fact: the site is dropped from {@link FOOTER_SITES} (so it is
+   *  absent from the footer "sites overview" and from the SEO interlink set), and
+   *  it is what {@link ADMIN_SITE_IDS} — the site menu's admin-gated section —
+   *  is derived from. NOT a permission: the console does its own authorization.
+   *  This only decides who is shown the door. */
+  adminOnly?: boolean
 }
 
 // Display order = switcher order, grouped into divider-separated sections:
@@ -246,6 +258,11 @@ export const SITES: SiteDef[] = [
   { id: 'integrations', label: 'Integrations', fullLabel: 'Agentic Developer Integrations', description: 'Manage integrations', prodHost: 'agenticdeveloperintegrations.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'games', label: 'Games', fullLabel: 'Agentic Developer Games', description: 'Build your games', prodHost: 'agenticdevelopergames.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'gamification', label: 'Gamification', fullLabel: 'Agentic Developer Gamification', description: 'Product gamification', prodHost: 'agenticdevelopergamification.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'store', label: 'Store', fullLabel: 'Agentic Developer Store', description: 'Hub merch & gear', prodHost: 'agenticdeveloperstore.com', hasStaging: true, hasTesting: true, hasHome: false, workspaceRoute: 'root' },
+  { id: 'stores', label: 'Stores', fullLabel: 'Agentic Developer Stores', description: 'Sell your products', prodHost: 'agenticdeveloperstores.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'testing', label: 'Testing', fullLabel: 'Agentic Developer Testing', description: 'Test plans & bugs', prodHost: 'agenticdevelopertesting.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'registry', label: 'Registry', fullLabel: 'Agentic Developer Registry', description: 'Registered hub developers', prodHost: 'agenticdeveloperregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'docs', label: 'Docs', fullLabel: 'Agentic Developer Docs', description: 'Organize your documents', prodHost: 'agenticdeveloperdocs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
   // pruning) — stays registered (its own header resolves, /details keep serving)
@@ -260,11 +277,15 @@ export const SITES: SiteDef[] = [
   { id: 'fishlamp', label: 'FishLamp Design', shortLabel: 'FishLamp', description: 'The studio behind the Hub', prodHost: 'fishlamp.com', hasStaging: false, hasTesting: false, hasHome: false, external: true, dividerBefore: true, sectionLabel: 'Studio & consulting', featured: true },
   { id: 'fishlampdesign', label: 'fishlampdesign.com', description: 'FishLamp Design — second domain', prodHost: 'fishlampdesign.com', hasStaging: false, hasTesting: false, hasHome: false, external: true },
   // --- operational consoles, their own section at the very end ---
+  // `status` heads the section because it is the only PUBLIC one: it carries the
+  // section's `sectionLabel`, and the two `adminOnly` consoles below it are dropped
+  // from FOOTER_SITES — a head that vanished from that roster would leave the ones
+  // after it in an unlabelled tail.
+  { id: 'status', label: 'Status', fullLabel: 'Agentic Developer Status', description: 'System status', prodHost: 'status.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false, dividerBefore: true, sectionLabel: 'Operations' },
   // admin is a wholly-authenticated console — its dashboard root IS its home,
   // so the switcher links it to '/' rather than a separate /home.
-  { id: 'admin', label: 'Admin', fullLabel: 'Agentic Developer Admin', description: 'Operations console', prodHost: 'admin.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false, dividerBefore: true, sectionLabel: 'Operations' },
-  { id: 'status', label: 'Status', fullLabel: 'Agentic Developer Status', description: 'System status', prodHost: 'status.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false },
-  { id: 'builds', label: 'Builds', fullLabel: 'Agentic Developer Builds', description: 'Build status', prodHost: 'builder.agenticdeveloperhub.com', hasStaging: false, hasTesting: true, hasHome: false },
+  { id: 'admin', label: 'Admin', fullLabel: 'Agentic Developer Admin', description: 'Operations console', prodHost: 'admin.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false, adminOnly: true },
+  { id: 'builds', label: 'Builds', fullLabel: 'Agentic Developer Builds', description: 'Build status', prodHost: 'builder.agenticdeveloperhub.com', hasStaging: false, hasTesting: true, hasHome: false, adminOnly: true },
   // --- Registered but hidden from the switcher list ---
   // messaging: an in-hub-only workspace feature (DMs + notifications), not a deployed
   // marketing site — no staging/testing/home tiers, hidden from the switcher + footer
@@ -378,10 +399,21 @@ export function siteBuildConfig(id: SiteId): SiteBuildConfig {
 export const LISTED_SITES: SiteDef[] = SITES.filter((s) => s.listed !== false)
 
 /** The crawlable sites to interlink from the footer, in display order. The roster
- *  above minus non-HTML endpoints (e.g. the MCP server). These render as real
- *  server-side `<a href>` links to absolute production hosts so search engines can
- *  follow them between properties. */
-export const FOOTER_SITES: SiteDef[] = LISTED_SITES.filter((s) => s.crawlable !== false)
+ *  above minus non-HTML endpoints (e.g. the MCP server) and minus the admin-only
+ *  consoles, which have their own gated menu section and no business in a public
+ *  overview or an SEO interlink set. These render as real server-side `<a href>`
+ *  links to absolute production hosts so search engines can follow them between
+ *  properties. */
+export const FOOTER_SITES: SiteDef[] = LISTED_SITES.filter(
+  (s) => s.crawlable !== false && s.adminOnly !== true,
+)
+
+/** The operations consoles, in display order — the site menu's admin-gated section.
+ *  Derived from {@link SiteDef.adminOnly} rather than hand-listed beside it, so the
+ *  set the menu shows an admin and the set the footer overview hides are the same
+ *  fact stated once. (The section's third row, the fleet monitor, is not a registry
+ *  site at all — see `fleetMenuGroups.ts`.) */
+export const ADMIN_SITE_IDS: SiteId[] = SITES.filter((s) => s.adminOnly === true).map((s) => s.id)
 
 export function getSite(id: SiteId): SiteDef | undefined {
   return SITES.find((s) => s.id === id)
@@ -416,44 +448,84 @@ export const MAIN_SITE_IDS: SiteId[] = [
 ]
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',
-  'customers', 'dashboards', 'devices', 'domains', 'ecosystems', 'education', 'games', 'gamification',
-  'integrations', 'knowledgebases', 'narratives', 'notebook', 'notifications', 'orgs',
-  'personabuilder', 'personas', 'products', 'projects', 'recipes', 'registries', 'research',
-  'sites', 'storage', 'teambuilder', 'teamregistry', 'tools',
+  'customers', 'dashboards', 'devices', 'docs', 'domains', 'ecosystems', 'education', 'games',
+  'gamification', 'integrations', 'knowledgebases', 'narratives', 'notebook', 'notifications',
+  'orgs', 'personabuilder', 'personas', 'products', 'projects', 'recipes', 'registries',
+  'registry', 'research', 'sites', 'storage', 'store', 'stores', 'teambuilder', 'teamregistry',
+  'testing', 'tools',
 ]
 
-/** Sensible groupings for the site menu + footer overview, in display order.
+/** The family grouped for the footer "sites overview", in display order.
+ *  ⚠️ These groups MIRROR the site menu's tree (`fleetMenuGroups.ts`) — same
+ *  labels, same membership, same order — because the two are the same answer to
+ *  the same question ("where does this site live?") shown on two surfaces, and a
+ *  visitor who learns the menu should recognise the overview. The menu's two
+ *  top-level leaves (Bitbag, Organizations) have no group of their own there, so
+ *  they join Hub here; everything else lines up row for row.
+ *
+ *  The mirror is a convention held by a test, not a derivation: the menu is a
+ *  React config in another package (icons, absolute hrefs, hub routes) and this
+ *  is pure data the registry owns. Change one, change the other.
+ *
  *  Order-independent of the SITES array (the scaffolded sites live in one gen
  *  block), so grouping is by membership here. Every listed site should appear in
  *  exactly one category (guarded by a test); supersedes the per-entry
- *  `dividerBefore`/`sectionLabel` hints for these two surfaces. */
+ *  `dividerBefore`/`sectionLabel` hints for these two surfaces.
+ *
+ *  Two kinds of site the MENU carries are deliberately absent here, because both
+ *  are absent from {@link FOOTER_SITES} and naming them would declare membership
+ *  of a group that can never render (a test pins it):
+ *
+ *  - the admin-only consoles (`admin`, `builds`) — their menu section is derived
+ *    from {@link ADMIN_SITE_IDS} instead;
+ *  - the folded sites (`help`, `recipes`, `education`, `consulting`), which are
+ *    `listed: false`: still registered and still reachable, so a menu row may
+ *    point AT them, but they are no longer part of the roster the family shows.
+ *
+ *  That is the whole of where the mirror can't hold, and it is one-way — every
+ *  category member has a menu row, never the reverse. */
 export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   {
-    label: 'Develop',
-    ids: ['bitbag', 'hub', 'cookbook', 'projects', 'narratives', 'devteam', 'toolkit', 'mcp', 'codereviews', 'research', 'notebook'],
+    // The hub and the surfaces that ARE the hub — plus the two rows the menu
+    // promotes to its top level (bitbag above Hub, orgs below it), which have no
+    // group of their own to mirror. `store` is the hub's own merch shop: the one
+    // place in the family that ships something you can hold, run by the hub.
+    label: 'Hub',
+    ids: ['bitbag', 'hub', 'news', 'status', 'community', 'hub-help', 'support', 'store', 'orgs'],
   },
+  // The menu's Learn topic, minus both of its other rows: the topic's own trigger
+  // is the folded `help` landing, and its Help row is hub-help, which sits in Hub
+  // above — one destination reached from two groups, and a site may be in only
+  // one category, so it is grouped where it lives rather than where it repeats.
+  { label: 'Learn', ids: ['academy'] },
+  { label: 'Plan', ids: ['projects', 'narratives', 'notebook', 'research', 'docs'] },
+  // mcp has no menu row of its own (it is an endpoint, not a page — `crawlable:
+  // false` keeps it out of the overview too), and Build is where the rest of the
+  // developer tooling sits, so that is where it is filed.
   {
-    // orgs and integrations sit with the other things a workspace is CONFIGURED with —
-    // orgs beside teamregistry/teambuilder (the same tenancy layer, one level up),
-    // integrations beside authentication/notifications (an external service wired in).
-    // games sits beside knowledgebases because it is the same shape of thing: a body of
-    // content you author here that the platform stores and hands back, rather than a
-    // service you wire up. The tail of this list is infrastructure, which it is not.
     label: 'Build',
-    ids: ['personas', 'personabuilder', 'personaregistry', 'registries', 'teamregistry', 'teambuilder', 'orgs', 'myagenticteams', 'ecosystems', 'knowledgebases', 'games', 'storage', 'tools', 'sites', 'domains', 'authentication', 'integrations', 'devices', 'notifications', 'dashboards'],
+    ids: ['devteam', 'codereviews', 'cookbook', 'toolkit', 'tools', 'testing', 'mcp'],
   },
-  // gamification is configured PER PRODUCT (its root topic list is the workspace's
-  // products), so it belongs to the product group, not to Build.
-  { label: 'Sell', ids: ['products', 'customers', 'billing', 'gamification'] },
   {
-    label: 'Learn & community',
-    ids: ['academy', 'news', 'community', 'communities', 'hub-help', 'support'],
+    label: 'Personas',
+    ids: ['personas', 'personabuilder', 'personaregistry', 'knowledgebases', 'teambuilder', 'teamregistry', 'myagenticteams'],
   },
-  // consultants sits with the studio brand; admin + status are their own consoles
-  // section last — their previous groupings. (education/recipes/consulting are
-  // folded — registered but delisted.)
-  { label: 'Studio & consulting', ids: ['consultants', 'fishlamp', 'fishlampdesign'] },
-  { label: 'Operations', ids: ['admin', 'status', 'builds'] },
+  // Everything a product IS or is configured with: gamification is configured PER
+  // PRODUCT, `stores` is the storefront ON a product, `education` is a product
+  // kind — none of them is a Build concern.
+  {
+    label: 'Products',
+    ids: ['products', 'storage', 'ecosystems', 'authentication', 'customers', 'billing', 'notifications', 'sites', 'communities', 'dashboards', 'devices', 'domains', 'integrations', 'registries', 'gamification', 'games', 'stores'],
+  },
+  // Hire absorbed the old "Studio & consulting" group: the studio brand and the
+  // two people-directories are one answer to "get someone to do this". The menu's
+  // topic trigger (the folded `consulting` landing) and its Agentic Development
+  // Studio row are both absent — the first is delisted, the second has no registry
+  // entry at all.
+  {
+    label: 'Hire',
+    ids: ['consultants', 'registry', 'fishlamp', 'fishlampdesign'],
+  },
 ]
 
 export type SiteGroup = { label: string; sites: SiteDef[] }
@@ -781,6 +853,9 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'integrations',
   // toolkit — the component demo.
   'demo',
+  // billing — where a purchase made before signing in is attached to an account
+  // (`app/claim/`). Signed-out by design, so it is a landing page, not a workspace.
+  'claim',
 ])
 
 /** The hub's own static top-level path segments — what tells one of ITS pages from a
