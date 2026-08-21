@@ -3,6 +3,16 @@ export { EditorSection, type EditorSectionItem } from "./editor-section"
 export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
 export { Field } from "./field"
 export { FieldGroup } from "./field-group"
+// What a document is called and where it lives — the title/slug pair, with a live
+// "available / unavailable" verdict for the slug. The slug rule is injected, so a host's
+// route alphabet stays the host's.
+export {
+  DocumentIdentityField,
+  useSlugAvailability,
+  type DocumentIdentityFieldProps,
+  type SlugStatus,
+  type SlugVerdict,
+} from "./document-identity-field"
 // The tag-set row (autocomplete + browse/add chooser + chips) — one affordance for every
 // surface that edits a set of labels, so research tags and work-item labels behave alike.
 export { TagSetField } from "./tag-set-field"
