@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Globe, Plus } from "lucide-react";
+import { Globe, Plus } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
@@ -419,12 +419,20 @@ export function ResearchPane({
   const items: TopicDetailItem[] = rows.map((d) => ({
     id: d.id,
     label: d.title || "Untitled",
-    // The icon carries the row's one discrete state: published (visible to the world) vs a
-    // private draft document. Matches the "Published" sublabel tag.
-    icon: d.visibility === "public" ? <Globe /> : <FileText />,
-    sublabel:
-      [d.category, d.visibility === "public" ? "Published" : null].filter(Boolean).join(" · ") ||
-      (d.tags.length > 0 ? d.tags.join(", ") : undefined),
+    // No leading icon (the level opts out) and no "Published" tag in the sublabel: a row has
+    // exactly ONE discrete state, and it is marked ONCE, at the trailing edge. The sublabel is
+    // left to say what the row IS — its category, else its tags — which is the only thing the
+    // title cannot. The globe is aria-hidden, so the state rides an sr-only word instead: an
+    // icon alone is a colour-only signal, and `trailing` renders AFTER the label, which is
+    // where an accessible name wants it.
+    trailing:
+      d.visibility === "public" ? (
+        <>
+          <span className="sr-only">, published</span>
+          <Globe size={14} aria-hidden className="text-apt-text-dim" />
+        </>
+      ) : undefined,
+    sublabel: d.category || (d.tags.length > 0 ? d.tags.join(", ") : undefined),
   }));
   const validationHint = draft && dirty ? validationError : null;
   const editing = selectedId !== null;
@@ -449,6 +457,9 @@ export function ResearchPane({
     onClear: onCancel,
     // `emptyLabel` STAYS: it is the rail's own text for an empty list, not a control.
     emptyLabel: docs === null ? "Loading…" : "No documents yet.",
+    // A document row's identity is its title; it has no icon worth a column of its own, and the
+    // published state it used to show there is now the row's `trailing` mark.
+    hideItemIcons: true,
   };
   useStackLevel(documentsLevel);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a

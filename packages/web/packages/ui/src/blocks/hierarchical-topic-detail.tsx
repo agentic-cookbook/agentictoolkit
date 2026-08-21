@@ -149,6 +149,11 @@ export interface TopicLevel {
    *  NOT scroll with them) — the hook for the shared `ListHeader` (filter field +
    *  actions) when an entity list lives inside the stack. */
   headerSlot?: ReactNode
+  /** Drop the LEADING icon from this level's rows in the expanded list. For a list whose rows
+   *  have no identity icon to show — where the shared fallback `Circle` is noise and a state
+   *  badge in the icon slot would duplicate the row's `trailing` mark. Ignored in the collapsed
+   *  icon strip, which has nothing but the icon. */
+  hideItemIcons?: boolean
 }
 
 /** The top bar: a breadcrumb trail (leading root, then each selected level, then any
@@ -1493,6 +1498,7 @@ function MinimizedStack({
               titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
+              hideItemIcons={level.hideItemIcons}
               collapsed={isCollapsed(level)}
               onToggle={manualCollapse ? (e) => setCollapse(i, e) : () => {}}
               onResize={(w) => onResizeLevel(level, w)}
@@ -2017,6 +2023,7 @@ function CoveredStack({
               titleActions={level.titleActions}
               railSlot={level.railSlot}
               headerSlot={level.headerSlot}
+              hideItemIcons={level.hideItemIcons}
               // (#4) ONLY the TOPMOST (frontier) menu gets a right-justified close (✕) in its header —
               // not every child. It dismisses that menu and clears the selection in the PARENT list
               // that opened it (the root never qualifies). Drop any open reveal so the stack settles
@@ -2262,6 +2269,7 @@ function NarrowStack({
             titleActions={level.titleActions}
             railSlot={level.railSlot}
             headerSlot={level.headerSlot}
+            hideItemIcons={level.hideItemIcons}
             // Nothing to disclose, cover or resize: the pane IS the whole view.
             collapsed={false}
             onToggle={() => {}}
