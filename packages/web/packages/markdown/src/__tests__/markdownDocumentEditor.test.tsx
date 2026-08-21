@@ -17,7 +17,7 @@
 // augmentation is program-wide once any file references it).
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, fireEvent, act } from '@testing-library/react'
 import { useState } from 'react'
 
 vi.mock('../components/MarkdownRenderer', () => ({
@@ -70,6 +70,11 @@ describe('MarkdownDocumentEditor — narrow', () => {
 
   it('shows the editor first and swaps to the preview on the Preview tab', async () => {
     const { container } = render(<Harness />)
+    // The tabbed (narrow, default) layout opens on the edit pane — the textbox must actually
+    // be present here, not just absent later. Mutating `showEditor` to `effective === 'split'`
+    // deletes this entire phone/tabbed edit view while every other assertion in this file
+    // still passes, since nothing else positively checks for the textbox outside the split.
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
     expect(container.querySelector('[data-slot="markdown-preview"]')).toBeNull()
     screen.getByRole('button', { name: /^preview$/i }).click()
     await waitFor(() =>
@@ -107,5 +112,18 @@ describe('MarkdownDocumentEditor — wide', () => {
   it('previews the current text once typing settles', async () => {
     render(<Harness initial="# Live" defaultLayout="split" />)
     await waitFor(() => expect(screen.getByTestId('rendered')).toHaveTextContent('# Live'))
+
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: '# Updated' } })
+
+    // Not yet — the preview must still show the pre-edit text until the debounce elapses
+    // (PREVIEW_DEBOUNCE_MS in the component is 300ms). Catches an undebounced (immediate)
+    // update.
+    act(() => void vi.advanceTimersByTime(299))
+    expect(screen.getByTestId('rendered')).toHaveTextContent('# Live')
+
+    // Now the debounce has elapsed — the preview must have updated. Catches a debounce that
+    // never fires at all (a permanently stale preview).
+    act(() => void vi.advanceTimersByTime(1))
+    expect(screen.getByTestId('rendered')).toHaveTextContent('# Updated')
   })
 })

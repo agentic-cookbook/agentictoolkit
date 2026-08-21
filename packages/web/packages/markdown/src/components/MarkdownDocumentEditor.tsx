@@ -45,6 +45,9 @@ export interface MarkdownDocumentEditorProps extends MarkdownEditorProps {
   header?: ReactNode
   /** Layout to open in on a wide viewport. Narrow always opens tabbed. */
   defaultLayout?: MarkdownEditorLayout
+  /** Reading theme for the preview pane, forwarded to `MarkdownReadingPalette`. Defaults to
+   *  that component's own default (`DEFAULT_THEME_ID`). */
+  themeId?: string
 }
 
 /**
@@ -59,13 +62,18 @@ export interface MarkdownDocumentEditorProps extends MarkdownEditorProps {
  * utilities, through the `@source` globs over `src/components` and `dist`.
  *
  * Everything else is `MarkdownEditor`'s: `value`, `onChange`, `label`, `onUpload`,
- * `toolbarExtras`, `fill`, … are forwarded untouched, so this is a drop-in replacement at
- * any existing call site.
+ * `toolbarExtras`, `className`, … are forwarded untouched onto the editor pane (merged with
+ * this component's own required layout classes, never replacing them), so this is a drop-in
+ * replacement at any existing call site. `fill` defaults to `true` here — unlike
+ * `MarkdownEditor` itself, whose default is `false` — because both this component's layouts
+ * are meant to fill their container by construction; pass `fill={false}` to opt back into a
+ * fixed-`rows` box.
  */
 export function MarkdownDocumentEditor({
   header,
   defaultLayout = 'tabbed',
-  className,
+  fill = true,
+  themeId,
   ...editor
 }: MarkdownDocumentEditorProps): React.JSX.Element {
   const wide = useMediaQuery(SPLIT_MIN_WIDTH)
@@ -84,7 +92,7 @@ export function MarkdownDocumentEditor({
   return (
     <div
       data-slot="markdown-document-editor"
-      className={cn('flex min-h-0 min-w-0 flex-1 flex-col gap-3', className)}
+      className="flex min-h-0 min-w-0 flex-1 flex-col gap-3"
     >
       {header}
 
@@ -136,16 +144,31 @@ export function MarkdownDocumentEditor({
       </div>
 
       <div className="flex min-h-0 min-w-0 flex-1 gap-3">
-        {showEditor && <MarkdownEditor {...editor} className="min-h-0 min-w-0 flex-1" />}
+        {showEditor && (
+          <MarkdownEditor
+            {...editor}
+            fill={fill}
+            className={cn('min-h-0 min-w-0 flex-1', editor.className)}
+          />
+        )}
         {showPreview && (
-          <MarkdownReadingPalette className="min-h-0 min-w-0 flex-1 overflow-y-auto rounded-md border border-apt-border p-4">
-            <div data-slot="markdown-preview" aria-live="polite">
+          <MarkdownReadingPalette
+            themeId={themeId}
+            className="min-h-0 min-w-0 flex-1 rounded-md border border-apt-border"
+          >
+            {/* The document itself is not a live region: every debounce tick would otherwise
+                re-announce the whole rendered document to screen readers 300ms after the
+                author stops typing. The short status node below is the live region instead. */}
+            <div data-slot="markdown-preview" aria-live="off">
               {source.trim() ? (
                 <MarkdownRenderer content={source} />
               ) : (
                 <p className="text-sm text-apt-text-dim">Nothing to preview yet.</p>
               )}
             </div>
+            <span className="sr-only" role="status" aria-live="polite">
+              {source.trim() ? 'Preview updated' : ''}
+            </span>
           </MarkdownReadingPalette>
         )}
       </div>
