@@ -77,6 +77,22 @@ describe('DocumentIdentityField', () => {
     expect(screen.queryByText(/unavailable/i)).toBeNull()
     expect(screen.queryByText(/^available$/i)).toBeNull()
   })
+  it("keeps the slug input's accessible name stable, excluding the verdict", () => {
+    // Field layout="inline" wraps its caption AND its children in one <Label>, so a naive
+    // reading of the DOM makes the input's accessible name include whatever the verdict
+    // span says -- which both mutates the name on every verdict change and duplicates text
+    // that is already an aria-live region. aria-labelledby overrides the wrapping label, so
+    // the name must stay exactly the caption, reason text and all excluded, even when a
+    // reason is present.
+    render(<Harness verdict={{ status: 'unavailable', reason: 'That word is reserved.' }} />)
+    const slugInput = screen.getByRole('textbox', { name: 'Slug' })
+    expect(slugInput).toHaveAccessibleName('Slug')
+    // The reason is still on the page (announced via the live region) -- just not IN the name.
+    expect(screen.getByText('That word is reserved.')).toBeInTheDocument()
+    // The later-task lookup this must keep working.
+    expect(screen.getByLabelText(/slug/i)).toBe(slugInput)
+  })
+
 })
 
 describe('useSlugAvailability', () => {
@@ -174,4 +190,19 @@ describe('useSlugAvailability', () => {
     expect(result.current.status).toBe('available')
     expect(check).toHaveBeenCalledTimes(1)
   })
+  it('leaves the verdict idle when the checker rejects, rather than surfacing "unavailable"', async () => {
+    // Pinning the deliberate choice: a network failure is indistinguishable from "the slug is
+    // taken" to the editor, and treating it as "unavailable" would block a save over a problem
+    // that has nothing to do with the slug. If the .catch ever started surfacing "unavailable"
+    // here, this is the test that would catch it.
+    const check = vi.fn().mockRejectedValue(new Error('network down'))
+    const { result } = renderHook(() => useSlugAvailability('any-slug', check, { debounceMs: 10 }))
+    await act(async () => {
+      vi.advanceTimersByTime(50)
+    })
+    await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
+    expect(result.current.status).toBe('idle')
+    expect(result.current.reason).toBeNull()
+  })
+
 })

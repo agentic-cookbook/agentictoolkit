@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useId, useRef, useState } from "react"
 
 import { Field } from "./field"
 import { Input } from "../components/input"
@@ -148,6 +148,14 @@ export function DocumentIdentityField({
   className,
 }: DocumentIdentityFieldProps) {
   const [touched, setTouched] = useState(false)
+  // Field layout="inline" wraps its caption AND its children in ONE <Label>, so the slug row's
+  // <label> literally contains the status span too — its implicit accessible name would grow
+  // (and mutate on every verdict change) to include whatever the verdict currently says.
+  // aria-labelledby overrides that implicit wrapping association, so the id it points at is
+  // the sole source of the name; aria-describedby then carries the verdict as a DESCRIPTION,
+  // which is allowed to change and to also live in an aria-live region.
+  const slugCaptionId = useId()
+  const slugStatusId = useId()
 
   const handleTitle = useCallback(
     (next: string) => {
@@ -172,11 +180,13 @@ export function DocumentIdentityField({
           placeholder="Untitled"
         />
       </Field>
-      <Field label={slugLabel} layout="inline">
+      <Field label={<span id={slugCaptionId}>{slugLabel}</span>} layout="inline">
         <div className="flex w-full items-center gap-2">
           <Input
             value={slug}
             disabled={disabled}
+            aria-labelledby={slugCaptionId}
+            aria-describedby={status ? slugStatusId : undefined}
             className="flex-1 font-mono text-[0.8rem]"
             onChange={(e) => {
               setTouched(true)
@@ -186,6 +196,7 @@ export function DocumentIdentityField({
           {status && (
             <span
               data-slot="slug-status"
+              id={slugStatusId}
               aria-live="polite"
               className={cn("shrink-0 text-xs", toneTextClass(STATUS_TONE[verdict.status]))}
             >
