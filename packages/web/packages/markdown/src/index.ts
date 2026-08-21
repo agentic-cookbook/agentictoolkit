@@ -64,5 +64,13 @@ export { MDV_PALETTES } from './themes/palettes'
 export { processMarkdown } from './lib/process-markdown'
 export type { ProcessedMarkdown } from './lib/process-markdown'
 
+// A document's title: the client mirror of the API's derivation, plus the one-key
+// frontmatter write a title field needs (the API accepts no title — it derives one).
+export {
+  deriveDocumentTitle,
+  frontmatterTitle,
+  setFrontmatterTitle,
+} from './lib/document-title'
+
 // MarkdownDocument type (re-exported for convenience)
 export type { MarkdownDocument } from './types'

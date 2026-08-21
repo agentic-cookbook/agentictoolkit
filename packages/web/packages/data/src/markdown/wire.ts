@@ -74,6 +74,14 @@ export interface MarkdownPublishBody {
   route: string;
 }
 
+/** `GET /content/markdown/{id}/route-available/{route}` response. `reason` explains a
+ *  `false`, and is `'ok'` when available — so a UI can say WHY a slug is refused
+ *  (malformed vs. a word the site's routes reserve vs. already used by this author). */
+export interface MarkdownRouteAvailability {
+  available: boolean;
+  reason: "ok" | "invalid" | "reserved" | "taken";
+}
+
 /** `{ items: string[] }` — shared shape of the categories/tags list responses. */
 export interface StringListBody {
   items: string[];

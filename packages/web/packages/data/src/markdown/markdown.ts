@@ -15,6 +15,7 @@ import type {
   MarkdownCreateBody,
   MarkdownUpdateBody,
   MarkdownPublishBody,
+  MarkdownRouteAvailability,
   StringListBody,
   MarkdownCategoryNode,
   MarkdownCategoryTreeBody,
@@ -31,6 +32,9 @@ export type ResearchSummary = MarkdownDocumentSummaryRow;
 
 export type CreateMarkdownBody = MarkdownCreateBody;
 export type UpdateMarkdownBody = MarkdownUpdateBody;
+
+/** Whether a public route is free for a document's author. */
+export type { MarkdownRouteAvailability } from "./wire";
 
 /** One category as this surface exposes it — id, name, and the parent pointer that
  *  makes the set a tree. Re-exported (not aliased) because a hierarchical consumer
@@ -179,6 +183,20 @@ export const markdownApi = {
   async remove(id: string, opts?: { workspace?: string }): Promise<void> {
     // 204 No Content — authedRequest, not authedJson (nothing to parse).
     await authedRequest(`${BASE}/${enc(id)}${workspaceQuery(opts)}`, { method: "DELETE" });
+  },
+
+  /** Is this public route free for this document's author? Answers the same question
+   *  `publish` would 409 on, but read-only and without claiming anything — so an editor can
+   *  ask while the user types. Excludes the document itself: a published paper's own slug is
+   *  not taken for it. The route is a PATH SEGMENT, hence `enc`. */
+  async routeAvailable(
+    id: string,
+    route: string,
+    opts?: { workspace?: string },
+  ): Promise<MarkdownRouteAvailability> {
+    return authedJson<MarkdownRouteAvailability>(
+      `${BASE}/${enc(id)}/route-available/${enc(route)}${workspaceQuery(opts)}`,
+    );
   },
 
   /** Publish under an author-defined public route. The route is unique per
