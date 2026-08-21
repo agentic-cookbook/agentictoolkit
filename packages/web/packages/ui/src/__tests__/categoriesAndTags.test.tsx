@@ -79,4 +79,20 @@ describe('CategoriesAndTags', () => {
     expect(group).not.toBeNull()
     expect(group.className).toContain('--apt-field-label-w')
   })
+
+  it("renders each row's Field in the inline grid layout, not just the group's width variable", () => {
+    // The group publishing `--apt-field-label-w` (above) is necessary but not sufficient —
+    // it says nothing about whether `Field` actually consumed `layout="inline"`. This walks
+    // up from the caption text to the real `<label>` (rendered by the shared `Label`
+    // component `Field` wraps its content in) and asserts it carries the inline grid class,
+    // so the test fails if `Field`'s inline branch is ever made a no-op.
+    renderBlock()
+    const categoriesLabel = screen.getByText('Categories').closest('label')
+    expect(categoriesLabel).not.toBeNull()
+    expect(categoriesLabel!.className).toContain('grid-cols-[var(--apt-field-label-w')
+
+    const tagsLabel = screen.getByText('Tags').closest('label')
+    expect(tagsLabel).not.toBeNull()
+    expect(tagsLabel!.className).toContain('grid-cols-[var(--apt-field-label-w')
+  })
 })
