@@ -40,13 +40,20 @@ export function ResearchFeature({
 }) {
   // Two bases, one behaviour: opening a document pushes under `docBasePath`, and CLOSING one
   // (`null`) returns to `basePath`. When the two are the same string — every host but the
-  // research site — both hooks build identical URLs and this is exactly the old single-base
-  // `pushSegment`.
+  // research site — both hooks build identical URLs, matching the old single-base `pushSegment`.
+  // `onSelectDoc`'s identity is stable too, but that's a separate fact from the URLs matching: it
+  // depends on the two `pushSegment` functions themselves (each its own `useCallback` keyed on
+  // `[router, basePath]`), not on `list`/`docs`, which are bare object literals `useBasePathRoute`
+  // returns fresh every render — depending on the objects would hand out a new `onSelectDoc`
+  // identity every render even though the methods inside are stable. No caller keys an effect or
+  // memo on `onSelectDoc` today (`documentsLevel` was already rebuilt every render before this
+  // file existed), so getting this wrong wouldn't have been a live bug, just a closed-off latent
+  // one — worth keying correctly regardless.
   const list = useBasePathRoute(basePath);
   const docs = useBasePathRoute(docBasePath ?? basePath);
   const onSelectDoc = useCallback(
     (id: string | null) => (id === null ? list.pushSegment(null) : docs.pushSegment(id)),
-    [list, docs],
+    [list.pushSegment, docs.pushSegment],
   );
   // RailHostBoundary: the pane's document list + exit guard exist only as rail-host
   // publications; on a bare feature site (no hub shell) the boundary self-hosts them.

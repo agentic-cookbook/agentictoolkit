@@ -29,9 +29,13 @@ import {
 import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
 
 // useBasePathRoute (ResearchFeature's URL wiring) reads next/navigation's useRouter; a stub is
-// enough since these tests assert on the API calls, not the resulting route.
+// enough for most tests, which assert on the API calls rather than the resulting route. The
+// "two bases" tests below (docBasePath !== basePath) DO assert on the route, so `push` is hoisted
+// to one shared spy rather than minted fresh per `useRouter()` call — a fresh `vi.fn()` per call
+// would leave no way to read back what a later render's `pushSegment` actually did.
+const { push } = vi.hoisted(() => ({ push: vi.fn() }));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ push, replace: vi.fn(), prefetch: vi.fn() }),
 }));
 
 // ResearchPane reads useAuth() directly (for the userSlug fallback) — stub a signed-in user so
@@ -302,6 +306,41 @@ describe("ResearchFeature", () => {
       retry.click();
     });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Two bases (docBasePath) ────────────────────────────────────────────────────
+  // The research SITE splits `basePath` (list) from `docBasePath` (open document) — see this
+  // component's own doc comment. Every test above passes only `basePath`, exercising just the
+  // default (docBasePath === basePath) path; these two are the only coverage of the split, so a
+  // regression that swapped the two bases, or fell back to `basePath` for both, would pass every
+  // other test in this file.
+
+  it("routes a selected document under docBasePath, not basePath", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/acme/home" docBasePath="/acme/edit" />
+      </Harness>,
+    );
+
+    const row = await screen.findByRole("button", { name: "Federated learning notes" });
+    fireEvent.click(row);
+
+    expect(push).toHaveBeenCalledWith("/acme/edit/doc-1", { scroll: false });
+  });
+
+  it("closing an open document (Cancel) returns to basePath, not docBasePath", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/acme/home" docBasePath="/acme/edit" docId="doc-1" />
+      </Harness>,
+    );
+
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(push).toHaveBeenCalledWith("/acme/home", { scroll: false });
   });
 
   // ── The cache ────────────────────────────────────────────────────────────────
