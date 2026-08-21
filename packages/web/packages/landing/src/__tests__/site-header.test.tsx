@@ -158,9 +158,93 @@ describe('SiteHeader', () => {
     // …and goes back to the left end above it, where there is no burger and the
     // nav needs the room. Same cascade requirement as the action rule: the
     // centring must come FIRST.
-    const mediaAt = rules.lastIndexOf('@media (min-width: 62rem)')
+    //
+    // Anchored on the reset itself and then walked BACK to its enclosing media
+    // block, rather than on `lastIndexOf('@media …')`. The sheet now ends with a
+    // second 62rem block — the drawer variant's — and a search from the end
+    // lands in that one, where the brand's margin is `auto` again; the test
+    // would fail while describing something true.
+    const resetAt = rules.indexOf('margin-left: 0')
+    expect(resetAt).toBeGreaterThan(bare!.index)
+    const mediaAt = rules.lastIndexOf('@media (min-width: 62rem)', resetAt)
     expect(mediaAt).toBeGreaterThan(bare!.index)
-    expect(rules.slice(mediaAt)).toMatch(/\.lp-site-brand\s*\{[^}]*margin-left:\s*0/)
+  })
+
+  it('renders no inline link row under bar="drawer"', () => {
+    // Absent from the DOM, not hidden: a display:none row is a dozen duplicate
+    // in-page anchors that a crawler reads and a rotor reaches anyway.
+    const { container } = render(<SiteHeader brand={<span>Brand</span>} links={LINKS} bar="drawer" />)
+    expect(container.querySelector('.lp-site-nav')).toBeNull()
+    expect(screen.getByText('Brand')).toBeTruthy()
+    // …while the drawer still carries every link.
+    // `.lp-nav` is on the anchor itself in NavChrome, not on a list around it.
+    expect(container.querySelectorAll('a.lp-nav')).toHaveLength(LINKS.length)
+  })
+
+  it('marks both the bar and the drawer wrapper for the variant, and neither by default', () => {
+    const drawer = render(<SiteHeader links={LINKS} bar="drawer" />).container
+    expect(drawer.querySelector('.lp-site-bar--drawer')).not.toBeNull()
+    expect(drawer.querySelector('.lp-site-drawer-only--always')).not.toBeNull()
+
+    const dflt = render(<SiteHeader links={LINKS} />).container
+    expect(dflt.querySelector('.lp-site-bar--drawer')).toBeNull()
+    expect(dflt.querySelector('.lp-site-drawer-only--always')).toBeNull()
+    expect(dflt.querySelector('.lp-site-nav')).not.toBeNull()
+  })
+
+  it('keeps the burger above the breakpoint for the variant, by not matching the hide', () => {
+    // The hide has to be written so it EXCLUDES the variant. Re-showing it with
+    // a second rule of the same (0,1,0) weight would leave the cascade to source
+    // order — the one thing the package's renamed-selector rule says not to lean
+    // on. So assert the shape, not just that the variant appears somewhere.
+    const rules = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(rules).toMatch(/\.lp-site-drawer-only:not\(\.lp-site-drawer-only--always\)\s*\{[^}]*display:\s*none/)
+    // And nothing anywhere sets `display` on the bare wrapper, which would hide
+    // the variant too.
+    const bareHide = /(^|[},])\s*\.lp-site-drawer-only\s*\{([^}]*)\}/m.exec(rules)
+    expect(bareHide?.[2] ?? '').not.toMatch(/display:/)
+  })
+
+  it('re-centres the wordmark above the breakpoint for the variant, after the default resets it', () => {
+    // The variant has a burger at every width, so the column reserve and the
+    // centring are both live at every width — which means undoing BOTH halves of
+    // the default block's reset (`margin-left: 0` and `max-width: none`), and
+    // doing it after that block rather than before, since the two selectors
+    // decide on weight only if the reset is not later.
+    const rules = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
+    const resetAt = rules.indexOf('margin-left: 0')
+    const variant = /\.lp-site-bar--drawer \.lp-site-brand\s*\{([^}]*)\}/.exec(rules)
+    expect(variant).not.toBeNull()
+    expect(variant!.index).toBeGreaterThan(resetAt)
+    expect(variant![1]).toMatch(/margin-left:\s*auto/)
+    expect(variant![1]).toMatch(/max-width:\s*calc\(100% - 2 \*/)
+  })
+
+  it('takes the variant’s action out of flow, so it is not a flex item beside the wordmark', () => {
+    // This is the whole reason the action can come back at all up here. The
+    // wordmark centres by `margin-inline: auto` on the row's only in-flow item;
+    // an action left in the flex row would re-centre it in the space beside the
+    // button. Absolutely positioned, it is not a flex item and the centre stays
+    // the viewport's.
+    const rules = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
+    const action = /\.lp-site-bar--drawer \.lp-site-action\s*\{([^}]*)\}/.exec(rules)
+    expect(action).not.toBeNull()
+    expect(action![1]).toMatch(/position:\s*absolute/)
+    expect(action![1]).toMatch(/display:\s*block/)
+  })
+
+  it('outweighs the base bar rule rather than relying on coming after it', () => {
+    // `.lp-site-bar.lp-site-bar--drawer` is (0,2,0) against `.lp-site-bar`'s
+    // (0,1,0). Written as a lone `.lp-site-bar--drawer` the two would tie and
+    // the full-bleed override would hold only while it stays below in the file.
+    // Matched with the innermost-braces walk the burger test uses, not a lone
+    // regex: `[^{}]*\{` from the top of the sheet would capture the enclosing
+    // `@media` line as the selector.
+    const rules = FLOW.replace(/\/\*[\s\S]*?\*\//g, '')
+    const bleed = [...rules.matchAll(/([^{}]*)\{([^{}]*)\}/g)].filter(([, , body]) =>
+      /width:\s*auto/.test(body!),
+    )
+    expect(bleed.map(([, selector]) => selector!.trim())).toEqual(['.lp-site-bar.lp-site-bar--drawer'])
   })
 
   it('omits the brand element entirely when there is no brand', () => {

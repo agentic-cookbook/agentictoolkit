@@ -300,7 +300,9 @@
  * is measured against the full-bleed `.lp-bar` instead.
  *
  * Above the breakpoint the burger is gone and the nav needs the room, so the
- * media block at the foot of this section puts the wordmark back on the left. */
+ * media block at the foot of this section puts the wordmark back on the left —
+ * unless the host chose `bar="drawer"`, where the burger is still there and the
+ * variant block puts the centring back. */
 .lp-site-brand {
   margin-inline: auto;
   max-width: calc(100% - 2 * (32px + 0.75rem));
@@ -391,7 +393,9 @@
  * was not; left, the chip becomes the ✕ in place. Nothing in chrome.css needed
  * changing for that — it is the arrangement's default, restored. */
 
-/* Above the breakpoint the inline nav is the navigation, so the burger goes.
+/* Above the breakpoint the inline nav is the navigation, so the burger goes —
+ * under the default `bar="nav"`. `bar="drawer"` opts out of this whole block by
+ * the `:not()` at its foot, and the variant block after it finishes the job.
  * `.lp-site-drawer-only` wraps NavChrome rather than the package restyling
  * `.lp-bar` from here: chrome.css owns that class, and two sheets setting
  * `display` on one selector is a race decided by import order. */
@@ -411,8 +415,76 @@
   .lp-site-action {
     display: block;
   }
-  .lp-site-drawer-only {
+  /* `:not()` rather than a plain `.lp-site-drawer-only { display: none }` with
+   * the drawer variant re-showing it below. Both selectors would weigh (0,1,0)
+   * and the cascade would fall to source order — the one thing the package's own
+   * rule about renamed selectors says not to rely on. Written this way the hide
+   * simply does not match the variant, so no later rule has to win. */
+  .lp-site-drawer-only:not(.lp-site-drawer-only--always) {
     display: none;
+  }
+}
+
+/* ---- bar="drawer": the burger IS the navigation, at every width ----
+ *
+ * Everything below the breakpoint is already this arrangement, so nothing here
+ * touches it — the rules are the wide viewport catching up with the narrow one.
+ * Three things change up there and each has its own reason:
+ *
+ * The BAR GOES FULL-BLEED. The burger is `position: fixed` at `--lp-bar-pad-x`
+ * from the viewport's own edge, which below the breakpoint is exactly the bar's
+ * gutter — `min(100% - 2.5rem, …)` insets by that same 1.25rem. Above it the
+ * `--lp-measure` clamp takes over and the bar's edge walks inward (230px in at
+ * 1440), while the burger stays at 18px. Left alone, the chip detaches into the
+ * margin and an action pinned to the bar's right edge sits 212px further in
+ * than its mirror. Dropping the clamp for a padding of the same 1.25rem makes
+ * the bar's box the viewport's again, so the wordmark's reserve arithmetic is
+ * the SAME calculation at every width — `100%` of a content box inset by
+ * 1.25rem a side, which is exactly what `min(100% - 2.5rem, …)` gives below the
+ * breakpoint. It costs nothing else: the bar's children up here are a centred
+ * wordmark and one button, not a measure of prose.
+ *
+ * The WORDMARK KEEPS CENTRING, so the media block's `margin-left: 0` and
+ * `max-width: none` are both undone. Those exist because the default
+ * arrangement has no burger up here and a nav that needs the room; this
+ * arrangement has a burger at every width, so the column reserve is live at
+ * every width too.
+ *
+ * The ACTION LEAVES THE FLOW. The centring works by `margin-inline: auto` on
+ * the row's only in-flow item, so an action sharing the line would re-centre
+ * the wordmark in what is left beside it (`.lp-site-action` above has the
+ * account). Taking it out of flow is what lets it come back at all up here:
+ * absolutely positioned it is not a flex item, the wordmark is still alone on
+ * the row, and the centre stays the viewport's. It stays hidden below the
+ * breakpoint for the reason it always did — 390px has no room for a third
+ * control, out of flow or not.
+ */
+@media (min-width: 62rem) {
+  .lp-site-bar.lp-site-bar--drawer {
+    width: auto;
+    /* The literal is `--lp-bar-pad-x`'s default, and it cannot be read from
+     * here: the token is set on `.lp-site-drawer-only`, a SIBLING, and custom
+     * properties inherit down rather than sideways. A host that moves it has to
+     * move this with it — same caveat as `.lp-site-brand`'s reserve. */
+    margin-inline: 0;
+    padding-inline: 1.25rem;
+  }
+  .lp-site-bar--drawer .lp-site-brand {
+    margin-left: auto;
+    max-width: calc(100% - 2 * (32px + 0.75rem));
+  }
+  .lp-site-bar--drawer .lp-site-action {
+    display: block;
+    /* The inset is restated rather than inherited from the bar's own
+     * `padding-inline`. An absolutely positioned box's containing block is its
+     * ancestor's PADDING box, and a padding box extends all the way out to the
+     * border edge — so `right: 0` sits flush against the viewport, with the
+     * gutter passing behind it. Measured: 0px in from the right against the
+     * burger's 18px on the left. Written this way both controls land on 18. */
+    position: absolute;
+    top: 50%;
+    right: 1.25rem;
+    transform: translateY(-50%);
   }
 }
 
