@@ -49,3 +49,26 @@ describe('buildFacetUrl', () => {
     expect(buildFacetUrl({ baseUrl: '/api', endpoints: { results: '/x' } }, 'tags')).toBeNull()
   })
 })
+
+describe('fixedParams', () => {
+  const scoped: SearchSource = {
+    baseUrl: '/api',
+    endpoints: { results: '/public/papers', tags: '/public/papers/tags' },
+    fixedParams: { author: 'ada' },
+  }
+
+  it('rides on the results request', () => {
+    const url = buildSearchUrl(scoped, { q: 'edge', category: '', tag: '' }, 1)
+    expect(url).toContain('author=ada')
+    expect(url).toContain('q=edge')
+  })
+
+  it('rides on a facet request', () => {
+    expect(buildFacetUrl(scoped, 'tags')).toBe('/api/public/papers/tags?author=ada')
+  })
+
+  it('is absent when the source sets none', () => {
+    const plain: SearchSource = { baseUrl: '/api', endpoints: { results: '/public/papers', tags: '/t' } }
+    expect(buildFacetUrl(plain, 'tags')).toBe('/api/t')
+  })
+})

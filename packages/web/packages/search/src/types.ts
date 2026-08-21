@@ -79,6 +79,14 @@ export interface SearchSource {
   endpoints: SearchSourceEndpoints
   /** Optional query-param name overrides (merged over {@link DEFAULT_QUERY_PARAMS}). */
   params?: Partial<SearchQueryParamMap>
+  /**
+   * Params that are part of the SCOPE rather than the query — sent on EVERY request, results
+   * and facets alike, and not clearable by the user (e.g. `{ author: 'ada' }` for one author's
+   * corpus). Kept separate from {@link SearchQueryParamMap}, which renames the user's filter
+   * axes: a scope param has no filter axis behind it, and putting it there would make it look
+   * like something the UI could clear.
+   */
+  fixedParams?: Record<string, string>
   /** Result page size (default 50). */
   pageSize?: number
   /** Optional fetch init merged into every request (e.g. `{ cache: 'no-store' }`). */

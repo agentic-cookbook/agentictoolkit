@@ -81,6 +81,9 @@ export function buildSearchUrl(
   const names = { ...DEFAULT_QUERY_PARAMS, ...source.params }
   const pageSize = source.pageSize ?? DEFAULT_PAGE_SIZE
   const qs = new URLSearchParams()
+  // Scope params first, so a source that (wrongly) names a filter axis in `fixedParams`
+  // loses to the user's actual filter rather than silently overriding it.
+  for (const [k, v] of Object.entries(source.fixedParams ?? {})) qs.set(k, v)
   const q = filters.q.trim()
   if (q) qs.set(names.q, q)
   if (filters.tag) qs.set(names.tag, filters.tag)
@@ -98,7 +101,13 @@ export function buildFacetUrl(
   facet: 'tags' | 'categories',
 ): string | null {
   const path = source.endpoints[facet]
-  return path ? joinPath(source.baseUrl, path) : null
+  if (!path) return null
+  const url = joinPath(source.baseUrl, path)
+  // The facet corpus has to mirror the results corpus, so the scope rides here too — a facet
+  // option outside the scope is an option that yields no results.
+  const qs = new URLSearchParams(Object.entries(source.fixedParams ?? {}))
+  const query = qs.toString()
+  return query ? `${url}?${query}` : url
 }
 
 /**
@@ -136,6 +145,7 @@ function sourceKeyOf(source: SearchSource): string {
     baseUrl: source.baseUrl,
     endpoints: source.endpoints,
     params: source.params ?? null,
+    fixedParams: source.fixedParams ?? null,
     pageSize: source.pageSize ?? null,
   })
 }
