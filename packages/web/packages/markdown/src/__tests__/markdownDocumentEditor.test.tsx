@@ -87,6 +87,41 @@ describe('MarkdownDocumentEditor — narrow', () => {
     render(<Harness />)
     expect(screen.getByTestId('header')).toBeInTheDocument()
   })
+
+  it('renders an overlay inside the editor pane, positioned against it', () => {
+    render(
+      <MarkdownDocumentEditor
+        value="hi"
+        onChange={() => {}}
+        overlay={<div data-testid="mentions">@…</div>}
+      />,
+    )
+    const overlay = screen.getByTestId('mentions')
+    // Not merely "on the page": a typeahead listbox is absolutely positioned, so it is only
+    // correct if its offset parent is the pane it belongs to.
+    expect(overlay.parentElement).toHaveClass('relative')
+    expect(overlay.parentElement).toContainElement(screen.getByRole('textbox'))
+  })
+
+  it('does not render the overlay over the preview', async () => {
+    render(
+      <MarkdownDocumentEditor
+        value="hi"
+        onChange={() => {}}
+        overlay={<div data-testid="mentions">@…</div>}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /preview/i }))
+    expect(screen.queryByTestId('mentions')).toBeNull()
+  })
+
+  it('lets a host size the preview pane', () => {
+    render(
+      <MarkdownDocumentEditor value="hi" onChange={() => {}} previewClassName="min-h-[12rem]" />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: /preview/i }))
+    expect(document.querySelector('[data-slot="markdown-preview"]')).toHaveClass('min-h-[12rem]')
+  })
 })
 
 describe('MarkdownDocumentEditor — wide', () => {

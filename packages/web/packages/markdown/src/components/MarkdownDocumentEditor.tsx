@@ -45,6 +45,13 @@ export interface MarkdownDocumentEditorProps extends MarkdownEditorProps {
   header?: ReactNode
   /** Layout to open in on a wide viewport. Narrow always opens tabbed. */
   defaultLayout?: MarkdownEditorLayout
+  /** Rendered inside the editor pane's positioning context — a typeahead listbox, a drag
+   *  target, anything that must sit against the textarea rather than the page. Absent from
+   *  the preview pane by construction: it belongs to editing. */
+  overlay?: ReactNode
+  /** Extra classes for the preview pane. A host that is not `fill` uses it to give the
+   *  preview the same bulk as its textarea, so switching panes doesn't resize the page. */
+  previewClassName?: string
   /** Reading theme for the preview pane, forwarded to `MarkdownReadingPalette`. Defaults to
    *  that component's own default (`DEFAULT_THEME_ID`). */
   themeId?: string
@@ -72,6 +79,8 @@ export interface MarkdownDocumentEditorProps extends MarkdownEditorProps {
 export function MarkdownDocumentEditor({
   header,
   defaultLayout = 'tabbed',
+  overlay,
+  previewClassName,
   fill = true,
   themeId,
   ...editor
@@ -145,21 +154,31 @@ export function MarkdownDocumentEditor({
 
       <div className="flex min-h-0 min-w-0 flex-1 gap-3">
         {showEditor && (
-          <MarkdownEditor
-            {...editor}
-            fill={fill}
-            className={cn('min-h-0 min-w-0 flex-1', editor.className)}
-          />
+          // The wrapper is unconditional: `relative` with no overlay costs nothing, and a
+          // wrapper that appears only when an overlay does would change the pane's box the
+          // moment a mention listbox opened.
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <MarkdownEditor
+              {...editor}
+              fill={fill}
+              className={cn('min-h-0 min-w-0 flex-1', editor.className)}
+            />
+            {overlay}
+          </div>
         )}
         {showPreview && (
           <MarkdownReadingPalette
             themeId={themeId}
-            className="min-h-0 min-w-0 flex-1 rounded-md border border-apt-border"
+            data-slot="markdown-preview"
+            className={cn(
+              'min-h-0 min-w-0 flex-1 rounded-md border border-apt-border',
+              previewClassName,
+            )}
           >
             {/* The document itself is not a live region: every debounce tick would otherwise
                 re-announce the whole rendered document to screen readers 300ms after the
                 author stops typing. */}
-            <div data-slot="markdown-preview" aria-live="off">
+            <div aria-live="off">
               {source.trim() ? (
                 <MarkdownRenderer content={source} />
               ) : (

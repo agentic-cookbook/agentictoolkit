@@ -104,6 +104,12 @@ function UploadMarkdownControl({
  * is associated with the textarea via `htmlFor`, so it is the textarea's
  * accessible name. Controlled via `value` / `onChange`; the editor owns no title
  * or classification fields — those stay with the consuming form.
+ *
+ * The bare markdown BODY control: a labelled textarea, a toolbar, and an optional
+ * upload. It is the primitive, not the default: a surface that edits a whole document
+ * wants `MarkdownDocumentEditor` from `@agentic-toolkit/markdown`, which composes this
+ * with a live preview and a side-by-side layout. Reach for this one when a preview would
+ * be noise — a one-line description, a comment box.
  */
 export function MarkdownEditor({
   value,

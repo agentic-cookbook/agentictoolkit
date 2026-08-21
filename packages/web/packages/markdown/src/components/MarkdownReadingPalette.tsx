@@ -13,6 +13,10 @@ export interface MarkdownReadingPaletteProps {
    *  existing call site hardcodes today). */
   themeId?: string
   className?: string
+  /** DOM identity marker for the rendered surface, passed straight through. A host that
+   *  needs to select or style this exact wrapper (a test, a sizing hook) uses this rather
+   *  than reaching past it for a child that may not exist. */
+  'data-slot'?: string
 }
 
 /**
@@ -46,10 +50,12 @@ export function MarkdownReadingPalette({
   children,
   themeId = DEFAULT_THEME_ID,
   className,
+  'data-slot': dataSlot,
 }: MarkdownReadingPaletteProps) {
   const theme = getThemeById(themeId)
   return (
     <div
+      data-slot={dataSlot}
       data-mdv-theme={theme.id}
       data-mdv-shiki-variant={theme.shikiVariant}
       style={theme.palette as CSSProperties}
