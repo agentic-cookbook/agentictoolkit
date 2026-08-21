@@ -16,6 +16,7 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   useStackLevel,
   useRailExitGuard as useWorkspaceExitGuard,
+  useDetailTitle,
   MasterDetailLeaf,
   useRecordAffordance,
   CreateResourceDialog,
@@ -462,6 +463,10 @@ export function ResearchPane({
     hideItemIcons: true,
   };
   useStackLevel(documentsLevel);
+  // The open document names the pane it is open in. `selectedDoc` is the SAVED document, so
+  // this is the title the rest of the platform knows it by (the list row, the public index,
+  // the API) rather than whatever the unsaved draft's first line currently says.
+  useDetailTitle(selectedDoc ? selectedDoc.title || "Untitled" : null);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
   // render-value dirty signal. `editing` is implied: a draft cannot be dirty with no editor open.
   useWorkspaceExitGuard(dirty ? { isDirty: () => dirty } : null);

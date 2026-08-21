@@ -18,7 +18,12 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "./rail-host";
-import { useHostBusyReports, useHostMissingAlert, useHostPopStack } from "./host-stack";
+import {
+  useHostBusyReports,
+  useHostMissingAlert,
+  useHostPopStack,
+  useHostDetailTitle,
+} from "./host-stack";
 
 /**
  * The standalone rail host: when a feature renders OUTSIDE a host (a feature site's /home),
@@ -126,6 +131,7 @@ export function StandaloneRailHost({
   const { reportBusy, levels: mergedLevels } = useHostBusyReports(registered);
   const popStack = useHostPopStack(mergedLevels);
   const { reportMissing, missingAlert } = useHostMissingAlert(popStack, guards.size > 0);
+  const { setDetailTitle, detailTitle } = useHostDetailTitle();
 
   // `toolbarSlot` stays null: an editor's action bar keeps rendering inside its own pane here, as
   // it always has. The page-level strip is the home bar, which this host does not own — see the
@@ -138,9 +144,18 @@ export function StandaloneRailHost({
       popStack,
       reportMissing,
       reportBusy,
+      setDetailTitle,
       toolbarSlot: null,
     }),
-    [registerLevels, unregisterLevels, registerExitGuard, popStack, reportMissing, reportBusy],
+    [
+      registerLevels,
+      unregisterLevels,
+      registerExitGuard,
+      popStack,
+      reportMissing,
+      reportBusy,
+      setDetailTitle,
+    ],
   );
 
   return (
@@ -170,6 +185,7 @@ export function StandaloneRailHost({
       <HierarchicalDetailView
         levels={mergedLevels}
         rootLabel={mergedLevels[0]?.title || undefined}
+        detailTitle={detailTitle}
         exitGuard={exitGuard}
       >
         {children}
