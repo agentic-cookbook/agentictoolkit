@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Copy, Globe } from "lucide-react";
+import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 
 import { useAction } from "@agentic-toolkit/crud";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button, buttonVariants } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
@@ -100,6 +100,17 @@ export function PublishSection({
               {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
               {copied ? "Copied" : "Copy"}
             </Button>
+            {userSlug && (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                <ExternalLink data-icon="inline-start" />
+                Preview
+              </a>
+            )}
           </div>
           {!userSlug && (
             <p className="text-xs text-apt-text-dim">
