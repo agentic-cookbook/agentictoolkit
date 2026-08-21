@@ -292,11 +292,17 @@ const WORKSPACES = [
  * recorded. The assignment happens in the render body (not an effect): Harness's function body
  * always runs before its child's, so by the time SiteHomeShell mounts and its effects can call
  * `replace`/`push`, `liveSetSlug` already points at this instance's setter. */
-function Shell({ workspaceSlug }: { workspaceSlug?: string }) {
+function Shell({
+  workspaceSlug,
+  workspaceHref,
+}: {
+  workspaceSlug?: string;
+  workspaceHref?: (slug: string) => string;
+}) {
   const [slug, setSlug] = useState<string | undefined>(workspaceSlug);
   liveSetSlug = setSlug;
   return (
-    <SiteHomeShell workspaceSlug={slug}>
+    <SiteHomeShell workspaceSlug={slug} workspaceHref={workspaceHref}>
       {/* The scope is rendered, not just consumed, so every test in this file that waits for
           `feature` is also asserting the shell never calls its child with a half-resolved one:
           `scopedBase` here is whatever the shell built, and the dedicated test below reads it. */}
@@ -1488,6 +1494,27 @@ describe("SiteHomeShell resolution", () => {
     expect(screen.queryByText(/couldn't load your workspaces/i)).toBeNull();
     expect(screen.getByRole("button", { name: "Acme" })).toBeInTheDocument();
     expect(screen.getByTestId("feature")).toBeInTheDocument();
+  });
+
+  it("seeds the workspace at the host's own base when one is declared", async () => {
+    // research's `/<slug>` is a PUBLIC author page; its gated surface is `/<slug>/home`. Seeding
+    // the bare workspace would land a signed-in visitor on the public page, which is the one
+    // outcome `/home` exists to prevent.
+    readCached.mockReturnValue("acme");
+    render(<Shell workspaceHref={(slug) => `/${slug}/home`} />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme/home", { scroll: false }));
+    // `scopedBase` is NOT the declared base: it stays the workspace itself, and the host appends
+    // its own surfaces. A shell that conflated the two would give the feature `/acme/home` here
+    // and every link it builds would gain a second `/home`.
+    await waitFor(() =>
+      expect(screen.getByTestId("feature").dataset.scopedBase).toBe("/acme"),
+    );
+  });
+
+  it("still seeds the bare workspace when the host declares no base", async () => {
+    readCached.mockReturnValue("acme");
+    render(<Shell />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/acme", { scroll: false }));
   });
 });
 

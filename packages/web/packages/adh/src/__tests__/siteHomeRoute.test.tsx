@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 
 // SiteHomeRoute's whole job is the ASSEMBLY: read the two route params, hand the workspace to the
 // shell and the path below it to the site's parser, mount the site's view inside the shell. So the
@@ -27,6 +27,7 @@ const shellProps = vi.fn();
 vi.mock("../home/SiteHomeShell", () => ({
   SiteHomeShell: (props: {
     workspaceSlug?: string;
+    workspaceHref?: (slug: string) => string;
     children: (scope: typeof SHELL_SCOPE) => React.ReactNode;
   }) => {
     shellProps(props);
@@ -180,6 +181,34 @@ describe("SiteHomeRoute", () => {
 
     expect(screen.getByTestId("shell")).toHaveAttribute("data-slug", "none");
     expect(parse).toHaveBeenCalledWith([]);
+  });
+
+  it("prefers an explicit `path` prop over the route's own catch-all param", () => {
+    // A route whose shape is `edit/[paperUuid]` has no `path` param to read, so it hands the
+    // segments down. If the prop were ignored the parser would see the route's own — which is
+    // exactly the bug: the editor would mount with nothing open.
+    params = { workspace: "acme", path: ["ignored-by-the-route"] };
+    render(<SiteHomeRoute model={model} path={["doc-9"]} />);
+    expect(parse).toHaveBeenCalledWith(["doc-9"]);
+    expect(screen.getByTestId("view").dataset.segments).toBe("doc-9");
+  });
+
+  it("treats an explicit empty `path` as no segments, not as an absent prop", () => {
+    params = { workspace: "acme", path: ["from-the-url"] };
+    render(<SiteHomeRoute model={model} path={[]} />);
+    expect(parse).toHaveBeenCalledWith([]);
+  });
+
+  it("forwards the model's workspaceHref to the shell, and nothing when it declares none", () => {
+    const workspaceHref = (slug: string) => `/${slug}/home`;
+    params = { workspace: "acme" };
+    render(<SiteHomeRoute model={{ ...model, workspaceHref }} />);
+    expect(shellProps).toHaveBeenCalledWith(expect.objectContaining({ workspaceHref }));
+
+    cleanup();
+    shellProps.mockClear();
+    render(<SiteHomeRoute model={model} />);
+    expect(shellProps.mock.calls[0]![0].workspaceHref).toBeUndefined();
   });
 });
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react";
 import { RailHostBoundary, useBasePathRoute } from "@agentic-toolkit/resource";
 import { ResearchPane } from "./ResearchPane";
 
@@ -15,6 +16,7 @@ import { ResearchPane } from "./ResearchPane";
  */
 export function ResearchFeature({
   basePath,
+  docBasePath,
   docId,
   userSlug,
   workspaceSlug,
@@ -22,6 +24,12 @@ export function ResearchFeature({
   /** The feature's URL base (drives the route): the hub passes `/<slug>/research`. Supplied by the
    *  host route rather than derived here, so the same feature mounts under either scheme. */
   basePath: string;
+  /** Where an OPEN document lives, when that is not directly under `basePath`. Defaults to
+   *  `basePath`, which is the hub: `/<slug>/research` lists and `/<slug>/research/<docId>`
+   *  opens. The research SITE splits them — `/<ws>/home` lists and `/<ws>/edit/<docId>` opens —
+   *  because its gated surfaces are two named route segments rather than one catch-all, which is
+   *  in turn because its `/<ws>` root is a public page. */
+  docBasePath?: string;
   /** The open document's id (first path segment), or undefined for the bare list. */
   docId?: string;
   /** The public-URL slug to publish under — see {@link ResearchPane}'s `userSlug` doc. Optional: a
@@ -30,7 +38,16 @@ export function ResearchFeature({
   /** Pins every op to the WORKSPACE'S owning principal — see {@link ResearchPane}'s doc. */
   workspaceSlug?: string;
 }) {
-  const { pushSegment } = useBasePathRoute(basePath);
+  // Two bases, one behaviour: opening a document pushes under `docBasePath`, and CLOSING one
+  // (`null`) returns to `basePath`. When the two are the same string — every host but the
+  // research site — both hooks build identical URLs and this is exactly the old single-base
+  // `pushSegment`.
+  const list = useBasePathRoute(basePath);
+  const docs = useBasePathRoute(docBasePath ?? basePath);
+  const onSelectDoc = useCallback(
+    (id: string | null) => (id === null ? list.pushSegment(null) : docs.pushSegment(id)),
+    [list, docs],
+  );
   // RailHostBoundary: the pane's document list + exit guard exist only as rail-host
   // publications; on a bare feature site (no hub shell) the boundary self-hosts them.
   return (
@@ -40,7 +57,7 @@ export function ResearchFeature({
         workspaceSlug={workspaceSlug}
         urlSelection={{
           docId,
-          onSelectDoc: pushSegment,
+          onSelectDoc: onSelectDoc,
         }}
       />
     </RailHostBoundary>

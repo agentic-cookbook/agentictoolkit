@@ -48,7 +48,11 @@ const loadWorkspaces = (): Promise<Workspace[]> => workspacesApi.list()
  * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
  * this workspace — and lands in the same place.
  */
-export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): ReactElement {
+export function SiteHomeShell({
+  workspaceSlug,
+  workspaceHref,
+  children,
+}: SiteHomeShellProps): ReactElement {
   // `error` is not optional to read here. A failed list leaves `items` at its previous value —
   // null on a cold mount (use-resource-list only calls setError on the catch path) — and a null
   // list is indistinguishable from a list still loading: resolution stays `undefined` forever, so
@@ -64,9 +68,14 @@ export function SiteHomeShell({ workspaceSlug, children }: SiteHomeShellProps): 
     'workspaces',
     loadWorkspaces,
   )
-  // Memoized with no dependencies, because useWorkspaceRoute holds this in two effects' dependency
-  // arrays — a fresh closure each render would re-run both on every render.
-  const hrefFor = useCallback((slug: string) => `/${slug}`, [])
+  // Memoized because useWorkspaceRoute holds this in two effects' dependency arrays — a fresh
+  // closure each render would re-run both on every render. `workspaceHref` is the host's own
+  // answer for where its gated surface lives (see SiteHomeShellProps); absent, a workspace lives
+  // at its bare slug, which is 38 of the 39 sites.
+  const hrefFor = useCallback(
+    (slug: string) => workspaceHref?.(slug) ?? `/${slug}`,
+    [workspaceHref],
+  )
   // Switching workspace KEEPS what you were looking at: the segments below the workspace are this
   // site's own selected path (`model.parse` reads exactly these — see SiteHomeRoute), so moving
   // them onto the new workspace is what makes the HTDV land on the same place rather than back at
