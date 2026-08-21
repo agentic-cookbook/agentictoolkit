@@ -384,7 +384,13 @@ function TopicList({
         {/* Colour alone is not a signal. The dot lives inside the aria-hidden icon, so the row's
             accessible name carries the state instead — appended AFTER the label here (an
             accessible name is content order), and folded into `aria-label` when the label is
-            hidden, since aria-label REPLACES the content and would silence this span. */}
+            hidden, since aria-label REPLACES the content and would silence this span.
+
+            TRAP: This announcement is gated on !hideLabel but NOT on hideIcon. The visual dot
+            is nested inside the icon span and IS suppressed by hideItemIcons. A level setting
+            both hideItemIcons:true and a row's blocked:true would announce "needs attention"
+            with no visible counterpart. The honest fix is to lift the dot out of the icon span
+            so hideItemIcons stops hiding state; hideItemIcons is about identity, blocked is state. */}
         {item.blocked && !hideLabel && <span className="sr-only">, needs attention</span>}
         {!hideLabel && (item.trailing || rowDisclosure) && (
           <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">

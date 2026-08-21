@@ -152,7 +152,8 @@ export interface TopicLevel {
   /** Drop the LEADING icon from this level's rows in the expanded list. For a list whose rows
    *  have no identity icon to show — where the shared fallback `Circle` is noise and a state
    *  badge in the icon slot would duplicate the row's `trailing` mark. Ignored in the collapsed
-   *  icon strip, which has nothing but the icon. */
+   *  icon strip, which has nothing but the icon. This prop also currently suppresses the
+   *  blocked marker — see the trap documented at the sr-only announcement in topic-detail.tsx. */
   hideItemIcons?: boolean
 }
 
