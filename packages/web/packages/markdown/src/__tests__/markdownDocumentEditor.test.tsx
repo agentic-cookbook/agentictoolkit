@@ -122,6 +122,26 @@ describe('MarkdownDocumentEditor — narrow', () => {
     fireEvent.click(screen.getByRole('button', { name: /preview/i }))
     expect(document.querySelector('[data-slot="markdown-preview"]')).toHaveClass('min-h-[12rem]')
   })
+
+  it('points both pane-chooser buttons at a real element, in either tab state', () => {
+    render(<Harness />)
+    const editBtn = screen.getByRole('button', { name: /^edit$/i })
+    const previewBtn = screen.getByRole('button', { name: /^preview$/i })
+
+    // Same target for both — there is exactly one pane container, not one per pane.
+    const target = editBtn.getAttribute('aria-controls')
+    expect(target).toBeTruthy()
+    expect(previewBtn.getAttribute('aria-controls')).toBe(target)
+
+    // Checked in the EDIT tab state (the default)...
+    expect(document.getElementById(target as string)).not.toBeNull()
+
+    // ...and again after switching to Preview. Only one pane is ever mounted in tabbed mode,
+    // so a per-pane id would resolve here and dangle there (or vice versa); the container is
+    // what has to keep resolving across the switch.
+    fireEvent.click(previewBtn)
+    expect(document.getElementById(target as string)).not.toBeNull()
+  })
 })
 
 describe('MarkdownDocumentEditor — wide', () => {

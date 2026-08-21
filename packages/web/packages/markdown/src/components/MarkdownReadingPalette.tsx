@@ -15,7 +15,19 @@ export interface MarkdownReadingPaletteProps {
   className?: string
   /** DOM identity marker for the rendered surface, passed straight through. A host that
    *  needs to select or style this exact wrapper (a test, a sizing hook) uses this rather
-   *  than reaching past it for a child that may not exist. */
+   *  than reaching past it for a child that may not exist.
+   *
+   *  `data-slot` is normally component-OWNED — `ui`'s `card.tsx` and friends hardcode their
+   *  own literal (`data-slot="card-content"`), not a caller-supplied one — but that convention
+   *  assumes the component knows its own identity in the page. This one doesn't: it is a
+   *  generic reading surface reused under a different name by whoever places it (here,
+   *  `MarkdownDocumentEditor`'s preview pane calls it `"markdown-preview"`; a future caller
+   *  might call it something else entirely). Taking the slot as a prop is deliberate, not a
+   *  layering slip — the alternative is this component guessing a name that fits every host.
+   *  A future consolidation of this component's callers (see the note above about
+   *  `PaperRenderer` and `MarkdownPreview`) could retire this prop in favor of a hardcoded
+   *  `data-slot="markdown-reading-palette"` and have hosts select the wrapper instead; that is
+   *  a real option, just not this branch's to take. */
   'data-slot'?: string
 }
 

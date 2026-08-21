@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useId, useState, type ReactNode } from 'react'
 import { Columns2, Eye, Pencil, Square } from 'lucide-react'
 
 import {
@@ -88,6 +88,11 @@ export function MarkdownDocumentEditor({
   const wide = useMediaQuery(SPLIT_MIN_WIDTH)
   const [layout, setLayout] = useState<MarkdownEditorLayout>(defaultLayout)
   const [tab, setTab] = useState<MarkdownEditorTab>('edit')
+  // Points the pane chooser at the pane container below, not at either pane: in tabbed mode
+  // exactly one of the two panes is mounted, so an id on the unmounted one would be a dangling
+  // `aria-controls` reference (ignored by AT) the instant the author switched tabs. The
+  // container exists in both layouts and always resolves.
+  const panesId = useId()
 
   // The PREFERENCE survives a narrow viewport even though the layout cannot be shown there:
   // only the EFFECTIVE layout collapses, so rotating back to landscape restores the split
@@ -140,11 +145,11 @@ export function MarkdownDocumentEditor({
               if (picked) setTab(picked as MarkdownEditorTab)
             }}
           >
-            <ToggleGroupItem value="edit">
+            <ToggleGroupItem value="edit" aria-controls={panesId}>
               <Pencil />
               Edit
             </ToggleGroupItem>
-            <ToggleGroupItem value="preview">
+            <ToggleGroupItem value="preview" aria-controls={panesId}>
               <Eye />
               Preview
             </ToggleGroupItem>
@@ -152,7 +157,7 @@ export function MarkdownDocumentEditor({
         )}
       </div>
 
-      <div className="flex min-h-0 min-w-0 flex-1 gap-3">
+      <div id={panesId} className="flex min-h-0 min-w-0 flex-1 gap-3">
         {showEditor && (
           // The wrapper is unconditional: `relative` with no overlay costs nothing, and a
           // wrapper that appears only when an overlay does would change the pane's box the
