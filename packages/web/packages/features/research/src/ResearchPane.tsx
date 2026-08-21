@@ -526,6 +526,7 @@ export function ResearchPane({
       </HomeBarPortal>
 
       <MasterDetailLeaf
+        fill
         form={{ actions, editing, draft }}
         trailing={renderRecordAffordance?.({
           path: "/content/markdown/{id}",
@@ -540,29 +541,32 @@ export function ResearchPane({
             ? "Loading…"
             : "Select a document to edit, or create a new one."
         }
-        renderDetail={(d) => (
-          <div className="flex flex-col gap-4">
-            {/* No "Loading…" branch: whatever is cached is on screen from the first frame, and the
-                read settles behind it. `disabled` is what makes that safe — see `isSettled`. */}
-            <ResearchDetail
-              draft={d}
-              onChange={onChange}
-              categoryOptions={accountCategories}
-              tagOptions={accountTags}
-              error={validationHint}
+        // Publishing is the pane's FLOOR, not the last thing under the body: it is about the
+        // document as a whole, it is where the public URL is read off, and it must not walk up
+        // and down the pane with the length of what you are writing.
+        footer={
+          selectedDoc && (
+            <PublishSection
+              key={selectedDoc.id}
+              doc={selectedDoc}
+              userSlug={userSlug}
+              workspaceSlug={workspaceSlug}
+              onChanged={onPublishChanged}
               disabled={!isSettled}
             />
-            {selectedDoc && (
-              <PublishSection
-                key={selectedDoc.id}
-                doc={selectedDoc}
-                userSlug={userSlug}
-                workspaceSlug={workspaceSlug}
-                onChanged={onPublishChanged}
-                disabled={!isSettled}
-              />
-            )}
-          </div>
+          )
+        }
+        renderDetail={(d) => (
+          // No "Loading…" branch: whatever is cached is on screen from the first frame, and the
+          // read settles behind it. `disabled` is what makes that safe — see `isSettled`.
+          <ResearchDetail
+            draft={d}
+            onChange={onChange}
+            categoryOptions={accountCategories}
+            tagOptions={accountTags}
+            error={validationHint}
+            disabled={!isSettled}
+          />
         )}
       />
 

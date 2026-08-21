@@ -24,6 +24,11 @@ import type { ResearchInput } from "./research-model";
  * categories as the distinct labels present across the user's documents, which is a
  * vocabulary, not a hierarchy, so the field renders its autocomplete/browse pair with no
  * breadcrumb.
+ *
+ * The card FILLS its pane: the body editor takes whatever height is left after the
+ * classification rows, and scrolls inside itself. That is why every wrapper from the
+ * Card down carries `min-h-0 flex-1` — one missing link in that chain and the editor
+ * collapses to its content.
  */
 export function ResearchDetail({
   draft,
@@ -44,9 +49,10 @@ export function ResearchDetail({
   disabled?: boolean;
 }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-5">
+    <Card className="flex min-h-0 flex-1 flex-col">
+      <CardContent className="flex min-h-0 flex-1 flex-col gap-5">
         <MarkdownEditor
+          fill
           label="Markdown body"
           placeholder={"# My research\n\nWrite or paste markdown here, or upload a .md file."}
           value={draft.content}

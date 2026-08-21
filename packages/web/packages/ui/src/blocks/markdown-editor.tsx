@@ -41,6 +41,12 @@ export interface MarkdownEditorProps {
   textareaClassName?: string
   /** Disable typing, upload, and toolbar controls. */
   disabled?: boolean
+  /** Take the height the parent gives instead of a fixed `rows` box: the root becomes a
+   *  `min-h-0 flex-1` column and the textarea flexes inside it (and stops offering the
+   *  manual resize grip, since the height is no longer the user's to set). `rows` is
+   *  ignored. The PARENT must supply a bounded height — a fill editor inside a scroller
+   *  has nothing to fill. */
+  fill?: boolean
 }
 
 /** Read a chosen `.md` file and hand its text + name back to the caller — the
@@ -113,12 +119,13 @@ export function MarkdownEditor({
   className,
   textareaClassName,
   disabled,
+  fill = false,
 }: MarkdownEditorProps) {
   const textareaId = useId()
   const hasToolbar = Boolean(toolbarExtras) || Boolean(onUpload) || quickReference
 
   return (
-    <div className={cn("flex flex-col gap-1.5", className)}>
+    <div className={cn("flex flex-col gap-1.5", fill && "min-h-0 flex-1", className)}>
       <div className="flex items-center justify-between gap-3">
         <Label
           htmlFor={textareaId}
@@ -138,10 +145,14 @@ export function MarkdownEditor({
       </div>
       <Textarea
         id={textareaId}
-        rows={rows}
+        rows={fill ? undefined : rows}
         spellCheck={spellCheck}
         disabled={disabled}
-        className={cn("font-mono text-[0.8rem]", textareaClassName)}
+        className={cn(
+          "font-mono text-[0.8rem]",
+          fill && "min-h-0 flex-1 resize-none",
+          textareaClassName,
+        )}
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
