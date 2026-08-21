@@ -482,8 +482,14 @@ export const MARKETING_SITE_IDS: SiteId[] = [
  *    `listed: false`: still registered and still reachable, so a menu row may
  *    point AT them, but they are no longer part of the roster the family shows.
  *
- *  That is the whole of where the mirror can't hold, and it is one-way — every
- *  category member has a menu row, never the reverse. */
+ *  The gap runs BOTH ways, and neither list is a subset of the other (the menu
+ *  side says the same thing in `fleetMenuGroups.ts`). Coming the other way, three
+ *  sites are categorized here with no menu row at all — `mcp` (an endpoint, not a
+ *  page), `fishlamp` and `fishlampdesign` — so a category member is not a promise
+ *  of a row any more than a row is a promise of a category. Only the GROUPING is
+ *  shared: same labels, same order, and a site in the same group on both surfaces
+ *  (`registry.test.ts` pins the labels and the exactly-once membership; it does
+ *  not, and cannot, pin a row-for-member correspondence, because there isn't one). */
 export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   {
     // The hub and the surfaces that ARE the hub — plus the two rows the menu
