@@ -4,9 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Globe, Plus } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
+import { deriveDocumentTitle, setFrontmatterTitle } from "@agentic-toolkit/markdown";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { Field } from "@agentic-toolkit/ui/blocks";
+import {
+  DocumentIdentityField,
+  useSlugAvailability,
+} from "@agentic-toolkit/ui/blocks/document-identity-field";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
@@ -33,6 +38,7 @@ import {
 } from "@agentic-toolkit/data";
 import {
   markdownApi,
+  type MarkdownRouteAvailability,
   type ResearchDocument,
   type ResearchSummary,
 } from "@agentic-toolkit/data/markdown";
@@ -42,6 +48,7 @@ import {
   researchNormalize,
   researchToInput,
   researchValidate,
+  routeFromTitle,
   tagsOf,
   toCreateBody,
   toUpdateBody,
@@ -52,6 +59,17 @@ import { ResearchFilters, type FilterState } from "./ResearchFilters";
 import { PublishSection } from "./PublishSection";
 
 const EMPTY_FILTERS: FilterState = { q: "", category: "", tag: "" };
+
+/** The backend's reason codes, as something to read. `ok` never reaches a message. Typed
+ *  against the wire union (`MarkdownRouteAvailability["reason"]`) rather than a hand-rolled
+ *  string type, so a new backend reason is a compile error here rather than a silently blank
+ *  message. */
+const SLUG_REASON: Record<MarkdownRouteAvailability["reason"], string | undefined> = {
+  ok: undefined,
+  invalid: "Use lowercase letters, numbers, dashes or underscores.",
+  reserved: "That word is reserved by this site.",
+  taken: "Another of your papers already uses that slug.",
+};
 
 /** The create modal's draft (HTD recipe `must-create-in-modal` +
  *  `must-scope-create-modal-to-placement`): the body, plus the category that PLACES it.
@@ -297,6 +315,50 @@ export function ResearchPane({
   const [override, setOverride] = useState<{ id: string; value: ResearchInput } | null>(null);
   const draft = override && override.id === selectedId ? override.value : baseline;
 
+  // ── Identity: the title, and the slug the paper will live at ───────────────
+  // The title is part of the DRAFT — it is the frontmatter `title:` key inside the body, the
+  // only place an author may state one (the API derives, never accepts, a title).
+  const title = draft ? deriveDocumentTitle(draft.content) : "";
+  const setTitle = useCallback(
+    (next: string) => {
+      if (draft) onChange({ ...draft, content: setFrontmatterTitle(draft.content, next) });
+    },
+    [draft],
+  );
+
+  // The slug is NOT part of the draft. `PUT /content/markdown/:id` has no route field — the
+  // route column is written by publish — so a slug in the draft would make an unpublished
+  // paper dirty forever, with no baseline that could ever come back carrying it. Session
+  // state, keyed by document like `override`, seeded from the published route when there is
+  // one and from the title when there is not.
+  const [slugEdit, setSlugEdit] = useState<{ id: string; value: string } | null>(null);
+  const slug =
+    slugEdit && slugEdit.id === selectedId
+      ? slugEdit.value
+      : (selectedDoc?.publicRoute ?? routeFromTitle(title));
+  const setSlug = useCallback(
+    // Lowercased HERE, not in the field: `DocumentIdentityField` edits a slug for whatever route
+    // space its host owns, and research's is lowercase (PUBLIC_ROUTE_RE). A field that forced
+    // case would be making that decision for every other host too.
+    (next: string) => {
+      if (selectedId) setSlugEdit({ id: selectedId, value: next.toLowerCase() });
+    },
+    [selectedId],
+  );
+
+  const checkSlug = useCallback(
+    async (candidate: string) => {
+      if (!selectedId) return { available: true };
+      const res = await markdownApi.routeAvailable(selectedId, candidate, {
+        workspace: workspaceSlug,
+      });
+      return { available: res.available, reason: SLUG_REASON[res.reason] };
+    },
+    [selectedId, workspaceSlug],
+  );
+  const slugVerdict = useSlugAvailability(slug, checkSlug);
+  const [slugAlert, setSlugAlert] = useState(false);
+
   // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there is
   // only ever one message, so "no error" needs no id to be about.
   const formError = raisedError && raisedError.id === selectedId ? raisedError.text : null;
@@ -346,6 +408,14 @@ export function ResearchPane({
     // Already in flight — swallow the duplicate. Reporting `false` is right for the exit guard
     // too: nothing has been persisted YET, so leaving now would still lose the edit.
     if (savingRef.current) return false;
+    // The spec's rule, and the reason it is a modal rather than an inline hint: by the time
+    // Save is pressed the user has committed, so the refusal has to interrupt. `checking` is
+    // NOT refused — a verdict still in flight is not a "no", and blocking on it would make Save
+    // feel broken on a slow connection.
+    if (slugVerdict.status === "unavailable") {
+      setSlugAlert(true);
+      return false;
+    }
     const problem = researchValidate(draft);
     if (problem) {
       setFormError(problem);
@@ -366,7 +436,15 @@ export function ResearchPane({
         // The response IS the server's copy, so record it rather than invalidating — a re-read
         // would spend a request to arrive back at these exact bytes. Dropping the override then
         // hands the form straight back to `baseline`, which is now what we just saved.
-        writeDoc(updated.id, updated);
+        //
+        // A published paper's slug IS its route, and moving it is a re-publish (POST
+        // /:id/publish re-points the route in place). Only for a paper that is already
+        // public: publishing a draft stays the author's explicit act, on the publish card.
+        let saved = updated;
+        if (saved.visibility === "public" && slug && slug !== saved.publicRoute) {
+          saved = await markdownApi.publish(saved.id, slug, { workspace: workspaceSlug });
+        }
+        writeDoc(saved.id, saved);
         setOverride(null);
       }
       return true;
@@ -463,10 +541,12 @@ export function ResearchPane({
     hideItemIcons: true,
   };
   useStackLevel(documentsLevel);
-  // The open document names the pane it is open in. `selectedDoc` is the SAVED document, so
-  // this is the title the rest of the platform knows it by (the list row, the public index,
-  // the API) rather than whatever the unsaved draft's first line currently says.
-  useDetailTitle(selectedDoc ? selectedDoc.title || "Untitled" : null);
+  // The open document names the pane it is open in. Now that the title is EDITABLE (the
+  // identity field above the body), the header follows what the author is typing rather than
+  // the saved document's name — Task 11's docblock gave this to `selectedDoc.title` for the
+  // reason stated above; that reason still holds, only the conclusion changes with the title
+  // now derived live from the draft.
+  useDetailTitle(draft ? deriveDocumentTitle(draft.content) : null);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
   // render-value dirty signal. `editing` is implied: a draft cannot be dirty with no editor open.
   useWorkspaceExitGuard(dirty ? { isDirty: () => dirty } : null);
@@ -554,6 +634,7 @@ export function ResearchPane({
             <PublishSection
               key={selectedDoc.id}
               doc={selectedDoc}
+              route={slug}
               userSlug={userSlug}
               workspaceSlug={workspaceSlug}
               onChanged={onPublishChanged}
@@ -566,6 +647,18 @@ export function ResearchPane({
           // read settles behind it. `disabled` is what makes that safe — see `isSettled`.
           <ResearchDetail
             draft={d}
+            identity={
+              <DocumentIdentityField
+                key={selectedId ?? "none"}
+                title={title}
+                onTitleChange={setTitle}
+                slug={slug}
+                onSlugChange={setSlug}
+                slugify={routeFromTitle}
+                verdict={slugVerdict}
+                disabled={!isSettled}
+              />
+            }
             onChange={onChange}
             categoryOptions={accountCategories}
             tagOptions={accountTags}
@@ -643,6 +736,18 @@ export function ResearchPane({
         busy={deleting}
         onConfirm={() => void confirmDelete()}
         onCancel={cancelDelete}
+      />
+
+      <AlertModal
+        open={slugAlert}
+        tone="error"
+        title="That slug isn’t available"
+        description={
+          slugVerdict.reason ??
+          "Another of your papers already uses that slug. Edit it and try again."
+        }
+        confirmLabel="OK"
+        onConfirm={() => setSlugAlert(false)}
       />
     </>
   );

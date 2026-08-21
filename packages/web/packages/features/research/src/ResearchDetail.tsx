@@ -1,37 +1,35 @@
 "use client";
 
+import type { ReactNode } from "react";
+
+import { MarkdownDocumentEditor } from "@agentic-toolkit/markdown";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { CategoriesAndTags } from "@agentic-toolkit/ui/blocks/categories-and-tags";
-import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { ResearchInput } from "./research-model";
 
 /**
- * Controlled, fields-only research-document editor — the raw markdown body, plus the
- * category and tags that classify it. Save/Cancel/Delete live in the EditorSection toolbar
- * and publishing lives in its own section; this component only renders the draft and reports
- * edits.
+ * Controlled, fields-only research-document editor — the document's identity, its markdown
+ * body (with a live preview and a side-by-side layout), and the category and tags that
+ * classify it. Save/Cancel/Delete live in the leaf's button bar and publishing lives in the
+ * pane's footer; this component only renders the draft and reports edits.
  *
- * There is no Title field: the backend derives the title (an authored frontmatter title,
- * else the body's first line), so it is the same string in this editor, the list row, the
- * public paper index and the API. A field here could only disagree with them.
+ * The title is still DERIVED — the API accepts none, so every client shows the same string —
+ * and the identity field above does not change that: it writes the frontmatter `title:` key
+ * INSIDE the body, which is the one place an author may state a title. The field is passed in
+ * as `identity` rather than built here because the slug half of it is the PANE's state (see
+ * ResearchPane: a slug has nowhere to be persisted until the paper is published).
  *
- * Category and tags are the shared {@link CategoriesAndTags} block — still
- * `CategoryField` for the single value and `TagSetField` for the set, composed into the
- * two aligned rows every classification surface uses — so a document classifies exactly
- * the way a note does. This surface passes no category TREE: research reads its
- * categories as the distinct labels present across the user's documents, which is a
- * vocabulary, not a hierarchy, so the field renders its autocomplete/browse pair with no
- * breadcrumb.
- *
- * The card FILLS its pane: the body editor takes whatever height is left after the
- * classification rows, and scrolls inside itself. That is why every wrapper from the
- * Card down carries `min-h-0 flex-1` — one missing link in that chain and the editor
- * collapses to its content.
+ * This is the shared {@link MarkdownDocumentEditor} — the same editing view any document
+ * surface gets. Nothing here imports its stylesheet: `@agentic-toolkit/markdown/styles` (and
+ * the Tailwind @source registration it carries for the package's own components) already
+ * reaches every family site through adh-family.css -> adh-help.css. A second import from
+ * inside a tsup-built feature package would be a duplicate, not a safeguard.
  */
 export function ResearchDetail({
   draft,
+  identity,
   onChange,
   categoryOptions,
   tagOptions,
@@ -39,6 +37,8 @@ export function ResearchDetail({
   disabled = false,
 }: {
   draft: ResearchInput;
+  /** The title/slug pair, rendered as the editor's header. */
+  identity: ReactNode;
   onChange: (next: ResearchInput) => void;
   categoryOptions: string[];
   tagOptions: string[];
@@ -51,8 +51,9 @@ export function ResearchDetail({
   return (
     <Card className="flex min-h-0 flex-1 flex-col">
       <CardContent className="flex min-h-0 flex-1 flex-col gap-5">
-        <MarkdownEditor
+        <MarkdownDocumentEditor
           fill
+          header={identity}
           label="Markdown body"
           placeholder={"# My research\n\nWrite or paste markdown here, or upload a .md file."}
           value={draft.content}
@@ -70,8 +71,6 @@ export function ResearchDetail({
 
         <CategoriesAndTags
           category={{
-            // Plural, per Mike's drawing of this row — the caption names the vocabulary the
-            // row draws from, not the arity of the value (which is still exactly one).
             label: "Categories",
             noun: "category",
             options: categoryOptions,

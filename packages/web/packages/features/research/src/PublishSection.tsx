@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 
 import { useAction } from "@agentic-toolkit/crud";
@@ -26,20 +25,27 @@ function publicUrl(slug: string, route: string): string {
 
 /**
  * The publish concern for the selected (saved) document — distinct from the
- * draft fields. A draft shows a route input + live preview and a Publish button;
- * a published paper shows its public URL with a copy button and an Unpublish
+ * draft fields. A draft shows where publishing will put it and a Publish button;
+ * a published paper shows its public URL with copy + preview controls and an Unpublish
  * button. Mutations run through the document API and lift the updated document
- * back to the pane so the list + selection stay in sync. Remount per document
- * (key={doc.id}) so the route input resets without an effect.
+ * back to the pane so the list + selection stay in sync.
+ *
+ * The route is a PROP, not state here. It is the same slug the identity field above the body
+ * edits, and two inputs for one value was the defect this replaced: an author could type one
+ * slug into the editor and a different one into this card, and only one of them meant
+ * anything.
  */
 export function PublishSection({
   doc,
+  route,
   userSlug,
   workspaceSlug,
   onChanged,
   disabled = false,
 }: {
   doc: ResearchDocument;
+  /** Where publishing will put this paper — owned by the pane, edited above the body. */
+  route: string;
   userSlug: string;
   /** Pins publish/unpublish to the WORKSPACE'S owning principal (backend `?workspace=`),
    *  so org-owned docs other members created resolve. */
@@ -51,7 +57,6 @@ export function PublishSection({
    *  changes nothing. */
   disabled?: boolean;
 }) {
-  const [route, setRoute] = useState(doc.publicRoute ?? "");
   const { busy, error, run } = useAction();
   const { copied, copy } = useClipboard();
 
@@ -131,40 +136,25 @@ export function PublishSection({
   return (
     <FieldGroup title="Publishing">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="research-route" className="font-mono text-[0.7rem] uppercase tracking-wider text-apt-text-muted">
-          Public route
-        </Label>
-        <div className="flex items-end gap-2">
-          <Input
-            id="research-route"
-            value={route}
-            placeholder="my-paper"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            aria-invalid={route !== "" && !routeValid}
-            onChange={(e) => setRoute(e.target.value.toLowerCase())}
-            disabled={disabled}
-            className="font-mono text-[0.8rem]"
-          />
+        <p className="text-xs text-apt-text-dim">
+          {trimmed ? (
+            routeValid ? (
+              <>
+                This paper is a private draft. Publishing puts it at{" "}
+                <span className="font-mono text-apt-text">{publicUrl(userSlug, trimmed)}</span>.
+              </>
+            ) : (
+              "That slug can’t be a public route — edit it above the body."
+            )
+          ) : (
+            "Give this paper a title or slug above to publish it."
+          )}
+        </p>
+        <div className="flex justify-end">
           <Button type="button" size="sm" disabled={!routeValid || busy || disabled} onClick={publish}>
             {busy ? "Publishing…" : "Publish"}
           </Button>
         </div>
-        {route !== "" && !routeValid ? (
-          // ErrorText, not a hand-written red <p>: this is the platform's inline validation line,
-          // and the primitive is what carries `role="alert"` — the hand-rolled version turned red
-          // for a sighted reader and said nothing at all to a screen reader, next to an input that
-          // is already `aria-invalid`. `text-xs` matches the hint it alternates with (below).
-          <ErrorText
-            className="text-xs"
-            error="Lowercase letters, digits, “-” and “_”; 2–128 chars, starting with a letter or digit."
-          />
-        ) : (
-          <p className="text-xs text-apt-text-dim">
-            {trimmed ? publicUrl(userSlug, trimmed) : "Choose a route to publish this paper publicly."}
-          </p>
-        )}
       </div>
       <ErrorText error={error} />
     </FieldGroup>

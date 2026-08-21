@@ -1820,6 +1820,9 @@ importers:
       '@agentic-toolkit/data':
         specifier: workspace:*
         version: link:../../data
+      '@agentic-toolkit/markdown':
+        specifier: workspace:*
+        version: link:../../markdown
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource

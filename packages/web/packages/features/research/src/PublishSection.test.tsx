@@ -30,6 +30,7 @@ describe("PublishSection — published", () => {
     render(
       <PublishSection
         doc={DOC}
+        route="intelligence-at-the-edges"
         userSlug="mikefullerton"
         workspaceSlug="mikefullerton"
         onChanged={async () => {}}
@@ -46,7 +47,13 @@ describe("PublishSection — published", () => {
 
   it("offers no Preview link before the author has a slug — there is nowhere to go", () => {
     render(
-      <PublishSection doc={DOC} userSlug="" workspaceSlug="mikefullerton" onChanged={async () => {}} />,
+      <PublishSection
+        doc={DOC}
+        route="intelligence-at-the-edges"
+        userSlug=""
+        workspaceSlug="mikefullerton"
+        onChanged={async () => {}}
+      />,
     );
     expect(screen.queryByRole("link", { name: /preview/i })).toBeNull();
     // The Copy button stays put (disabled), so the row doesn't restructure.

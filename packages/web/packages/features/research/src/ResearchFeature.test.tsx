@@ -54,6 +54,7 @@ vi.mock("@agentic-toolkit/data/markdown", () => ({
     update: vi.fn(),
     categories: vi.fn(),
     tags: vi.fn(),
+    routeAvailable: vi.fn().mockResolvedValue({ available: true, reason: "ok" }),
   },
 }));
 
@@ -67,6 +68,7 @@ const create = vi.mocked(markdownApi.create);
 const update = vi.mocked(markdownApi.update);
 const categories = vi.mocked(markdownApi.categories);
 const tags = vi.mocked(markdownApi.tags);
+const routeAvailable = vi.mocked(markdownApi.routeAvailable);
 
 const SUMMARY: ResearchSummary = {
   id: "doc-1",
@@ -257,21 +259,26 @@ describe("ResearchFeature", () => {
       </Harness>,
     );
 
-    // The body is the only editable text: there is no Title input to assert, by design — the
-    // title shown in the rail is derived from this field's first line.
+    // The body loads, and the identity field above it shows the title this body derives — Task
+    // 16 gave the editor a Title input; it edits the frontmatter, not a separate field.
     const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
     await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
-    expect(screen.queryByLabelText("Title")).toBeNull();
+    expect(screen.getByLabelText("Title")).toHaveValue("Federated learning");
     await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined }));
   });
 
-  // Task 11's ask: "the title should show in the header of the HTDV's details pane." ResearchPane
-  // wires this with `useDetailTitle(selectedDoc ? selectedDoc.title || "Untitled" : null)` — but a
-  // mutation to `useDetailTitle(null)` (publishing nothing, ever) left `resource`'s 95/95 and this
-  // package's own 20/20 both green, because nothing here asserted on the PUBLISH side of that call.
-  // `resource/src/__tests__/detailTitle.test.tsx` covers the plumbing (a synthetic pane through
-  // `useHostDetailTitle`); these two cover the integration point this task actually delivers —
-  // that ResearchPane itself is the caller, and that it clears what it published.
+  // Task 11's ask: "the title should show in the header of the HTDV's details pane." Task 16
+  // re-pointed this at the DRAFT (`useDetailTitle(draft ? deriveDocumentTitle(draft.content) :
+  // null)`) now that the title is editable, so the header follows what the author is typing
+  // rather than the saved document's name — "Federated learning" is what `deriveDocumentTitle`
+  // reads off `DOCUMENT.content`'s first line, distinct from `DOCUMENT.title` ("Federated
+  // learning notes") used elsewhere in this file for the list row / rail button name. A
+  // mutation to `useDetailTitle(null)` (publishing nothing, ever) left `resource`'s 95/95 and
+  // this package's own 20/20 both green, because nothing here asserted on the PUBLISH side of
+  // that call. `resource/src/__tests__/detailTitle.test.tsx` covers the plumbing (a synthetic
+  // pane through `useHostDetailTitle`); these two cover the integration point this task
+  // actually delivers — that ResearchPane itself is the caller, and that it clears what it
+  // published.
   it("publishes the open document's title into the detail header", async () => {
     render(
       <Harness>
@@ -282,7 +289,7 @@ describe("ResearchFeature", () => {
     // The doc loads asynchronously (get() resolves the cached-or-fetched copy); wait for the
     // title to land rather than asserting synchronously.
     await waitFor(() =>
-      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning notes"),
+      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning"),
     );
   });
 
@@ -302,7 +309,7 @@ describe("ResearchFeature", () => {
       </Harness>,
     );
     await waitFor(() =>
-      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning notes"),
+      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning"),
     );
 
     rerender(
@@ -694,5 +701,79 @@ describe("ResearchFeature", () => {
       ),
     );
     await waitFor(() => expect(screen.queryByText("Federated learning notes")).toBeNull());
+  });
+});
+
+// Task 16: the identity field above the body, and the one alert that stands between an
+// author and saving a slug the API has already refused. `deriveDocumentTitle(DOCUMENT.content)`
+// — "Federated learning", the `#` heading marker stripped off the body's first line — is a
+// DIFFERENT string from `DOCUMENT.title` ("Federated learning notes", the field the list row
+// and rail button use elsewhere in this file); the identity field reads the body, not that
+// field, which is the whole point of the task.
+const KNOWN_TITLE = "Federated learning";
+
+/** Opens the known document with its editor on screen. `docId` is a static prop in this
+ *  URL-driven harness — the mocked router's `push` never causes a re-render with a new
+ *  `docId` — so clicking a rail row only proves `push` fired; it does not open anything here.
+ *  Every existing test above that needs the editor visible mounts with `docId="doc-1"`
+ *  directly, and this helper follows the same pattern. */
+async function openFirstDocument(): Promise<void> {
+  render(
+    <Harness>
+      <ResearchFeature basePath="/w1/research" docId="doc-1" />
+    </Harness>,
+  );
+  const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+  await waitFor(() => expect(body.value).toBe(DOCUMENT.content));
+}
+
+describe("ResearchFeature — title and slug", () => {
+  afterEach(cleanup);
+
+  it("shows the open document's title, read from its frontmatter", async () => {
+    await openFirstDocument();
+    expect(screen.getByLabelText("Title")).toHaveValue(KNOWN_TITLE);
+  });
+
+  it("writes an edited title into the body's frontmatter, so the derived title matches", async () => {
+    await openFirstDocument();
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
+    const body = screen.getByLabelText("Markdown body") as HTMLTextAreaElement;
+    expect(body.value).toContain('title: "Renamed Paper"');
+  });
+
+  it("follows the title with the slug until the slug is edited", async () => {
+    await openFirstDocument();
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
+    expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper");
+
+    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "renamed-paper-2" } });
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Again" } });
+    expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper-2");
+  });
+
+  it("alerts instead of saving when the slug is unavailable", async () => {
+    routeAvailable.mockResolvedValue({ available: false, reason: "taken" });
+    await openFirstDocument();
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Clashing" } });
+
+    // SLUG_REASON maps the "taken" reason to this sentence, not to "unavailable" or "taken"
+    // verbatim — the wording is the API's, and this is the string that actually renders.
+    await waitFor(() =>
+      expect(screen.getByText(/already uses that slug/i)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    // AlertModal is built on @base-ui/react's <Dialog>, which renders role="dialog" — not
+    // "alertdialog".
+    expect(await screen.findByRole("dialog")).toHaveTextContent(/slug/i);
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("shows ONE slug input — the publish card no longer carries its own", async () => {
+    routeAvailable.mockResolvedValue({ available: true, reason: "ok" });
+    await openFirstDocument();
+    expect(screen.getAllByLabelText(/slug|public route/i)).toHaveLength(1);
   });
 });
