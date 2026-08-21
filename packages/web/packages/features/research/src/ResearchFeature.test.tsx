@@ -23,6 +23,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import {
   HomeBarHost,
   RailHostContext,
+  useHostDetailTitle,
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
@@ -146,9 +147,19 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
  *  merged stack the way the hub's workspace shell would (the shell owns `mergedLevels`; this
  *  package owns only the RailHostContext contract), plus a real {@link HomeBarHost} above both —
  *  the two hosts SiteHomeShell / the hub shell mount around this feature. Stands in for them so
- *  the published document rows AND the home bar's own controls are drivable. */
+ *  the published document rows AND the home bar's own controls are drivable.
+ *
+ *  `setDetailTitle`/`detailTitle` are wired through the package's own {@link useHostDetailTitle} —
+ *  the REAL host-side hook every production host (StandaloneRailHost, the hub's
+ *  WorkspaceChromeProvider) uses to turn `useDetailTitle` publishes into the string HTDV's
+ *  `detailTitle` prop receives — rather than a hand-rolled stand-in, so what this test exercises
+ *  is the actual merge logic, not a re-implementation of it. The rendered `detail-title` node
+ *  stands in for HTDV's own title strip (`hierarchical-topic-detail.tsx`'s `detailTitle` slot),
+ *  which lives in `@agentic-toolkit/ui` and is not something this harness renders — this package
+ *  has no test coverage of HTDV itself, only of what reaches its host-side boundary. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
+  const { setDetailTitle, detailTitle } = useHostDetailTitle();
   const registry: RailHostRegistry = useMemo(
     () => ({
       registerLevels: (id, entry) =>
@@ -167,9 +178,10 @@ function Harness({ children }: { children: ReactNode }) {
       popStack: () => {},
       reportMissing: () => {},
       reportBusy: () => {},
+      setDetailTitle,
       toolbarSlot: null,
     }),
-    [],
+    [setDetailTitle],
   );
   const mergedLevels = [...entries.values()]
     .sort((a, b) => a.depth - b.depth)
@@ -177,6 +189,11 @@ function Harness({ children }: { children: ReactNode }) {
   return (
     <RailHostContext.Provider value={registry}>
       <HomeBarHost>
+        {/* Stand-in for HTDV's title strip: same string {@link useHostDetailTitle} would hand
+            the real detail header, rendered here so a test can read it back. Empty (not
+            missing) when no pane is publishing, so "cleared" and "never rendered" both read as
+            the same empty string rather than a testid that disappears from the DOM. */}
+        <div data-testid="detail-title">{detailTitle ?? ""}</div>
         <Rail levels={mergedLevels} />
         {children}
       </HomeBarHost>
@@ -246,6 +263,55 @@ describe("ResearchFeature", () => {
     await waitFor(() => expect(body.value).toBe("# Federated learning\n\nSome notes."));
     expect(screen.queryByLabelText("Title")).toBeNull();
     await waitFor(() => expect(get).toHaveBeenCalledWith("doc-1", { workspace: undefined }));
+  });
+
+  // Task 11's ask: "the title should show in the header of the HTDV's details pane." ResearchPane
+  // wires this with `useDetailTitle(selectedDoc ? selectedDoc.title || "Untitled" : null)` — but a
+  // mutation to `useDetailTitle(null)` (publishing nothing, ever) left `resource`'s 95/95 and this
+  // package's own 20/20 both green, because nothing here asserted on the PUBLISH side of that call.
+  // `resource/src/__tests__/detailTitle.test.tsx` covers the plumbing (a synthetic pane through
+  // `useHostDetailTitle`); these two cover the integration point this task actually delivers —
+  // that ResearchPane itself is the caller, and that it clears what it published.
+  it("publishes the open document's title into the detail header", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+
+    // The doc loads asynchronously (get() resolves the cached-or-fetched copy); wait for the
+    // title to land rather than asserting synchronously.
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning notes"),
+    );
+  });
+
+  // ResearchFeature always wires research's opt-in `urlSelection` (see its own doc), so
+  // `selectedId` is URL-driven and fixed by this test's `docId` prop for the life of one render —
+  // clicking Cancel only pushes a route through the mocked router (asserted elsewhere, "closing an
+  // open document (Cancel) returns to basePath"), it does not itself change `docId` here. So this
+  // drives the transition through `rerender` with `docId` dropped, the same way "leaves a failed
+  // save's message behind when another document is opened" (below) rerenders onto a new `docId` —
+  // that changes `selectedDoc` from the SAME mounted `ResearchPane`, which is what exercises
+  // `useDetailTitle`'s own cleanup path (its effect depends on `title`, so a title→null change
+  // runs the previous effect's cleanup before the new, no-op-null one).
+  it("leaves no stale title once the open document is deselected", async () => {
+    const { rerender } = render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("detail-title").textContent).toBe("Federated learning notes"),
+    );
+
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+
+    await waitFor(() => expect(screen.getByTestId("detail-title").textContent).toBe(""));
   });
 
   // `canSave` is dirty && valid — the busy term is applied at the button (SaveCancelButtons
