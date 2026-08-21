@@ -65,6 +65,12 @@ const UNIVERSAL = [
 export const RESERVED_SLUGS: Readonly<Record<string, readonly string[]>> = {
   registries: UNIVERSAL,
   consultants: UNIVERSAL,
+  // research addresses an AUTHOR at its root segment (`/<authorSlug>`), so its static routes
+  // shadow any author who shares a name with one. UNIVERSAL already covers every static
+  // directory in its app/ tree except `papers`, which is named explicitly: that is the prefix
+  // this corpus is being moved OFF, and the URLs under it stay in crawler indexes and in
+  // support conversations long after the directory goes, so an author must not be handed it.
+  research: [...UNIVERSAL, 'papers'],
 }
 
 /**
