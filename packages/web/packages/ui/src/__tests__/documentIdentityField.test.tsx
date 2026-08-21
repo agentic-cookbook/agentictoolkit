@@ -89,6 +89,10 @@ describe('DocumentIdentityField', () => {
     expect(slugInput).toHaveAccessibleName('Slug')
     // The reason is still on the page (announced via the live region) -- just not IN the name.
     expect(screen.getByText('That word is reserved.')).toBeInTheDocument()
+    // ...and it reaches the input as its DESCRIPTION. Without this assertion, dropping
+    // aria-describedby leaves the verdict visible but programmatically unattached to the
+    // field it is about, and every other test in this file still passes.
+    expect(slugInput).toHaveAccessibleDescription('That word is reserved.')
     // The later-task lookup this must keep working.
     expect(screen.getByLabelText(/slug/i)).toBe(slugInput)
   })
