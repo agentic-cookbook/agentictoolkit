@@ -55,6 +55,7 @@ vi.mock("@agentic-toolkit/data/markdown", () => ({
     categories: vi.fn(),
     tags: vi.fn(),
     routeAvailable: vi.fn().mockResolvedValue({ available: true, reason: "ok" }),
+    publish: vi.fn(),
   },
 }));
 
@@ -69,6 +70,7 @@ const update = vi.mocked(markdownApi.update);
 const categories = vi.mocked(markdownApi.categories);
 const tags = vi.mocked(markdownApi.tags);
 const routeAvailable = vi.mocked(markdownApi.routeAvailable);
+const publish = vi.mocked(markdownApi.publish);
 
 const SUMMARY: ResearchSummary = {
   id: "doc-1",
@@ -775,5 +777,155 @@ describe("ResearchFeature — title and slug", () => {
     routeAvailable.mockResolvedValue({ available: true, reason: "ok" });
     await openFirstDocument();
     expect(screen.getAllByLabelText(/slug|public route/i)).toHaveLength(1);
+  });
+
+  // The three below cover the live-publish half of the lifecycle: `onSave`'s
+  // `if (saved.visibility === "public" && slug && slug !== saved.publicRoute)` block at
+  // ResearchPane.tsx. Editing the SLUG field alone never dirties the draft (`dirty` compares
+  // content/category/tags, not the slug — see `researchDiffers`), so a slug move that should
+  // trigger a re-publish has to ride along with a content edit; the cleanest one is the title,
+  // which both dirties the draft AND (unless the slug has been touched) drives the slug via the
+  // "follows" behaviour already covered above.
+
+  it("re-publishes a live paper when the title-driven slug moves", async () => {
+    const published: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      visibility: "public",
+      publicRoute: "federated-learning",
+    };
+    get.mockResolvedValue(structuredClone(published));
+    // The PUT response never carries a new route — only `publish` moves it — so `saved` here
+    // still has the OLD route, which is exactly what makes `slug !== saved.publicRoute` true.
+    update.mockResolvedValueOnce({
+      ...structuredClone(published),
+      content: "# Renamed Paper\n\nSome notes.",
+    });
+    publish.mockResolvedValueOnce({ ...structuredClone(published), publicRoute: "renamed-paper" });
+
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe(published.content));
+    expect(screen.getByLabelText("Slug")).toHaveValue("federated-learning");
+
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
+    await waitFor(() => expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper"));
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+
+    await waitFor(() =>
+      expect(publish).toHaveBeenCalledWith("doc-1", "renamed-paper", { workspace: undefined }),
+    );
+  });
+
+  it("does not re-publish a live paper when the slug is untouched", async () => {
+    const published: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      visibility: "public",
+      publicRoute: "federated-learning",
+    };
+    get.mockResolvedValue(structuredClone(published));
+    update.mockResolvedValueOnce({
+      ...structuredClone(published),
+      content: "# Federated learning\n\nSome notes, edited.",
+    });
+
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe(published.content));
+    expect(screen.getByLabelText("Slug")).toHaveValue("federated-learning");
+
+    // Dirties the draft WITHOUT touching the title line, so the slug — which is still
+    // following, unedited — stays exactly what it already was: the saved document's own route.
+    fireEvent.change(body, { target: { value: "# Federated learning\n\nSome notes, edited." } });
+
+    await act(async () => {
+      screen.getByRole("button", { name: "Save" }).click();
+    });
+
+    await waitFor(() => expect(update).toHaveBeenCalledTimes(1));
+    expect(publish).not.toHaveBeenCalled();
+  });
+
+  it("resets the slug's follow behaviour when the open document changes", async () => {
+    const doc1: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      visibility: "public",
+      publicRoute: "federated-learning",
+    };
+    const doc2: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      id: "doc-2",
+      title: "Quantum notes",
+      content: "# Quantum notes\n\nOther body.",
+      visibility: "public",
+      publicRoute: "quantum-notes",
+    };
+    get.mockImplementation(async (id) => structuredClone(id === "doc-2" ? doc2 : doc1));
+
+    const { rerender } = render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        doc1.content,
+      ),
+    );
+    // Seeded from doc-1's OWN publicRoute — the published-document half of "the slug seeds
+    // from the title when there is no route, and from the route when there is one."
+    expect(screen.getByLabelText("Slug")).toHaveValue("federated-learning");
+
+    // Load doc-2 too, so it is CACHED by the time we come back to it below — the return trip
+    // has to be a synchronous cache hit, not a fresh fetch, or a plain loading-gap unmount
+    // (MasterDetailLeaf renders its empty-state placeholder while `selectedDoc` is null) would
+    // reset `touched` on its own and the assertion below would pass with `key` gone too.
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-2" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        doc2.content,
+      ),
+    );
+    expect(screen.getByLabelText("Slug")).toHaveValue("quantum-notes");
+
+    // Touch doc-2's slug directly, then go BACK to doc-1 — already cached, so this transition
+    // paints from cache with no null/loading frame in between and nothing naturally unmounts
+    // `DocumentIdentityField`. Only the document-scoped `key` can reset its `touched` state here.
+    fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "quantum-notes-2" } });
+
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        doc1.content,
+      ),
+    );
+    // doc-1's OWN route again, not doc-2's edited value carried over.
+    expect(screen.getByLabelText("Slug")).toHaveValue("federated-learning");
+
+    // And doc-1's slug still FOLLOWS its title. The parent's `slug` prop alone would already
+    // satisfy the assertion above even with a stale, still-`touched` field (the value is
+    // controlled from ResearchPane regardless of remount) — this second half is what actually
+    // depends on `DocumentIdentityField` having remounted, because it exercises the field's own
+    // `touched` state, not just the value the parent handed it.
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
+    expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper");
   });
 });
