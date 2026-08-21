@@ -7,12 +7,16 @@ import type { SiteHomeModel } from './SiteHomeModel';
  * hand the rest to the site's parser, and mount the site's view inside the shell at the
  * workspace-scoped base. A site supplies a model (see ./SiteHomeModel) and supplies no assembly.
  *
- * MOUNTED TWICE per site, and that is the whole redirect mechanism:
+ * MOUNTED ONCE OR MORE per site, and the `/home` mount is the whole redirect mechanism:
  *
  *   - `app/[workspace]/[[...path]]/page.tsx` — the workspace route itself, `/<ws>/<rest…>`.
  *   - `app/home/page.tsx` — no params at all, so the shell resolves the user's workspace and
- *     replaces the URL with it. `/home` is a redirect, not a page, and it needs no resolution
- *     logic of its own: "no workspace in the URL" is a state the shell already owns.
+ *     replaces the URL with it (at `model.workspaceHref`, if the site declares one). `/home`
+ *     is a redirect, not a page, and it needs no resolution logic of its own.
+ *   - A site MAY mount it at NAMED routes instead of the catch-all — research mounts
+ *     `[workspace]/home` and `[workspace]/edit/[paperUuid]`, because its `[workspace]` root is a
+ *     public page and the two gated surfaces are gated by their own layouts. Such a route has no
+ *     `path` param to read, so it passes `path` explicitly; see that prop.
  *
  * A CLIENT component, and that is load-bearing rather than incidental. A model carries functions
  * (`parse`, `render`), and functions cannot cross from a Server Component into a Client one — so
@@ -26,7 +30,23 @@ import type { SiteHomeModel } from './SiteHomeModel';
  * that awaited `params` to pass them down would be a server→client crossing again, for data the
  * client can read directly.
  */
-export declare function SiteHomeRoute<View>({ model }: {
+export declare function SiteHomeRoute<View>({ model, path, }: {
     model: SiteHomeModel<View>;
+    /**
+     * The segments below the workspace, when the ROUTE knows them and the URL does not spell them
+     * as a catch-all. A site whose editor lives at `[workspace]/edit/[paperUuid]` has no `path`
+     * param to read — its shape is two named segments — so it reads its own and hands them down:
+     * `path={[paperUuid]}`.
+     *
+     * Note what is NOT passed: the literal `edit`. A host's segments are its own URL grammar, and
+     * `model.parse` speaks the FEATURE's grammar — the same one the hub's
+     * `/<slug>/research/<docId>` speaks. Passing `['edit', uuid]` would give the feature two
+     * grammars to parse and put the site's URL layout inside a shared parser, which is exactly the
+     * drift that parser exists to prevent.
+     *
+     * Overrides the route param when given, INCLUDING when it is empty: `[]` means "this route has
+     * no segments below the workspace", which is a statement, not an absence.
+     */
+    path?: string[];
 }): ReactElement;
 //# sourceMappingURL=SiteHomeRoute.d.ts.map

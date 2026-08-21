@@ -39,16 +39,42 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
 export interface SiteHomeShellProps {
     /** The workspace segment as it stands in the URL, if any. */
     workspaceSlug?: string;
+    /**
+     * Where a workspace's GATED surface lives on this host, given its slug. Defaults to
+     * `/<slug>` — the workspace itself — which is what 38 of the 39 sites mean and why this is
+     * optional rather than required.
+     *
+     * Used for ONE thing: the seeding replace out of `/home`. `/home` is the address the whole
+     * family hands out — the header's Home link, the SSO return target, the registry's post-login
+     * landing — and it names no workspace, so the shell resolves one and rewrites the URL. On a
+     * site whose `/<slug>` is PUBLIC content that rewrite lands a signed-in visitor on the public
+     * page instead of the app. research is that site: `/<author>` is their published paper index
+     * and the gated surface is `/<author>/home`, so it passes ``(slug) => `/${slug}/home` ``.
+     *
+     * Deliberately NOT `scopedBase`, which stays `/<slug>` on every site including research. The
+     * workspace IS `/<slug>`; `home` and `edit` are two surfaces the host mounts under it, and the
+     * host appends those itself. Conflating the two would double the suffix on every link the
+     * feature builds.
+     *
+     * Not `switchHrefFor` either, which needs no seam: that carries the segments BELOW the
+     * workspace across a switch, and on research those segments already START with `home` or
+     * `edit`, so `/ada/home` → `/bob/home` falls out of the existing rule.
+     *
+     * An effect dependency inside `useWorkspaceRoute` — pass a stable identity (module scope, or
+     * `useCallback`), or the seeding effect re-runs on every render.
+     */
+    workspaceHref?: (slug: string) => string;
     /** The site's view. Called — not rendered — once a workspace is resolved AND in the URL. */
     children: (scope: SiteHomeScope) => ReactNode;
-    /** The model's workspace-bar action, forwarded by SiteHomeRoute. The shell owns WHEN it is
-     *  called: only once `resolved` is non-null, because the bar renders before resolution
-     *  completes and this callback is documented as never seeing an absent workspace. */
-    action?: (scope: SiteHomeScope) => ReactNode;
 }
 /**
  * One site's workspace-route declaration. `View` is inferred from `parse`, so a site never names
  * it.
+ *
+ * There is no slot here for a page's controls. A site's search, filters, and its primary "Add"
+ * go in the HOME BAR — the strip between the workspace bar and the breadcrumb bar — which the
+ * FEATURE publishes into with `HomeBarPortal`, from inside `render`. That keeps a control in the
+ * same React tree as the state it drives, which the model's own slot could never do.
  */
 export interface SiteHomeModel<View> {
     /**
@@ -58,9 +84,11 @@ export interface SiteHomeModel<View> {
      * consumed — a site that reads it here is reading the wrong layer, and `scopedBase` /
      * `workspaceSlug` are how it gets that.
      *
-     * There is no `basePath` above it and no site declares one: the workspace IS the first segment
-     * on every site, so the count of segments above it is zero everywhere and a field that can only
-     * hold one value is a field three sites got to disagree about.
+     * There is no `basePath` above it: the workspace is the FIRST segment on every site, so the
+     * count of segments above it is zero everywhere. What CAN differ is where a site's gated
+     * surface sits BELOW the workspace — research's is `/<slug>/home`, because `/<slug>` is its
+     * public author page — and that is `workspaceHref` below, which affects only where `/home`
+     * seeds to. The segments handed here are still the ones below the workspace.
      *
      * This is also where a site says a path does NOT exist, by calling `notFound()` — the route
      * mounts one optional catch-all in every site, so "there is nothing at this depth" is a
@@ -73,9 +101,6 @@ export interface SiteHomeModel<View> {
     /** This site's workspace landing view. Called only once a workspace has resolved, so nothing
      *  here has to cope with an absent one. */
     render: (ctx: SiteHomeContext<View>) => ReactNode;
-    /** An optional right-justified control in the workspace bar. Called only once a workspace
-     *  has resolved, so nothing here copes with an absent one. */
-    action?: (scope: SiteHomeScope) => ReactNode;
     /**
      * This site's own shell around `render`, in place of the shared `<SiteHomeShell>`.
      *
@@ -96,6 +121,20 @@ export interface SiteHomeModel<View> {
      * has no such check of its own.
      */
     shell?: ComponentType<SiteHomeShellProps>;
+    /**
+     * This site's answer to {@link SiteHomeShellProps.workspaceHref} — where its gated surface
+     * lives under a workspace. Omit it and the shell seeds the bare `/<slug>`, which is right for
+     * every site whose root segment is the app rather than someone's public content.
+     *
+     * Declared on the MODEL rather than passed at each mount because it is a fact about the SITE,
+     * and the site has three mounts (`app/home/page.tsx` and the two gated routes) that must not be
+     * able to disagree about it. Contrast `SiteHomeRoute`'s `path`, which is a fact about ONE
+     * route's shape and therefore belongs at the mount.
+     *
+     * Must be a stable identity — declare it at module scope alongside the model, never inline in
+     * a component. It reaches an effect dependency array in `useWorkspaceRoute`.
+     */
+    workspaceHref?: (slug: string) => string;
     /**
      * This site's public section on a principal's profile at `/<slug>/profile`.
      *

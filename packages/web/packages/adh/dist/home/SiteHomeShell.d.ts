@@ -32,5 +32,5 @@ import type { SiteHomeShellProps } from './SiteHomeModel';
  * for one without. This shell makes the narrower judgement — authenticated, but not a MEMBER of
  * this workspace — and lands in the same place.
  */
-export declare function SiteHomeShell({ workspaceSlug, children, action }: SiteHomeShellProps): ReactElement;
+export declare function SiteHomeShell({ workspaceSlug, workspaceHref, children, }: SiteHomeShellProps): ReactElement;
 //# sourceMappingURL=SiteHomeShell.d.ts.map

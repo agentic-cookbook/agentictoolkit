@@ -12,6 +12,7 @@ import { useCallback as useCallback3 } from "react";
 import { usePathname } from "next/navigation";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
 import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
+import { HomeBarHost } from "@agentic-toolkit/resource";
 
 // src/profile/ProfileFallback.tsx
 import { useEffect as useEffect3, useState as useState4 } from "react";
@@ -484,12 +485,19 @@ function workspacePathTail(pathname) {
 // src/home/SiteHomeShell.tsx
 import { Fragment, jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
-function SiteHomeShell({ workspaceSlug, children, action }) {
+function SiteHomeShell({
+  workspaceSlug,
+  workspaceHref,
+  children
+}) {
   const { items: workspaces, error, isFetching } = useResourceList(
     "workspaces",
     loadWorkspaces
   );
-  const hrefFor = useCallback3((slug) => `/${slug}`, []);
+  const hrefFor = useCallback3(
+    (slug) => workspaceHref?.(slug) ?? `/${slug}`,
+    [workspaceHref]
+  );
   const pathname = usePathname() ?? "";
   const switchHrefFor = useCallback3(
     (slug) => `/${[slug, ...workspacePathTail(pathname)].join("/")}`,
@@ -517,30 +525,42 @@ function SiteHomeShell({ workspaceSlug, children, action }) {
       {
         workspaces,
         selected: resolved ?? null,
-        onSelect,
-        action: resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null ? action?.({ workspaceSlug: resolved, scopedBase: `/${resolved}`, workspace }) : void 0
+        onSelect
       }
     ),
-    error !== null && workspaces === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
-    resolved === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
-    resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null && children({
-      workspaceSlug: resolved,
-      scopedBase: `/${resolved}`,
-      workspace
-    })
+    /* @__PURE__ */ jsxs4(HomeBarHost, { children: [
+      error !== null && workspaces === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "Couldn't load your workspaces. Reload the page to try again." }),
+      resolved === null && /* @__PURE__ */ jsx6(TopicSelectHint, { title: "No workspaces yet \u2014 create one from the hub to get started." }),
+      resolved !== void 0 && resolved !== null && resolved === workspaceSlug && workspace !== null && children({
+        workspaceSlug: resolved,
+        scopedBase: `/${resolved}`,
+        workspace
+      })
+    ] })
   ] });
 }
 
 // src/home/SiteHomeRoute.tsx
 import { jsx as jsx7 } from "react/jsx-runtime";
-function SiteHomeRoute({ model }) {
+function SiteHomeRoute({
+  model,
+  path
+}) {
   const params = useParams();
   const raw = params?.path;
-  const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
+  const fromUrl = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
+  const rest = path !== void 0 ? path : fromUrl;
   const workspaceSlug = params?.workspace;
   const view = model.parse(rest);
   const Shell = model.shell ?? SiteHomeShell;
-  return /* @__PURE__ */ jsx7(Shell, { workspaceSlug, action: model.action, children: (scope) => model.render({ ...scope, view }) });
+  return /* @__PURE__ */ jsx7(
+    Shell,
+    {
+      workspaceSlug,
+      ...model.workspaceHref !== void 0 ? { workspaceHref: model.workspaceHref } : {},
+      children: (scope) => model.render({ ...scope, view })
+    }
+  );
 }
 
 // src/home/SiteHomeModel.ts
