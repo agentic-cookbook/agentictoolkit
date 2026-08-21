@@ -33,6 +33,7 @@ export function TagSetField({
   options,
   value,
   onChange,
+  layout,
   disabled = false,
   className,
 }: {
@@ -47,6 +48,8 @@ export function TagSetField({
   /** The selected set, in order. */
   value: string[]
   onChange: (next: string[]) => void
+  /** Caption above the control (default) or beside it — see {@link Field}. */
+  layout?: "stacked" | "inline"
   disabled?: boolean
   className?: string
 }): React.ReactElement {
@@ -79,8 +82,12 @@ export function TagSetField({
   }
 
   return (
-    <Field label={label} hint={hint} className={className}>
-      <div className="flex w-full flex-col gap-2">
+    <Field label={label} hint={hint} layout={layout} className={className}>
+      {/* The SAME row shape as CategoryField: autocomplete on the left, browse/add on the
+          right, one line. The two rows are the same control with a different picker behind
+          them, and a stacked pair here made them look like different kinds of thing wherever
+          a form shows both (notebook's NoteDetail, research's editor). */}
+      <div className="flex w-full items-stretch gap-2">
         <Combobox
           items={suggestions}
           value={text}
@@ -88,7 +95,7 @@ export function TagSetField({
           ariaLabel={`Add a ${noun}`}
           placeholder={`Add a ${noun}…`}
           disabled={disabled}
-          className="w-full"
+          className="flex-1"
         />
         <EntityChooser
           multiple
@@ -101,6 +108,7 @@ export function TagSetField({
           placeholder={`Filter or add a ${noun}…`}
           emptySelectionLabel={`No ${label.toLowerCase()} yet`}
           disabled={disabled}
+          className="w-44 shrink-0"
         />
       </div>
     </Field>

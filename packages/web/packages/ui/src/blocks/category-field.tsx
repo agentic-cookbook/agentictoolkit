@@ -95,6 +95,7 @@ export function CategoryField({
   value,
   onChange,
   onRename,
+  layout,
   disabled = false,
   className,
 }: {
@@ -116,6 +117,8 @@ export function CategoryField({
    *  until it settles, and stays open (with the error) if it rejects. Omit it and the crumbs are
    *  static text, which is what a surface with no write access to the tree should pass. */
   onRename?: (node: CategoryTreeNode, nextName: string) => void | Promise<void>
+  /** Caption above the control (default) or beside it — see {@link Field}. */
+  layout?: "stacked" | "inline"
   disabled?: boolean
   className?: string
 }): React.ReactElement {
@@ -172,7 +175,7 @@ export function CategoryField({
   }
 
   return (
-    <Field label={label} hint={hint} className={className}>
+    <Field label={label} hint={hint} layout={layout} className={className}>
       <div className="flex w-full flex-col gap-2">
         {trail.length > 0 && (
           <nav aria-label={`${label} path`}>

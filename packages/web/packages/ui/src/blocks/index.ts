@@ -6,6 +6,7 @@ export { FieldGroup } from "./field-group"
 // The tag-set row (autocomplete + browse/add chooser + chips) — one affordance for every
 // surface that edits a set of labels, so research tags and work-item labels behave alike.
 export { TagSetField } from "./tag-set-field"
+export { CategoriesAndTags } from "./categories-and-tags"
 // Its sibling for the single-valued, HIERARCHICAL vocabulary: same autocomplete + browse pair,
 // plus the breadcrumb that says where in the tree the chosen name sits and the rename behind it.
 export { CategoryField, categoryTrail, type CategoryTreeNode } from "./category-field"

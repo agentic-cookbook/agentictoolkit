@@ -1,8 +1,7 @@
 "use client";
 
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { CategoryField } from "@agentic-toolkit/ui/blocks/category-field";
-import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
+import { CategoriesAndTags } from "@agentic-toolkit/ui/blocks/categories-and-tags";
 import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -18,11 +17,13 @@ import type { ResearchInput } from "./research-model";
  * else the body's first line), so it is the same string in this editor, the list row, the
  * public paper index and the API. A field here could only disagree with them.
  *
- * Category and tags are the shared blocks — {@link CategoryField} for the single value and
- * {@link TagSetField} for the set — so a document classifies exactly the way a note does.
- * This surface passes no category TREE: research reads its categories as the distinct labels
- * present across the user's documents, which is a vocabulary, not a hierarchy, so the field
- * renders its autocomplete/browse pair with no breadcrumb.
+ * Category and tags are the shared {@link CategoriesAndTags} block — still
+ * `CategoryField` for the single value and `TagSetField` for the set, composed into the
+ * two aligned rows every classification surface uses — so a document classifies exactly
+ * the way a note does. This surface passes no category TREE: research reads its
+ * categories as the distinct labels present across the user's documents, which is a
+ * vocabulary, not a hierarchy, so the field renders its autocomplete/browse pair with no
+ * breadcrumb.
  */
 export function ResearchDetail({
   draft,
@@ -61,23 +62,23 @@ export function ResearchDetail({
           }
         />
 
-        <CategoryField
-          label="Category"
-          noun="category"
-          hint="Optional — a single classification label. Type to autocomplete, or Choose to browse."
-          options={categoryOptions}
-          value={draft.category}
-          onChange={(category) => onChange({ ...draft, category })}
-          disabled={disabled}
-        />
-
-        <TagSetField
-          label="Tags"
-          noun="tag"
-          hint="Optional — a set of labels. Type to autocomplete, or Choose to browse."
-          options={tagOptions}
-          value={draft.tags}
-          onChange={(tags) => onChange({ ...draft, tags })}
+        <CategoriesAndTags
+          category={{
+            // Plural, per Mike's drawing of this row — the caption names the vocabulary the
+            // row draws from, not the arity of the value (which is still exactly one).
+            label: "Categories",
+            noun: "category",
+            options: categoryOptions,
+            value: draft.category,
+            onChange: (category) => onChange({ ...draft, category }),
+          }}
+          tags={{
+            label: "Tags",
+            noun: "tag",
+            options: tagOptions,
+            value: draft.tags,
+            onChange: (tags) => onChange({ ...draft, tags }),
+          }}
           disabled={disabled}
         />
 
