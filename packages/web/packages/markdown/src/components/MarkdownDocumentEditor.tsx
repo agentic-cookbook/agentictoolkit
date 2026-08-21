@@ -158,7 +158,7 @@ export function MarkdownDocumentEditor({
           >
             {/* The document itself is not a live region: every debounce tick would otherwise
                 re-announce the whole rendered document to screen readers 300ms after the
-                author stops typing. The short status node below is the live region instead. */}
+                author stops typing. */}
             <div data-slot="markdown-preview" aria-live="off">
               {source.trim() ? (
                 <MarkdownRenderer content={source} />
@@ -166,9 +166,6 @@ export function MarkdownDocumentEditor({
                 <p className="text-sm text-apt-text-dim">Nothing to preview yet.</p>
               )}
             </div>
-            <span className="sr-only" role="status" aria-live="polite">
-              {source.trim() ? 'Preview updated' : ''}
-            </span>
           </MarkdownReadingPalette>
         )}
       </div>
