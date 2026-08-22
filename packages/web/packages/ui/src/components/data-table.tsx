@@ -287,7 +287,26 @@ export function DataTable<T>({
 
   function onRowClick(e: React.MouseEvent, id: string): void {
     // A click that lands on an in-cell control still SELECTS the row (so the details pane follows
-    // the row you are editing) but must not steal the control's own click.
+    // the row you are editing) but must not steal the control's own click — and it must never
+    // SHRINK a selection, which is what makes this a guard rather than the bare `selectOne` it
+    // used to be.
+    //
+    // The two shapes this component serves pull in opposite directions here. A details-pane list
+    // selects exactly one row, and "clicking into a cell moves the pane to that row" is the whole
+    // reason a control click touches the selection at all. A bulk-action table selects many, and
+    // there `selectOne` is destructive: the operator ticks thirty rows, opens one row's inline
+    // menu to check something, and the toolbar count quietly becomes 1 — so the Delete they press
+    // next acts on one row instead of thirty. The checkbox column defends itself with a
+    // stopPropagation wrapper; nothing else in a cell does, and asking every consumer to remember
+    // one is a convention rather than a guarantee.
+    //
+    // So: a control click still moves a single selection, and leaves a multiple one alone. Neither
+    // use case loses anything, and the case that loses data cannot happen.
+    if (fromCellControl(e.target)) {
+      if (selectedIds.size > 1) return
+      selectOne(id)
+      return
+    }
     if (e.shiftKey) range(id)
     else if (e.altKey) addToSelection(id)
     else selectOne(id)
