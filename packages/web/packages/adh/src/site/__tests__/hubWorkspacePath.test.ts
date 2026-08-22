@@ -68,10 +68,23 @@ describe('isHubWorkspacePath', () => {
     }
   })
 
-  it('rejects a public profile and a marketing feature page', () => {
-    // The two destinations the hub's own root segment used to serve. Both took a static prefix
-    // when `[workspace]` claimed the root, and both prefixes are reserved words.
-    expect(isHubWorkspacePath('/user/mike')).toBe(false)
+  it('rejects a marketing feature page', () => {
+    // `/features/…` is one of the two destinations the hub's own root segment used to serve;
+    // it took a static prefix when `[workspace]` claimed the root, and that prefix is a hub
+    // route the lockstep test in adh-registry holds to the app tree.
+    //
+    // The OTHER one used to be asserted here as `/user/mike` → false, and it stopped being
+    // true when `feat(profiles)` gave the family a fleet-wide `/<slug>` and deleted the hub's
+    // `app/user` tree. `user` left HUB_ROUTE_SEGMENTS with the directory — correctly, since
+    // that set must equal the hub's static top-level routes in BOTH directions — so this
+    // function now answers `true` for `/user/mike`, and that is the honest answer for the same
+    // reason `/typo` gets one below: the path addresses a workspace slugged `user`. Nobody can
+    // hold it (`user` is an rdid type prefix, so RESERVED_PRINCIPAL_SLUGS refuses it at mint),
+    // so the route's own gate resolves it against the caller's workspaces and renders the
+    // shared not-found. Asserting `false` here would mean re-adding a word to
+    // HUB_ROUTE_SEGMENTS that the hub does not route, which is the exact failure that set's
+    // reverse direction exists to catch.
+    expect(isHubWorkspacePath('/user/mike')).toBe(true)
     expect(isHubWorkspacePath('/features/mcp')).toBe(false)
     // `projects` is both a marketing feature id AND a workspace feature segment. Under the old
     // second-segment test this page read as a workspace route the moment it moved under
