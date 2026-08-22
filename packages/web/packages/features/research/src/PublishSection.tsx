@@ -193,19 +193,29 @@ export function PublishSection({
             "Give this paper a title or slug above to publish it."
           )}
         </p>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end">
           {/* Unconditionally mounted (only its TEXT is conditional) — same reason as
               `document-identity-field.tsx`'s `slug-status` span: an `aria-live` region has to
               already exist in the DOM before its content changes for assistive tech to have
               anything to have observed the mutation on. This is also the ONLY thing that
               announces the reason at all, since the Publish button below is natively disabled
               (see the comment on `publishDisabledReasonId` above) and so never receives the
-              focus that would let its `aria-describedby` be read. */}
+              focus that would let its `aria-describedby` be read.
+              The spacing to the Publish button below lives HERE, not as `gap-1` on the
+              container, and is itself conditioned on emptiness: an empty `<p>` (`{null}`
+              children) is a zero-height block but is still a flex ITEM, so a container `gap`
+              would insert a permanent 0.25rem above the button on every publishable draft, where
+              this paragraph is empty — verified by running it, this was exactly that regression.
+              `empty:mb-0` (Tailwind v4's `empty` variant, mapping to the standard `:empty`
+              pseudo-class — confirmed available in this repo's Tailwind v4 setup, no extra
+              config needed) collapses `mb-1` back to nothing whenever there is no reason text,
+              restoring the pre-regression, no-gap layout without reintroducing a conditional
+              mount. */}
           <p
             data-slot="publish-disabled-reason"
             id={publishDisabledReasonId}
             aria-live="polite"
-            className={`text-xs ${toneTextClass("error")}`}
+            className={`text-xs mb-1 empty:mb-0 ${toneTextClass("error")}`}
           >
             {routeUnavailable ? `Can’t publish: ${verdict?.reason ?? "this slug is unavailable."}` : null}
           </p>

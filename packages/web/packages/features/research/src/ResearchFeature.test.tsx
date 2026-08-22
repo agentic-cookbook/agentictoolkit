@@ -54,7 +54,7 @@ vi.mock("@agentic-toolkit/data/markdown", () => ({
     update: vi.fn(),
     categories: vi.fn(),
     tags: vi.fn(),
-    routeAvailable: vi.fn().mockResolvedValue({ available: true, reason: "ok" }),
+    routeAvailable: vi.fn(),
     publish: vi.fn(),
   },
 }));
@@ -97,9 +97,11 @@ beforeEach(() => {
   // running it: a value queued by a test that throws (or otherwise returns) before consuming
   // it stays queued and leaks into the NEXT test's call to the same mock. `vi.resetAllMocks()`
   // (`.mockReset()` on every mock) additionally drops that queue AND any base implementation
-  // set via `mockResolvedValue`/`mockImplementation` — including `routeAvailable`'s default
-  // from the `vi.mock` factory above, which a reset wipes just as it wipes anything set in a
-  // previous test. That is why every default the suite relies on is re-established below,
+  // set via `mockResolvedValue`/`mockImplementation` — including a base set by a PREVIOUS
+  // test's own call to one of those, which a reset wipes just as thoroughly as one set here.
+  // (The `vi.mock` factory above no longer sets a base for anything — every mock there is a
+  // bare `vi.fn()` — so this `beforeEach` is the single place any default comes from.) That is
+  // why every default the suite relies on is re-established below,
   // explicitly, in this same `beforeEach`: it is the only way to reset the *Once queue for
   // every mock (closing the leak class for all of them, not just the two — `update` and
   // `publish` — that a prior version of this comment singled out) while still giving each test
@@ -397,6 +399,122 @@ describe("ResearchFeature", () => {
       retry.click();
     });
     expect(update).toHaveBeenCalledTimes(2);
+  });
+
+  // ── Pins `beforeEach`'s `vi.resetAllMocks()` (G1) ──────────────────────────────
+  // Deliberately declaration-order dependent, and that is the whole point: the first test ends
+  // by leaving a `mockResolvedValueOnce` on `get` UNCONSUMED (nothing after it calls `get`
+  // again), and the second — the very next test vitest runs — asserts the ONLY thing that can
+  // be true if `beforeEach` dropped that dangling queue before it started: doc-1 opens with the
+  // beforeEach default (`DOCUMENT.content`), not the poisoned response the first test queued.
+  // vitest runs a single file's tests in declaration order with shuffling off — this repo does
+  // not opt into `sequence.shuffle` (`packages/features/vitest.preset.ts` passes no `sequence`
+  // key to `defineConfig`, verified by reading it) — so "next test" here means exactly this pair,
+  // in this order, every run. `vi.clearAllMocks()` (`.mockClear()`) would leave this queued value
+  // in place — it only drops call history — so it would bleed straight into the second test's
+  // first `get()` call. `vi.resetAllMocks()` (`.mockReset()`) drops it, which is the one thing
+  // this pair exists to require of whatever `beforeEach` does.
+  it("G1 pin (1/2): queues a get() response for doc-1 that this test itself never consumes", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe(DOCUMENT.content));
+    expect(get).toHaveBeenCalledTimes(1);
+    // Left dangling on purpose: nothing after this line calls `get` again in THIS test, so this
+    // one-shot response is still queued when the file moves on to the next test.
+    get.mockResolvedValueOnce({
+      ...structuredClone(DOCUMENT),
+      content: "# Leaked from G1 pin (1/2)\n\nA queue this stale must never reach a real test.",
+    });
+  });
+
+  it("G1 pin (2/2): opens doc-1 with beforeEach's default, not (1/2)'s leaked queue", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    // Under `vi.clearAllMocks()` this reads "# Leaked from G1 pin (1/2)…" instead — the query
+    // cache is emptied between tests (packages/data/vitest-setup.ts), so this IS a fresh `get`
+    // call, and a surviving *Once queue is the only thing that could answer it wrongly.
+    const body = (await screen.findByLabelText("Markdown body")) as HTMLTextAreaElement;
+    await waitFor(() => expect(body.value).toBe(DOCUMENT.content));
+  });
+
+  // ── Pins `beforeEach`'s `routeAvailable` default (G2) ───────────────────────────
+  // G2's fix deletes the `vi.mock` factory's `routeAvailable.mockResolvedValue(...)` (a dead
+  // second writer `vi.resetAllMocks()` wipes before any test body runs) so `beforeEach`'s own
+  // `routeAvailable.mockResolvedValue({ available: true, reason: "ok" })` is the sole authority.
+  // Nothing above in this file actually depends on that default resolving `available: true` —
+  // every existing "unavailable" test overrides it per-test, and the writesPublicRoute gate
+  // (ResearchPane.tsx) only ever blocks on `status === "unavailable"`, so a verdict that never
+  // settles at all (`idle`) is indistinguishable from `available` to every assertion elsewhere
+  // in this file. Verified by running it: deleting `beforeEach`'s `routeAvailable` line (with the
+  // factory default already gone) left the suite at 54/54 green, not red — the "surviving
+  // declaration is load-bearing" claim G2 makes is false without this pin. `checkSlug` (the
+  // callback `useSlugAvailability` awaits) does `res.available` on whatever `routeAvailable`
+  // resolves to; with no default at all that is `undefined`, `res.available` throws, and
+  // `useSlugAvailability`'s own `.catch()` swallows it into `{ status: "idle" }` — which
+  // `document-identity-field.tsx` renders as NO text in its `[data-slot="slug-status"]` span.
+  // The default resolving `{ available: true, reason: "ok" }` instead renders "Available" there
+  // (`SLUG_REASON.ok` is `undefined`, so the span falls back to `STATUS_TEXT.available`) — the
+  // one observable difference between the default doing its job and silently not existing.
+  it("G2 pin: settles the slug availability check to Available from beforeEach's routeAvailable default", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await screen.findByLabelText("Markdown body");
+    // DOCUMENT is private with no publicRoute, so its slug follows the derived title
+    // ("federated-learning") — truthy, which is what makes `useSlugAvailability` fire at all.
+    await waitFor(() =>
+      expect(document.querySelector('[data-slot="slug-status"]')).toHaveTextContent("Available"),
+    );
+  });
+
+  // ── Categories and tags wiring (G3) ─────────────────────────────────────────────
+  // `categories.mockResolvedValue([])` / `tags.mockResolvedValue([])` in `beforeEach` were dead
+  // defaults — verified by running it: deleting both left the suite at 54/54 green, because
+  // nothing anywhere in this file observed either call's RESOLVED VALUE, only that the calls
+  // happened. That is a coverage hole over `markdownApi.categories()` / `markdownApi.tags()` →
+  // `ResearchPane`'s `accountCategories`/`accountTags` → `ResearchDetail`'s `categoryOptions`/
+  // `tagOptions` → `CategoriesAndTags` (`packages/ui/src/blocks/categories-and-tags.tsx`) — the
+  // seam `packages/ui/src/__tests__/categoriesAndTags.test.tsx` cannot cover, because it renders
+  // the control directly and never touches `markdownApi`.
+  //
+  // What's queryable: `CategoryField`/`TagSetField` (read via `ResearchDetail.tsx` and
+  // `categories-and-tags.tsx`) each pair a `Combobox` autocomplete with an `EntityChooser`
+  // "Choose…" browser. The browser is the one that renders its full option list as real DOM —
+  // `role="option"` rows inside a `role="listbox"` — once its trigger is clicked (see
+  // `packages/ui/src/components/list-chooser.tsx`, exercised the same way by
+  // `packages/ui/src/__tests__/listChooser.test.tsx`'s `open()` helper). The category trigger's
+  // accessible name is "Browse categories" (`Browse ${label.toLowerCase()}` off
+  // `CategoriesAndTags`'s `label: "Categories"`); the tags trigger's is "Tags" (`EntityChooser`'s
+  // multi-mode `ariaLabel` is the row's own `label`) — both per
+  // `packages/ui/src/__tests__/categoriesAndTags.test.tsx`.
+  it("wires markdownApi's categories and tags into the classification control's Choose… pickers", async () => {
+    categories.mockResolvedValue(["Physics", "Chemistry"]);
+    tags.mockResolvedValue(["alpha", "beta"]);
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await screen.findByLabelText("Markdown body");
+
+    fireEvent.click(screen.getByRole("button", { name: "Browse categories" }));
+    await waitFor(() =>
+      expect(screen.getByRole("option", { name: "Physics" })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole("option", { name: "Chemistry" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tags" }));
+    await waitFor(() => expect(screen.getByRole("option", { name: "alpha" })).toBeInTheDocument());
+    expect(screen.getByRole("option", { name: "beta" })).toBeInTheDocument();
   });
 
   // ── Two bases (docBasePath) ────────────────────────────────────────────────────

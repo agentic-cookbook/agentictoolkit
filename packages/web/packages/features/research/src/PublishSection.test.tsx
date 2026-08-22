@@ -178,6 +178,32 @@ describe("PublishSection — draft", () => {
     expect(publishButton).not.toHaveAttribute("aria-describedby");
   });
 
+  it("pins the emptiness-conditional spacing (G4) — a class-presence check standing in for a layout fact jsdom can't see", () => {
+    // jsdom does not resolve the cascade, so this cannot assert the empty `<p>` actually
+    // contributes no visible gap above the Publish button — only that the classes which make
+    // that true in a real browser are the ones rendered. F3 unconditionally mounted this
+    // paragraph so its `aria-live` region always exists (kept as-is here); the regression F3
+    // introduced was `gap-1` on the flex container, which inserted a permanent 0.25rem gap above
+    // Publish even while this paragraph is empty. The fix moves the spacing onto the paragraph
+    // itself via `mb-1 empty:mb-0` (Tailwind v4's `empty` variant, `:empty`) so it collapses when
+    // there is no reason text, and drops `gap-1` from the container so nothing restores that
+    // gap another way.
+    render(
+      <PublishSection
+        doc={DRAFT}
+        route="fresh-route"
+        verdict={{ status: "available", reason: null }}
+        userSlug="mikefullerton"
+        workspaceSlug="mikefullerton"
+        onChanged={async () => {}}
+      />,
+    );
+    const reason = document.querySelector('[data-slot="publish-disabled-reason"]');
+    expect(reason).toHaveClass("mb-1", "empty:mb-0");
+    const container = reason?.parentElement;
+    expect(container).not.toHaveClass("gap-1");
+  });
+
   it("disables Publish for a route that fails the format check, verdict or no verdict — N6's original gap", () => {
     // N6 dropped `!routeValid` from the disabled expression and the suite at the time never
     // caught it: every existing test only ever exercised routes that pass PUBLIC_ROUTE_RE, so
