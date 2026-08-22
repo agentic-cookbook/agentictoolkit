@@ -19,7 +19,13 @@ vi.mock('@agentic-toolkit/data', async (importOriginal) => ({
 }))
 
 const { rename } = vi.hoisted(() => ({ rename: vi.fn() }))
-vi.mock('@agentic-toolkit/data/organizations', () => ({ organizationsApi: { rename } }))
+// ORGANIZATIONS_QUERY_KEY is part of the mock because the save INVALIDATES it: a partial mock
+// leaves it undefined, `invalidateQueries({ queryKey: undefined })` throws inside the save, and
+// both navigation assertions below fail for a reason that has nothing to do with navigation.
+vi.mock('@agentic-toolkit/data/organizations', () => ({
+  organizationsApi: { rename },
+  ORGANIZATIONS_QUERY_KEY: ['organizations'],
+}))
 
 import { OrgSettingsForm } from './OrgSettingsPane'
 

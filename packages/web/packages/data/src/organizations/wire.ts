@@ -18,6 +18,20 @@ export interface Organization {
   rdid?: string;
 }
 
+/**
+ * One row of the WORKSPACE-SCOPED list (`GET /organization/organizations?workspace=`). Carries the
+ * owner pair the row itself now holds, so a surface can say WHY an org is in the list — owned by
+ * this workspace, or merely belonged to — without a second lookup.
+ */
+export interface OrganizationListRow {
+  id: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  ownerKind: "customer" | "organization";
+  ownerId: string;
+}
+
 /** POST body. Only slug + name: everything else about the org is provisioned server-side. */
 export interface OrganizationCreateInput {
   slug: string;

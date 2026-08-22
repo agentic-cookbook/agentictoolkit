@@ -24,10 +24,15 @@ import { useReportSettingsDirty } from "@agentic-toolkit/resource";
  *  (useAction + ErrorText + Field/Input). */
 export function NewOrganizationModal({
   open,
+  workspaceSlug,
   onClose,
   onCreated,
 }: {
   open: boolean;
+  /** The workspace the org is created FROM, and therefore the one that will OWN it — creating
+   *  from an org workspace makes that org the new org's owner. Required rather than defaulted,
+   *  so no host can silently mint an org into the creator's personal workspace by omission. */
+  workspaceSlug: string;
   onClose: () => void;
   onCreated: (slug: string) => void;
 }) {
@@ -50,10 +55,13 @@ export function NewOrganizationModal({
     event.preventDefault();
     void run(async () => {
       // The namespace rdid is derived server-side as `org.<slug>`, so there is nothing to enter.
-      const result = await organizationsApi.create({
-        slug: slug.trim(),
-        name: name.trim(),
-      });
+      const result = await organizationsApi.create(
+        {
+          slug: slug.trim(),
+          name: name.trim(),
+        },
+        workspaceSlug,
+      );
       onCreated(result.organization.slug);
     });
   }
