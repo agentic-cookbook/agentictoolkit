@@ -793,8 +793,8 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   // and a word only it serves would make the lockstep case fail. The three stay reserved
   // family-wide by `SITE_ROUTE_SEGMENTS` in `@agentic-toolkit/adh/site`, which is a different
   // question: this set says "not a slug", that one says "nobody may claim it".
-  // research — public papers and the search page.
-  'papers',
+  // research — the finder. A paper's own address is `/<author>/<paper-slug>`, whose first
+  // segment IS the workspace slug, so `search` is the only word of research's that lands here.
   'search',
   // registries + consultants — the public registry and profile pages beside the workspace.
   // `search` above is theirs too: all three sites put a finder at their root, and a Set
@@ -803,6 +803,8 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'registry',
   // integrations — the OAuth return the site owns at its own root.
   'integrations',
+  // billing — where a checkout comes back to be attached to an account.
+  'claim',
   // toolkit — the component demo.
   'demo',
 ])
