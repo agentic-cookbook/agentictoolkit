@@ -73,9 +73,15 @@ describe('DocumentIdentityField', () => {
   })
 
   it('says nothing at all before anything has been checked', () => {
-    render(<Harness verdict={{ status: 'idle', reason: null }} />)
+    const { container } = render(<Harness verdict={{ status: 'idle', reason: null }} />)
     expect(screen.queryByText(/unavailable/i)).toBeNull()
     expect(screen.queryByText(/^available$/i)).toBeNull()
+    // The live region itself must already be mounted — with no text — even at idle: an
+    // `aria-live` region has to exist in the DOM *before* its content changes for assistive
+    // tech to announce the mutation, so the span cannot wait for the first non-idle verdict to
+    // appear. This is the assertion that would fail if the span were wrapped back in
+    // `{status && (…)}`.
+    expect(container.querySelector('[data-slot="slug-status"]')).not.toBeNull()
   })
   it("keeps the slug input's accessible name stable, excluding the verdict", () => {
     // Field layout="inline" wraps its caption AND its children in one <Label>, so a naive
@@ -237,7 +243,13 @@ describe('useSlugAvailability', () => {
     await act(async () => {
       vi.advanceTimersByTime(1)
     })
-    await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
+    // Assert synchronously, right after crossing the boundary — not through `waitFor`, which
+    // (under `shouldAdvanceTime: true`) keeps nudging fake time forward on its own and would
+    // therefore pass even if the default debounce were longer than 350ms. Only a synchronous
+    // check at exactly the 350ms mark pins the default in both directions.
+    expect(check).toHaveBeenCalledTimes(1)
+    // The promise resolution that follows is a microtask, not a timer, so waiting it out here
+    // is fine — it does not mask the boundary assertion above.
     await waitFor(() => expect(result.current.status).toBe('available'))
   })
 

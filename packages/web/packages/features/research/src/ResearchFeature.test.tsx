@@ -819,6 +819,41 @@ describe("ResearchFeature — title and slug", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
+  it("saves without the unavailable-slug alert when a published paper's slug is UNCHANGED, even though the checker reports it unavailable (FIX C5)", async () => {
+    // The save GUARD and the write CONDITION now share one predicate (`writesPublicRoute`),
+    // which adds the `slug !== publicRoute` term the guard used to omit. This deliberately
+    // disagrees with the backend's real behaviour (which excludes the document's own id, so an
+    // unchanged slug never actually reads "unavailable") to pin that the guard itself — not
+    // just a well-behaved backend — is what lets an untouched slug through.
+    const published: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      visibility: "public",
+      publicRoute: "federated-learning",
+    };
+    get.mockResolvedValue(structuredClone(published));
+    routeAvailable.mockResolvedValue({ available: false, reason: "taken" });
+    update.mockResolvedValueOnce({
+      ...structuredClone(published),
+      content: "# Federated learning\n\nSome notes, edited.",
+    });
+    await openFirstDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/already uses that slug/i)).toBeInTheDocument(),
+    );
+
+    // Dirties the draft WITHOUT touching the title line, so the slug — still following,
+    // unedited — stays exactly what it already was: the saved document's own route.
+    fireEvent.change(screen.getByLabelText("Markdown body"), {
+      target: { value: "# Federated learning\n\nSome notes, edited." },
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(publish).not.toHaveBeenCalled();
+  });
+
   it("does NOT block or alert on Save for a DRAFT with an unavailable slug — nothing is written yet (FIX 3)", async () => {
     // DOCUMENT (the fixture openFirstDocument opens) is private: an unpublished draft's slug is
     // never persisted by Save — only Publish writes the route — so a collision on a field that
@@ -828,8 +863,11 @@ describe("ResearchFeature — title and slug", () => {
     await openFirstDocument();
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Clashing" } });
 
+    // A DRAFT's unavailable slug also disables the Publish card's own button (FIX C8's reason
+    // text lives right next to it), so the identity field's live-region verdict is no longer
+    // the ONLY place this sentence renders — `getAllByText` rather than `getByText`.
     await waitFor(() =>
-      expect(screen.getByText(/already uses that slug/i)).toBeInTheDocument(),
+      expect(screen.getAllByText(/already uses that slug/i).length).toBeGreaterThan(0),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -992,5 +1030,66 @@ describe("ResearchFeature — title and slug", () => {
     // `touched` state, not just the value the parent handed it.
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
     expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper");
+  });
+
+  it("does not resurrect an abandoned title buffer when the selection returns to it (FIX C4)", async () => {
+    // `titleEdit` is keyed by id (masked, not cleared, when the selection moves away) — the
+    // same shape `slugEdit` has always had, and which the test above pins for the slug. This
+    // pins the title half: leaving a document mid-edit without Save or Cancel, then coming
+    // back, must show the stored/derived title, not the raw buffer left behind.
+    const doc2: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      id: "doc-2",
+      title: "Quantum notes",
+      content: "# Quantum notes\n\nOther body.",
+    };
+    get.mockImplementation(async (id) => structuredClone(id === "doc-2" ? doc2 : DOCUMENT));
+
+    const { rerender } = render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        DOCUMENT.content,
+      ),
+    );
+
+    // A trailing space, deliberately: it makes the raw buffer ("New Title ") observably
+    // different from the trimmed, stored/derived title ("New Title") a fix would show instead.
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New Title " } });
+    expect(screen.getByLabelText("Title")).toHaveValue("New Title ");
+
+    // Load doc-2 — cached by the time we return — then come back to doc-1. A cache hit, no
+    // fetch, nothing naturally remounts the field.
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-2" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        doc2.content,
+      ),
+    );
+
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    // Back to doc-1's body — heading unchanged. (Not a full-string match against
+    // `DOCUMENT.content`: the edit above went through `onChange`, whose write path
+    // legitimately rewrote the frontmatter `title:` key, so the body it left behind now carries
+    // that frontmatter block. That's expected and is not what this test is about.)
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toContain(
+        "# Federated learning",
+      ),
+    );
+
+    // The stored/derived title, not the abandoned raw buffer with its trailing space intact.
+    expect(screen.getByLabelText("Title")).toHaveValue("New Title");
   });
 });

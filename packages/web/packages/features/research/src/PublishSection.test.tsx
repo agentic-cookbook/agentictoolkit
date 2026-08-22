@@ -105,6 +105,41 @@ describe("PublishSection — draft", () => {
     expect(screen.getByRole("button", { name: /^publish$/i })).toBeDisabled();
   });
 
+  it("states the reason in the card when an unavailable slug disables Publish (FIX C8)", () => {
+    // The gate itself was already covered above; what wasn't was WHY it's disabled being
+    // stated anywhere Publish itself lives — the reason previously only showed up in the
+    // identity field above the body, so a disabled button in this card had no explanation of
+    // its own. Reuses the same `verdict` prop the gate reads, not a recomputed check.
+    render(
+      <PublishSection
+        doc={DRAFT}
+        route="taken-route"
+        verdict={{ status: "unavailable", reason: "That route is taken." }}
+        userSlug="mikefullerton"
+        workspaceSlug="mikefullerton"
+        onChanged={async () => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^publish$/i })).toBeDisabled();
+    expect(screen.getByText(/that route is taken/i)).toBeInTheDocument();
+  });
+
+  it("says nothing about a disabled Publish when the slug IS available", () => {
+    render(
+      <PublishSection
+        doc={DRAFT}
+        route="fresh-route"
+        verdict={{ status: "available", reason: null }}
+        userSlug="mikefullerton"
+        workspaceSlug="mikefullerton"
+        onChanged={async () => {}}
+      />,
+    );
+    expect(screen.getByRole("button", { name: /^publish$/i })).toBeEnabled();
+    expect(screen.queryByText(/that route is taken/i)).toBeNull();
+    expect(document.querySelector('[data-slot="publish-disabled-reason"]')).toBeNull();
+  });
+
   it("disables Publish for a route that fails the format check, verdict or no verdict — N6's original gap", () => {
     // N6 dropped `!routeValid` from the disabled expression and the suite at the time never
     // caught it: every existing test only ever exercised routes that pass PUBLIC_ROUTE_RE, so

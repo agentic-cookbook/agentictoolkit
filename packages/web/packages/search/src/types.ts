@@ -88,6 +88,14 @@ export interface SearchSource {
    * this for a name that collides with a filter param: `buildSearchUrl` applies these last, so
    * they overwrite rather than lose to the same-named user filter — the alternative would let a
    * misconfigured source's scope leak past the corpus it declared.
+   *
+   * That "wins" rule holds for EVERY param name, including the paging axes — `buildSearchUrl`
+   * sets `page`/`pageSize` before it applies `fixedParams`, so a source that names either one
+   * here pins it, permanently, the same as any other fixed param. There is no special-cased
+   * exclusion for them: the simpler and more predictable rule is that a fixed param overrides
+   * whatever query param shares its name, no exceptions, so a caller that deliberately wants a
+   * pinned page or page size is never silently ignored. Do not name `page` or `pageSize` in
+   * `fixedParams` unless pinning pagination is genuinely the intent.
    */
   fixedParams?: Record<string, string>
   /** Result page size (default 50). */

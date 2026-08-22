@@ -93,6 +93,23 @@ function sameFilters(a: FilterState, b: FilterState): boolean {
   return a.q === b.q && a.category === b.category && a.tag === b.tag;
 }
 
+/** Whether saving with `slug` as the identity field's current value would move this document's
+ *  published route. ONE expression, used at BOTH the places that need to agree on it: the
+ *  save-time GUARD in `onSave` (before the write, deciding whether an unavailable slug should
+ *  block Save at all — a draft's slug writes nothing, so it never needs to) and the write
+ *  CONDITION right after the update response comes back (deciding whether to follow up with a
+ *  publish call). A round of review found the guard and the write had drifted — the guard
+ *  omitted the `slug !== doc.publicRoute` term — because each spelled the same rule out
+ *  separately, 30 lines apart. Naming it once is what keeps that from happening again; the two
+ *  call sites differ only in WHICH document they pass in (the cached `selectedDoc` for the
+ *  guard, the fresh `updated` response for the write), not in the rule itself. */
+function writesPublicRoute(
+  doc: Pick<ResearchDocument, "visibility" | "publicRoute"> | null | undefined,
+  slug: string,
+): boolean {
+  return doc?.visibility === "public" && Boolean(slug) && slug !== doc?.publicRoute;
+}
+
 /**
  * The /research workspace: a master/detail surface over the signed-in user's
  * markdown research documents. This pane owns the data (list/search + the full
@@ -366,6 +383,17 @@ export function ResearchPane({
   const slugVerdict = useSlugAvailability(slug, checkSlug);
   const [slugAlert, setSlugAlert] = useState(false);
 
+  // Both edit buffers are KEYED by id above (`titleEdit.id === selectedId`), which masks a
+  // buffer left over from a different document — but masking is not clearing. Leave a document
+  // mid-edit without pressing Cancel, select another, then come back, and the abandoned raw
+  // buffer would still be sitting in state, ready to resurrect the moment `selectedId` matches
+  // it again. Clear both explicitly on every selection change so an old buffer can never
+  // outlive the selection it belonged to.
+  useEffect(() => {
+    setTitleEdit(null);
+    setSlugEdit(null);
+  }, [selectedId]);
+
   // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there is
   // only ever one message, so "no error" needs no id to be about.
   const formError = raisedError && raisedError.id === selectedId ? raisedError.text : null;
@@ -443,11 +471,11 @@ export function ResearchPane({
     // Save is pressed the user has committed, so the refusal has to interrupt. `checking` is
     // NOT refused — a verdict still in flight is not a "no", and blocking on it would make Save
     // feel broken on a slow connection.
-    // Only a PUBLISHED paper's save can write the route (see the publish call below), so the
-    // guard only applies there. An unpublished draft's slug writes nothing on save — refusing
-    // it over a collision that will never happen loses the author's content edits over a field
-    // that has no effect until the author explicitly publishes.
-    if (selectedDoc?.visibility === "public" && slugVerdict.status === "unavailable") {
+    // Only a save that would actually MOVE the route (see `writesPublicRoute`) needs this
+    // guard. An unpublished draft's slug writes nothing on save, and a published paper whose
+    // slug is unchanged writes nothing either — refusing either over a collision that will
+    // never happen loses the author's content edits over a field that has no effect this save.
+    if (writesPublicRoute(selectedDoc, slug) && slugVerdict.status === "unavailable") {
       setSlugAlert(true);
       return false;
     }
@@ -476,7 +504,7 @@ export function ResearchPane({
         // /:id/publish re-points the route in place). Only for a paper that is already
         // public: publishing a draft stays the author's explicit act, on the publish card.
         let saved = updated;
-        if (saved.visibility === "public" && slug && slug !== saved.publicRoute) {
+        if (writesPublicRoute(saved, slug)) {
           saved = await markdownApi.publish(saved.id, slug, { workspace: workspaceSlug });
         }
         writeDoc(saved.id, saved);

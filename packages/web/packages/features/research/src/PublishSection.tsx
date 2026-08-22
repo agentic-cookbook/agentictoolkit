@@ -13,23 +13,26 @@ import { useClipboard } from "@agentic-toolkit/ui/hooks/useClipboard";
 import type { ResearchDocument } from "@agentic-toolkit/data/markdown";
 import { markdownApi } from "@agentic-toolkit/data/markdown";
 import type { SlugVerdict } from "@agentic-toolkit/ui/blocks/document-identity-field";
+import { toneTextClass } from "@agentic-toolkit/ui/lib/tone";
 import { PUBLIC_ROUTE_RE } from "./research-model";
 
 // Deliberately hard-coded, not per-environment, and not a defect: `features/research` is a
-// MECHANISM-tier package (see this repo's CLAUDE.md), and the per-environment origin that
-// would replace this literal — `adh-registry`'s `research` site entry, resolved through its
-// `siteUrl`/`localOrigin` seam — lives in `@agentic-toolkit/adh-registry`, a VOCABULARY-tier
-// package that encodes the whole 48-site registry. A MECHANISM package must not import a
-// VOCABULARY one (this file would otherwise be reaching past its own layer for one string),
-// and the host that COULD inject it — this feature's mount point — is `frontend/src/sites/
-// research/` in the adh superproject, outside this repo entirely: this package has no seam a
-// superproject site can push a resolved origin through (contrast `ProfilePanel.profileUrlFor`,
-// which exists for exactly that purpose and is the pattern a real fix here would need). So the
-// Preview link this constant backs ALWAYS points at production, even from `*.dev.local` or a
-// preview deployment — a locally-drafted, unpublished paper's Preview may 404 there. That is a
-// known, accepted limitation of previewing locally, not a bug in this component: fixing it
-// requires either a host-injected origin prop threaded in from the superproject site (a change
-// outside this repo) or importing `adh-registry` here (a layering violation this repo forbids).
+// MECHANISM-tier package (see `scripts/check_boundaries.py` at the submodule root, which both
+// defines and enforces the mechanism/vocabulary tier rule), and the per-environment origin
+// that would replace this literal — `adh-registry`'s `research` site entry, resolved through
+// its `siteUrl`/`localOrigin` seam — lives in `@agentic-toolkit/adh-registry`, a
+// VOCABULARY-tier package that encodes the whole site registry. A MECHANISM package must not
+// import a VOCABULARY one (this file would otherwise be reaching past its own layer for one
+// string), and the host that COULD inject it — this feature's mount point — is
+// `frontend/src/sites/research/` in the adh superproject, outside this repo entirely: this
+// package has no seam a superproject site can push a resolved origin through (contrast
+// `ProfilePanel.profileUrlFor`, which exists for exactly that purpose and is the pattern a
+// real fix here would need). So the Preview link this constant backs ALWAYS points at
+// production, even from `*.dev.local` or a preview deployment — a locally-drafted, unpublished
+// paper's Preview may 404 there. That is a known, accepted limitation of previewing locally,
+// not a bug in this component: fixing it requires either a host-injected origin prop threaded
+// in from the superproject site (a change outside this repo) or importing `adh-registry` here
+// (a layering violation this repo forbids).
 const RESEARCH_ORIGIN = "https://agenticdeveloperresearch.com";
 const SLUG_PLACEHOLDER = "your-slug";
 
@@ -178,7 +181,12 @@ export function PublishSection({
             "Give this paper a title or slug above to publish it."
           )}
         </p>
-        <div className="flex justify-end">
+        <div className="flex flex-col items-end gap-1">
+          {routeUnavailable && (
+            <p data-slot="publish-disabled-reason" className={`text-xs ${toneTextClass("error")}`}>
+              Can’t publish: {verdict?.reason ?? "this slug is unavailable."}
+            </p>
+          )}
           <Button
             type="button"
             size="sm"
