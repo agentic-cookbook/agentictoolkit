@@ -4,8 +4,9 @@
 // Hand-written on the backend (NOT generic CRUD): creating an org PROVISIONS
 // its ownership chain (namespace + admin team + default ecosystem) and mints
 // its reverse-domain rdid. Authz is split server-side: create is open to any
-// authenticated caller, name/description edits are org-team-admin, and slug
-// changes are site-admin; a 403 surfaces as an inline error.
+// authenticated caller in their PERSONAL workspace but needs admin of the org
+// when created from an org workspace, name/description edits are org-team-admin,
+// and slug changes are site-admin; a 403 surfaces as an inline error.
 //
 // `list` is WORKSPACE-SCOPED and takes the workspace slug. It replaced the older
 // arrangement, where a host wanting "the caller's organizations" read
@@ -72,8 +73,12 @@ export const organizationsApi = {
   },
 
   /**
-   * Create + provision an organization (any authenticated caller; the creator is seeded as the
-   * org's admin).
+   * Create + provision an organization; the creator is seeded as the new org's admin.
+   *
+   * Open to any authenticated caller in their own personal workspace. Creating from an ORG
+   * workspace is a governance act — the org that owns the workspace ends up owning the result —
+   * so the backend requires the caller to be an admin of that org (or of one above it) and
+   * answers 403 otherwise.
    *
    * `workspaceSlug` names the workspace the org is created FROM, and therefore the workspace that
    * will OWN it — creating from an org workspace makes that org the owner. It is required for the

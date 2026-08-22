@@ -19,17 +19,19 @@ export interface Organization {
 }
 
 /**
- * One row of the WORKSPACE-SCOPED list (`GET /organization/organizations?workspace=`). Carries the
- * owner pair the row itself now holds, so a surface can say WHY an org is in the list — owned by
- * this workspace, or merely belonged to — without a second lookup.
+ * One row of the WORKSPACE-SCOPED list (`GET /organization/organizations?workspace=`).
+ *
+ * No owner pair. The row's `(ownerKind, ownerId)` was on this type and on the wire, and nothing
+ * read it: the QUESTION it answered — why is this org in the list — is already answered by which
+ * workspace you asked, and the two ids it shipped (a customer id, or another org's id) are
+ * identifiers for principals the caller may not be able to see at all. A list row is a name to
+ * click; it does not need to carry the internals of the row's ownership to be one.
  */
 export interface OrganizationListRow {
   id: string;
   slug: string;
   name: string;
   description?: string | null;
-  ownerKind: "customer" | "organization";
-  ownerId: string;
 }
 
 /** POST body. Only slug + name: everything else about the org is provisioned server-side. */

@@ -15,6 +15,7 @@ import {
 } from "../api/archived-workspaces";
 import { WORKSPACES_QUERY_KEY } from "../api/workspaces";
 import { organizationsApi } from "../api/organizations";
+import { ORGANIZATIONS_QUERY_KEY } from "@agentic-toolkit/data/organizations";
 import { errMsg } from "@agentic-toolkit/data";
 
 /**
@@ -42,14 +43,22 @@ export function ArchivedPanel() {
       // Restore is keyed by id, which the list carries. There is deliberately no slug lookup
       // here: GET /organization/organizations/{key} cannot see an archived org.
       await organizationsApi.restore(row.id);
-      // Both invalidations together, not one awaited after the other: sequential, the second
-      // refetch only STARTS once the first has come back, so between the two the row is gone
+      // All three invalidations together, not awaited one after another: sequential, each
+      // refetch only STARTS once the previous has come back, so between them the row is gone
       // from Archived while the workspace picker still doesn't have it — and if the archived
-      // refetch rejects (it is the one whose list just shrank), the picker is never
+      // refetch rejects (it is the one whose list just shrank), the others are never
       // invalidated at all and the restored org stays missing until a reload.
+      //
+      // The third key is the orgs rail. Unlike the hub's create flow — a different Next app, a
+      // different QueryClient — this panel is mounted by the settings registry INSIDE every
+      // site, the orgs site included, so on that site the rail's `["organizations", <slug>]`
+      // entry is in this very cache and a restored org is a row that belongs back in it. The
+      // prefix invalidates every workspace's copy, which is right: the restored org may be
+      // owned by any of them. On the other sites there is no such entry and this costs nothing.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ARCHIVED_WORKSPACES_QUERY_KEY }),
         qc.invalidateQueries({ queryKey: WORKSPACES_QUERY_KEY }),
+        qc.invalidateQueries({ queryKey: ORGANIZATIONS_QUERY_KEY }),
       ]);
     } catch (e) {
       setError(errMsg(e, "Couldn't restore that organization."));

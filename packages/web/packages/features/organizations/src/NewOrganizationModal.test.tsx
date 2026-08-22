@@ -26,6 +26,11 @@ beforeEach(() => {
   create.mockResolvedValue({ organization: { slug: "acme" } });
 });
 
+// The workspace the dialog was opened FROM, and therefore the one that will own what it creates.
+// Required by the component for the same reason it is required by the API: an org created inside
+// an org workspace and posted without it silently becomes the creator's personal org.
+const OWNER = "owning-workspace";
+
 /** Reads the registry the way the exit gates do — from an event handler, not render. */
 function DirtyReadout() {
   const { isAnyDirty } = useSettingsDirty();
@@ -53,7 +58,12 @@ describe("NewOrganizationModal reports its half-entered org to the settings regi
       </SettingsDirtyProvider>
     );
     return render(
-      <NewOrganizationModal open={open} onClose={() => {}} onCreated={() => {}} />,
+      <NewOrganizationModal
+        open={open}
+        workspaceSlug={OWNER}
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
       { wrapper },
     );
   }
@@ -109,7 +119,14 @@ describe("NewOrganizationModal reports its half-entered org to the settings regi
 
     // Only the modal: RTL re-applies the `wrapper` itself, and passing the provider again here
     // would mount a SECOND readout beside the first.
-    rerender(<NewOrganizationModal open={false} onClose={() => {}} onCreated={() => {}} />);
+    rerender(
+      <NewOrganizationModal
+        open={false}
+        workspaceSlug={OWNER}
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
+    );
     readRegistry();
     expectRegistry("clean");
   });
@@ -123,7 +140,7 @@ describe("NewOrganizationModal reports its half-entered org to the settings regi
       </SettingsDirtyProvider>
     );
     const { rerender } = render(
-      <NewOrganizationModal open onClose={() => {}} onCreated={onCreated} />,
+      <NewOrganizationModal open workspaceSlug={OWNER} onClose={() => {}} onCreated={onCreated} />,
       { wrapper },
     );
 
@@ -134,7 +151,16 @@ describe("NewOrganizationModal reports its half-entered org to the settings regi
     // The caller closes the dialog off the back of onCreated — that hand-off is what ends the
     // draft, so assert it happened and then that the closed modal reports nothing.
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith("acme"));
-    rerender(<NewOrganizationModal open={false} onClose={() => {}} onCreated={onCreated} />);
+    // The owning workspace reaches the wire — the prop is not decoration.
+    expect(create).toHaveBeenCalledWith({ slug: "acme", name: "Acme Inc." }, OWNER);
+    rerender(
+      <NewOrganizationModal
+        open={false}
+        workspaceSlug={OWNER}
+        onClose={() => {}}
+        onCreated={onCreated}
+      />,
+    );
     readRegistry();
     expectRegistry("clean");
   });
