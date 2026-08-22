@@ -165,7 +165,7 @@ function NavLinkItem({ link }) {
 // src/header/NavigationPopover.tsx
 import { cn, noAutofillProps } from "@agentic-toolkit/ui";
 import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
-import { useShortcut } from "@agentic-toolkit/ui/hooks/useShortcut";
+import { useShortcut, chordFromEvent, sameChord } from "@agentic-toolkit/ui/hooks/useShortcut";
 import {
   DropdownMenu as DropdownMenu2,
   DropdownMenuTrigger as DropdownMenuTrigger2,
@@ -252,6 +252,17 @@ function NavigationPopover({
       enabled: Boolean(openShortcut?.keys)
     },
     () => setOpen((cur) => !cur)
+  );
+  const closeOnShortcut = useCallback(
+    (event) => {
+      const keys = openShortcut?.keys;
+      if (!keys) return;
+      const chord = chordFromEvent(event.nativeEvent);
+      if (chord === null || !sameChord(chord, keys)) return;
+      event.preventDefault();
+      setOpen(false);
+    },
+    [openShortcut?.keys]
   );
   const chooseItem = useCallback(
     (item) => {
@@ -498,6 +509,7 @@ function NavigationPopover({
         {
           align: "start",
           className: "adh-nav-popover__menu",
+          onKeyDownCapture: closeOnShortcut,
           onMouseLeave: (event) => {
             const to = event.relatedTarget;
             if (to instanceof Element && to.closest('[role="menu"]')) return;
