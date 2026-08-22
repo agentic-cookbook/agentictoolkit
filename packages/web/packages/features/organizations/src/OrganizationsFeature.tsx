@@ -5,13 +5,13 @@ import type { ReactElement } from "react";
 import { Building2, KeyRound, Server, Settings, UsersRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResourceExplorer, type ResourceTopic } from "@agentic-toolkit/resource";
+import { useResourceItemPrefetch } from "@agentic-toolkit/data";
 import {
-  useResourceItemPrefetch,
-  workspacesApi,
-  WORKSPACES_QUERY_KEY,
-  type Workspace,
-} from "@agentic-toolkit/data";
-import { organizationsApi, type Organization } from "@agentic-toolkit/data/organizations";
+  organizationsApi,
+  ORGANIZATIONS_QUERY_KEY,
+  type Organization,
+  type OrganizationListRow,
+} from "@agentic-toolkit/data/organizations";
 import {
   EcosystemConfigGate,
   ServerBagsPane,
@@ -31,6 +31,14 @@ import type { OrganizationsPathSelection } from "./parse-path";
 export interface OrganizationsFeatureProps extends OrganizationsPathSelection {
   /** The feature's URL base. The organizations site mounts it at the workspace root (""). */
   basePath: string;
+  /** The resolved workspace whose organizations this rail lists. The SLUG scopes the query; the
+   *  KIND decides what the list means, and therefore what the rail says it is showing. */
+  workspaceSlug: string;
+  workspaceKind: "individual" | "organization";
+  /** The workspace's display name — the rail names an ORG workspace in its own blurb, because
+   *  "the organizations owned by Agentic Developer Studio" is the sentence that stops a row from
+   *  looking like a self-reference. */
+  workspaceName: string;
   /**
    * The host's help-store lookup, keyed by ROUTE — the keys are spelled at the topic that reads
    * one. Threaded rather than imported because the sentences live in adh's vocabulary tier, which
@@ -43,10 +51,19 @@ export interface OrganizationsFeatureProps extends OrganizationsPathSelection {
  * The Organizations feature: the caller's organizations as the root list, and each org's
  * Server bags / Tokens / Teams / Settings beside it.
  *
- * The list comes from `workspacesApi.list()` filtered to organizations, not from an organizations
- * endpoint — there ISN'T one. `/organization/organizations` resolves an org by key and creates
- * them; "which orgs am I in" is a membership question, and `/workspaces` is where the backend
- * answers it. (See `@agentic-toolkit/data/organizations`.)
+ * The list is WORKSPACE-SCOPED: `organizationsApi.list(workspaceSlug)`, and what it returns
+ * depends on the workspace you are standing in —
+ *
+ *   - a PERSONAL workspace lists the orgs you OWN plus the orgs you BELONG TO;
+ *   - an ORG workspace lists the orgs THAT ORG owns.
+ *
+ * It did not always. The rail used to read `workspacesApi.list()` filtered to organizations,
+ * which asks a pure MEMBERSHIP question — the same answer under every workspace. So switching
+ * workspaces changed the chrome and nothing else, and the org you had just switched INTO sat in
+ * its own organizations list looking like it contained itself. The fix was not a filter: orgs had
+ * no owning workspace to filter BY. They carry one now (`owner_kind`/`owner_id`, the pair personas
+ * have always had), and this reads it. `workspacesApi.list()` is still exactly right for the
+ * workspace SWITCHER above, which really is asking "where can I go".
  *
  * The topics deliberately reuse the hub's own words rather than inventing a second vocabulary for
  * the same things — an org is one entity with one set of knobs, and a user who learns it in one
@@ -68,6 +85,9 @@ export interface OrganizationsFeatureProps extends OrganizationsPathSelection {
  */
 export function OrganizationsFeature({
   basePath,
+  workspaceSlug,
+  workspaceKind,
+  workspaceName,
   helpFor,
   all,
   activeOrgSlug,
@@ -75,17 +95,28 @@ export function OrganizationsFeature({
   topicPath,
 }: OrganizationsFeatureProps): ReactElement {
   const orgsQuery = useQuery({
-    // The SHARED key, not a private one: this is the same `GET /workspaces` the header's
-    // switcher reads, and a rename or a create in here has to make that copy stale too. Two keys
-    // over one endpoint would leave whichever host didn't do the save showing the old name.
-    queryKey: WORKSPACES_QUERY_KEY,
-    queryFn: () => workspacesApi.list(),
+    // Keyed BY WORKSPACE, because the answer differs per workspace — a single shared key would
+    // serve the previous workspace's rows for one frame after every switch, which is the same
+    // wrong-list-for-this-workspace bug in a shorter-lived form.
+    queryKey: [...ORGANIZATIONS_QUERY_KEY, workspaceSlug],
+    queryFn: () => organizationsApi.list(workspaceSlug),
   });
   // `null` (not `[]`) while loading: ResourceExplorer reads an empty array as a LOADED empty list
   // and falls back to the "All" landing, so a slug in the URL would look deleted for one frame.
-  const organizations: Workspace[] | null = orgsQuery.data
-    ? orgsQuery.data.filter((w) => w.kind === "organization")
-    : null;
+  const organizations: OrganizationListRow[] | null = orgsQuery.data ?? null;
+
+  // WHAT THE RAIL SAYS IT IS SHOWING. The list means two different things, so one sentence cannot
+  // describe both — and the wrong sentence is what made an org appearing under its own workspace
+  // read as a bug. Under an ORG the blurb NAMES the org, so "Agentic Developer Studio" in the row
+  // and "owned by Agentic Developer Studio" in the blurb are visibly a parent and a child, not a
+  // thing containing itself.
+  const isOrgWorkspace = workspaceKind === "organization";
+  const railHelp = isOrgWorkspace
+    ? `The organizations ${workspaceName} owns. Pick one to manage its config values, tokens, teams and record — or create another one under ${workspaceName}.`
+    : "The organizations you own or belong to. Pick one to manage its config values, tokens, teams and record — or create a new one.";
+  const railEmptyLabel = isOrgWorkspace
+    ? `${workspaceName} doesn't own any organizations yet.`
+    : "You aren't in any organizations yet.";
 
   // Warm the org's own RECORD as the pointer rests on its row, onto the entry Settings ▸ Profile
   // reads. The explorer already warms the ROUTE; the record is the other half of that click, and
@@ -185,7 +216,7 @@ export function OrganizationsFeature({
   ];
 
   return (
-    <ResourceExplorer<Workspace>
+    <ResourceExplorer<OrganizationListRow>
       basePath={basePath}
       all={all}
       activeId={activeOrgSlug}
@@ -208,8 +239,8 @@ export function OrganizationsFeature({
       topics={topics}
       rail={{
         title: "Organizations",
-        help: "The organizations you belong to. Pick one to manage its config values, tokens, teams and record — or create a new one.",
-        emptyLabel: "You aren't in any organizations yet.",
+        help: railHelp,
+        emptyLabel: railEmptyLabel,
         // The slug, not the display name, is the unique key — two orgs may share a name, and
         // the slug is what every URL, invite link and API path carries. Without it beside the
         // name the rail can show two rows a user cannot tell apart.
@@ -219,7 +250,16 @@ export function OrganizationsFeature({
       // `open` is a constant here because ResourceExplorer MOUNTS the dialog only while it is
       // open; the modal keeps the prop because the hub's workspace bar renders it persistently.
       renderDialog={(onClose, onCreated) => (
-        <NewOrganizationModal open onClose={onClose} onCreated={onCreated} />
+        <NewOrganizationModal
+          open
+          // The rail's own workspace: a "New Organization" started from an org workspace creates
+          // an org THAT ORG owns, which is what makes the new row appear in the very list the
+          // button sits on. Passing the wrong slug here would file the org somewhere the user
+          // cannot see it.
+          workspaceSlug={workspaceSlug}
+          onClose={onClose}
+          onCreated={onCreated}
+        />
       )}
       reload={reload}
     />

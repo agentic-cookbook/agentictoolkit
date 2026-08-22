@@ -19,7 +19,11 @@ import {
   useResourceItemWriter,
   WORKSPACES_QUERY_KEY,
 } from "@agentic-toolkit/data";
-import { organizationsApi, type Organization } from "@agentic-toolkit/data/organizations";
+import {
+  organizationsApi,
+  ORGANIZATIONS_QUERY_KEY,
+  type Organization,
+} from "@agentic-toolkit/data/organizations";
 import {
   StackGroupDetail,
   useReportSettingsDirty,
@@ -357,6 +361,10 @@ export function OrgSettingsForm({
       // WORKSPACES_QUERY_KEY, which this save has just made stale. Without this the rename
       // is visible only in the form the user typed it into.
       void qc.invalidateQueries({ queryKey: WORKSPACES_QUERY_KEY });
+      // BOTH lists, because they are two caches over two endpoints since organizations grew an
+      // owning workspace: the switcher's membership list above, and the orgs rail's
+      // owner-scoped list here. The rail is where a renamed org is most visibly the same row.
+      void qc.invalidateQueries({ queryKey: ORGANIZATIONS_QUERY_KEY });
       // A slug change moves the whole workspace URL space; land on the renamed
       // organization's settings rather than a dead slug.
       if (renamed.slug !== org.slug) {
