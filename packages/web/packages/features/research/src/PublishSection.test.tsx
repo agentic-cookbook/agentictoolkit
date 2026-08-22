@@ -122,11 +122,13 @@ describe("PublishSection — draft", () => {
     );
     const publishButton = screen.getByRole("button", { name: /^publish$/i });
     expect(publishButton).toBeDisabled();
-    // The FULL rendered copy (FIX E2) — not just a substring match against the verdict's own
-    // reason text, which would stay green even if the "Can't publish: " prefix were mangled or
-    // deleted.
+    // The FULL rendered copy (FIX E2) — exact, not `toHaveTextContent`'s substring match (jest-dom
+    // 6.9.1's `toHaveTextContent`, verified by running it: appending "EXTRA JUNK COPY" to the
+    // rendered text left this exact assertion, when it used `toHaveTextContent`, green). `.textContent`
+    // equality is exact, so a mangled or truncated "Can't publish: " prefix — or trailing junk —
+    // fails it.
     const reason = document.querySelector('[data-slot="publish-disabled-reason"]');
-    expect(reason).toHaveTextContent("Can’t publish: That route is taken.");
+    expect(reason?.textContent).toBe("Can’t publish: That route is taken.");
     // FIX E5: the reason is linked to the button via aria-describedby, the same pattern the
     // identity field already uses for its own verdict — a screen-reader user landing on a
     // disabled Publish button must hear WHY, not just that it's disabled.
@@ -167,8 +169,12 @@ describe("PublishSection — draft", () => {
     const publishButton = screen.getByRole("button", { name: /^publish$/i });
     expect(publishButton).toBeEnabled();
     expect(screen.queryByText(/that route is taken/i)).toBeNull();
-    expect(document.querySelector('[data-slot="publish-disabled-reason"]')).toBeNull();
-    // No reason paragraph exists, so nothing to point at (FIX E5).
+    // The reason paragraph is now mounted UNCONDITIONALLY (FIX F3) — it is the `aria-live`
+    // region a screen reader watches, and a region that only exists once there is something to
+    // announce is a region assistive tech never started observing. Only its TEXT is
+    // conditional, so it renders empty here rather than absent.
+    expect(document.querySelector('[data-slot="publish-disabled-reason"]')).toHaveTextContent("");
+    // aria-describedby still points nowhere meaningful — nothing to announce (FIX E5).
     expect(publishButton).not.toHaveAttribute("aria-describedby");
   });
 

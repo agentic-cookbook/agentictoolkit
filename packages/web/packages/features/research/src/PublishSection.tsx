@@ -88,11 +88,16 @@ export function PublishSection({
 }) {
   const { busy, error, run } = useAction();
   const { copied, copy } = useClipboard();
-  // Same pattern as `document-identity-field.tsx`'s `slugStatusId`: an id the reason paragraph
-  // carries always, and the button points at only while the paragraph is actually rendered —
-  // an `aria-describedby` pointing at an absent id is as good as none, and a screen-reader user
-  // landing on a disabled Publish button with no announced cause is exactly the defect the C8
-  // reason paragraph existed to fix, just for users who can't see the paragraph appear.
+  // The Publish button below uses the native `disabled` attribute (via `Button` →
+  // `PressableButton` → base-ui's `Button.Props`, no `focusableWhenDisabled` exists anywhere
+  // in `ui/src` — grepped) — a natively disabled element is removed from the tab order, so it
+  // is never focused and its `aria-describedby` is never read. That means the reason text
+  // below must be announced some other way: an `aria-live` region, following the exact
+  // arrangement `document-identity-field.tsx`'s `slugStatusId`/`slug-status` span uses —
+  // unconditionally mounted, with only its TEXT conditional, so the region already exists in
+  // the DOM before the first verdict lands and that first change is observed. The
+  // `aria-describedby` link is kept anyway: it costs nothing and is correct markup for any
+  // future host that renders Publish as a focusable (e.g. `aria-disabled`) control instead.
   const publishDisabledReasonId = useId();
 
   const trimmed = route.trim().toLowerCase();
@@ -189,15 +194,21 @@ export function PublishSection({
           )}
         </p>
         <div className="flex flex-col items-end gap-1">
-          {routeUnavailable && (
-            <p
-              data-slot="publish-disabled-reason"
-              id={publishDisabledReasonId}
-              className={`text-xs ${toneTextClass("error")}`}
-            >
-              Can’t publish: {verdict?.reason ?? "this slug is unavailable."}
-            </p>
-          )}
+          {/* Unconditionally mounted (only its TEXT is conditional) — same reason as
+              `document-identity-field.tsx`'s `slug-status` span: an `aria-live` region has to
+              already exist in the DOM before its content changes for assistive tech to have
+              anything to have observed the mutation on. This is also the ONLY thing that
+              announces the reason at all, since the Publish button below is natively disabled
+              (see the comment on `publishDisabledReasonId` above) and so never receives the
+              focus that would let its `aria-describedby` be read. */}
+          <p
+            data-slot="publish-disabled-reason"
+            id={publishDisabledReasonId}
+            aria-live="polite"
+            className={`text-xs ${toneTextClass("error")}`}
+          >
+            {routeUnavailable ? `Can’t publish: ${verdict?.reason ?? "this slug is unavailable."}` : null}
+          </p>
           <Button
             type="button"
             size="sm"

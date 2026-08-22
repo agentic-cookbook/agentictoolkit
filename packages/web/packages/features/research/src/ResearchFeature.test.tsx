@@ -92,26 +92,25 @@ const DOCUMENT: ResearchDocument = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  // `update` and `publish` are the two mocks individual tests queue a ONE-SHOT response onto
-  // via `mockResolvedValueOnce`/`mockRejectedValueOnce`, to script exactly one call's result.
-  // `vi.clearAllMocks()` above only calls `.mockClear()` on every mock, which drops call
-  // history but NOT a still-queued once-implementation — so a test that throws (or otherwise
-  // returns) before reaching the call meant to consume its queued value leaves that value
-  // sitting in the queue, where it leaks forward and gets wrongly consumed by a LATER test's
-  // call to the same mock, producing a spurious failure with no connection to what that later
-  // test actually does. `.mockReset()` additionally drops the queue, so call it explicitly on
-  // these two. Not `vi.resetAllMocks()` for every mock: `routeAvailable`'s default resolved
-  // value is set once, in the `vi.mock` factory above, and is never re-established here — a
-  // global reset would wipe it for every test that relies on that default without setting its
-  // own, which is most of them.
-  update.mockReset();
-  publish.mockReset();
+  // `vi.clearAllMocks()` (`.mockClear()` on every mock) drops call history but NOT a
+  // still-queued `mockResolvedValueOnce`/`mockRejectedValueOnce` implementation — verified by
+  // running it: a value queued by a test that throws (or otherwise returns) before consuming
+  // it stays queued and leaks into the NEXT test's call to the same mock. `vi.resetAllMocks()`
+  // (`.mockReset()` on every mock) additionally drops that queue AND any base implementation
+  // set via `mockResolvedValue`/`mockImplementation` — including `routeAvailable`'s default
+  // from the `vi.mock` factory above, which a reset wipes just as it wipes anything set in a
+  // previous test. That is why every default the suite relies on is re-established below,
+  // explicitly, in this same `beforeEach`: it is the only way to reset the *Once queue for
+  // every mock (closing the leak class for all of them, not just the two — `update` and
+  // `publish` — that a prior version of this comment singled out) while still giving each test
+  // the same starting state.
+  vi.resetAllMocks();
   list.mockResolvedValue([structuredClone(SUMMARY)]);
   get.mockResolvedValue(structuredClone(DOCUMENT));
   create.mockResolvedValue(structuredClone(DOCUMENT));
   categories.mockResolvedValue([]);
   tags.mockResolvedValue([]);
+  routeAvailable.mockResolvedValue({ available: true, reason: "ok" });
 });
 
 // Explicit and redundant, deliberately: this package's vitest runs with `globals: true`
@@ -891,7 +890,6 @@ describe("ResearchFeature — title and slug", () => {
   });
 
   it("shows ONE slug input — the publish card no longer carries its own", async () => {
-    routeAvailable.mockResolvedValue({ available: true, reason: "ok" });
     await openFirstDocument();
     expect(screen.getAllByLabelText(/slug|public route/i)).toHaveLength(1);
   });
