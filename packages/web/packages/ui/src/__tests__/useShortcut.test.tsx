@@ -13,6 +13,8 @@ import {
   useRegisteredShortcuts,
   registerShortcut,
   parseChord,
+  chordFromEvent,
+  sameChord,
   formatChord,
   isApplePlatform,
   type ShortcutSpec,
@@ -328,5 +330,106 @@ describe("formatChord", () => {
       expect(formatChord("mod+shift+enter")).toBe("Ctrl+Shift+Enter");
       expect(formatChord("escape")).toBe("Esc");
     });
+  });
+});
+
+describe("chordFromEvent", () => {
+  /** A keydown as the recorder sees it — handed straight to chordFromEvent, never dispatched. */
+  function press(init: KeyboardEventInit): KeyboardEvent {
+    return new KeyboardEvent("keydown", init);
+  }
+
+  it("returns null for a bare modifier — the user is mid-chord, not done", () => {
+    for (const key of ["Meta", "Control", "Shift", "Alt", "AltGraph", "CapsLock"]) {
+      expect(chordFromEvent(press({ key }))).toBeNull();
+    }
+  });
+
+  it("refuses Escape and Tab, whatever is held — they are how you leave the recorder", () => {
+    withPlatform("MacIntel", () => {
+      expect(chordFromEvent(press({ key: "Escape" }))).toBeNull();
+      expect(chordFromEvent(press({ key: "Tab" }))).toBeNull();
+      expect(chordFromEvent(press({ key: "Escape", metaKey: true, shiftKey: true }))).toBeNull();
+      expect(chordFromEvent(press({ key: "Tab", metaKey: true, altKey: true }))).toBeNull();
+    });
+  });
+
+  it("spells the command modifier as `mod`, per platform", () => {
+    withPlatform("MacIntel", () => {
+      expect(chordFromEvent(press({ key: "k", metaKey: true }))).toBe("mod+k");
+    });
+    withPlatform("Win32", () => {
+      expect(chordFromEvent(press({ key: "k", ctrlKey: true }))).toBe("mod+k");
+    });
+  });
+
+  it("returns null for the NON-command modifier, which matchesEvent would refuse anyway", () => {
+    withPlatform("MacIntel", () => {
+      expect(chordFromEvent(press({ key: "k", ctrlKey: true }))).toBeNull();
+    });
+    withPlatform("Win32", () => {
+      expect(chordFromEvent(press({ key: "k", metaKey: true }))).toBeNull();
+    });
+  });
+
+  it("lowercases the key and orders the modifiers mod, alt, shift", () => {
+    withPlatform("MacIntel", () => {
+      expect(chordFromEvent(press({ key: "K", metaKey: true, altKey: true, shiftKey: true }))).toBe(
+        "mod+alt+shift+k",
+      );
+    });
+  });
+
+  it("emits shift only where matchesEvent reads it", () => {
+    withPlatform("MacIntel", () => {
+      // A bare character already records that shift was held — "?", never "shift+/".
+      expect(chordFromEvent(press({ key: "?", shiftKey: true }))).toBe("?");
+      // A NAMED key does not, so shift has to be spelled out.
+      expect(chordFromEvent(press({ key: "Enter", shiftKey: true }))).toBe("shift+enter");
+      // Alongside a modifier it is meaningful even for a character.
+      expect(chordFromEvent(press({ key: "K", metaKey: true, shiftKey: true }))).toBe("mod+shift+k");
+    });
+  });
+
+  it("spells the space key, which the `+` split cannot carry", () => {
+    withPlatform("MacIntel", () => {
+      expect(chordFromEvent(press({ key: " ", metaKey: true }))).toBe("mod+space");
+    });
+  });
+
+  it("is the inverse of parseChord: the recorded chord fires on the event it came from", () => {
+    withPlatform("MacIntel", () => {
+      for (const init of [
+        { key: "K", metaKey: true, shiftKey: true },
+        { key: "Enter", shiftKey: true },
+        { key: " ", metaKey: true },
+        { key: "?", shiftKey: true },
+        { key: "j", metaKey: true, altKey: true },
+      ] satisfies KeyboardEventInit[]) {
+        const keys = chordFromEvent(press(init));
+        expect(keys).not.toBeNull();
+        const run = vi.fn();
+        const off = registerShortcut({ keys: keys!, label: "Recorded" }, run);
+        fireEvent.keyDown(document.body, init);
+        off();
+        expect(run, `${keys} should fire on the event it was recorded from`).toHaveBeenCalledTimes(
+          1,
+        );
+      }
+    });
+  });
+});
+
+describe("sameChord", () => {
+  it("compares the parsed chords, so neither spelling has to be canonical", () => {
+    expect(sameChord("mod+shift+k", "shift+mod+K")).toBe(true);
+    expect(sameChord("option+up", "alt+arrowup")).toBe(true);
+    expect(sameChord("esc", "escape")).toBe(true);
+  });
+
+  it("separates chords that differ by a modifier or a key", () => {
+    expect(sameChord("mod+k", "mod+shift+k")).toBe(false);
+    expect(sameChord("mod+k", "alt+k")).toBe(false);
+    expect(sameChord("mod+k", "mod+j")).toBe(false);
   });
 });

@@ -17,7 +17,7 @@ import { ChevronDown } from 'lucide-react'
 import { type NavLinkIcon } from './NavLink'
 import { cn, noAutofillProps } from '@agentic-toolkit/ui'
 import { confirmNavigation, GUARDED_NAV_ATTR } from '@agentic-toolkit/ui/lib/navigation-guard'
-import { useShortcut } from '@agentic-toolkit/ui/hooks/useShortcut'
+import { useShortcut, chordFromEvent, sameChord } from '@agentic-toolkit/ui/hooks/useShortcut'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -307,6 +307,25 @@ export function NavigationPopover({
       enabled: Boolean(openShortcut?.keys),
     },
     () => setOpen((cur) => !cur),
+  )
+
+  // ...and the same chord again, from INSIDE the open menu. The popup stops keydown
+  // from propagating past its own portal container, so the document-level registration
+  // above never sees a press made while focus is in the menu — which, since the menu
+  // takes focus when it opens, is every press meant to close it again. `allowInInput`
+  // does not help: the event does not reach the registry at all. Capture phase, so a
+  // chord built on a key the command field handles (Enter, an arrow) still gets here
+  // before `handleInputKeyDown` stops it.
+  const closeOnShortcut = useCallback(
+    (event: KeyboardEvent<HTMLDivElement>): void => {
+      const keys = openShortcut?.keys
+      if (!keys) return
+      const chord = chordFromEvent(event.nativeEvent)
+      if (chord === null || !sameChord(chord, keys)) return
+      event.preventDefault()
+      setOpen(false)
+    },
+    [openShortcut?.keys],
   )
 
   // Navigate to a chosen item, then close. Default is a full-page assign (matches
@@ -671,6 +690,7 @@ export function NavigationPopover({
       <DropdownMenuContent
         align="start"
         className="adh-nav-popover__menu"
+        onKeyDownCapture={closeOnShortcut}
         // Close a hover-opened topic flyout when the pointer genuinely leaves the
         // menu (not when it crosses into the portaled flyout — relatedTarget is
         // then still inside a [role="menu"]). Keyboard-driven 'sub' state is left
