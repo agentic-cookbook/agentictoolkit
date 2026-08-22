@@ -3,8 +3,10 @@ import { gameBlank, gameToInput, gameValidate, gameDiffers, gameNormalize } from
 import { wholeNumberProblem } from "../fields";
 import type { Game } from "@agentic-toolkit/data/games";
 
+// A plain, opaque uuid — not an rdid — matching the post-§1 contract: a game has no
+// address of its own any more, it is reached through its product's ecosystem id.
 const row: Game = {
-  id: "game.acme.cavern",
+  id: "3f6bb2b0-9e56-4d1e-8c9f-2a144b6c1cd0",
   name: "Cavern",
   slug: "cavern",
   description: "A dark place.",
@@ -40,8 +42,9 @@ describe("the game draft helpers", () => {
     });
   });
 
-  // Both panes edit the SAME row, so toInput must carry the WHOLE input — an Engine save
-  // that dropped `name` would blank it.
+  // Engine and Settings edit the SAME row, so toInput must carry the WHOLE input — an
+  // Engine save that dropped `name` would blank it, even though nothing in this package
+  // edits `name` any more.
   it("carries every editable field out of a row, not just one pane's half", () => {
     expect(gameToInput(row)).toEqual({
       slug: "cavern",
@@ -66,47 +69,26 @@ describe("the game draft helpers", () => {
     expect(gameNormalize(gameToInput(row))).toEqual(gameToInput(row));
   });
 
-  it("requires a name and a slug", () => {
-    expect(gameValidate({ ...gameToInput(row), name: "  " }, [])).toBe("Name is required.");
-    expect(gameValidate({ ...gameToInput(row), slug: "" }, [])).toBe("Slug is required.");
-  });
-
-  it("rejects a slug that is not one lowercase rdid segment", () => {
-    expect(gameValidate({ ...gameToInput(row), slug: "Cavern_1" }, [])).toBe(
-      "Lowercase letters, digits, and interior hyphens only (no underscores).",
-    );
-  });
-
-  it("rejects the two reserved URL segments as slugs", () => {
-    expect(gameValidate({ ...gameToInput(row), slug: "new" }, [])).toBe(
-      '"new" is reserved — pick another slug.',
-    );
-    expect(gameValidate({ ...gameToInput(row), slug: "all" }, [])).toBe(
-      '"all" is reserved — pick another slug.',
-    );
-  });
-
-  it("rejects a slug already taken", () => {
-    expect(gameValidate(gameToInput(row), ["cavern"])).toBe('Slug "cavern" is already in use.');
-  });
-
+  // No slug/name checks any more: §1 dropped the game's own rdid grammar (name/slug/
+  // description are the PRODUCT's fields now), so `gameValidate` only has the operational
+  // half left to check — engine config JSON and the retention window.
   it("rejects engine config that is not JSON", () => {
-    expect(gameValidate({ ...gameToInput(row), engineConfig: "{" }, [])).toBe(
+    expect(gameValidate({ ...gameToInput(row), engineConfig: "{" })).toBe(
       "Engine config must be valid JSON.",
     );
   });
 
   it("accepts empty engine config", () => {
-    expect(gameValidate({ ...gameToInput(row), engineConfig: "   " }, [])).toBeNull();
+    expect(gameValidate({ ...gameToInput(row), engineConfig: "   " })).toBeNull();
   });
 
   // `IntegerInput` hands unfinished or out-of-range text over as NaN rather than inventing
   // a number, so validation is where that stops being savable.
   it("rejects a retention window that is not a storable whole number", () => {
-    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: NaN }, [])).toBe(
+    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: NaN })).toBe(
       wholeNumberProblem("Event retention"),
     );
-    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: 1.5 }, [])).toBe(
+    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: 1.5 })).toBe(
       wholeNumberProblem("Event retention"),
     );
   });
@@ -116,14 +98,14 @@ describe("the game draft helpers", () => {
   // it does not make the column accept the value.
   it("rejects a retention window below one day, on either log mode", () => {
     const atLeastOne = "Event retention must be at least one day.";
-    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: 0 }, [])).toBe(atLeastOne);
-    expect(
-      gameValidate({ ...gameToInput(row), eventLog: "debug", eventRetentionDays: -1 }, []),
-    ).toBe(atLeastOne);
+    expect(gameValidate({ ...gameToInput(row), eventRetentionDays: 0 })).toBe(atLeastOne);
+    expect(gameValidate({ ...gameToInput(row), eventLog: "debug", eventRetentionDays: -1 })).toBe(
+      atLeastOne,
+    );
   });
 
   it("accepts a valid draft", () => {
-    expect(gameValidate(gameToInput(row), [])).toBeNull();
+    expect(gameValidate(gameToInput(row))).toBeNull();
   });
 
   it("sees a difference in any field", () => {

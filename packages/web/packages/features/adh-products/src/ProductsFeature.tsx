@@ -10,7 +10,7 @@ import {
   FolderKanban,
   Flag,
   Server,
-  Trophy,
+  Gamepad2,
   HardDrive,
   Plug,
   MessageCircle,
@@ -40,11 +40,11 @@ import {
   SigninAppsPane,
   StorageTokensPanel,
 } from "@agentic-toolkit/ecosystem-config";
-import { GamificationPane } from "@agentic-toolkit/gamification";
 import { AccessPane } from "@agentic-toolkit/authentication";
 import { SubjectProjectPane } from "@agentic-toolkit/projects";
 import { helpFor } from "@agentic-toolkit/adh/help/store";
 import { PRODUCT_TOPICS } from "./topics";
+import { GamingGroup } from "./GamingGroup";
 
 // The PRODUCTS feature — @agentic-toolkit/ecosystems's EcosystemsFeature presented as Products
 // (each product IS an ecosystem). This file is the composition: it builds the feature's injected
@@ -80,7 +80,7 @@ const ICONS: Record<string, ReactNode> = {
   // Users + Requests / Pending users / Invites); a people icon matches the label.
   invitations: <UsersRound size={16} aria-hidden />,
   "signin-apps": <LogIn size={16} aria-hidden />,
-  gamification: <Trophy size={16} aria-hidden />,
+  gaming: <Gamepad2 size={16} aria-hidden />,
   auth: <KeyRound size={16} aria-hidden />,
   "feature-flags": <Flag size={16} aria-hidden />,
   "server-bags": <Server size={16} aria-hidden />,
@@ -236,14 +236,18 @@ export function productTopicPaneRenderer({
             leaf={ctx.leaf}
           />
         );
-      case "gamification":
-        // Single-record config pane (no inner deep-link): the product's gamification realm —
-        // enable/disable, skin, and per-surface toggles over its members.
+      case "gaming":
+        // A host-owned GROUP, not a single-record pane (design doc §4.2): the member list
+        // depends on the realm's mode, which is data GamingGroup reads itself — the toolkit's
+        // own GROUP_IDS/groupMembers stay static and untouched. `helpFor` itself (not a resolved
+        // string) is passed through because the group builds several members' worth of help
+        // text, where every other case here only ever resolves one.
         return (
-          <GamificationPane
+          <GamingGroup
             ecosystemId={ctx.ecosystemId}
-            title={ctx.title}
-            help={helpFor("ecosystems/gamification")}
+            leaf={ctx.leaf}
+            subLeafFor={ctx.subLeafFor}
+            helpFor={helpFor}
           />
         );
       // The three group-member panes (Storage ▸ Buckets / Access, Users ▸ Users). The

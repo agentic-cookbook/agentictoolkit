@@ -1,0 +1,261 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
+
+import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
+import { isForbidden, useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
+import { gamesApi, type Game, type GameInput } from "@agentic-toolkit/data/games";
+import { gamificationApi, type GamingMode, type RealmConfig } from "@agentic-toolkit/data/gamification";
+import { EditActionBar, SettingsDirtyProvider, useReportSettingsDirty } from "@agentic-toolkit/resource";
+import { Label } from "@agentic-toolkit/ui/components/label";
+import { Switch } from "@agentic-toolkit/ui/components/switch";
+import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import {
+  GAME_FOR_ECOSYSTEM_CACHE_KEY,
+  REALM_CONFIG_CACHE_KEY,
+  loadGameRow,
+  loadRealmConfig,
+} from "./useGameForEcosystem";
+import { GameOperationalFields, gameDiffers, gameNormalize, gameToInput, gameValidate } from "./GameDetail";
+
+/**
+ * Replaces GameOverviewPane. Two resources, one save bar: the realm's `mode` (whether this
+ * product's game is on) and the game row's own operational fields (status, character
+ * names, event log, retention). Name/slug/description are GONE from here — they are the
+ * PRODUCT's fields now, edited under the product's own Ecosystem Settings (§1, §5.3 of the
+ * product-gaming-modes design) — so a save from this pane still submits the game's WHOLE
+ * `GameInput` (via `gameToInput`/`gameNormalize`/`gameDiffers`, unchanged from Engine's),
+ * it just never lets the operational fields' `onChange` touch the identity ones.
+ *
+ * Modeled on `RealmSettingsPane` (manual draft/dirty/save/cancel over `EditActionBar`, NOT
+ * `useMasterDetailForm` — that hook is for one list-shaped resource, and this pane composes
+ * two: `RealmConfig` and `Game`) rather than on `RecordSettingsPane`. It reads BOTH the raw
+ * game row and the realm config directly — not through the mode-gated `useGameForEcosystem`
+ * — because this is the one pane that must show an existing game's fields even when the
+ * mode is (or is being switched) away from `'game'`, and must show the Enable Gaming switch
+ * in every mode, since flipping it on is how a product gets a game in the first place.
+ */
+
+interface Draft {
+  mode: GamingMode;
+  /** null only when no `game.games` row has ever been minted for this product — the
+   *  operational fields render only once this is non-null (see the file doc: the mint
+   *  happens server-side on save, so switching Enable Gaming on does not itself reveal
+   *  fields there is nothing yet to show). */
+  game: GameInput | null;
+}
+
+function toDraft(config: RealmConfig, gameRow: Game | null): Draft {
+  return { mode: config.mode, game: gameRow ? gameToInput(gameRow) : null };
+}
+
+export function GameSettingsPane({
+  ecosystemId,
+  help,
+}: {
+  ecosystemId?: string;
+  /** Unused: the breadcrumb names the pane (kept for the ScopedPane prop shape, matching
+   *  `RealmSettingsPane`'s `title`). */
+  title?: ReactNode;
+  help?: ReactNode;
+}) {
+  const { item: config, error: configError } = useResourceItemQuery<RealmConfig>(
+    REALM_CONFIG_CACHE_KEY,
+    ecosystemId ?? null,
+    loadRealmConfig,
+    { reportErrors: false },
+  );
+  const {
+    item: gameRow,
+    isSettled: gameSettled,
+    error: gameError,
+  } = useResourceItemQuery<Game | null>(GAME_FOR_ECOSYSTEM_CACHE_KEY, ecosystemId ?? null, loadGameRow, {
+    reportErrors: false,
+  });
+  const writeConfig = useResourceItemWriter<RealmConfig>(REALM_CONFIG_CACHE_KEY);
+  const writeGame = useResourceItemWriter<Game | null>(GAME_FOR_ECOSYSTEM_CACHE_KEY);
+
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [savedNote, setSavedNote] = useState<string | null>(null);
+
+  // `ready` gates baseline construction on BOTH reads landing, not just the config: a save
+  // fired before the game-row read settles could not tell "no game yet" from "still loading",
+  // and would risk treating an existing row as absent.
+  const ready = config != null && gameSettled;
+  const baseline = useMemo(() => (ready ? toDraft(config!, gameRow ?? null) : null), [ready, config, gameRow]);
+  const dirty = useMemo(
+    () => !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline),
+    [draft, baseline],
+  );
+
+  // Same non-clobbering reseed as RealmSettingsPane: a background revalidation must never
+  // overwrite an edit in progress.
+  const dirtyRef = useRef(dirty);
+  dirtyRef.current = dirty;
+  useEffect(() => {
+    if (baseline) setDraft((prev) => (prev && dirtyRef.current ? prev : baseline));
+  }, [baseline]);
+
+  const gameValidationError = draft?.game ? gameValidate(draft.game) : null;
+  const canSave = dirty && !gameValidationError;
+
+  useReportSettingsDirty("games-settings", dirty);
+
+  const patchMode = useCallback((mode: GamingMode) => {
+    setSavedNote(null);
+    setDraft((prev) => (prev ? { ...prev, mode } : prev));
+  }, []);
+
+  const patchGame = useCallback((next: GameInput) => {
+    setSavedNote(null);
+    setDraft((prev) => (prev ? { ...prev, game: next } : prev));
+  }, []);
+
+  const save = useCallback(async () => {
+    if (!ecosystemId || !draft || !baseline || !canSave) return;
+    setSaving(true);
+    setSaveError(null);
+    setSavedNote(null);
+
+    const modeChanged = draft.mode !== baseline.mode;
+    const gameFieldsChanged = !!baseline.game && !!draft.game && gameDiffers(draft.game, baseline.game);
+
+    try {
+      let nextConfig = config!;
+      let nextGameRow = gameRow ?? null;
+      let replayedNote: string | null = null;
+
+      if (modeChanged) {
+        const res = await gamificationApi.updateRealmConfig(ecosystemId, { mode: draft.mode });
+        writeConfig(ecosystemId, res.config);
+        nextConfig = res.config;
+        replayedNote = res.replayed
+          ? `Backfilled ${res.replayed.subjects} members, ${res.replayed.badges} badges.`
+          : null;
+        // Flipping mode may mint (or leave alone) the game row server-side. Re-fetch it
+        // directly — `reload()` returns no data — and push the answer into the SAME cache
+        // key every other pane on this rail reads, so Engine/Content/Connections/Effects
+        // reflect the flip without a navigation.
+        nextGameRow = await loadGameRow(ecosystemId);
+        writeGame(ecosystemId, nextGameRow);
+      }
+
+      // The WHOLE GameInput goes over the wire, not just the operational fields: a partial
+      // body would let this save blank out the engine/name/slug/description columns Engine
+      // (and, at mint, the product) own. `draft.game` already carries those unchanged,
+      // since `GameOperationalFields`' onChange never touches them.
+      if (gameFieldsChanged && nextGameRow && draft.game) {
+        const normalized = gameNormalize(draft.game);
+        const updated = await gamesApi.update(nextGameRow.id, normalized);
+        writeGame(ecosystemId, updated);
+        nextGameRow = updated;
+      }
+
+      setDraft(toDraft(nextConfig, nextGameRow));
+      setSavedNote(replayedNote ?? "Saved.");
+    } catch (err) {
+      if (!isForbidden(err)) {
+        reportUnexpectedAuthError(err, { feature: "games-settings", step: "save" });
+      }
+      setSaveError(
+        isForbidden(err)
+          ? "You don't have access to change this product's gaming settings."
+          : err instanceof Error
+            ? err.message
+            : "Failed to save gaming settings.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }, [ecosystemId, draft, baseline, canSave, config, gameRow, writeConfig, writeGame]);
+
+  const cancel = useCallback(() => {
+    if (baseline) setDraft(baseline);
+    setSaveError(null);
+    setSavedNote(null);
+  }, [baseline]);
+
+  const loadError = configError ?? gameError;
+
+  return (
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <EditActionBar
+        dirty={dirty}
+        canSave={canSave}
+        saving={saving}
+        onCancel={cancel}
+        onSave={save}
+        status={
+          saveError ? (
+            <span className="text-apt-red">{saveError}</span>
+          ) : savedNote && !dirty ? (
+            <span className="text-apt-text-muted">{savedNote}</span>
+          ) : null
+        }
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+        <div className="max-w-3xl space-y-7">
+          {help && <p className="text-sm text-apt-text-muted">{help}</p>}
+          <ErrorText error={loadError} />
+          {!draft && !loadError && <p className="text-sm text-apt-text-muted">Loading…</p>}
+
+          {draft && (
+            <>
+              {/* Enable Gaming — the ONE writer of mode 'game'. Renders in every mode (unlike
+                  every other pane on this rail, which is gated behind it): this switch is how
+                  a product ENTERS game mode, so it cannot itself be hidden by that gate. */}
+              <div className="flex items-start justify-between gap-6">
+                <div className="min-w-0">
+                  <Label htmlFor="games-enabled" className="text-sm font-medium text-apt-text">
+                    Enable Gaming
+                  </Label>
+                  <p className="mt-0.5 text-xs text-apt-text-muted">
+                    Turning this on mints this product&rsquo;s game and its realm, and backfills
+                    existing members. Turning it off keeps the game&rsquo;s configuration —
+                    nothing is deleted, and turning it back on resumes the same game.
+                  </p>
+                </div>
+                <Switch
+                  id="games-enabled"
+                  checked={draft.mode === "game"}
+                  onCheckedChange={(on) => patchMode(on ? "game" : "none")}
+                />
+              </div>
+
+              <div className="border-t border-apt-border pt-6">
+                {draft.game ? (
+                  <GameOperationalFields
+                    draft={draft.game}
+                    onChange={patchGame}
+                    error={gameValidationError}
+                  />
+                ) : (
+                  <p className="text-sm text-apt-text-muted">
+                    This product has no game yet — turn on Enable Gaming and save to mint one.
+                    Its status, character names, event log and retention will appear here once it
+                    exists.
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The Settings TOPIC: the switch plus the game's operational fields, in its own guard
+ *  registry — same reasoning as `GamificationSettingsTopicPane` (the provider has to sit
+ *  INSIDE the rail host so `useRailExitGuard` finds it; nested inside a host that already
+ *  has one it safely defers). */
+export function GameSettingsTopicPane(props: { ecosystemId?: string; help?: ReactNode }) {
+  return (
+    <SettingsDirtyProvider>
+      <GameSettingsPane {...props} />
+    </SettingsDirtyProvider>
+  );
+}

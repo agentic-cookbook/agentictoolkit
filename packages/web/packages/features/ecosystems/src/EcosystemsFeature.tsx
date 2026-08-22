@@ -67,6 +67,15 @@ export interface RenderTopicPaneCtx {
   ecosystemId?: string;
   title?: ReactNode;
   leaf?: TopicLeaf;
+  /** Cedes the NEXT url segment to a group member, for a host that renders its OWN
+   *  `StackGroupDetail` rather than using this package's `GROUP_IDS` (products' Gaming group
+   *  does — its member list depends on the product's gaming mode, which is data, and
+   *  `groupMembers` below is static).
+   *
+   *  Without this a host group could publish members but never deep-link INTO one, because
+   *  `subLeafFor` reached only the in-package groups — the host got `leaf` and stopped there.
+   *  That asymmetry had no reason behind it; a group is a group wherever it is rendered. */
+  subLeafFor?: (memberId: string) => TopicLeaf;
 }
 
 /**
@@ -459,7 +468,12 @@ export function EcosystemsFeature({
       // topic in its URL to dodge a collision the toolkit invented. Everything a host declines
       // (returns null for) still lands on the in-package panes below, so the hub — whose
       // renderProductTopicPane claims none of these four ids — behaves exactly as before.
-      const hostPane = renderTopicPane(t.id, { ecosystemId: ecoId, title: titleFor(t.label), leaf });
+      const hostPane = renderTopicPane(t.id, {
+        ecosystemId: ecoId,
+        title: titleFor(t.label),
+        leaf,
+        subLeafFor,
+      });
       if (hostPane) return hostPane;
       if (t.id === "settings") {
         return (

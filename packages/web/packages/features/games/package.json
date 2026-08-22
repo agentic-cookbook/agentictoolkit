@@ -13,19 +13,14 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./parse` is the SERVER-SAFE entry: the client barrel carries 'use client', and preserve-directives would propagate it to any entry that imported it.",
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. No `./parse` entry: this package no longer owns a URL grammar (§1 of the product-gaming-modes design) — a game has no address of its own, so the host site parses with `@agentic-toolkit/ecosystems/parse`'s `parseEcosystemsPath` directly.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
       "development": "./src/index.ts",
       "import": "./dist/index.js"
     },
-    "./sources.css": "./sources.css",
-    "./parse": {
-      "types": "./dist/parse-path.d.ts",
-      "development": "./src/parse-path.ts",
-      "import": "./dist/parse-path.js"
-    }
+    "./sources.css": "./sources.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types",

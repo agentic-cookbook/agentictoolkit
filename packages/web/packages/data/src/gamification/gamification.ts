@@ -6,8 +6,9 @@
 // /gamification/realms/:ecosystemId/config route (Phase 5 Task 1) through the host BFF's
 // /api/:path* proxy.
 //
-// GET returns the realm's config (defaults when unset). PUT is a partial update; enabling a
-// realm (false → true) triggers a retroactive replay, so its response may carry `replayed`.
+// GET returns the realm's config (defaults when unset). PUT is a partial update; raising a
+// realm's mode from 'none' to either 'gamification' or 'game' triggers a retroactive replay,
+// so its response may carry `replayed`.
 //
 // The types come from ./wire, this module's own transcription of the backend's
 // `Gamification*` schemas — NOT from `@agentic-toolkit/adh-api-types`. Every other client
@@ -47,6 +48,7 @@ export type {
   RealmEventType,
   RealmEventTypeInput,
   Seasons,
+  GamingMode,
 } from "./wire";
 
 const configPath = (ecoId: string) => `/api/gamification/realms/${enc(ecoId)}/config`;

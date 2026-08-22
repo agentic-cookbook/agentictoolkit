@@ -778,15 +778,24 @@ importers:
       '@agentic-toolkit/adh-ecosystem-panes':
         specifier: workspace:*
         version: link:../adh-ecosystem-panes
+      '@agentic-toolkit/auth':
+        specifier: workspace:*
+        version: link:../../auth
       '@agentic-toolkit/authentication':
         specifier: workspace:*
         version: link:../authentication
+      '@agentic-toolkit/data':
+        specifier: workspace:*
+        version: link:../../data
       '@agentic-toolkit/ecosystem-config':
         specifier: workspace:*
         version: link:../ecosystem-config
       '@agentic-toolkit/ecosystems':
         specifier: workspace:*
         version: link:../ecosystems
+      '@agentic-toolkit/games':
+        specifier: workspace:*
+        version: link:../games
       '@agentic-toolkit/gamification':
         specifier: workspace:*
         version: link:../gamification
@@ -799,6 +808,9 @@ importers:
       '@agentic-toolkit/resource':
         specifier: workspace:*
         version: link:../../resource
+      '@agentic-toolkit/ui':
+        specifier: workspace:*
+        version: link:../../ui
       lucide-react:
         specifier: ^1.16.0
         version: 1.16.0(react@19.2.7)

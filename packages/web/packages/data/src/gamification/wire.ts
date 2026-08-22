@@ -16,11 +16,24 @@ export type Seasons = {
   lengthDays: number;
 } | null;
 
+/**
+ * A realm's gaming mode — one axis with a strongest value, not a choice between two
+ * features. `'game'` INCLUDES everything `'gamification'` gives, tuned for a game rather
+ * than a consumer app (skin defaults to `rpg` instead of `plain`); it is a superset, not
+ * an alternative. A gate that only cares whether gaming is on at all reads
+ * `mode !== 'none'`; only game-specific surfaces read `mode === 'game'`.
+ *
+ *   - `'none'`         — no game mechanics. Telemetry still flows; nothing is awarded and
+ *                         no gaming UI is shown.
+ *   - `'gamification'` — badges, levels, streaks, leaderboards on a regular product.
+ *   - `'game'`         — a dedicated, playable game, plus everything `'gamification'` gives.
+ */
+export type GamingMode = "none" | "gamification" | "game";
+
 /** `GET /gamification/realms/{ecosystemId}/config` — defaults when unset. */
 export interface RealmConfig {
   ecosystemId: string;
-  /** false leaves telemetry flowing but suppresses awards/UI. */
-  enabled: boolean;
+  mode: GamingMode;
   skin: "rpg" | "plain";
   /** Per-surface toggles; a surface is ON unless set false. */
   surfaces: Record<string, boolean>;
@@ -31,7 +44,7 @@ export interface RealmConfig {
 
 /** Partial update body for the config PUT — every field optional. */
 export interface RealmConfigInput {
-  enabled?: boolean;
+  mode?: GamingMode;
   skin?: "rpg" | "plain";
   surfaces?: Record<string, boolean>;
   /** null clears seasons; an object sets the window (anchor + lengthDays 1..366). */

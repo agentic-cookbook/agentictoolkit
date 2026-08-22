@@ -38,9 +38,11 @@ export const PRODUCT_TOPICS = [
   { id: "signin-apps", label: "Sign-in apps", dividerAfter: false },
   // (Communities sat here. Every host rendered it as "Coming soon" and there is no communities
   // surface to route to on any of them, so the row is gone rather than parked.)
-  // The product's gamification REALM: enable/disable, skin, and per-surface toggles
-  // (badges / leaderboards / streaks / recaps) — an engagement surface over its members.
-  { id: "gamification", label: "Gamification", dividerAfter: false },
+  // The product's gaming shape — a host-owned GROUP (see ProductsFeature's
+  // productTopicPaneRenderer) whose member list depends on the realm's mode ('none' /
+  // 'gamification' / 'game'): badges/levels/streaks engagement on a regular product, or a
+  // full dedicated game (engine/content/connections/effects) with gamification tuned for it.
+  { id: "gaming", label: "Gaming", dividerAfter: false },
   // Explicit per-product auth policy (signup mode / login enabled) for this
   // product's vended customer realm — the conceptual "Auth settings" home.
   { id: "auth", label: "Auth", dividerAfter: false },

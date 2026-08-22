@@ -17,7 +17,7 @@ import {
 // A plausible `game.games` wire row — the default answer to every request here, so the
 // client's own unwrap runs for real instead of being skipped by a rejected promise.
 const gameRow = {
-  id: "game.acme.cavern",
+  id: "8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34",
   slug: "cavern",
   name: "Cavern",
   description: "Cold." as string | null,
@@ -33,7 +33,7 @@ const gameRow = {
 
 const definitionRow = {
   id: "def-1",
-  gameId: "game.acme.cavern",
+  gameId: "8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34",
   authorCustomerId: "",
   kind: "room",
   key: "hall",
@@ -131,6 +131,23 @@ describe("where each request names its parent", () => {
     expect(urlOf()).toBe("/api/game/games");
   });
 
+  // `uq_games_ecosystem` (partial on `deleted_at IS NULL`) makes at most one row possible, so
+  // taking the first is not a guess — it is the whole answer. The two tests below pin both
+  // halves of that: a hit unwraps to the row, a miss is `null` rather than a throw, because a
+  // product in `none` or `gamification` mode legitimately has no game and every pane renders
+  // an empty state off exactly this.
+  it("resolves the one game of an ecosystem", async () => {
+    respondWith([{ ...gameRow, id: "8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34" }]);
+    const found = await gamesApi.forEcosystem("ecosystem.acme");
+    expect(urlOf()).toBe("/api/game/games?ecosystemId=ecosystem.acme");
+    expect(found?.id).toBe("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
+  });
+
+  it("answers null for an ecosystem with no game", async () => {
+    respondWith([]);
+    await expect(gamesApi.forEcosystem("ecosystem.acme")).resolves.toBeNull();
+  });
+
   // `game.games` is NOT in the backend's ECOSYSTEM_PARAM_SCOPED_TABLES, so `?ecosystemId=`
   // is an ordinary column filter rather than a scope override — and POST reads no query
   // params at all. Named in the query, the new game is filed under the CALLER's ecosystem
@@ -143,14 +160,14 @@ describe("where each request names its parent", () => {
 
   // A game does not move between ecosystems, and a PUT naming one is the only way to try.
   it("does not resend the ecosystem on update", async () => {
-    await gamesApi.update("game.acme.cavern", gameInput);
-    expect(urlOf()).toBe("/api/game/games/game.acme.cavern");
+    await gamesApi.update("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34", gameInput);
+    expect(urlOf()).toBe("/api/game/games/8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
     expect(bodyOf()).not.toHaveProperty("ecosystemId");
   });
 
-  it("addresses one game by its rdid, encoded", async () => {
-    await gamesApi.delete("game.acme.a b");
-    expect(urlOf()).toBe(`/api/game/games/${encodeURIComponent("game.acme.a b")}`);
+  it("percent-encodes the id in the path", async () => {
+    await gamesApi.delete("a b");
+    expect(urlOf()).toBe(`/api/game/games/${encodeURIComponent("a b")}`);
   });
 
   it("filters each child collection by game in the QUERY", async () => {
@@ -161,28 +178,28 @@ describe("where each request names its parent", () => {
     ] as const) {
       fetchMock.mockReset();
       respondWith([]);
-      await api.list("game.acme.cavern");
-      expect(urlOf()).toBe(`/api/game/${base}?gameId=game.acme.cavern`);
+      await api.list("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
+      expect(urlOf()).toBe(`/api/game/${base}?gameId=8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34`);
     }
   });
 
   it("parents a created definition through the BODY, not the query", async () => {
     respondWith(definitionRow);
-    await gameDefinitionsApi.create("game.acme.cavern", definitionInput);
+    await gameDefinitionsApi.create("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34", definitionInput);
     expect(urlOf()).toBe("/api/game/definitions");
-    expect(bodyOf().gameId).toBe("game.acme.cavern");
+    expect(bodyOf().gameId).toBe("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
   });
 
   it("parents a created effect through the BODY, not the query", async () => {
-    await gameEffectsApi.create("game.acme.cavern", effectInput);
+    await gameEffectsApi.create("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34", effectInput);
     expect(urlOf()).toBe("/api/game/effects");
-    expect(bodyOf().gameId).toBe("game.acme.cavern");
+    expect(bodyOf().gameId).toBe("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
   });
 
   it("parents a created mapping through the BODY, not the query", async () => {
-    await gameMappingsApi.create("game.acme.cavern", mappingInput);
+    await gameMappingsApi.create("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34", mappingInput);
     expect(urlOf()).toBe("/api/game/mappings");
-    expect(bodyOf().gameId).toBe("game.acme.cavern");
+    expect(bodyOf().gameId).toBe("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34");
   });
 
   // `definitions.author_customer_id` is ROUTE-MANAGED and masked out of the generic CRUD
@@ -190,7 +207,7 @@ describe("where each request names its parent", () => {
   // way. The guarantee this client can actually make is that it never sends one.
   it("never sends a definition's author, which the route owns", async () => {
     respondWith(definitionRow);
-    await gameDefinitionsApi.create("game.acme.cavern", definitionInput);
+    await gameDefinitionsApi.create("8f2b1c40-0d3e-4a7b-9c11-6e5a2d8f0b34", definitionInput);
     expect(bodyOf()).not.toHaveProperty("authorCustomerId");
   });
 

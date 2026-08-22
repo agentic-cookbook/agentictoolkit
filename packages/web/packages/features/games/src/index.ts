@@ -1,19 +1,19 @@
 "use client";
 
 // The client barrel. Every component here is a Client Component by construction —
-// preserve-directives puts this file's directive on the whole chunk. The path parser
-// is NOT re-exported: it lives behind `@agentic-toolkit/games/parse` precisely so a
-// server route can call it without dragging this bundle along.
+// preserve-directives puts this file's directive on the whole chunk. There is no
+// games-owned URL grammar any more (§1 of the product-gaming-modes design): the host site
+// parses with `@agentic-toolkit/ecosystems/parse`'s `parseEcosystemsPath` directly, so this
+// package has no `./parse` subpath to keep separate from this bundle.
 
-export type { GamesPathSelection } from "./parse-path";
-
-export { GameOverviewPane } from "./GameOverviewPane";
 export { GameEnginePane } from "./GameEnginePane";
 export {
-  GameIdentityFields,
+  GameOperationalFields,
   GameEngineFields,
   GAME_STATUSES,
   GAME_CHARACTER_NAMES,
+  GAME_EVENT_LOGS,
+  DEFAULT_EVENT_RETENTION_DAYS,
   gameBlank,
   gameToInput,
   gameValidate,
@@ -23,6 +23,14 @@ export {
 export { GameContentPane } from "./GameContentPane";
 export { GameConnectionsPane } from "./GameConnectionsPane";
 export { GameEffectsPane } from "./GameEffectsPane";
+export { GameSettingsPane, GameSettingsTopicPane } from "./GameSettingsPane";
+export { GameNotEnabledPane } from "./GameNotEnabledPane";
+export {
+  useGameForEcosystem,
+  type GameForEcosystem,
+  GAME_FOR_ECOSYSTEM_CACHE_KEY,
+  REALM_CONFIG_CACHE_KEY,
+} from "./useGameForEcosystem";
 export { GameChildPane, type GameChildPaneConfig } from "./GameChildPane";
 export { InlineChildList, type InlineChildListConfig } from "./InlineChildList";
 export { DefinitionChildren } from "./DefinitionChildren";
@@ -79,4 +87,5 @@ export {
 export { IntegerInput, OptionalIntegerInput } from "./IntegerInput";
 export { inlineUrlSelection } from "./inlineSelection";
 export { sortByGroup } from "./group";
-export { GamesFeature } from "./GamesFeature";
+export { GAME_TOPICS } from "./topics";
+export { GamesFeature, type GamesFeatureProps } from "./GamesFeature";

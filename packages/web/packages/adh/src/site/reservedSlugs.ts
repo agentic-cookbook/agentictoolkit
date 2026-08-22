@@ -181,12 +181,18 @@ export const SITE_ROUTE_SEGMENTS: readonly string[] = [
 export const GRAMMAR_SEGMENTS: readonly string[] = [
   // organizations, teams, projects, ecosystems — `parse-path.ts`, the "all" landing.
   'all',
-  // games — `parse-path.ts` compares the first segment IT is handed to `"new"` before reading
-  // it as a game id, so `/<workspace>/new` is the create-game dialog. That is the second URL
-  // segment, so unlike a route directory it cannot shadow a workspace slug; it is listed anyway
-  // on the reasoning the rest of this file records — a slug is minted once, against every site
-  // at once, and `all` above is here for exactly the same reason.
-  'new',
+  // No parser spends this one today. `games/parse-path.ts` did — `/<workspace>/new` opened the
+  // create-game dialog — and it went when the games rail became a list of products and a game
+  // stopped being something you create directly (2026-08-22, `product-gaming-modes`).
+  //
+  // It stays reserved anyway, and deliberately: reserving a word is reversible and un-reserving
+  // one is not. Delete this line and the very next customer may mint a workspace called `new`,
+  // at which point no future grammar in any of the twelve features can ever spend the word
+  // again — the obvious word for "the create screen", held by one account, fleet-wide, forever.
+  // The word is still held back — it moved to RESERVED_HANDLE_WORDS, which is the list for a
+  // refusal that is NOT shadowing. Keeping it here would have made this list say something false
+  // about itself: every entry above is a segment some parser really compares against, and that
+  // is the only claim this list makes.
 ]
 
 /**
@@ -222,6 +228,15 @@ export const RESERVED_HANDLE_WORDS: readonly string[] = [
   'logout',
   'me',
   'monitoring',
+  // Held on the same footing as the rest of this list, not because anything routes it.
+  // `games/parse-path.ts` matched `/<workspace>/new` for the create-game dialog until
+  // 2026-08-22 (`product-gaming-modes`), and when that grammar went the word came here rather
+  // than being un-reserved: `new` is the obvious word for "the create screen", so letting one
+  // account claim it fleet-wide, permanently, to buy back a name nobody has asked for is the
+  // trade this list's own docstring declines to make. If a grammar spends the segment again,
+  // it belongs back in GRAMMAR_SEGMENTS — and in the backend's RESERVED_ROUTE_SLUGS, which
+  // dropped it because that list admits only words a live route or grammar earns.
+  'new',
   'pricing',
   'profile',
   'public',

@@ -19,16 +19,16 @@
 //     `assertWriteWithinScope` 403s a foreign one.
 // Either way the caller resolves the id with `ecosystemsApi.ecosystemIdForSlug(slug)`.
 //
-// RDIDs, AND WHY EVERY ID HERE IS STILL AN OPAQUE STRING. `game.games` is RDID-ADDRESSED
-// (`game.<ecosystem>.<slug>`), so a game's `id` arrives as an rdid and is what a later
-// request addresses it by. `game.games.ecosystem_id` and the three children's `game_id`
-// are RDID REFS, so they arrive as rdids too and are ACCEPTED as rdids on write and as
-// list filters — crud/factory.ts resolves a ref column's rdid to the stored uuid on both
-// paths. Nothing here parses any of them: the frontend's rdid mirror cannot add the
-// `game` type before the backend's, because `frontend/tools/verify-rdid-parity.py` pins
-// the two maps as text INCLUDING declaration order. The three children's OWN ids, and
-// `effects.definition_id` / `mappings.from_id` / `mappings.to_id`, are plain uuids —
-// also opaque, and passed straight through.
+// ONE GAME PER ECOSYSTEM, AND WHY EVERY ID HERE IS A PLAIN UUID. `game.games` is NOT
+// rdid-addressed — it has no address of its own. `id` is an opaque, server-generated
+// uuid, like every other id in this file, and a game is reached as "the game of
+// ecosystem X" through its product's ecosystem rdid rather than by an address of its
+// own. That lookup is safe because a partial unique index (`uq_games_ecosystem`,
+// `(ecosystem_id) WHERE deleted_at IS NULL`) enforces at most one live game per
+// ecosystem — see `gamesApi.forEcosystem` below, now the primary way callers find a
+// game. `game.games.ecosystem_id` still arrives as the product's ecosystem rdid — that
+// direction never changed — but nothing here parses it; it is passed straight through,
+// same as every other id.
 //
 // PARENT SCOPING. The children are filtered by `?gameId=` on list and carry `gameId` in
 // the CREATE BODY — the same split as the ecosystem above, and for the same reason: the
@@ -53,8 +53,9 @@ export type GameEventLog = "debug" | "authoritative";
 
 /** A row of `game.games` — the catalog record. */
 export interface Game {
-  /** The game's rdid, `game.<ecosystem>.<slug>` — server-derived on create, and what
-   *  every later request addresses this row by. Opaque here. */
+  /** An opaque, server-generated uuid — no address of its own. A game is reached through
+   *  its product's ecosystem rdid instead, one game per ecosystem; see
+   *  `gamesApi.forEcosystem`. */
   id: string;
   /** Stable, URL-safe, ecosystem-unique. NOT the title. */
   slug: string;
@@ -97,7 +98,7 @@ export type GameDefinitionStatus = "active" | "retired";
 /** A row of `game.definitions` — the nouns a game declares (rooms, spells, items…). */
 export interface GameDefinition {
   id: string;
-  /** The parent game's RDID (an rdid ref), not a uuid. */
+  /** The parent game's uuid. */
   gameId: string;
   /** The author, and deliberately not `customerId` (that spelling would make the whole
    *  table customer-scoped for delta sync). NOT NULL with a `''` default: `''` is house-
@@ -144,10 +145,9 @@ export type GameEffectOperation = "add" | "multiply" | "set";
 /** A row of `game.effects` — the delta a definition applies, and what fires it. */
 export interface GameEffect {
   id: string;
-  /** The parent game's RDID (an rdid ref), not a uuid. */
+  /** The parent game's uuid. */
   gameId: string;
-  /** The definition this effect hangs off. A plain uuid — `definition_id` is a FK but not
-   *  an rdid ref, so it neither arrives as nor is accepted as an rdid. */
+  /** The definition this effect hangs off. A plain uuid, like every other id here. */
   definitionId: string;
   /** The effect's stable handle WITHIN its definition. */
   key: string;
@@ -182,7 +182,7 @@ export interface GameEffectInput {
 /** A row of `game.mappings` — a typed edge between two definitions. */
 export interface GameMapping {
   id: string;
-  /** The parent game's RDID (an rdid ref), not a uuid. */
+  /** The parent game's uuid. */
   gameId: string;
   /** The edge type — `exit`, `recipe_input`, `drops`, … The game's vocabulary, with no
    *  `check` behind it. */
@@ -343,6 +343,16 @@ export const gamesApi = {
     return sortByText(rows.map(gameFromWire), (g) => g.name);
   },
 
+  /** The ecosystem's (at most one) game — the primary lookup now that a product has at
+   *  most one game. Safe to return a single row rather than a list: a partial unique
+   *  index, `uq_games_ecosystem` on `(ecosystem_id) WHERE deleted_at IS NULL`, enforces
+   *  at most one LIVE game per ecosystem, so this filtered list can never have more than
+   *  one row to choose between. */
+  async forEcosystem(ecosystemId: string): Promise<Game | null> {
+    const rows = await gamesApi.list(ecosystemId);
+    return rows[0] ?? null;
+  },
+
   async create(input: GameInput, ecosystemId: string): Promise<Game> {
     // No pre-read for a duplicate slug: the backend's unique constraint is the real guard,
     // and a pre-read cannot see a soft-deleted row still holding the slug. Catch the 409.
@@ -362,9 +372,8 @@ export const gamesApi = {
     }
   },
 
-  /** `id` is the game's rdid (or its uuid — the route resolves either). The ecosystem is
-   *  NOT resent: a game does not move between ecosystems, and a PUT that named one would
-   *  be the only way to try. */
+  /** `id` is the game's uuid. The ecosystem is NOT resent: a game does not move between
+   *  ecosystems, and a PUT that named one would be the only way to try. */
   async update(id: string, input: GameInput): Promise<Game> {
     try {
       return gameFromWire(
@@ -378,8 +387,8 @@ export const gamesApi = {
     }
   },
 
-  /** Generic CRUD TOMBSTONES rather than deleting (`deleted_at`), and the game's rdid
-   *  mapping goes with it — so the slug, and the address built from it, are free again. */
+  /** Generic CRUD TOMBSTONES rather than deleting (`deleted_at`) — so a deleted game's
+   *  ecosystem is free for a new game, per `uq_games_ecosystem`'s `WHERE deleted_at IS NULL`. */
   async delete(id: string): Promise<void> {
     await authedRequest(`${GAMES}/${enc(id)}`, { method: "DELETE" });
   },
@@ -388,10 +397,9 @@ export const gamesApi = {
 /**
  * The three per-game child collections share one shape, so they share one factory.
  *
- * `gameId` is the parent game's rdid: a LIST FILTER on the way in (`?gameId=`, resolved
- * to the stored uuid because `game_id` is an rdid ref), and a BODY field on create. The
- * two spellings are not interchangeable — the generic POST reads no query params, so a
- * `?gameId=` create would insert with no parent and fail its NOT NULL.
+ * `gameId` is the parent game's uuid: a LIST FILTER on the way in (`?gameId=`) and a BODY
+ * field on create. The two spellings are not interchangeable — the generic POST reads no
+ * query params, so a `?gameId=` create would insert with no parent and fail its NOT NULL.
  */
 function childApi<TRow, TWire, TInput>(
   base: string,

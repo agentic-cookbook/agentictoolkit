@@ -9,6 +9,8 @@ import {
 } from "@agentic-toolkit/data/games";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { GameChildPane, type GameChildPaneConfig } from "./GameChildPane";
+import { GameNotEnabledPane } from "./GameNotEnabledPane";
+import { useGameForEcosystem } from "./useGameForEcosystem";
 import {
   MappingFields,
   mappingBlank,
@@ -57,13 +59,15 @@ const config: GameChildPaneConfig<GameMapping, GameMappingInput> = {
 };
 
 export function GameConnectionsPane({
-  gameId,
+  ecosystemId,
   leaf,
   title,
 }: {
-  gameId?: string;
+  ecosystemId?: string;
   leaf?: TopicLeaf;
   title?: ReactNode;
 }) {
-  return <GameChildPane gameId={gameId} leaf={leaf} title={title} config={config} />;
+  const { game, isSettled } = useGameForEcosystem(ecosystemId);
+  if (!game) return <GameNotEnabledPane isSettled={isSettled} />;
+  return <GameChildPane gameId={game.id} leaf={leaf} title={title} config={config} />;
 }

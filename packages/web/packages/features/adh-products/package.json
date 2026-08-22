@@ -39,13 +39,17 @@
   "dependencies": {
     "@agentic-toolkit/adh": "workspace:*",
     "@agentic-toolkit/adh-ecosystem-panes": "workspace:*",
+    "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
     "@agentic-toolkit/ecosystem-config": "workspace:*",
     "@agentic-toolkit/ecosystems": "workspace:*",
     "@agentic-toolkit/gamification": "workspace:*",
+    "@agentic-toolkit/games": "workspace:*",
     "@agentic-toolkit/integrations": "workspace:*",
     "@agentic-toolkit/projects": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
     "lucide-react": "^1.16.0"
   },
   "peerDependencies": {

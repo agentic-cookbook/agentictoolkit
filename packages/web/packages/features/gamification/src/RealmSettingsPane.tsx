@@ -7,6 +7,7 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { isForbidden, useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
 import {
   gamificationApi,
+  type GamingMode,
   type RealmConfig,
   type RealmConfigInput,
 } from "@agentic-toolkit/data/gamification";
@@ -26,6 +27,13 @@ import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
  * reference `timezone`, four per-surface toggles (badges / leaderboards / streaks / recaps),
  * and the optional seasons window. Enabling a realm (false → true) triggers a retroactive
  * replay server-side, whose result is surfaced inline ("Backfilled N members, M badges").
+ *
+ * The `enabled` toggle used to be a boolean; it now reads/writes `mode` (`none` |
+ * `gamification` | `game`), the three-valued generalization the same column now stores.
+ * Gamification is a SUBSET of game, not an alternative to it — when `mode === 'game'` the
+ * switch renders checked-and-disabled, because turning gamification off underneath an active
+ * game would silently strand its awards/leaderboards machinery. There is no `mode: 'game'`
+ * write path from this pane; that transition only happens from the games site's own switch.
  *
  * `children` is what makes this serve BOTH hosts from one file. This pane owns the save bar
  * and the scroll container, so the hub's single combined pane cannot be "this plus three
@@ -96,7 +104,7 @@ const SURFACES: { key: SurfaceKey; label: string; help: string }[] = [
 type SurfaceKey = "badges" | "leaderboards" | "streaks" | "recaps";
 
 interface Draft {
-  enabled: boolean;
+  mode: GamingMode;
   skin: "rpg" | "plain";
   timezone: string;
   surfaces: Record<SurfaceKey, boolean>;
@@ -109,7 +117,7 @@ interface Draft {
 
 function toDraft(cfg: RealmConfig): Draft {
   return {
-    enabled: cfg.enabled,
+    mode: cfg.mode,
     skin: cfg.skin,
     // Defensive default: keeps the Select controlled even if a caller's config predates
     // `timezone` (unset realms still get 'UTC' server-side).
@@ -228,7 +236,7 @@ export function RealmSettingsPane({
     // persisted state matches the UI regardless of the backend's merge-vs-replace semantics
     // (a surface is ON unless explicitly false, so an explicit `true` is always harmless).
     const body: RealmConfigInput = {};
-    if (draft.enabled !== baseline.enabled) body.enabled = draft.enabled;
+    if (draft.mode !== baseline.mode) body.mode = draft.mode;
     if (draft.skin !== baseline.skin) body.skin = draft.skin;
     if (draft.timezone !== baseline.timezone) body.timezone = draft.timezone;
     const surfacesChanged = SURFACES.some((s) => draft.surfaces[s.key] !== baseline.surfaces[s.key]);
@@ -303,21 +311,27 @@ export function RealmSettingsPane({
 
           {draft && (
             <>
-              {/* Enabled */}
+              {/* Mode — this switch only ever writes 'none' or 'gamification'. It cannot turn
+                  gamification off out from under an active game: gamification is a SUBSET of
+                  game, so while mode is 'game' the switch reads checked-and-disabled and the
+                  copy explains why, matching the games site's own "Enable Gaming" switch,
+                  which is the only writer of 'game'. */}
               <div className="flex items-start justify-between gap-6">
                 <div className="min-w-0">
                   <Label htmlFor="gamification-enabled" className="text-sm font-medium text-apt-text">
                     Enable gamification
                   </Label>
                   <p className="mt-0.5 text-xs text-apt-text-muted">
-                    When off, telemetry keeps flowing but awards and gamification UI are
-                    suppressed. Enabling backfills existing members.
+                    {draft.mode === "game"
+                      ? "On, because this product is a dedicated game — gamification comes with game mode."
+                      : "When off, telemetry keeps flowing but awards and gamification UI are suppressed. Enabling backfills existing members."}
                   </p>
                 </div>
                 <Switch
                   id="gamification-enabled"
-                  checked={draft.enabled}
-                  onCheckedChange={(enabled) => patch({ enabled })}
+                  checked={draft.mode !== "none"}
+                  disabled={draft.mode === "game"}
+                  onCheckedChange={(on) => patch({ mode: on ? "gamification" : "none" })}
                 />
               </div>
 

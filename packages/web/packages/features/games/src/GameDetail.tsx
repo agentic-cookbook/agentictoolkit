@@ -2,13 +2,12 @@
 
 import { useId } from "react";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { Input } from "@agentic-toolkit/ui/components/input";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { DetailSection } from "@agentic-toolkit/resource";
-import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
 import type {
   Game,
   GameCharacterNames,
@@ -18,9 +17,6 @@ import type {
 } from "@agentic-toolkit/data/games";
 import { IntegerInput } from "./IntegerInput";
 import { wholeNumberProblem } from "./fields";
-
-/** The URL grammar reserves these as first segments, so no game may claim one as its slug. */
-const RESERVED_SLUGS = ["all", "new"];
 
 /** `game.games.status` — a closed set with a `check` behind it, so a select rather than a
  *  text field. The help is the schema's own distinction: `hidden` is delisted but still
@@ -65,8 +61,10 @@ export function gameBlank(): GameInput {
   };
 }
 
-/** The WHOLE editable row, not one pane's half: Overview and Engine edit the same record,
- *  so a partial input would let an Engine save blank the name. */
+/** The WHOLE editable row, not one pane's half: Engine and Settings edit the same record
+ *  (name/slug/description are no longer edited from this package at all — see
+ *  `GameOperationalFields` below — but they still round-trip through every save here), so
+ *  a partial input would let one pane's save blank the other's fields. */
 export function gameToInput(g: Game): GameInput {
   return {
     slug: g.slug,
@@ -111,17 +109,17 @@ export function gameDiffers(a: GameInput, b: GameInput): boolean {
   );
 }
 
-/** Returns an error message, or null when the draft is valid. */
-export function gameValidate(draft: GameInput, takenSlugs: string[]): string | null {
-  if (!draft.name.trim()) return "Name is required.";
-  const slug = draft.slug.trim();
-  if (!slug) return "Slug is required.";
-  // The slug becomes the leaf of the game's rdid (`game.<ecosystem>.<slug>`), so it obeys
-  // the shared segment grammar rather than a second rule invented here.
-  const slugErr = validateLeaf(slug);
-  if (slugErr) return slugErr;
-  if (RESERVED_SLUGS.includes(slug)) return `"${slug}" is reserved — pick another slug.`;
-  if (takenSlugs.includes(slug)) return `Slug "${slug}" is already in use.`;
+/**
+ * Returns an error message, or null when the draft is valid.
+ *
+ * No slug/name checks here any more: `Game.id` is a plain uuid (§1 of the
+ * product-gaming-modes design) — a game has no address of its own, so there is no rdid
+ * leaf grammar for its slug to obey, and name/slug/description are the PRODUCT's fields
+ * now (derived onto the game at mint, edited under the product's Ecosystem Settings, not
+ * this package). What is left to validate is the operational half this package still
+ * owns: the engine config's JSON and the retention window.
+ */
+export function gameValidate(draft: GameInput): string | null {
   const config = draft.engineConfig.trim();
   if (config) {
     try {
@@ -149,18 +147,24 @@ function set<K extends keyof GameInput>(
 }
 
 /**
- * The game's identity — what it is called, what it is about, and the four operator
- * switches adh itself READS AND ACTS ON: `status` and `character_names` (the profile route
- * rejects a blank name when names are required), then `event_log` and
- * `event_retention_days`, which the retention sweep deletes rows on the strength of.
+ * The four operator switches adh itself READS AND ACTS ON: `status` and
+ * `character_names` (the profile route rejects a blank name when names are required),
+ * then `event_log` and `event_retention_days`, which the retention sweep deletes rows on
+ * the strength of.
  *
- * That is the line these fields sit on, and it is the schema's own: `engine` and
- * `engine_config` are OPAQUE to adh and belong to the Engine topic; everything here is a
- * switch adh reads. Controlled; Save/Cancel live in the pane's button bar or the create
- * dialog's footer. With `title` the fields sit in a titled DetailSection (the pane);
- * without it they render bare (the dialog).
+ * Name, slug and description are NOT here — they are the PRODUCT's fields now (derived
+ * onto the game at mint; edited under the product's own Ecosystem Settings, a different
+ * pane in a different package entirely). This is the operational half of what used to be
+ * one `GameIdentityFields` component; the identity half is gone from this package along
+ * with the games rail that used to edit it (see docs/superpowers/specs/
+ * 2026-08-22-product-gaming-modes-design.md §5.3, §1).
+ *
+ * `engine`/`engine_config` are OPAQUE to adh and belong to the Engine topic; everything
+ * here is a switch adh reads. Controlled; Save/Cancel live in the pane's button bar. With
+ * `title` the fields sit in a titled DetailSection (Engine's pane); without it they render
+ * bare (Settings, which supplies its own section framing around the whole pane).
  */
-export function GameIdentityFields({
+export function GameOperationalFields({
   title,
   draft,
   onChange,
@@ -172,9 +176,6 @@ export function GameIdentityFields({
   error?: string | null;
 }) {
   const uid = useId();
-  const nameId = `${uid}-name`;
-  const slugId = `${uid}-slug`;
-  const descriptionId = `${uid}-description`;
   const statusId = `${uid}-status`;
   const charactersId = `${uid}-character-names`;
   const eventLogId = `${uid}-event-log`;
@@ -183,41 +184,6 @@ export function GameIdentityFields({
   const body = (
     <Card>
       <CardContent className="flex flex-col gap-5">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={nameId}>Name</Label>
-          <Input
-            id={nameId}
-            placeholder="The Cavern"
-            value={draft.name}
-            onChange={(e) => set(draft, onChange, "name", e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={slugId}>Slug</Label>
-          <Input
-            id={slugId}
-            placeholder="cavern"
-            value={draft.slug}
-            onChange={(e) => set(draft, onChange, "slug", e.target.value.toLowerCase())}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <p className="text-xs text-apt-text-muted">
-            Lowercase letters, digits, and interior hyphens. It becomes the last part of the
-            game&rsquo;s identifier and cannot be <code>all</code> or <code>new</code>.
-          </p>
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor={descriptionId}>Description</Label>
-          <Textarea
-            id={descriptionId}
-            rows={3}
-            placeholder="One or two sentences about what this game is."
-            value={draft.description}
-            onChange={(e) => set(draft, onChange, "description", e.target.value)}
-          />
-        </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor={statusId}>Status</Label>
           <Select

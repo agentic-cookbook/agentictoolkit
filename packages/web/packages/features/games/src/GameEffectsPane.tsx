@@ -5,6 +5,8 @@ import { Zap } from "lucide-react";
 import { gameEffectsApi, type GameEffect, type GameEffectInput } from "@agentic-toolkit/data/games";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { GameChildPane, type GameChildPaneConfig } from "./GameChildPane";
+import { GameNotEnabledPane } from "./GameNotEnabledPane";
+import { useGameForEcosystem } from "./useGameForEcosystem";
 import {
   EffectFields,
   effectBlank,
@@ -56,13 +58,15 @@ const config: GameChildPaneConfig<GameEffect, GameEffectInput> = {
 };
 
 export function GameEffectsPane({
-  gameId,
+  ecosystemId,
   leaf,
   title,
 }: {
-  gameId?: string;
+  ecosystemId?: string;
   leaf?: TopicLeaf;
   title?: ReactNode;
 }) {
-  return <GameChildPane gameId={gameId} leaf={leaf} title={title} config={config} />;
+  const { game, isSettled } = useGameForEcosystem(ecosystemId);
+  if (!game) return <GameNotEnabledPane isSettled={isSettled} />;
+  return <GameChildPane gameId={game.id} leaf={leaf} title={title} config={config} />;
 }

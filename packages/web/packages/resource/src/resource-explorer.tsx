@@ -564,8 +564,10 @@ export function ResourceExplorer<T>({
                       side the icon sits (`has-data-[icon=inline-start]:pl-1.5`). A `size={16}`
                       here was already dead — the class wins over lucide's width/height attributes
                       — while the missing `data-icon` left this button wearing symmetric padding,
-                      so it did not match the fleet's other icon buttons (games' `CreateGameAction`
-                      is the pattern). */}
+                      so it did not match the fleet's other icon buttons. (This used to cite games'
+                      `CreateGameAction` as the pattern; that component went with the create-game
+                      dialog in `product-gaming-modes`, and the pattern is now just the two
+                      attributes above.) */}
                   <Plus data-icon="inline-start" aria-hidden />
                   {newButtonLabel}
                 </Button>
