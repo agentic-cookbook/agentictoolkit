@@ -1738,15 +1738,19 @@ var ADMIN_MENU_GROUPS = [
 
 // src/header/StudioWordmark.tsx
 import "react";
-import { jsx as jsx13 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
 function StudioWordmark() {
-  return /* @__PURE__ */ jsx13(
+  return /* @__PURE__ */ jsxs9(
     "a",
     {
       className: "adh-nav-popover__wordmark",
       href: "https://agenticdevelopmentstudio.com",
       rel: "noopener",
-      children: "Agentic Development Studio"
+      children: [
+        /* @__PURE__ */ jsx13("span", { className: "adh-nav-popover__wordmark-name", children: "agentic development" }),
+        " ",
+        /* @__PURE__ */ jsx13("span", { className: "adh-nav-popover__wordmark-kind", children: "studio" })
+      ]
     }
   );
 }
@@ -1996,11 +2000,11 @@ function PrefetchSiblingSites() {
 }
 
 // src/header/SiteMenuSwitcher.tsx
-import { jsx as jsx17, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 function SiteMenuSwitcher(props) {
   const pathname = usePathname4() ?? "/";
   const onWorkspaceRoute = isWorkspaceMenuRoute(props.currentSiteId, pathname);
-  return /* @__PURE__ */ jsxs9(Fragment5, { children: [
+  return /* @__PURE__ */ jsxs10(Fragment5, { children: [
     /* @__PURE__ */ jsx17(PrefetchSiblingSites, {}),
     onWorkspaceRoute ? /* @__PURE__ */ jsx17(WorkspaceSiteMenu, { ...props }) : /* @__PURE__ */ jsx17(MarketingSiteMenu, { ...props })
   ] });
@@ -2143,7 +2147,7 @@ function useEffectiveEnv(hostname) {
 }
 
 // src/header/DevToolsMenu.tsx
-import { Fragment as Fragment6, jsx as jsx18, jsxs as jsxs10 } from "react/jsx-runtime";
+import { Fragment as Fragment6, jsx as jsx18, jsxs as jsxs11 } from "react/jsx-runtime";
 var DebugConsoleWindow = dynamic(
   () => import("@agentic-toolkit/adh/debug-console").then((m) => m.DebugConsoleWindow)
 );
@@ -2202,7 +2206,7 @@ function DevToolsMenuPopover({
     () => [...entries, ...devToolsSection],
     [entries, devToolsSection]
   );
-  return /* @__PURE__ */ jsxs10(Fragment6, { children: [
+  return /* @__PURE__ */ jsxs11(Fragment6, { children: [
     /* @__PURE__ */ jsx18(
       NavigationPopover3,
       {

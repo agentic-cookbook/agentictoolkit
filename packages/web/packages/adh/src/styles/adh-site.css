@@ -546,30 +546,43 @@
   padding: 0.7rem 0.75rem 0.55rem;
 }
 
-/* The studio mark, set to match `.adh-footer__brand-link` — same mono face, same
-   size and tracking, same accent colour — because it is the same name in the same
-   product and two settings of it read as two studios. Text rather than an asset (see
-   StudioWordmark), so it needs no second copy for the dark theme.
+/* The studio mark, set the way the studio's own wordmark is set rather than the way
+   the site footer says the name: lowercase, a sans face, and split across two weights
+   and two tones. The footer says it inside a copyright sentence, where a lowercase
+   two-weight logotype would read as a typo; this is the mark standing alone. So it
+   deliberately shares nothing with `.adh-footer__brand-link` — not the face, not the
+   tracking, not the accent colour — and the `--adh-footer-*` overrides are gone with
+   it: a host retinting its footer brand is not retinting the studio's logo.
 
-   It reads at accent weight rather than dimmed: the site footer states the studio
-   plainly on every page, and the menu's signature has no reason to whisper what the
-   page below it says out loud. The same host overrides apply, so a site that retints
-   its footer brand retints this with it. */
+   Text rather than an asset (see StudioWordmark), so both tones are theme tokens and
+   one rule reads correctly in both themes with no second copy. Larger than the footer
+   credit (0.95rem vs 0.7rem) because a signature closing the menu is the mark itself,
+   not a line of fine print. */
 .adh-nav-popover__wordmark {
-  color: var(--adh-footer-brand-color, var(--color-accent));
-  font-family: var(--adh-footer-font, var(--font-mono));
-  font-size: var(--adh-footer-size, 0.7rem);
-  font-weight: 400;
-  letter-spacing: var(--adh-footer-letter-spacing, 0.04em);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   line-height: 1;
   text-align: center;
   text-decoration: none;
+}
+
+/* The dimmed half. The split is what makes the mark the studio's, so it survives
+   hover — the whole mark does not resolve to one colour. */
+.adh-nav-popover__wordmark-kind {
+  color: var(--color-text-dim);
+  font-weight: 400;
   transition: color calc(0.12s * var(--apt-anim-scale, 1)) ease-out;
 }
 
-.adh-nav-popover__wordmark:hover,
-.adh-nav-popover__wordmark:focus-visible {
-  color: var(--adh-footer-brand-color-hover, var(--color-accent-bright));
+/* Hover lifts only the dim half, toward the bright half it is set against. A link
+   needs to answer the pointer, and this is the one move that says "interactive"
+   without recolouring a logo or underlining it. */
+.adh-nav-popover__wordmark:hover .adh-nav-popover__wordmark-kind,
+.adh-nav-popover__wordmark:focus-visible .adh-nav-popover__wordmark-kind {
+  color: var(--color-text-secondary);
 }
 
 /* Topic row in the top-level list — a sub-trigger that pops out a flyout. The
