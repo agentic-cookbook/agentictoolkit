@@ -91,7 +91,18 @@ const DOCUMENT: ResearchDocument = {
   publicRoute: null,
 };
 
+// Incremented once per `beforeEach` run — the mechanism the G1 pin (below, "Deliberately
+// declaration-order dependent") uses to turn its own adjacency requirement into an enforced
+// assertion instead of a comment nobody has to obey. See the pin for how the two `let`s below
+// are used together.
+let beforeEachRunCount = 0;
+// The `beforeEachRunCount` value G1 pin (1/2) recorded as its last action, so (2/2) can assert
+// that exactly one `beforeEach` — its own — ran in between, i.e. that no test was inserted
+// between the pair. `null` until (1/2) runs.
+let g1PinRecordedBeforeEachCount: number | null = null;
+
 beforeEach(() => {
+  beforeEachRunCount++;
   // `vi.clearAllMocks()` (`.mockClear()` on every mock) drops call history but NOT a
   // still-queued `mockResolvedValueOnce`/`mockRejectedValueOnce` implementation — verified by
   // running it: a value queued by a test that throws (or otherwise returns) before consuming
@@ -402,18 +413,32 @@ describe("ResearchFeature", () => {
   });
 
   // ── Pins `beforeEach`'s `vi.resetAllMocks()` (G1) ──────────────────────────────
-  // Deliberately declaration-order dependent, and that is the whole point: the first test ends
-  // by leaving a `mockResolvedValueOnce` on `get` UNCONSUMED (nothing after it calls `get`
-  // again), and the second — the very next test vitest runs — asserts the ONLY thing that can
-  // be true if `beforeEach` dropped that dangling queue before it started: doc-1 opens with the
-  // beforeEach default (`DOCUMENT.content`), not the poisoned response the first test queued.
-  // vitest runs a single file's tests in declaration order with shuffling off — this repo does
-  // not opt into `sequence.shuffle` (`packages/features/vitest.preset.ts` passes no `sequence`
-  // key to `defineConfig`, verified by reading it) — so "next test" here means exactly this pair,
-  // in this order, every run. `vi.clearAllMocks()` (`.mockClear()`) would leave this queued value
-  // in place — it only drops call history — so it would bleed straight into the second test's
-  // first `get()` call. `vi.resetAllMocks()` (`.mockReset()`) drops it, which is the one thing
-  // this pair exists to require of whatever `beforeEach` does.
+  // Order-dependent by construction: the first test leaves a `mockResolvedValueOnce` on `get`
+  // UNCONSUMED (nothing after it calls `get` again), and the second — the very next test vitest
+  // runs — asserts the ONLY thing that can be true if `beforeEach` dropped that dangling queue
+  // before it started: doc-1 opens with the beforeEach default (`DOCUMENT.content`), not the
+  // poisoned response the first test queued. vitest runs a single file's tests in declaration
+  // order with shuffling off — this repo does not opt into `sequence.shuffle`
+  // (`packages/features/vitest.preset.ts` passes no `sequence` key to `defineConfig`, verified by
+  // reading it) — so there is no randomness to worry about.
+  //
+  // What declaration order does NOT give you is protection against a future edit inserting a
+  // test between this pair. Verified by running it: inserting a test that renders and opens a
+  // document — the shape of nearly every other test in this file — between the pair, with
+  // `vi.resetAllMocks()` reverted to `vi.clearAllMocks()`, left the suite fully green; the
+  // interloper consumes the queued `get` response itself, so the regression this pin exists to
+  // catch becomes silently undetectable. A comment asking the pair to stay adjacent does not
+  // stop that. So adjacency is enforced below as an assertion: `beforeEachRunCount` (declared
+  // above, module scope) increments once per `beforeEach` run; (1/2) records its value into
+  // `g1PinRecordedBeforeEachCount` as its last action, and (2/2) asserts, as its FIRST action,
+  // that exactly one `beforeEach` — its own — has run since. Insert any test between them and
+  // that count is off by (at least) one, and the assertion fails and says why, whether or not the
+  // interloper happens to touch `get`.
+  //
+  // `vi.clearAllMocks()` (`.mockClear()`) would leave the queued value in place — it only drops
+  // call history — so it would bleed straight into the second test's first `get()` call.
+  // `vi.resetAllMocks()` (`.mockReset()`) drops it, which is the one thing this pair exists to
+  // require of whatever `beforeEach` does.
   it("G1 pin (1/2): queues a get() response for doc-1 that this test itself never consumes", async () => {
     render(
       <Harness>
@@ -429,9 +454,22 @@ describe("ResearchFeature", () => {
       ...structuredClone(DOCUMENT),
       content: "# Leaked from G1 pin (1/2)\n\nA queue this stale must never reach a real test.",
     });
+    // Last action, deliberately: records how many `beforeEach` runs have happened so far, so
+    // (2/2) can assert that exactly one more — its own — ran between here and there.
+    g1PinRecordedBeforeEachCount = beforeEachRunCount;
   });
 
   it("G1 pin (2/2): opens doc-1 with beforeEach's default, not (1/2)'s leaked queue", async () => {
+    // First action, deliberately: if a test was inserted between (1/2) and (2/2), more than one
+    // `beforeEach` ran since (1/2) recorded its count, and this fails before the render below can
+    // paper over it by consuming the leaked queue itself.
+    expect(
+      beforeEachRunCount,
+      "G1 pin (1/2) and (2/2) must remain adjacent test declarations. A test was inserted " +
+        "between them, which lets the interloper's own render consume (1/2)'s leaked `get` " +
+        "queue — the pin then silently stops testing anything, without any assertion failing " +
+        `to say so. (recorded at (1/2): ${g1PinRecordedBeforeEachCount}, now: ${beforeEachRunCount})`,
+    ).toBe((g1PinRecordedBeforeEachCount ?? NaN) + 1);
     render(
       <Harness>
         <ResearchFeature basePath="/w1/research" docId="doc-1" />
@@ -459,9 +497,15 @@ describe("ResearchFeature", () => {
   // resolves to; with no default at all that is `undefined`, `res.available` throws, and
   // `useSlugAvailability`'s own `.catch()` swallows it into `{ status: "idle" }` — which
   // `document-identity-field.tsx` renders as NO text in its `[data-slot="slug-status"]` span.
-  // The default resolving `{ available: true, reason: "ok" }` instead renders "Available" there
-  // (`SLUG_REASON.ok` is `undefined`, so the span falls back to `STATUS_TEXT.available`) — the
-  // one observable difference between the default doing its job and silently not existing.
+  // The default resolving `{ available: true, reason: "ok" }` instead renders "Available" there —
+  // the one observable difference between the default doing its job and silently not existing.
+  // Not because of `SLUG_REASON.ok`: `document-identity-field.tsx`'s `useSlugAvailability`
+  // resolution branch hardcodes `{ status: "available", reason: null }` on the available path and
+  // never reads `res.reason` at all, so `SLUG_REASON.ok` being `undefined` (vs. any other string)
+  // is irrelevant here — verified by running it: setting `SLUG_REASON.ok` to a string in
+  // `ResearchPane.tsx` and reverting left this pin still passing. `document-identity-field.tsx`'s
+  // `[data-slot="slug-status"]` span then renders `verdict.reason ?? status`, i.e.
+  // `null ?? STATUS_TEXT.available`, which is "Available".
   it("G2 pin: settles the slug availability check to Available from beforeEach's routeAvailable default", async () => {
     render(
       <Harness>
