@@ -1,11 +1,12 @@
 import { defineConfig } from 'tsup'
 import { preserveDirectivesPlugin } from 'esbuild-plugin-preserve-directives'
 
-// Three entries, one per persona package this bridges. Keeping them separate
+// Four entries, one per persona package this bridges. Keeping them separate
 // (rather than one barrel) means a consumer that only wants viewport primitives
-// does not pull chat and themes into its graph.
+// does not pull chat, themes and the avatar engine into its graph.
 export default defineConfig({
   entry: {
+    avatar: 'src/avatar.ts',
     chat: 'src/chat.ts',
     themes: 'src/themes.ts',
     viewport: 'src/viewport.ts',
@@ -29,6 +30,8 @@ export default defineConfig({
     'react',
     'react-dom',
     'react/jsx-runtime',
+    'gsap',
+    '@agenticdevelopertoolkit/avatar',
     '@agenticdevelopertoolkit/chat',
     '@agenticdevelopertoolkit/themes',
     '@agenticdevelopertoolkit/viewport',

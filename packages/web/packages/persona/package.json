@@ -11,6 +11,11 @@
     "dist"
   ],
   "exports": {
+    "./avatar": {
+      "types": "./dist/avatar.d.ts",
+      "development": "./src/avatar.ts",
+      "import": "./dist/avatar.js"
+    },
     "./chat": {
       "types": "./dist/chat.d.ts",
       "development": "./src/chat.ts",
@@ -54,14 +59,16 @@
   },
   "//peerDependencies": "Declared as peers, not dependencies, for the same reason bitbag declares them: the consumer supplies the copy, so there is one instance rather than one per package that happens to re-export it. `themes` carries React context at module scope (colorMode.tsx), which splits silently across two copies.",
   "peerDependencies": {
+    "@agenticdevelopertoolkit/avatar": "*",
     "@agenticdevelopertoolkit/chat": "*",
     "@agenticdevelopertoolkit/themes": "*",
     "@agenticdevelopertoolkit/viewport": "*",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
-  "//devDependencies": "The three @agenticdevelopertoolkit/* entries are peer deps above; these `link:`s exist only so this package can build and typecheck itself. They target THIS repo's own submodule at external/agenticdevelopertoolkit, so a `git clone --recursive` builds with no sibling checkout anywhere on disk.",
+  "//devDependencies": "The four @agenticdevelopertoolkit/* entries are peer deps above; these `link:`s exist only so this package can build and typecheck itself. They target THIS repo's own submodule at external/agenticdevelopertoolkit, so a `git clone --recursive` builds with no sibling checkout anywhere on disk.",
   "devDependencies": {
+    "@agenticdevelopertoolkit/avatar": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/avatar",
     "@agenticdevelopertoolkit/chat": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/chat",
     "@agenticdevelopertoolkit/themes": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/themes",
     "@agenticdevelopertoolkit/viewport": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/viewport",

@@ -2150,6 +2150,9 @@ importers:
 
   packages/persona:
     devDependencies:
+      '@agenticdevelopertoolkit/avatar':
+        specifier: link:../../../../external/agenticdevelopertoolkit/packages/web/packages/avatar
+        version: link:../../../../external/agenticdevelopertoolkit/packages/web/packages/avatar
       '@agenticdevelopertoolkit/chat':
         specifier: link:../../../../external/agenticdevelopertoolkit/packages/web/packages/chat
         version: link:../../../../external/agenticdevelopertoolkit/packages/web/packages/chat
