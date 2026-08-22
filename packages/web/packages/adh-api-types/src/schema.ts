@@ -18615,8 +18615,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the caller's existing categories (names + the category TREE)
-         * @description The account's full set of categories (content.categories), scoped to the workspace owner and ecosystem. `items` is the distinct, alphabetical NAME list — the autocomplete/browse source for the research classification UI. `nodes` is the same set with its structure kept (id + parentId), which is what a hierarchical browser folds into a tree.
+         * List the caller's existing categories (names + the category HIERARCHY)
+         * @description The account's full set of categories (content.categories), scoped to the workspace owner and ecosystem. `items` is the distinct, alphabetical NAME list — the autocomplete/browse source for the research classification UI. `nodes` is the same set with its structure kept (id + parentIds), which is what a hierarchical browser folds. The hierarchy is a DAG, not a tree: a category may sit under any number of parents, or none.
          */
         get: {
             parameters: {
@@ -18652,8 +18652,8 @@ export interface paths {
         };
         put?: never;
         /**
-         * Create a category, optionally nested under another
-         * @description Mints a category for the workspace owner. Omit `parentId` (or send null) for a root. A category NAME is unique per owner across the whole tree — every other op addresses a category by name — so re-posting an existing name under the SAME parent returns it unchanged (idempotent), and under a DIFFERENT parent is a 409. This never MOVES a category. A `parentId` that isn't one of this owner's live categories is a 404.
+         * Create a category, optionally nested under one or more others
+         * @description Mints a category for the workspace owner. Omit `parentIds` (or send an empty array) for an unfiled category. A category NAME is unique per owner across the whole hierarchy — every other op addresses a category by name — so re-posting an existing name is idempotent ONLY when every parent it asks for is already one of that category's parents; asking for a new one is a 409. This never RE-FILES a category: adding a parent to an existing one is an edge write on /content/category_edges. Any id in `parentIds` that isn't one of this owner's live categories is a 404.
          */
         post: {
             parameters: {
@@ -18670,13 +18670,13 @@ export interface paths {
                     "application/json": {
                         /** @description The category name (unique per owner). */
                         name: string;
-                        /** @description Id of the category this one sits under. Omit or null for a root category. */
-                        parentId?: string | null;
+                        /** @description Ids of the categories this one sits under — any number, or none. Omit or send [] for an unfiled category. */
+                        parentIds?: string[];
                     };
                 };
             };
             responses: {
-                /** @description The existing category with this name (already under this parent) */
+                /** @description The existing category with this name (already under every requested parent) */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -19063,6 +19063,82 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/content/markdown/{id}/route-available/{route}": {
+        parameters: {
+            query?: {
+                /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to). Omitted: the caller’s own documents. Unknown/foreign slug: 404. */
+                workspace?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+                route: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Check whether a public route slug is free for this document
+         * @description The live availability check behind the publish field. It answers the SAME question `POST /{id}/publish` answers with a 409, against the same author and the same exclusion (a document’s own route is never taken for itself), so the two can never disagree. Always 200 with a verdict — an unavailable route is an answer, not an error. 404s a missing, deleted, or non-owned document BEFORE looking at the route, so it cannot be used to probe another author’s slug space.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description Scope to this WORKSPACE’s owning principal (the caller’s own customer slug, or an organization the caller belongs to). Omitted: the caller’s own documents. Unknown/foreign slug: 404. */
+                    workspace?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                    route: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The verdict */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            available: boolean;
+                            /**
+                             * @description `ok` when available. `invalid` — wrong shape (lowercase, [a-z0-9_-], leading alphanumeric, 2–128 chars). `reserved` — a word the site’s own routing owns. `taken` — another live paper of this author already publishes there.
+                             * @enum {string}
+                             */
+                            reason: "ok" | "invalid" | "reserved" | "taken";
+                        };
+                    };
                 };
                 /** @description Error */
                 401: {
@@ -44586,7 +44662,6 @@ export interface paths {
                             description: string;
                             color: string;
                             icon: string;
-                            parentId: string | null;
                             sortOrder: number;
                             createdAt: string;
                             updatedAt: string;
@@ -44624,7 +44699,6 @@ export interface paths {
                         description?: string;
                         color?: string;
                         icon?: string;
-                        parentId?: string | null;
                         sortOrder?: number;
                         syncTxid?: number;
                     };
@@ -44646,7 +44720,6 @@ export interface paths {
                             description: string;
                             color: string;
                             icon: string;
-                            parentId: string | null;
                             sortOrder: number;
                             createdAt: string;
                             updatedAt: string;
@@ -44718,7 +44791,6 @@ export interface paths {
                             description: string;
                             color: string;
                             icon: string;
-                            parentId: string | null;
                             sortOrder: number;
                             createdAt: string;
                             updatedAt: string;
@@ -44766,7 +44838,6 @@ export interface paths {
                         description?: string;
                         color?: string;
                         icon?: string;
-                        parentId?: string | null;
                         sortOrder?: number;
                         syncTxid?: number;
                     };
@@ -44788,7 +44859,6 @@ export interface paths {
                             description: string;
                             color: string;
                             icon: string;
-                            parentId: string | null;
                             sortOrder: number;
                             createdAt: string;
                             updatedAt: string;
@@ -44829,6 +44899,306 @@ export interface paths {
         };
         post?: never;
         /** Delete categories */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/content/category-edges": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List category_edges */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            deletedAt: string | null;
+                            parentId: string;
+                            childId: string;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create category_edges */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        parentId: string;
+                        childId: string;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description category_edges */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            deletedAt: string | null;
+                            parentId: string;
+                            childId: string;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/content/category-edges/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get category_edges by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description category_edges */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            deletedAt: string | null;
+                            parentId: string;
+                            childId: string;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update category_edges */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        parentId?: string;
+                        childId?: string;
+                        sortOrder?: number;
+                        syncTxid?: number;
+                    };
+                };
+            };
+            responses: {
+                /** @description category_edges */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            customerId: string;
+                            deletedAt: string | null;
+                            parentId: string;
+                            childId: string;
+                            sortOrder: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            syncVersion: number;
+                            syncStampedAt: string | null;
+                            syncTxid: number;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete category_edges */
         delete: {
             parameters: {
                 query?: never;
@@ -68258,9 +68628,9 @@ export interface components {
         MarkdownCategoryNode: {
             id: string;
             name: string;
-            /** @description The category this one sits under; null for a root. App-level convention — there is no FK, so a consumer folding the tree must tolerate a missing or cyclic parent. */
-            parentId: string | null;
-            /** @description Sibling order hint (0 unless set through the generic CRUD). */
+            /** @description Every category this one sits under (content.category_edges). Empty for an unfiled category — there is no null sentinel. A category may appear under several parents at once, so a consumer folding this into a tree renders the same node in more than one place. Parent ids that are not themselves in `nodes` are already filtered out, and the write path rejects cycles, so the fold terminates. */
+            parentIds: string[];
+            /** @description Order among the unfiled/root categories (0 unless set through the generic CRUD). Order among one parent's children lives on the edge. */
             sortOrder: number;
         };
         /** MarkdownCategoryTree */
