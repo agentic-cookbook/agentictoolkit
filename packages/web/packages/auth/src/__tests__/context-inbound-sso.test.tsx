@@ -103,6 +103,30 @@ describe('AuthProvider inbound SSO (in place)', () => {
     expect(loc.replace).not.toHaveBeenCalled()
   })
 
+  it('settles anonymous on #error=login_required under React StrictMode', async () => {
+    // The sibling test above renders WITHOUT StrictMode, which is why this stayed
+    // hidden. StrictMode double-invokes the effect: pass 1 is cancelled by its own
+    // cleanup partway through (at the `if (cancelled) return` after the refresh),
+    // so it never clears isLoading — and pass 2 must therefore be allowed to run
+    // to the end and clear it. A once-guard that bails pass 2 outright strands
+    // isLoading at true forever, and every RequireAuth gate below shows its
+    // loading skeleton for the rest of the page's life. The guard exists for the
+    // single-use `#code`; an `#error` has nothing to consume twice.
+    const loc = stubLocation('/home', '#error=login_required')
+
+    const { getByText } = render(
+      <StrictMode>
+        <AuthProvider clientId="adh">
+          <Probe />
+        </AuthProvider>
+      </StrictMode>,
+    )
+
+    await waitFor(() => getByText('anon'))
+    expect(fetched.some((u) => u.includes('exchange'))).toBe(false)
+    expect(loc.replace).not.toHaveBeenCalled()
+  })
+
   it('keeps an existing session when an inbound #code fails to exchange (stray fragment)', async () => {
     // A logged-in user (valid stored tokens) lands on a content page carrying a
     // stray `#code` that is NOT an SSO landing. The failed exchange must fall

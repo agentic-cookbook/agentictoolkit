@@ -225,8 +225,19 @@ export function AuthProvider<U extends AuthUser = AuthUser>({
         // it. Set the guard synchronously, before any await, so the second pass
         // bails here while the first pass's exchange (below) still resolves and
         // applies — hence no `cancelled` discard on the success path.
-        if (inboundStartedRef.current) return
-        inboundStartedRef.current = true
+        //
+        // Scoped to a `code`, and that scope is load-bearing. An `#error` (the
+        // `login_required` a silent check bounces back) has nothing single-use to
+        // protect, and it does not end in this block — it falls through to the
+        // refresh/settle path below, which IS `cancelled`-guarded. Under
+        // StrictMode that combination stranded the provider: pass 1 returned at
+        // the post-refresh `if (cancelled) return` without clearing isLoading,
+        // pass 2 returned here without reaching it either, and every RequireAuth
+        // gate below showed its loading skeleton for the life of the page.
+        if (inbound.code) {
+          if (inboundStartedRef.current) return
+          inboundStartedRef.current = true
+        }
         // Strip the SSO `code`/`error` from the address bar but KEEP any other
         // fragment the page carried — the `#site-switch` up-walk marker (the AS
         // appends `&code=…` to it) or a scroll anchor.
