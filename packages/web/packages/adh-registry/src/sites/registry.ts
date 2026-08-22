@@ -436,9 +436,12 @@ export function isSiteId(value: string): value is SiteId {
  *  about one checkout, and this file is shared by all of them. `mcp` and `builds`
  *  have no site folder ANYWHERE (an endpoint and a backend), so they're in neither
  *  list. `messaging` was a third until 2026-08-22, when it stopped being an
- *  in-hub-only feature and got a deck, a domain and a directory of its own — the
- *  hub view at `/<slug>/messaging` is still there (see HUB_FEATURE_SEGMENT), a site
- *  and its hub view having always been two things rather than a choice. */
+ *  in-hub-only feature and got a deck, a domain and a directory of its own. The hub
+ *  view at `/<slug>/messaging` is still there, but it is `messages`'s now (see
+ *  HUB_FEATURE_SEGMENT): the id was reused for a site about configuring email & SMS,
+ *  and sending and receiving messages — which is what that route does — went to
+ *  `messages`. A site and its hub view were always two things rather than a choice,
+ *  which is why the route did not have to move when the id changed hands. */
 export const MAIN_SITE_IDS: SiteId[] = [
   'admin', 'bitbag', 'community', 'cookbook', 'devteam', 'help', 'hub', 'hub-help',
   'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',
@@ -702,7 +705,13 @@ export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
   // the site has no workspace inside the hub — only its own marketing pages. Listing a segment
   // here that the hub does not route would make HUB_WORKSPACE_SEGMENTS claim a workspace that
   // isn't there.)
-  messaging: 'messaging',
+  // The hub's DM workspace + notification inbox, at /<slug>/messaging. Keyed by
+  // `messages` — sending and receiving messages is what that site is — while the
+  // segment keeps the older `messaging` spelling, which is a route name and not a
+  // site name (as with personas → all-data). The `messaging` SITE has no hub view:
+  // it is about configuring email & SMS for your products, and the hub surface for
+  // that is the `integrations` feature.
+  messages: 'messaging',
   // Ecosystems are managed as PRODUCTS in the hub (/<slug>/products — each product IS
   // an ecosystem), so both the ecosystems and products sites switch into that view.
   ecosystems: 'products',
@@ -1060,7 +1069,30 @@ export function siteHomePath(id: SiteId): string {
  *
  *  `external` sites (FishLamp Design) are excluded from EVERY env: they are
  *  link-outs, not ADH apps — they have no `/auth/callback` and never begin an
- *  ADH login, so listing them would widen the OAuth redirect surface for nothing. */
+ *  ADH login, so listing them would widen the OAuth redirect surface for nothing.
+ *
+ *  ⚠️ `hasStaging` / `hasTesting` ARE THE OAUTH REDIRECT SURFACE, and editing one
+ *  is a one-way door. The enforcement point is a DB column, and the deploy-time
+ *  sync that fills it (`backend/src/adh/src/lib/sync-return-origins.ts`) is
+ *  ADDITIVE, NEVER PRUNING — it adds what this function names and keeps whatever
+ *  else is already there. So flipping a flag to `true` allow-lists that origin on
+ *  that env permanently; flipping it back to `false` does NOT take it off, and
+ *  nothing in the deploy path will. Un-widening is a deliberate, hand-run
+ *  `tools/sync-return-origins.ts --prune` against that env. Treat a flag flip on
+ *  an EXISTING row the way you would treat editing the allow-list itself, and
+ *  flip one only for a site that really is deployed on that tier — a claimed tier
+ *  with nothing behind it buys a live redirect target for a host we are not
+ *  serving. (`testing/probe-auth-fleet.py` derives its roster from these same
+ *  flags, so a tier claimed and not deployed shows up there as a failing probe
+ *  rather than as silence.)
+ *
+ *  This has happened once. `messaging` was an in-hub-only feature id until
+ *  2026-08-22 — `hasStaging: false, hasTesting: false, listed: false`, so only its
+ *  production origin was ever listed — and became a real three-tier site that day
+ *  (deployed by `.shipr`'s group4 shard, all three hosts live in DNS), which added
+ *  `https://staging.agenticdevelopermessaging.com` and
+ *  `https://testing.agenticdevelopermessaging.com` for good. Intended, and written
+ *  down here because the diff that did it looked like a listing change. */
 export function ssoReturnOrigins(env: 'production' | 'staging' | 'testing'): string[] {
   const prefix = env === 'production' ? '' : `${env}.`
   return SITES.filter(
