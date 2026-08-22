@@ -424,4 +424,49 @@ describe('DataTable selection checkboxes', () => {
     render(<Harness />)
     expect(screen.queryByRole('separator', { name: 'Resize column __select' })).toBeNull()
   })
+
+  it('names each checkbox from the row when the id IS the descriptive field', () => {
+    // The guess skips any field equal to the id, so a table keyed by its own name column falls
+    // through to whatever comes next — here a category every row shares, which would give all
+    // three rows the checkbox name "Select fruit" and make them indistinguishable to a screen
+    // reader. `describeRow` is the caller saying what the row is called.
+    const catalogue = [
+      { resource: 'apple', kind: 'fruit' },
+      { resource: 'pear', kind: 'fruit' },
+    ]
+    render(
+      <DataTable
+        ariaLabel="Catalogue"
+        columns={[{ key: 'resource', header: 'Resource' }]}
+        rows={catalogue}
+        getRowId={(r) => r.resource}
+        selectedIds={new Set()}
+        onSelectionChange={vi.fn()}
+        showSelectionCheckboxes
+        describeRow={(r) => r.resource}
+      />,
+    )
+    expect(screen.getByRole('checkbox', { name: 'Select apple' })).toBeTruthy()
+    expect(screen.getByRole('checkbox', { name: 'Select pear' })).toBeTruthy()
+  })
+
+  it('without describeRow, a table keyed by its own name column collides on the next field', () => {
+    // Documents the fallback this prop exists for, so the guess cannot quietly get "better" and
+    // leave the pages that pass `describeRow` looking like they did it for no reason.
+    render(
+      <DataTable
+        ariaLabel="Catalogue"
+        columns={[{ key: 'resource', header: 'Resource' }]}
+        rows={[
+          { resource: 'apple', kind: 'fruit' },
+          { resource: 'pear', kind: 'fruit' },
+        ]}
+        getRowId={(r) => r.resource}
+        selectedIds={new Set()}
+        onSelectionChange={vi.fn()}
+        showSelectionCheckboxes
+      />,
+    )
+    expect(screen.getAllByRole('checkbox', { name: 'Select fruit' })).toHaveLength(2)
+  })
 })
