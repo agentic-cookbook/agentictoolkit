@@ -250,6 +250,8 @@ describe('LISTED_SITES (the family roster)', () => {
       'testing',
       'registry',
       'docs',
+      'messaging',
+      'messages',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
@@ -262,7 +264,11 @@ describe('LISTED_SITES (the family roster)', () => {
     const ids = LISTED_SITES.map((s) => s.id)
     expect(ids).toContain('admin')
     expect(ids).toContain('status')
-    expect(ids).not.toContain('messaging')
+    // `consulting`, not `messaging`: this named messaging until 2026-08-22, when it
+    // stopped being an in-hub-only feature and became a deck with a domain. The
+    // assertion is about `listed: false` being honoured at all, so it needs an id that
+    // still IS one — the folded sites are the lasting example.
+    expect(ids).not.toContain('consulting')
   })
   it('includes the new mcp entry', () => {
     expect(LISTED_SITES.map((s) => s.id)).toContain('mcp')
@@ -751,6 +757,8 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'testing',
       'registry',
       'docs',
+      'messaging',
+      'messages',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',

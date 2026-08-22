@@ -15,6 +15,7 @@ import {
   Shield,
   Bot,
   Archive,
+  Keyboard,
 } from "lucide-react";
 import {
   AccountPanel,
@@ -47,6 +48,10 @@ import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import { reservedWorkspaceSlugs } from "../site";
 import { siteUrl } from "@agentic-toolkit/adh-registry";
 import { AppearancePanel } from "./AppearancePanel";
+// Relative, like AppearancePanel above and for the same reason: this panel is part of
+// THIS entry and holds no module state of its own. The store it writes through to does,
+// and that one it imports by package path — see its own header.
+import { HubPreferencesPanel } from "./HubPreferencesPanel";
 // Package path, not "./topics": this is the same specifier a Server Component outside this
 // package must use to reach these exports without going through the "use client"-tainted
 // settings/index barrel — using it here too keeps one documented route, in and out of the
@@ -79,6 +84,7 @@ const ICONS: Record<SettingsTopicId, ReactNode> = {
   tokens: <Key size={16} aria-hidden />,
   assistants: <Bot size={16} aria-hidden />,
   archived: <Archive size={16} aria-hidden />,
+  preferences: <Keyboard size={16} aria-hidden />,
 };
 
 const HELP: Partial<Record<SettingsTopicId, string>> = {
@@ -93,6 +99,7 @@ const HELP: Partial<Record<SettingsTopicId, string>> = {
   tokens: "Create and revoke personal API tokens.",
   assistants: "Control, per tool, what each assistant may do on your behalf.",
   archived: "Organizations you've archived. Restore one while its handle is still free.",
+  preferences: "How the hub itself behaves on this browser, including its keyboard shortcut.",
 };
 
 // ProfilePanel takes the host's reserved slug words as a prop (see its own doc comment).
@@ -121,6 +128,7 @@ const PANELS: Record<SettingsTopicId, ReactNode> = {
   tokens: <TokensPanel />,
   assistants: <AssistantsPanel />,
   archived: <ArchivedPanel />,
+  preferences: <HubPreferencesPanel />,
 };
 
 // Panels that render their OWN gold-mono section title (SectionHeader, which matches
@@ -133,8 +141,8 @@ const SELF_TITLED: ReadonlySet<SettingsTopicId> = new Set<SettingsTopicId>([
 
 // Backend endpoint each settings section maps to — drives the FeatureTitle "API"
 // button. Self endpoints (/auth/me) and collections take no path params. Sections
-// with no backing endpoint (appearance = local theme, subscription = placeholder)
-// are omitted, so no button shows. SELF_TITLED sections wire the button in their own
+// with no backing endpoint (appearance = local theme, preferences = this browser only,
+// subscription = placeholder) are omitted, so no button shows. SELF_TITLED sections wire the button in their own
 // panel instead (they skip FeatureTitle here).
 const API_PATHS: Partial<Record<SettingsTopicId, string>> = {
   account: "/auth/me",

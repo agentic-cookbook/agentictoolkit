@@ -109,6 +109,17 @@ export type NavigationPopoverProps = {
      *  destination. It sits outside the scrolling list too, so it stays visible on a
      *  menu long enough to scroll. */
     footer?: ReactNode;
+    /** A chord that TOGGLES the menu, in `@agentic-toolkit/ui/hooks/useShortcut`
+     *  spelling — `'mod+shift+k'`, say. Omit (or pass `''`) for no shortcut, which is
+     *  what every popover that isn't the site menu wants: two popovers registering the
+     *  same chord would race, and the registry's most-recent-wins tie-break would hand
+     *  the win to whichever mounted last. Toggling rather than opening is deliberate —
+     *  a chord the user can only press one way is a chord they have to reach for the
+     *  mouse to undo. */
+    openShortcut?: {
+        keys: string;
+        label: string;
+    };
 };
 /**
  * A header command menu: a trigger that opens a popover whose top level mixes
@@ -129,5 +140,5 @@ export type NavigationPopoverProps = {
  * navigate a chosen item, and any command-row trailing control / special search
  * command.
  */
-export declare function NavigationPopover({ entries, triggerLabel, triggerContent, triggerText, triggerIcon, triggerClassName, placeholder, emptyLabel, onChoose, commandTrailing, searchCommand, footer, }: NavigationPopoverProps): ReactElement;
+export declare function NavigationPopover({ entries, triggerLabel, triggerContent, triggerText, triggerIcon, triggerClassName, placeholder, emptyLabel, onChoose, commandTrailing, searchCommand, footer, openShortcut, }: NavigationPopoverProps): ReactElement;
 //# sourceMappingURL=NavigationPopover.d.ts.map

@@ -3,7 +3,7 @@
 "use client";
 
 // src/settings/UserSettingsOverlay.tsx
-import { useState } from "react";
+import { useState as useState2 } from "react";
 import {
   Dialog,
   DialogContent,
@@ -28,7 +28,8 @@ import {
   Bell,
   Shield,
   Bot,
-  Archive
+  Archive,
+  Keyboard
 } from "lucide-react";
 import {
   AccountPanel,
@@ -395,26 +396,140 @@ function AppearancePanel() {
   ] }) });
 }
 
+// src/settings/HubPreferencesPanel.tsx
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Button } from "@agentic-toolkit/ui/components/button";
+import {
+  chordFromEvent,
+  formatChord,
+  sameChord,
+  useRegisteredShortcuts
+} from "@agentic-toolkit/ui/hooks/useShortcut";
+import { SettingRow as SettingRow2 } from "@agentic-toolkit/account";
+import {
+  DEFAULT_SITE_MENU_SHORTCUT,
+  setSiteMenuShortcut,
+  useHubPreferences
+} from "@agentic-toolkit/adh/header/hub-preferences";
+import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
+var SITE_MENU_LABEL = "Site menu";
+function HubPreferencesPanel() {
+  const { siteMenuShortcut } = useHubPreferences();
+  const registered = useRegisteredShortcuts();
+  const [recording, setRecording] = useState({ state: "idle" });
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const registeredRef = useRef(registered);
+  registeredRef.current = registered;
+  const save = useCallback((keys) => {
+    setSiteMenuShortcut(keys);
+    setRecording({ state: "idle" });
+  }, []);
+  useEffect(() => {
+    if (recording.state !== "listening") return;
+    const onKeyDown = (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === "Escape") {
+        setRecording({ state: "idle" });
+        return;
+      }
+      const keys = chordFromEvent(event);
+      if (keys === null) return;
+      const clash = registeredRef.current.find(
+        (s) => s.label !== SITE_MENU_LABEL && sameChord(s.keys, keys)
+      );
+      if (clash) {
+        setRecording({ state: "conflict", keys, with: clash.label });
+        return;
+      }
+      setSiteMenuShortcut(keys);
+      setRecording({ state: "idle" });
+    };
+    document.addEventListener("keydown", onKeyDown, true);
+    return () => document.removeEventListener("keydown", onKeyDown, true);
+  }, [recording.state]);
+  const isDefault = siteMenuShortcut === DEFAULT_SITE_MENU_SHORTCUT;
+  const isOff = siteMenuShortcut === "";
+  return /* @__PURE__ */ jsx2("div", { className: "min-h-0 flex-1 overflow-y-auto px-6 py-6", children: /* @__PURE__ */ jsxs2("div", { className: "max-w-3xl space-y-7", children: [
+    /* @__PURE__ */ jsx2("p", { className: "text-sm text-apt-text-muted", children: "Preferences for the hub\u2019s own chrome. Unlike the rest of your settings, these are saved to this browser rather than to your account \u2014 a keyboard shortcut belongs to the keyboard in front of you." }),
+    /* @__PURE__ */ jsx2(
+      SettingRow2,
+      {
+        label: "Site menu shortcut",
+        description: "Opens and closes the site menu from anywhere, including while you are typing.",
+        children: /* @__PURE__ */ jsxs2("div", { className: "flex items-center gap-2", children: [
+          /* @__PURE__ */ jsx2(
+            "span",
+            {
+              className: "min-w-24 rounded-md border border-apt-border px-3 py-1.5 text-center font-mono text-sm text-apt-text",
+              "aria-live": "polite",
+              children: recording.state === "listening" ? "Press keys\u2026" : !mounted ? "\xA0" : isOff ? "Off" : formatChord(siteMenuShortcut)
+            }
+          ),
+          recording.state === "listening" ? /* @__PURE__ */ jsx2(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => setRecording({ state: "idle" }),
+              children: "Cancel"
+            }
+          ) : /* @__PURE__ */ jsx2(
+            Button,
+            {
+              variant: "outline",
+              size: "sm",
+              onClick: () => setRecording({ state: "listening" }),
+              children: isOff ? "Set" : "Change"
+            }
+          ),
+          /* @__PURE__ */ jsx2(
+            Button,
+            {
+              variant: "ghost",
+              size: "sm",
+              disabled: isDefault,
+              onClick: () => save(DEFAULT_SITE_MENU_SHORTCUT),
+              children: "Reset"
+            }
+          ),
+          /* @__PURE__ */ jsx2(Button, { variant: "ghost", size: "sm", disabled: isOff, onClick: () => save(""), children: "Turn off" })
+        ] })
+      }
+    ),
+    recording.state === "listening" && /* @__PURE__ */ jsx2("p", { className: "text-xs text-apt-text-muted", children: "Press the combination you want. Escape cancels; Escape and Tab cannot be bound." }),
+    recording.state === "conflict" && /* @__PURE__ */ jsxs2("p", { className: "text-xs text-apt-red", role: "alert", children: [
+      formatChord(recording.keys),
+      " is already",
+      " ",
+      /* @__PURE__ */ jsx2("span", { className: "font-medium", children: recording.with }),
+      ". Pick another combination."
+    ] })
+  ] }) });
+}
+
 // src/settings/registry.tsx
 import {
   SETTINGS_TOPICS,
   resolveSettingsTopic
 } from "@agentic-toolkit/adh/settings/topics";
-import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
 var ICONS = {
-  account: /* @__PURE__ */ jsx2(User, { size: 16, "aria-hidden": true }),
-  security: /* @__PURE__ */ jsx2(Shield, { size: 16, "aria-hidden": true }),
-  subscription: /* @__PURE__ */ jsx2(CreditCard, { size: 16, "aria-hidden": true }),
-  usage: /* @__PURE__ */ jsx2(Gauge, { size: 16, "aria-hidden": true }),
-  profile: /* @__PURE__ */ jsx2(Globe, { size: 16, "aria-hidden": true }),
-  appearance: /* @__PURE__ */ jsx2(Palette, { size: 16, "aria-hidden": true }),
-  social: /* @__PURE__ */ jsx2(Share2, { size: 16, "aria-hidden": true }),
-  addresses: /* @__PURE__ */ jsx2(MapPin, { size: 16, "aria-hidden": true }),
-  contacts: /* @__PURE__ */ jsx2(Mail, { size: 16, "aria-hidden": true }),
-  notifications: /* @__PURE__ */ jsx2(Bell, { size: 16, "aria-hidden": true }),
-  tokens: /* @__PURE__ */ jsx2(Key, { size: 16, "aria-hidden": true }),
-  assistants: /* @__PURE__ */ jsx2(Bot, { size: 16, "aria-hidden": true }),
-  archived: /* @__PURE__ */ jsx2(Archive, { size: 16, "aria-hidden": true })
+  account: /* @__PURE__ */ jsx3(User, { size: 16, "aria-hidden": true }),
+  security: /* @__PURE__ */ jsx3(Shield, { size: 16, "aria-hidden": true }),
+  subscription: /* @__PURE__ */ jsx3(CreditCard, { size: 16, "aria-hidden": true }),
+  usage: /* @__PURE__ */ jsx3(Gauge, { size: 16, "aria-hidden": true }),
+  profile: /* @__PURE__ */ jsx3(Globe, { size: 16, "aria-hidden": true }),
+  appearance: /* @__PURE__ */ jsx3(Palette, { size: 16, "aria-hidden": true }),
+  social: /* @__PURE__ */ jsx3(Share2, { size: 16, "aria-hidden": true }),
+  addresses: /* @__PURE__ */ jsx3(MapPin, { size: 16, "aria-hidden": true }),
+  contacts: /* @__PURE__ */ jsx3(Mail, { size: 16, "aria-hidden": true }),
+  notifications: /* @__PURE__ */ jsx3(Bell, { size: 16, "aria-hidden": true }),
+  tokens: /* @__PURE__ */ jsx3(Key, { size: 16, "aria-hidden": true }),
+  assistants: /* @__PURE__ */ jsx3(Bot, { size: 16, "aria-hidden": true }),
+  archived: /* @__PURE__ */ jsx3(Archive, { size: 16, "aria-hidden": true }),
+  preferences: /* @__PURE__ */ jsx3(Keyboard, { size: 16, "aria-hidden": true })
 };
 var HELP = {
   account: "Your sign-in email and password.",
@@ -427,28 +542,30 @@ var HELP = {
   contacts: "Emails and phone numbers shown on your card.",
   tokens: "Create and revoke personal API tokens.",
   assistants: "Control, per tool, what each assistant may do on your behalf.",
-  archived: "Organizations you've archived. Restore one while its handle is still free."
+  archived: "Organizations you've archived. Restore one while its handle is still free.",
+  preferences: "How the hub itself behaves on this browser, including its keyboard shortcut."
 };
 var PANELS = {
-  account: /* @__PURE__ */ jsx2(AccountPanel, {}),
-  security: /* @__PURE__ */ jsx2(SecurityWorkspace, {}),
-  subscription: /* @__PURE__ */ jsx2(SubscriptionPanel, {}),
-  usage: /* @__PURE__ */ jsx2(UsagePanel, {}),
-  profile: /* @__PURE__ */ jsx2(
+  account: /* @__PURE__ */ jsx3(AccountPanel, {}),
+  security: /* @__PURE__ */ jsx3(SecurityWorkspace, {}),
+  subscription: /* @__PURE__ */ jsx3(SubscriptionPanel, {}),
+  usage: /* @__PURE__ */ jsx3(UsagePanel, {}),
+  profile: /* @__PURE__ */ jsx3(
     ProfilePanel,
     {
       reservedSlugs: reservedWorkspaceSlugs(),
       profileUrlFor: (slug) => siteUrl("hub", `/${encodeURIComponent(slug)}`, window.location.hostname)
     }
   ),
-  appearance: /* @__PURE__ */ jsx2(AppearancePanel, {}),
-  social: /* @__PURE__ */ jsx2(SocialLinksPanel, {}),
-  addresses: /* @__PURE__ */ jsx2(AddressesPanel, {}),
-  contacts: /* @__PURE__ */ jsx2(ContactInfoPanel, {}),
-  notifications: /* @__PURE__ */ jsx2(NotificationsWorkspace, {}),
-  tokens: /* @__PURE__ */ jsx2(TokensPanel, {}),
-  assistants: /* @__PURE__ */ jsx2(AssistantsPanel, {}),
-  archived: /* @__PURE__ */ jsx2(ArchivedPanel, {})
+  appearance: /* @__PURE__ */ jsx3(AppearancePanel, {}),
+  social: /* @__PURE__ */ jsx3(SocialLinksPanel, {}),
+  addresses: /* @__PURE__ */ jsx3(AddressesPanel, {}),
+  contacts: /* @__PURE__ */ jsx3(ContactInfoPanel, {}),
+  notifications: /* @__PURE__ */ jsx3(NotificationsWorkspace, {}),
+  tokens: /* @__PURE__ */ jsx3(TokensPanel, {}),
+  assistants: /* @__PURE__ */ jsx3(AssistantsPanel, {}),
+  archived: /* @__PURE__ */ jsx3(ArchivedPanel, {}),
+  preferences: /* @__PURE__ */ jsx3(HubPreferencesPanel, {})
 };
 var SELF_TITLED = /* @__PURE__ */ new Set([
   "notifications",
@@ -478,13 +595,13 @@ function buildSettingsTopics() {
       // route, which renders this same list uncontrolled. Do not "fix" it to match the
       // overlay's actual URL; there isn't one.
       href: `/settings/${t.id}`,
-      content: /* @__PURE__ */ jsxs2("div", { className: "flex min-h-0 min-w-0 flex-1 flex-col", children: [
-        !SELF_TITLED.has(t.id) && /* @__PURE__ */ jsx2(
+      content: /* @__PURE__ */ jsxs3("div", { className: "flex min-h-0 min-w-0 flex-1 flex-col", children: [
+        !SELF_TITLED.has(t.id) && /* @__PURE__ */ jsx3(
           FeatureTitle,
           {
             title: t.label,
             help: HELP[t.id],
-            trailing: apiPath ? /* @__PURE__ */ jsx2(RecordApiButton, { path: apiPath, pathValues: {}, title: `${t.label} API` }) : void 0
+            trailing: apiPath ? /* @__PURE__ */ jsx3(RecordApiButton, { path: apiPath, pathValues: {}, title: `${t.label} API` }) : void 0
           }
         ),
         PANELS[t.id]
@@ -493,7 +610,7 @@ function buildSettingsTopics() {
   });
 }
 function SettingsTab({ activeTopic }) {
-  return /* @__PURE__ */ jsx2(SettingsDirtyProvider, { children: /* @__PURE__ */ jsx2(
+  return /* @__PURE__ */ jsx3(SettingsDirtyProvider, { children: /* @__PURE__ */ jsx3(
     SettingsLayout,
     {
       topics: buildSettingsTopics(),
@@ -504,26 +621,26 @@ function SettingsTab({ activeTopic }) {
 
 // src/settings/UserSettingsOverlay.tsx
 import { DEFAULT_SETTINGS_TOPIC } from "@agentic-toolkit/adh/settings/topics";
-import { jsx as jsx3, jsxs as jsxs3 } from "react/jsx-runtime";
+import { jsx as jsx4, jsxs as jsxs4 } from "react/jsx-runtime";
 function UserSettingsOverlay({
   open,
   onOpenChange
 }) {
-  return /* @__PURE__ */ jsx3(ToolkitQueryProvider, { children: /* @__PURE__ */ jsx3(SettingsDirtyProvider2, { children: /* @__PURE__ */ jsx3(UserSettingsDialog, { open, onOpenChange }) }) });
+  return /* @__PURE__ */ jsx4(ToolkitQueryProvider, { children: /* @__PURE__ */ jsx4(SettingsDirtyProvider2, { children: /* @__PURE__ */ jsx4(UserSettingsDialog, { open, onOpenChange }) }) });
 }
 function UserSettingsDialog({
   open,
   onOpenChange
 }) {
-  const [topic, setTopic] = useState(DEFAULT_SETTINGS_TOPIC);
-  const [openedWith, setOpenedWith] = useState(open);
+  const [topic, setTopic] = useState2(DEFAULT_SETTINGS_TOPIC);
+  const [openedWith, setOpenedWith] = useState2(open);
   if (open !== openedWith) {
     setOpenedWith(open);
     if (open) setTopic(DEFAULT_SETTINGS_TOPIC);
   }
   const topics = buildSettingsTopics();
   const { isAnyDirty } = useSettingsDirty();
-  const [pendingExit, setPendingExit] = useState(null);
+  const [pendingExit, setPendingExit] = useState2(null);
   function attemptExit(action) {
     if (isAnyDirty()) setPendingExit(() => action);
     else action();
@@ -535,7 +652,7 @@ function UserSettingsDialog({
     }
     attemptExit(() => onOpenChange(false));
   }
-  return /* @__PURE__ */ jsx3(Dialog, { open, onOpenChange: handleOpenChange, children: /* @__PURE__ */ jsxs3(
+  return /* @__PURE__ */ jsx4(Dialog, { open, onOpenChange: handleOpenChange, children: /* @__PURE__ */ jsxs4(
     DialogContent,
     {
       className: "flex flex-col gap-0 overflow-hidden p-0",
@@ -548,8 +665,8 @@ function UserSettingsDialog({
         maxHeight: "calc(100vh - 2rem)"
       },
       children: [
-        /* @__PURE__ */ jsx3(DialogTitle, { className: "shrink-0 border-b border-apt-border px-6 py-3 font-mono text-sm tracking-wide text-apt-gold", children: "User Settings" }),
-        /* @__PURE__ */ jsx3("div", { className: "flex min-h-0 flex-1 flex-col", children: /* @__PURE__ */ jsx3(
+        /* @__PURE__ */ jsx4(DialogTitle, { className: "shrink-0 border-b border-apt-border px-6 py-3 font-mono text-sm tracking-wide text-apt-gold", children: "User Settings" }),
+        /* @__PURE__ */ jsx4("div", { className: "flex min-h-0 flex-1 flex-col", children: /* @__PURE__ */ jsx4(
           SettingsLayout2,
           {
             topics,
@@ -560,7 +677,7 @@ function UserSettingsDialog({
             }
           }
         ) }),
-        /* @__PURE__ */ jsx3(
+        /* @__PURE__ */ jsx4(
           UnsavedChangesAlert,
           {
             open: pendingExit !== null,

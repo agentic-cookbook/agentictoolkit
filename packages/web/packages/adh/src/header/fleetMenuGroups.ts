@@ -2,7 +2,7 @@ import { ADMIN_SITE_IDS } from '@agentic-toolkit/adh-registry'
 import { type MenuGroup, type MenuLink } from './SiteMenu'
 
 // ─────────────────────────────────────────────────────────────────────────────
-// The fleet tree — the whole family as nine rows, used identically by BOTH the
+// The fleet tree — the whole family as ten rows, used identically by BOTH the
 // marketing (logged-out) and workspace (logged-in) menus. Every row here is a
 // site anyone may visit; the rows that DO depend on a session (Home, Workspaces,
 // Recents, Login/Sign up) are the chrome {@link SiteMenu} builds around this —
@@ -10,12 +10,12 @@ import { type MenuGroup, type MenuLink } from './SiteMenu'
 // {@link ADMIN_MENU_GROUPS} below, which is a separate export precisely so that
 // this one stays unconditional.
 //
-// Shape: seven of the nine open a submenu, and five of those seven are a link as
+// Shape: seven of the ten open a submenu, and five of those seven are a link as
 // well — "Hub" opens the hub's own pages and IS the hub. The other two ('Plan',
 // 'Build') are grouping headers with nowhere of their own to go, because the
 // family has no plan.* or build.* site; they exist to give the sites underneath
-// them a name. The remaining two rows (Bitbag, Organizations) are plain
-// destinations with nothing under them.
+// them a name. The remaining three rows (Bitbag, Messages, Organizations) are
+// plain destinations with nothing under them.
 //
 // Every row carries an icon and a short trailing tagline. A `{ site }` row takes
 // both from the registry unless it says otherwise here, so this file states a
@@ -28,8 +28,8 @@ import { type MenuGroup, type MenuLink } from './SiteMenu'
 // change the other; a registry test pins the labels from its side.
 //
 // The two surfaces are not the same LIST, though, and neither is a subset of the
-// other: this tree promotes Bitbag and Organizations to top-level rows (the
-// overview has no such shape, so it files them under Hub) and adds the Studio's
+// other: this tree promotes Bitbag, Messages and Organizations to top-level rows
+// (the overview has no such shape, so it files them under Hub) and adds the Studio's
 // absolute href, while the overview additionally carries the sites with no menu
 // row at all (fishlamp, fishlampdesign, mcp). Only the grouping is shared.
 //
@@ -71,6 +71,7 @@ function topic(t: {
  */
 export const FLEET_MENU_GROUPS: MenuGroup[] = [
   leaf({ site: 'bitbag', description: "The hub's AI persona" }),
+  leaf({ site: 'messages', description: 'Your messages, everywhere' }),
   topic({
     label: 'Hub',
     description: 'The center of it all',
@@ -159,6 +160,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'authentication' },
       { site: 'customers' },
       { site: 'billing' },
+      { site: 'messaging', description: 'Email & SMS for your products' },
       { site: 'notifications' },
       { site: 'sites' },
       { site: 'communities' },

@@ -17,6 +17,7 @@ import { ChevronDown } from 'lucide-react'
 import { type NavLinkIcon } from './NavLink'
 import { cn, noAutofillProps } from '@agentic-toolkit/ui'
 import { confirmNavigation, GUARDED_NAV_ATTR } from '@agentic-toolkit/ui/lib/navigation-guard'
+import { useShortcut } from '@agentic-toolkit/ui/hooks/useShortcut'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -140,6 +141,14 @@ export type NavigationPopoverProps = {
    *  destination. It sits outside the scrolling list too, so it stays visible on a
    *  menu long enough to scroll. */
   footer?: ReactNode
+  /** A chord that TOGGLES the menu, in `@agentic-toolkit/ui/hooks/useShortcut`
+   *  spelling — `'mod+shift+k'`, say. Omit (or pass `''`) for no shortcut, which is
+   *  what every popover that isn't the site menu wants: two popovers registering the
+   *  same chord would race, and the registry's most-recent-wins tie-break would hand
+   *  the win to whichever mounted last. Toggling rather than opening is deliberate —
+   *  a chord the user can only press one way is a chord they have to reach for the
+   *  mouse to undo. */
+  openShortcut?: { keys: string; label: string }
 }
 
 /** Wrap every case-insensitive occurrence of `query` in `text` so the matched
@@ -246,6 +255,7 @@ export function NavigationPopover({
   commandTrailing,
   searchCommand,
   footer,
+  openShortcut,
 }: NavigationPopoverProps): ReactElement {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -276,6 +286,28 @@ export function NavigationPopover({
     if (opts?.restoreFocus === false) suppressFocusRestore.current = true
     setOpen(false)
   }, [])
+
+  // The optional global chord (see `openShortcut`). Registered unconditionally with
+  // `enabled` carrying the on/off, because mounting the hook conditionally is what
+  // React forbids — and `enabled: false` also keeps a menu with no chord out of the
+  // enumerated shortcut list, rather than advertising an empty binding.
+  // `allowInInput` is on: the whole point of a site-switch chord is to reach it from
+  // wherever you are, and the command field of the menu it opens is itself a text
+  // field, so without this the chord could open the menu but never close it again.
+  // An absent chord is spelled `''`, which parses to a key no keydown can report — so the
+  // registration is inert twice over, by `enabled` and by the chord itself. The registry
+  // preventDefaults a match before it runs the handler, so there is nothing to do here but
+  // flip the state.
+  useShortcut(
+    {
+      keys: openShortcut?.keys ?? '',
+      label: openShortcut?.label ?? '',
+      group: 'Navigation',
+      allowInInput: true,
+      enabled: Boolean(openShortcut?.keys),
+    },
+    () => setOpen((cur) => !cur),
+  )
 
   // Navigate to a chosen item, then close. Default is a full-page assign (matches
   // cross-site switching); subclasses pass `onChoose` for SPA navigation.
@@ -348,6 +380,25 @@ export function NavigationPopover({
     close({ restoreFocus: false })
     searchCommand.onSelect()
   }, [close, searchCommand])
+
+  // Pointer moved onto the menu's non-row CHROME — the command field, the footer,
+  // the empty-state line. Those sit inside the popup but outside the list, so
+  // `DropdownMenuContent`'s onMouseLeave never fires for them and a topic disclosed on
+  // the way down stays disclosed, looking exactly as if the pointer were still on its
+  // row. Clearing the cursor closes the flyout and drops the row highlight together.
+  //
+  // Deliberately NOT hung on the content or the list itself: a row's own onMouseMove
+  // BUBBLES, so a parent handler would run after it and its `{ kind: 'none' }` would
+  // win, killing hover disclosure entirely. Only the chrome elements carry it.
+  //
+  // Guarded on `navByKeyboard` for the same reason onMouseLeave leaves 'sub' alone: if
+  // the cursor is merely resting on the chrome while someone arrows around, the browser
+  // still emits a mousemove for an incidental jiggle, and stealing their highlight for
+  // it would be worse than the bug this fixes.
+  const leaveRows = useCallback(() => {
+    if (navByKeyboard.current) return
+    setNav((cur) => (cur.kind === 'none' ? cur : { kind: 'none' }))
+  }, [])
 
   // Which topic's flyout is open — the controlled `open` for each DropdownMenuSub.
   const disclosed =
@@ -642,7 +693,7 @@ export function NavigationPopover({
           return true
         }}
       >
-        <div className="adh-nav-popover__search">
+        <div className="adh-nav-popover__search" onMouseMove={leaveRows}>
           <span className="adh-nav-popover__prompt" aria-hidden>
             &gt;
           </span>
@@ -889,14 +940,25 @@ export function NavigationPopover({
             })}
         </div>
         {searching && !cmdActive && searchResults.length === 0 && (
-          <p className="adh-nav-popover__empty" role="status" aria-live="polite">
+          <p
+            className="adh-nav-popover__empty"
+            role="status"
+            aria-live="polite"
+            onMouseMove={leaveRows}
+          >
             {emptyLabel}
           </p>
         )}
         {footer && (
           <>
-            <div className="adh-dropdown-menu__separator" role="separator" />
-            <div className="adh-nav-popover__footer">{footer}</div>
+            <div
+              className="adh-dropdown-menu__separator"
+              role="separator"
+              onMouseMove={leaveRows}
+            />
+            <div className="adh-nav-popover__footer" onMouseMove={leaveRows}>
+              {footer}
+            </div>
           </>
         )}
       </DropdownMenuContent>

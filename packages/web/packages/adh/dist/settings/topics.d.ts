@@ -1,4 +1,4 @@
-/** Left-sidebar sections inside User Settings, in rail order. Shared by hub's
+/** Left-sidebar sections inside User Settings, in rail order — alphabetical by label. Shared by hub's
  *  /settings route and the User Settings overlay every site mounts.
  *
  *  Import these from "@agentic-toolkit/adh/settings/topics" — this exact subpath, never
@@ -8,48 +8,53 @@
  *  "use client", and a built dist chunk hoists that directive onto everything else the
  *  same entry reaches. See settings/index.ts's own header comment for the full mechanism. */
 export declare const SETTINGS_TOPICS: readonly [{
-    readonly id: "appearance";
-    readonly label: "Appearance";
-}, {
     readonly id: "account";
     readonly label: "Account";
 }, {
+    readonly id: "addresses";
+    readonly label: "Addresses";
+}, {
+    readonly id: "tokens";
+    readonly label: "API tokens";
+}, {
+    readonly id: "appearance";
+    readonly label: "Appearance";
+}, {
+    readonly id: "archived";
+    readonly label: "Archived";
+}, {
+    readonly id: "assistants";
+    readonly label: "Assistants";
+}, {
+    readonly id: "contacts";
+    readonly label: "Contact info";
+}, {
+    readonly id: "preferences";
+    readonly label: "Hub Preferences";
+}, {
+    readonly id: "notifications";
+    readonly label: "Notifications";
+}, {
+    readonly id: "profile";
+    readonly label: "Profile";
+}, {
     readonly id: "security";
     readonly label: "Security";
+}, {
+    readonly id: "social";
+    readonly label: "Social links";
 }, {
     readonly id: "subscription";
     readonly label: "Subscription";
 }, {
     readonly id: "usage";
     readonly label: "Usage";
-}, {
-    readonly id: "profile";
-    readonly label: "Profile";
-}, {
-    readonly id: "social";
-    readonly label: "Social links";
-}, {
-    readonly id: "addresses";
-    readonly label: "Addresses";
-}, {
-    readonly id: "contacts";
-    readonly label: "Contact info";
-}, {
-    readonly id: "notifications";
-    readonly label: "Notifications";
-}, {
-    readonly id: "tokens";
-    readonly label: "API tokens";
-}, {
-    readonly id: "assistants";
-    readonly label: "Assistants";
-}, {
-    readonly id: "archived";
-    readonly label: "Archived";
 }];
 export type SettingsTopicId = (typeof SETTINGS_TOPICS)[number]["id"];
-/** Opening Settings lands on the first section in the rail (currently Appearance). */
+/** Opening Settings lands on Appearance. Named outright rather than read off
+ *  SETTINGS_TOPICS[0], because the rail is ordered alphabetically for the reader —
+ *  so which section happens to sort first is not a statement about where to land. */
 export declare const DEFAULT_SETTINGS_TOPIC: string;
-/** Clamp an arbitrary topic id to a known section, defaulting to the first. */
+/** Clamp an arbitrary topic id to a known section, defaulting to DEFAULT_SETTINGS_TOPIC. */
 export declare function resolveSettingsTopic(activeTopic?: string): string;
 //# sourceMappingURL=topics.d.ts.map

@@ -165,6 +165,7 @@ function NavLinkItem({ link }) {
 // src/header/NavigationPopover.tsx
 import { cn, noAutofillProps } from "@agentic-toolkit/ui";
 import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
+import { useShortcut } from "@agentic-toolkit/ui/hooks/useShortcut";
 import {
   DropdownMenu as DropdownMenu2,
   DropdownMenuTrigger as DropdownMenuTrigger2,
@@ -227,7 +228,8 @@ function NavigationPopover({
   onChoose,
   commandTrailing,
   searchCommand,
-  footer
+  footer,
+  openShortcut
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -241,6 +243,16 @@ function NavigationPopover({
     if (opts?.restoreFocus === false) suppressFocusRestore.current = true;
     setOpen(false);
   }, []);
+  useShortcut(
+    {
+      keys: openShortcut?.keys ?? "",
+      label: openShortcut?.label ?? "",
+      group: "Navigation",
+      allowInInput: true,
+      enabled: Boolean(openShortcut?.keys)
+    },
+    () => setOpen((cur) => !cur)
+  );
   const chooseItem = useCallback(
     (item) => {
       setOpen(false);
@@ -289,6 +301,10 @@ function NavigationPopover({
     close({ restoreFocus: false });
     searchCommand.onSelect();
   }, [close, searchCommand]);
+  const leaveRows = useCallback(() => {
+    if (navByKeyboard.current) return;
+    setNav((cur) => cur.kind === "none" ? cur : { kind: "none" });
+  }, []);
   const disclosed = nav.kind === "sub" ? nav.entry : nav.kind === "top" && nav.open ? nav.entry : null;
   const activeKey = searching ? cmdActive ? "cmd" : searchActive >= 0 ? `s${searchActive}` : null : nav.kind === "sub" ? `e${nav.entry}s${nav.item}` : nav.kind === "top" ? `e${nav.entry}` : null;
   const activeId = activeKey ? `${uid}-${activeKey}` : void 0;
@@ -497,7 +513,7 @@ function NavigationPopover({
             return true;
           },
           children: [
-            /* @__PURE__ */ jsxs3("div", { className: "adh-nav-popover__search", children: [
+            /* @__PURE__ */ jsxs3("div", { className: "adh-nav-popover__search", onMouseMove: leaveRows, children: [
               /* @__PURE__ */ jsx4("span", { className: "adh-nav-popover__prompt", "aria-hidden": true, children: ">" }),
               /* @__PURE__ */ jsx4(
                 "input",
@@ -677,10 +693,26 @@ function NavigationPopover({
                 );
               })
             ] }),
-            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4("p", { className: "adh-nav-popover__empty", role: "status", "aria-live": "polite", children: emptyLabel }),
+            searching && !cmdActive && searchResults.length === 0 && /* @__PURE__ */ jsx4(
+              "p",
+              {
+                className: "adh-nav-popover__empty",
+                role: "status",
+                "aria-live": "polite",
+                onMouseMove: leaveRows,
+                children: emptyLabel
+              }
+            ),
             footer && /* @__PURE__ */ jsxs3(Fragment4, { children: [
-              /* @__PURE__ */ jsx4("div", { className: "adh-dropdown-menu__separator", role: "separator" }),
-              /* @__PURE__ */ jsx4("div", { className: "adh-nav-popover__footer", children: footer })
+              /* @__PURE__ */ jsx4(
+                "div",
+                {
+                  className: "adh-dropdown-menu__separator",
+                  role: "separator",
+                  onMouseMove: leaveRows
+                }
+              ),
+              /* @__PURE__ */ jsx4("div", { className: "adh-nav-popover__footer", onMouseMove: leaveRows, children: footer })
             ] })
           ]
         }
@@ -1088,6 +1120,7 @@ import {
   useWorkspacesMenu as useWorkspacesMenu2
 } from "@agentic-toolkit/adh/header";
 import { useRecents } from "@agentic-toolkit/adh/header/recents";
+import { useHubPreferences } from "@agentic-toolkit/adh/header/hub-preferences";
 
 // src/header/useSiteMenu.ts
 import { useCallback as useCallback2, useMemo as useMemo2 } from "react";
@@ -1157,6 +1190,7 @@ import {
   LogIn,
   Mail,
   MessageCircle,
+  MessagesSquare,
   MonitorSmartphone,
   Network,
   Newspaper,
@@ -1167,6 +1201,7 @@ import {
   Route,
   School,
   ScrollText,
+  Send,
   Server,
   Settings as Settings2,
   ShieldCheck,
@@ -1319,6 +1354,10 @@ var MENU_ICONS = {
   // matches the '/integrations' route
   knowledgebases: BookOpen,
   // matches FEATURE_META `knowledgebases`
+  messages: MessagesSquare,
+  // the conversations themselves, read and written
+  messaging: Send,
+  // what a PRODUCT sends out — email and SMS, not your own inbox
   notebook: NotebookPen,
   // "Notes" in the fleet menu
   notifications: Bell,
@@ -1538,6 +1577,7 @@ function topic(t) {
 }
 var FLEET_MENU_GROUPS = [
   leaf({ site: "bitbag", description: "The hub's AI persona" }),
+  leaf({ site: "messages", description: "Your messages, everywhere" }),
   topic({
     label: "Hub",
     description: "The center of it all",
@@ -1626,6 +1666,7 @@ var FLEET_MENU_GROUPS = [
       { site: "authentication" },
       { site: "customers" },
       { site: "billing" },
+      { site: "messaging", description: "Email & SMS for your products" },
       { site: "notifications" },
       { site: "sites" },
       { site: "communities" },
@@ -1693,7 +1734,7 @@ function StudioWordmark() {
       className: "adh-nav-popover__wordmark",
       href: "https://agenticdevelopmentstudio.com",
       rel: "noopener",
-      children: "agentic development studio"
+      children: "Agentic Development Studio"
     }
   );
 }
@@ -1731,6 +1772,7 @@ function SiteMenu({
   const pathname = usePathname3() ?? "/";
   const workspacesMenu = useWorkspacesMenu2();
   const recents = useRecents();
+  const { siteMenuShortcut } = useHubPreferences();
   const topSection = useMemo3(() => {
     if (!authenticated) {
       const out2 = [];
@@ -1844,6 +1886,7 @@ function SiteMenu({
     NavigationPopover2,
     {
       entries: allEntries,
+      openShortcut: { keys: siteMenuShortcut, label: "Site menu" },
       onChoose: navigate,
       triggerLabel: `${label} \u2014 switch site`,
       triggerText: label,

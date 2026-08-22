@@ -62,6 +62,8 @@ export type SiteId =
   | 'testing'
   | 'registry'
   | 'docs'
+  | 'messaging'
+  | 'messages'
   // </gen:union>
   | 'narratives'
   // fishlamp / fishlampdesign: FishLamp Design, the studio that publishes the whole
@@ -69,10 +71,6 @@ export type SiteId =
   // same site. `external: true` — they are link-outs, not apps in this repo.
   | 'fishlamp'
   | 'fishlampdesign'
-  // messaging: NOT a marketing site — an in-hub-only workspace feature (the DM /
-  // notifications surface at /<slug>/messaging). Registered so HUB_FEATURE_SEGMENT can
-  // key it and the feature's `siteId` resolves; hidden from the switcher (listed:false).
-  | 'messaging'
 
 export type SiteRedirect = {
   readonly source: string
@@ -254,7 +252,7 @@ export const SITES: SiteDef[] = [
   { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'orgs', label: 'Organizations', fullLabel: 'Agentic Developer Organizations', description: 'Manage organizations', prodHost: 'agenticdeveloperorgs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
-  { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotebook.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotes.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'integrations', label: 'Integrations', fullLabel: 'Agentic Developer Integrations', description: 'Manage integrations', prodHost: 'agenticdeveloperintegrations.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'games', label: 'Games', fullLabel: 'Agentic Developer Games', description: 'Build your games', prodHost: 'agenticdevelopergames.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'gamification', label: 'Gamification', fullLabel: 'Agentic Developer Gamification', description: 'Product gamification', prodHost: 'agenticdevelopergamification.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
@@ -263,6 +261,8 @@ export const SITES: SiteDef[] = [
   { id: 'testing', label: 'Testing', fullLabel: 'Agentic Developer Testing', description: 'Test plans & bugs', prodHost: 'agenticdevelopertesting.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'registry', label: 'Registry', fullLabel: 'Agentic Developer Registry', description: 'Registered hub developers', prodHost: 'agenticdeveloperregistry.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'docs', label: 'Docs', fullLabel: 'Agentic Developer Docs', description: 'Organize your documents', prodHost: 'agenticdeveloperdocs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'messaging', label: 'Messaging', fullLabel: 'Agentic Developer Messaging', description: 'Email & SMS integrations', prodHost: 'agenticdevelopermessaging.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'messages', label: 'Messages', fullLabel: 'Agentic Developer Messages', description: 'Send & receive messages', prodHost: 'agenticdevelopermessages.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
   // pruning) — stays registered (its own header resolves, /details keep serving)
@@ -286,12 +286,6 @@ export const SITES: SiteDef[] = [
   // so the switcher links it to '/' rather than a separate /home.
   { id: 'admin', label: 'Admin', fullLabel: 'Agentic Developer Admin', description: 'Operations console', prodHost: 'admin.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: false, adminOnly: true },
   { id: 'builds', label: 'Builds', fullLabel: 'Agentic Developer Builds', description: 'Build status', prodHost: 'builder.agenticdeveloperhub.com', hasStaging: false, hasTesting: true, hasHome: false, adminOnly: true },
-  // --- Registered but hidden from the switcher list ---
-  // messaging: an in-hub-only workspace feature (DMs + notifications), not a deployed
-  // marketing site — no staging/testing/home tiers, hidden from the switcher + footer
-  // (listed:false). Exists so the `messaging` feature's siteId and
-  // HUB_FEATURE_SEGMENT entry resolve to a real registry site.
-  { id: 'messaging', label: 'Messaging', fullLabel: 'Agentic Developer Messaging', description: 'Direct messages & notifications', prodHost: 'agenticdevelopermessaging.com', hasStaging: false, hasTesting: false, hasHome: false, listed: false },
 ]
 
 export type SiteBuildConfig = {
@@ -439,9 +433,12 @@ export function isSiteId(value: string): value is SiteId {
  *  beside this file": `bitbag` and `myagenticteams` are built from their own repos
  *  since 2026-08-15 and are full members regardless, which is why the test names
  *  them rather than the registry doing it — where a site's source sits is a fact
- *  about one checkout, and this file is shared by all of them. `mcp` / `builds` /
- *  `messaging` have no site folder ANYWHERE (an endpoint / a backend / an in-hub
- *  feature), so they're in neither list. */
+ *  about one checkout, and this file is shared by all of them. `mcp` and `builds`
+ *  have no site folder ANYWHERE (an endpoint and a backend), so they're in neither
+ *  list. `messaging` was a third until 2026-08-22, when it stopped being an
+ *  in-hub-only feature and got a deck, a domain and a directory of its own — the
+ *  hub view at `/<slug>/messaging` is still there (see HUB_FEATURE_SEGMENT), a site
+ *  and its hub view having always been two things rather than a choice. */
 export const MAIN_SITE_IDS: SiteId[] = [
   'admin', 'bitbag', 'community', 'cookbook', 'devteam', 'help', 'hub', 'hub-help',
   'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',
@@ -449,7 +446,8 @@ export const MAIN_SITE_IDS: SiteId[] = [
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',
   'customers', 'dashboards', 'devices', 'docs', 'domains', 'ecosystems', 'education', 'games',
-  'gamification', 'integrations', 'knowledgebases', 'narratives', 'notebook', 'notifications',
+  'gamification', 'integrations', 'knowledgebases', 'messages', 'messaging', 'narratives',
+  'notebook', 'notifications',
   'orgs', 'personabuilder', 'personas', 'products', 'projects', 'recipes', 'registries',
   'registry', 'research', 'sites', 'storage', 'store', 'stores', 'teambuilder', 'teamregistry',
   'testing', 'tools',
@@ -492,12 +490,13 @@ export const MARKETING_SITE_IDS: SiteId[] = [
  *  not, and cannot, pin a row-for-member correspondence, because there isn't one). */
 export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   {
-    // The hub and the surfaces that ARE the hub — plus the two rows the menu
-    // promotes to its top level (bitbag above Hub, orgs below it), which have no
-    // group of their own to mirror. `store` is the hub's own merch shop: the one
-    // place in the family that ships something you can hold, run by the hub.
+    // The hub and the surfaces that ARE the hub — plus the three rows the menu
+    // promotes to its top level (bitbag and messages above Hub, orgs below it),
+    // which have no group of their own to mirror. `store` is the hub's own merch
+    // shop: the one place in the family that ships something you can hold, run by
+    // the hub.
     label: 'Hub',
-    ids: ['bitbag', 'hub', 'news', 'status', 'community', 'hub-help', 'support', 'store', 'orgs'],
+    ids: ['bitbag', 'messages', 'hub', 'news', 'status', 'community', 'hub-help', 'support', 'store', 'orgs'],
   },
   // The menu's Learn topic, minus both of its other rows: the topic's own trigger
   // is the folded `help` landing, and its Help row is hub-help, which sits in Hub
@@ -521,7 +520,7 @@ export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   // kind — none of them is a Build concern.
   {
     label: 'Products',
-    ids: ['products', 'storage', 'ecosystems', 'authentication', 'customers', 'billing', 'notifications', 'sites', 'communities', 'dashboards', 'devices', 'domains', 'integrations', 'registries', 'gamification', 'games', 'stores'],
+    ids: ['products', 'storage', 'ecosystems', 'authentication', 'customers', 'billing', 'messaging', 'notifications', 'sites', 'communities', 'dashboards', 'devices', 'domains', 'integrations', 'registries', 'gamification', 'games', 'stores'],
   },
   // Hire absorbed the old "Studio & consulting" group: the studio brand and the
   // two people-directories are one answer to "get someone to do this". The menu's

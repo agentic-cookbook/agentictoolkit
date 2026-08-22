@@ -123,6 +123,15 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   registry: { tier: 'chapter', pillar: 'build', funnelStage: 'adopt', nextStep: 'consultants' },
   // Docs is research with the publishing stripped out, so it hands off to research.
   docs: { tier: 'chapter', pillar: 'build', funnelStage: 'learn', nextStep: 'research' },
+  // --- the two halves of messaging, which are deliberately different chapters ---
+  // Messaging is what a PRODUCT sends — the providers, senders and templates behind
+  // its email and SMS — so it is a backend chapter and hands off to notifications,
+  // the surface those messages go out through.
+  messaging: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'notifications' },
+  // Messages is what YOU read and write, across every workspace and ecosystem at
+  // once. That is a hub surface rather than a product service, so it hands back to
+  // the hub rather than into any product chapter.
+  messages: { tier: 'chapter', pillar: 'build', funnelStage: 'adopt', nextStep: 'hub' },
   // --- studio & consulting. FishLamp Design is the studio the family sits under
   // (it replaced Agentic Developer Studio, whose site is gone); consulting points
   // at it as the absorbing site. fishlampdesign is the same site on its second
@@ -134,8 +143,6 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   admin: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
   status: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
   builds: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'status' },
-  // --- registered but unlisted ---
-  messaging: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'hub' },
 }
 
 /** The guided tour's next-step graph: whose `/tour` this site's `/tour` hands
@@ -188,8 +195,10 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   domains: 'ecosystems',
   ecosystems: 'gamification',
   gamification: 'integrations',
-  integrations: 'notifications',
-  notifications: 'orgs',
+  integrations: 'messaging',
+  messaging: 'notifications',
+  notifications: 'messages',
+  messages: 'orgs',
   orgs: 'games',
   games: 'products',
   products: 'stores',
