@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react"
 
-import { Field } from "./field"
+import { Field, FIELD_LABEL_GROUP_CLASS } from "./field"
 import { Input } from "../components/input"
 import { cn } from "../lib/utils"
 import { toneTextClass, type Tone } from "../lib/tone"
@@ -170,7 +170,7 @@ export function DocumentIdentityField({
   return (
     <div
       data-slot="document-identity"
-      className={cn("flex w-full flex-col gap-3 [--apt-field-label-w:6.5rem]", className)}
+      className={cn("flex w-full flex-col gap-3", FIELD_LABEL_GROUP_CLASS, className)}
     >
       <Field label={titleLabel} layout="inline">
         <Input
@@ -193,16 +193,20 @@ export function DocumentIdentityField({
               onSlugChange(e.target.value)
             }}
           />
-          {status && (
-            <span
-              data-slot="slug-status"
-              id={slugStatusId}
-              aria-live="polite"
-              className={cn("shrink-0 text-xs", toneTextClass(STATUS_TONE[verdict.status]))}
-            >
-              {verdict.reason ?? status}
-            </span>
-          )}
+          {/* Unconditionally mounted (only its TEXT is conditional): an `aria-live` region has
+              to already exist in the DOM before its content changes, or assistive tech has
+              nothing to have observed the mutation on — mounting the span together with its
+              first content means the first verdict, the one most likely to matter
+              ("Unavailable", the one that blocks Save), is the one most likely to go
+              unannounced. */}
+          <span
+            data-slot="slug-status"
+            id={slugStatusId}
+            aria-live="polite"
+            className={cn("shrink-0 text-xs", toneTextClass(STATUS_TONE[verdict.status]))}
+          >
+            {status ? (verdict.reason ?? status) : null}
+          </span>
         </div>
       </Field>
     </div>

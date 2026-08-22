@@ -84,7 +84,10 @@ export interface SearchSource {
    * and facets alike, and not clearable by the user (e.g. `{ author: 'ada' }` for one author's
    * corpus). Kept separate from {@link SearchQueryParamMap}, which renames the user's filter
    * axes: a scope param has no filter axis behind it, and putting it there would make it look
-   * like something the UI could clear.
+   * like something the UI could clear. "Not clearable" also means it WINS if a source misuses
+   * this for a name that collides with a filter param: `buildSearchUrl` applies these last, so
+   * they overwrite rather than lose to the same-named user filter — the alternative would let a
+   * misconfigured source's scope leak past the corpus it declared.
    */
   fixedParams?: Record<string, string>
   /** Result page size (default 50). */

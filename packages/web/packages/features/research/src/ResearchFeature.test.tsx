@@ -128,6 +128,9 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
       {levels.map((l) => (
         <div key={l.id}>
           {l.busy && <span data-testid={`busy-${l.id}`} />}
+          {/* Wiring-level stand-in for the real rail's icon column: not rendering one is the
+           *  observable effect of `hideItemIcons`, which nothing here otherwise reads. */}
+          <span data-testid={`hide-item-icons-${l.id}`}>{String(Boolean(l.hideItemIcons))}</span>
           <ul>
             {l.items.map((item) => (
               <li key={item.id}>
@@ -504,6 +507,20 @@ describe("ResearchFeature", () => {
     expect(screen.getByTestId("busy-research-documents")).not.toBeNull();
   });
 
+  // A document row's identity is its title; the primitive that suppresses the (columned, but
+  // otherwise empty) icon slot is covered at the `topic-detail.tsx` level — this pins that the
+  // documents level actually WIRES `hideItemIcons: true` when it publishes itself, which the
+  // typechecker cannot: an optional boolean prop compiles whether it is passed or not.
+  it("publishes the documents level with hideItemIcons — a row's identity is its title alone", async () => {
+    render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" />
+      </Harness>,
+    );
+    await screen.findByText("Federated learning notes");
+    expect(screen.getByTestId("hide-item-icons-research-documents")).toHaveTextContent("true");
+  });
+
   // The loader this pane used to own cleared the form error on every selection change. Nothing
   // pinned that, and the cache refactor deleted the loader — so without this the message from a
   // failed save on one document greets the user on the next one, attached to a document that
@@ -744,6 +761,30 @@ describe("ResearchFeature — title and slug", () => {
     expect(body.value).toContain('title: "Renamed Paper"');
   });
 
+  it("keeps a trailing space typed mid-word — a keystroke round-trip through the trimmed, derived title must not revert it", async () => {
+    // A single `fireEvent.change` with the whole final string can't observe this: the bug is
+    // in what happens BETWEEN keystrokes. `setFrontmatterTitle` trims before it writes, and
+    // `deriveDocumentTitle` re-reads that trimmed frontmatter — so a title field driven
+    // straight off the derived value (no local edit buffer) drops a trailing space back to the
+    // caller on the very next render, which drops the NEXT keystroke typed after it too. Typing
+    // one character at a time and asserting the field after each is what actually exercises
+    // that round trip.
+    await openFirstDocument();
+    const titleField = screen.getByLabelText("Title") as HTMLInputElement;
+    const target = "New Title ";
+    let typed = "";
+    for (const ch of target) {
+      typed += ch;
+      fireEvent.change(titleField, { target: { value: typed } });
+      expect(titleField).toHaveValue(typed);
+    }
+    // ...and the character typed right after the trailing space survives too — the field the
+    // bug reverts silently swallows this one first.
+    typed += "2";
+    fireEvent.change(titleField, { target: { value: typed } });
+    expect(titleField).toHaveValue("New Title 2");
+  });
+
   it("follows the title with the slug until the slug is edited", async () => {
     await openFirstDocument();
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Renamed Paper" } });
@@ -754,7 +795,12 @@ describe("ResearchFeature — title and slug", () => {
     expect(screen.getByLabelText("Slug")).toHaveValue("renamed-paper-2");
   });
 
-  it("alerts instead of saving when the slug is unavailable", async () => {
+  it("alerts instead of saving when the slug is unavailable — on a PUBLISHED paper, whose save actually writes the route", async () => {
+    // Gated on visibility (see FIX 3 below): only a published paper's Save can move the route,
+    // so the fixture here must be public — a draft's slug writes nothing and must not be
+    // blocked by this guard at all (see the next test).
+    const published: ResearchDocument = { ...structuredClone(DOCUMENT), visibility: "public", publicRoute: "federated-learning" };
+    get.mockResolvedValue(structuredClone(published));
     routeAvailable.mockResolvedValue({ available: false, reason: "taken" });
     await openFirstDocument();
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Clashing" } });
@@ -771,6 +817,25 @@ describe("ResearchFeature — title and slug", () => {
     // "alertdialog".
     expect(await screen.findByRole("dialog")).toHaveTextContent(/slug/i);
     expect(update).not.toHaveBeenCalled();
+  });
+
+  it("does NOT block or alert on Save for a DRAFT with an unavailable slug — nothing is written yet (FIX 3)", async () => {
+    // DOCUMENT (the fixture openFirstDocument opens) is private: an unpublished draft's slug is
+    // never persisted by Save — only Publish writes the route — so a collision on a field that
+    // has no effect until the author explicitly publishes must not lose the author's edits.
+    routeAvailable.mockResolvedValue({ available: false, reason: "taken" });
+    update.mockResolvedValueOnce(structuredClone(DOCUMENT));
+    await openFirstDocument();
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Clashing" } });
+
+    await waitFor(() =>
+      expect(screen.getByText(/already uses that slug/i)).toBeInTheDocument(),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("shows ONE slug input — the publish card no longer carries its own", async () => {

@@ -318,13 +318,20 @@ export function ResearchPane({
   // ── Identity: the title, and the slug the paper will live at ───────────────
   // The title is part of the DRAFT — it is the frontmatter `title:` key inside the body, the
   // only place an author may state one (the API derives, never accepts, a title).
-  const title = draft ? deriveDocumentTitle(draft.content) : "";
-  const setTitle = useCallback(
-    (next: string) => {
-      if (draft) onChange({ ...draft, content: setFrontmatterTitle(draft.content, next) });
-    },
-    [draft],
-  );
+  //
+  // `derivedTitle` is read here AND by `useDetailTitle` further down — computed once and
+  // shared, rather than each call site deriving its own copy the two are free to drift.
+  const derivedTitle = draft ? deriveDocumentTitle(draft.content) : "";
+  // Local edit buffer, mirroring `slugEdit` just below: the input must show exactly what was
+  // typed — trailing space included — even though `setFrontmatterTitle` trims on write and
+  // `derivedTitle` re-derives from (also-trimmed) content on every render. Without this buffer
+  // the controlled input is driven by a value that reverts the trailing space the instant it is
+  // typed, corrupting every keystroke after it: type "Hello ", it writes/re-derives "Hello",
+  // React forces the DOM node back to "Hello", and the next character lands as "HelloW". The
+  // write still goes through the trim below, so stored frontmatter stays trimmed — only the
+  // DISPLAYED value is held raw. Do not "simplify" this back into a derived value.
+  const [titleEdit, setTitleEdit] = useState<{ id: string; value: string } | null>(null);
+  const title = titleEdit && titleEdit.id === selectedId ? titleEdit.value : derivedTitle;
 
   // The slug is NOT part of the draft. `PUT /content/markdown/:id` has no route field — the
   // route column is written by publish — so a slug in the draft would make an unpublished
@@ -389,16 +396,40 @@ export function ResearchPane({
     [openDoc],
   );
 
-  function onChange(next: ResearchInput): void {
-    if (!selectedId) return;
-    setOverride({ id: selectedId, value: next });
-    if (formError) setFormError(null);
-  }
+  // Memoized (rather than the plain `function` declaration it used to be) so `setTitle` below
+  // can depend on it honestly: an unmemoized `onChange` closing over `formError` made
+  // `setTitle`'s old dependency array a lie (it listed only `[draft]`), which is why the first
+  // Title keystroke after a failed save used to leave the error banner up one keystroke too
+  // long — `draft` did not change when `formError` did, so the stale closure ran.
+  const onChange = useCallback(
+    (next: ResearchInput): void => {
+      if (!selectedId) return;
+      setOverride({ id: selectedId, value: next });
+      if (formError) setFormError(null);
+    },
+    [selectedId, formError, setFormError],
+  );
+
+  // Defined here — after `onChange` — rather than beside `derivedTitle`/`titleEdit` above, so it
+  // can close over the memoized `onChange` without a temporal-dead-zone error (a `const` cannot
+  // be referenced before its own initializer runs, unlike the hoisted `function` this used to be).
+  const setTitle = useCallback(
+    (next: string) => {
+      if (selectedId) setTitleEdit({ id: selectedId, value: next });
+      if (draft) onChange({ ...draft, content: setFrontmatterTitle(draft.content, next) });
+    },
+    [draft, onChange, selectedId],
+  );
 
   function onCancel(): void {
     openDoc(null);
     setOverride(null);
     setFormError(null);
+    // Both identity fields are session state keyed by document id — clear them together here so
+    // they cannot drift apart again: an abandoned edit in either must not survive Cancel and
+    // reappear if the same document is reselected.
+    setSlugEdit(null);
+    setTitleEdit(null);
   }
 
   // Returns true once the draft is persisted (false on a validation/save failure) so the merged
@@ -412,7 +443,11 @@ export function ResearchPane({
     // Save is pressed the user has committed, so the refusal has to interrupt. `checking` is
     // NOT refused — a verdict still in flight is not a "no", and blocking on it would make Save
     // feel broken on a slow connection.
-    if (slugVerdict.status === "unavailable") {
+    // Only a PUBLISHED paper's save can write the route (see the publish call below), so the
+    // guard only applies there. An unpublished draft's slug writes nothing on save — refusing
+    // it over a collision that will never happen loses the author's content edits over a field
+    // that has no effect until the author explicitly publishes.
+    if (selectedDoc?.visibility === "public" && slugVerdict.status === "unavailable") {
       setSlugAlert(true);
       return false;
     }
@@ -546,7 +581,7 @@ export function ResearchPane({
   // the saved document's name — Task 11's docblock gave this to `selectedDoc.title` for the
   // reason stated above; that reason still holds, only the conclusion changes with the title
   // now derived live from the draft.
-  useDetailTitle(draft ? deriveDocumentTitle(draft.content) : null);
+  useDetailTitle(draft ? derivedTitle : null);
   // Registered only while DIRTY (see useMasterDetailLevel) so the host's guard count is a
   // render-value dirty signal. `editing` is implied: a draft cannot be dirty with no editor open.
   useWorkspaceExitGuard(dirty ? { isDirty: () => dirty } : null);
@@ -635,6 +670,7 @@ export function ResearchPane({
               key={selectedDoc.id}
               doc={selectedDoc}
               route={slug}
+              verdict={slugVerdict}
               userSlug={userSlug}
               workspaceSlug={workspaceSlug}
               onChanged={onPublishChanged}

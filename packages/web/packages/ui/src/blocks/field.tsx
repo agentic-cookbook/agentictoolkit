@@ -18,6 +18,15 @@ import { fieldCaptionClass } from "../lib/typography"
 // `--apt-field-label-w` custom property rather than a prop, because alignment is a
 // property of the GROUP: a wrapper sets it once and every inline field inside lines
 // up, without any field having to know what its neighbours are called.
+
+// The one width every inline `Field` group in the family agrees on. A wrapper that sets
+// `--apt-field-label-w` any other way is still legal (it's a custom property, not this
+// constant, that `Field` actually reads) — but two sibling subtrees that both want the SAME
+// column (document-identity-field.tsx's identity rows and categories-and-tags.tsx's, in
+// `ResearchDetail`) must read one source rather than each writing its own copy of `6.5rem`
+// that happens, today, to match.
+export const FIELD_LABEL_GROUP_CLASS = "[--apt-field-label-w:6.5rem]"
+
 export function Field({
   label,
   hint,

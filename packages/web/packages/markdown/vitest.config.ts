@@ -1,9 +1,10 @@
 import { defineConfig } from 'vitest/config'
 
 // Node environment by default: the pipeline/fetcher/registry tests are pure async with no
-// DOM. The ONE React component this package ships (MarkdownDocumentEditor) opts itself into
-// jsdom with a `// @vitest-environment jsdom` docblock rather than making every test pay for
-// a DOM.
+// DOM. The package ships several React components (MarkdownRenderer, MarkdownContent,
+// MarkdownThemeSwitcher, MarkdownReadingPalette, MarkdownDocumentEditor) — but this file's
+// only DOM test is MarkdownDocumentEditor's, which opts itself into jsdom with a
+// `// @vitest-environment jsdom` docblock rather than making every test pay for a DOM.
 //
 // The root setup file supplies the jest-dom matchers plus the jsdom shims (matchMedia,
 // ResizeObserver, storage). Every shim in it is guarded on `typeof window !== 'undefined'`,

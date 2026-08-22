@@ -69,6 +69,9 @@ export function NoteFields({
         // Unbounded host (a plain flex column, no fixed height) — `fill` would collapse
         // the textarea to its intrinsic 2 rows instead of the fixed 16-row box below.
         fill={false}
+        // Matches the textarea's own fixed-`rows` bulk (rows=16 default), so switching to
+        // the Preview tab doesn't shrink the card and jump the Category/Tags fields below it.
+        previewClassName="min-h-[20rem]"
         toolbarExtras={
           <MarkdownSpellCheck
             value={draft.content}

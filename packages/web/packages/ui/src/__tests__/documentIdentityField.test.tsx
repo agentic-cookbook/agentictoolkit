@@ -97,6 +97,21 @@ describe('DocumentIdentityField', () => {
     expect(screen.getByLabelText(/slug/i)).toBe(slugInput)
   })
 
+  it('pins each verdict to its tone — success green, error red, never the inherited colour', () => {
+    // `STATUS_TONE` is a hand-rolled map next to a comment naming exactly this failure mode:
+    // both verdicts rendering in the inherited (unstyled) colour while every other test still
+    // passes, because none of them look at the CLASS, only the text. Swap the two entries for
+    // each other and this is the only assertion that goes red.
+    const { unmount: unmountAvailable } = render(
+      <Harness verdict={{ status: 'available', reason: null }} />,
+    )
+    expect(screen.getByText('Available')).toHaveClass('text-apt-green')
+    unmountAvailable()
+
+    render(<Harness verdict={{ status: 'unavailable', reason: null }} />)
+    expect(screen.getByText('Unavailable')).toHaveClass('text-apt-red')
+  })
+
 })
 
 describe('useSlugAvailability', () => {
@@ -207,6 +222,23 @@ describe('useSlugAvailability', () => {
     await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
     expect(result.current.status).toBe('idle')
     expect(result.current.reason).toBeNull()
+  })
+
+  it('waits the documented 350ms default when no debounceMs is injected', async () => {
+    // Every other test in this block passes an explicit `debounceMs: 10` to make itself fast,
+    // which means none of them exercise the DEFAULT the hook actually ships with. Pin it here.
+    const check = vi.fn().mockResolvedValue({ available: true })
+    const { result } = renderHook(() => useSlugAvailability('default-timing-slug', check))
+    await act(async () => {
+      vi.advanceTimersByTime(349)
+    })
+    expect(check).not.toHaveBeenCalled()
+    expect(result.current.status).toBe('checking')
+    await act(async () => {
+      vi.advanceTimersByTime(1)
+    })
+    await waitFor(() => expect(check).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(result.current.status).toBe('available'))
   })
 
 })

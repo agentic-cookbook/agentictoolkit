@@ -12,13 +12,30 @@ import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
 import { useClipboard } from "@agentic-toolkit/ui/hooks/useClipboard";
 import type { ResearchDocument } from "@agentic-toolkit/data/markdown";
 import { markdownApi } from "@agentic-toolkit/data/markdown";
+import type { SlugVerdict } from "@agentic-toolkit/ui/blocks/document-identity-field";
 import { PUBLIC_ROUTE_RE } from "./research-model";
 
+// Deliberately hard-coded, not per-environment, and not a defect: `features/research` is a
+// MECHANISM-tier package (see this repo's CLAUDE.md), and the per-environment origin that
+// would replace this literal — `adh-registry`'s `research` site entry, resolved through its
+// `siteUrl`/`localOrigin` seam — lives in `@agentic-toolkit/adh-registry`, a VOCABULARY-tier
+// package that encodes the whole 48-site registry. A MECHANISM package must not import a
+// VOCABULARY one (this file would otherwise be reaching past its own layer for one string),
+// and the host that COULD inject it — this feature's mount point — is `frontend/src/sites/
+// research/` in the adh superproject, outside this repo entirely: this package has no seam a
+// superproject site can push a resolved origin through (contrast `ProfilePanel.profileUrlFor`,
+// which exists for exactly that purpose and is the pattern a real fix here would need). So the
+// Preview link this constant backs ALWAYS points at production, even from `*.dev.local` or a
+// preview deployment — a locally-drafted, unpublished paper's Preview may 404 there. That is a
+// known, accepted limitation of previewing locally, not a bug in this component: fixing it
+// requires either a host-injected origin prop threaded in from the superproject site (a change
+// outside this repo) or importing `adh-registry` here (a layering violation this repo forbids).
 const RESEARCH_ORIGIN = "https://agenticdeveloperresearch.com";
 const SLUG_PLACEHOLDER = "your-slug";
 
 /** The public URL a published paper resolves at. The author's slug comes from
- *  their profile; when it isn't set yet we show a placeholder + a hint. */
+ *  their profile; when it isn't set yet we show a placeholder + a hint. Always a PRODUCTION
+ *  URL — see `RESEARCH_ORIGIN` above. */
 function publicUrl(slug: string, route: string): string {
   return `${RESEARCH_ORIGIN}/${slug || SLUG_PLACEHOLDER}/${route}`;
 }
@@ -38,6 +55,7 @@ function publicUrl(slug: string, route: string): string {
 export function PublishSection({
   doc,
   route,
+  verdict,
   userSlug,
   workspaceSlug,
   onChanged,
@@ -46,6 +64,13 @@ export function PublishSection({
   doc: ResearchDocument;
   /** Where publishing will put this paper — owned by the pane, edited above the body. */
   route: string;
+  /** The identity field's live availability verdict for `route`, from the same
+   *  `useSlugAvailability` call the pane wires to `DocumentIdentityField` above the body — one
+   *  verdict, read by both controls. Omit only for a host with no availability check at all;
+   *  when present, Publish is gated on it exactly as Save is: a slug the UI is showing as
+   *  "Unavailable" must not be offered for publish, even though the format regex alone would
+   *  accept it (the backend would 409 such a publish, but the UI must not invite the round trip). */
+  verdict?: SlugVerdict;
   userSlug: string;
   /** Pins publish/unpublish to the WORKSPACE'S owning principal (backend `?workspace=`),
    *  so org-owned docs other members created resolve. */
@@ -62,6 +87,9 @@ export function PublishSection({
 
   const trimmed = route.trim().toLowerCase();
   const routeValid = PUBLIC_ROUTE_RE.test(trimmed);
+  // Undefined verdict (no host-supplied availability check) reads as "not unavailable" — this
+  // gate must never be the reason Publish is disabled for a host that never wired one in.
+  const routeUnavailable = verdict?.status === "unavailable";
 
   function publish(): void {
     void run(async () => {
@@ -151,7 +179,12 @@ export function PublishSection({
           )}
         </p>
         <div className="flex justify-end">
-          <Button type="button" size="sm" disabled={!routeValid || busy || disabled} onClick={publish}>
+          <Button
+            type="button"
+            size="sm"
+            disabled={!routeValid || routeUnavailable || busy || disabled}
+            onClick={publish}
+          >
             {busy ? "Publishing…" : "Publish"}
           </Button>
         </div>

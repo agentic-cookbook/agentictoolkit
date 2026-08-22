@@ -54,6 +54,16 @@ describe('deriveDocumentTitle', () => {
   it('prefers title over name regardless of which line comes first', () => {
     expect(deriveDocumentTitle('---\nname: Alpha\ntitle: Beta\n---\n\nbody\n')).toBe('Beta')
   })
+
+  it('caps a derived title at 500 characters — the write-side cap has a mirror on read', () => {
+    // The write side (`setFrontmatterTitle`) has its own cap, already covered elsewhere. This
+    // pins the DERIVE side: a document whose frontmatter (or first body line) already exceeds
+    // the cap — written some other way, or by an older/looser client — must not hand back an
+    // unbounded string for a title field to display.
+    const longTitle = 'x'.repeat(600)
+    expect(deriveDocumentTitle(`---\ntitle: ${longTitle}\n---\n\nbody\n`)).toHaveLength(500)
+    expect(deriveDocumentTitle(`${longTitle}\n`)).toHaveLength(500)
+  })
 })
 
 describe('frontmatterTitle', () => {

@@ -123,6 +123,20 @@ describe('MarkdownDocumentEditor — narrow', () => {
     expect(document.querySelector('[data-slot="markdown-preview"]')).toHaveClass('min-h-[12rem]')
   })
 
+  it('collapses a `split` preference to tabbed on a phone — side-by-side is never available narrow', () => {
+    // The narrow tests above only ever exercise the DEFAULT layout (`tabbed`), where the
+    // `wide ? layout : 'tabbed'` collapse is a no-op — mutating it to just `layout` still left
+    // every one of them green. Requesting `split` while narrow is the only render that can
+    // actually observe the collapse.
+    const { container } = render(<Harness defaultLayout="split" />)
+    // Tabbed: exactly one pane mounted at a time, and the tab buttons exist at all (the split
+    // layout drops them entirely — see the "wide" describe block below).
+    expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^preview$/i })).toBeInTheDocument()
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+    expect(container.querySelector('[data-slot="markdown-preview"]')).toBeNull()
+  })
+
   it('points both pane-chooser buttons at a real element, in either tab state', () => {
     render(<Harness />)
     const editBtn = screen.getByRole('button', { name: /^edit$/i })

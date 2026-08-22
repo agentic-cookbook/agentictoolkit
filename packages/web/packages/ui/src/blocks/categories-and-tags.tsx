@@ -4,6 +4,7 @@ import * as React from "react"
 
 import { CategoryField, type CategoryTreeNode } from "./category-field"
 import { TagSetField } from "./tag-set-field"
+import { FIELD_LABEL_GROUP_CLASS } from "./field"
 import { cn } from "../lib/utils"
 
 /**
@@ -58,8 +59,10 @@ export function CategoriesAndTags({
       data-slot="categories-and-tags"
       // The label column's width lives here rather than on either field: it is what the two
       // rows share, and setting it once is what makes the captions align. Any host that wants
-      // a wider column overrides the same variable through `className`.
-      className={cn("flex w-full flex-col gap-3 [--apt-field-label-w:6.5rem]", className)}
+      // a wider column overrides the same variable through `className`. `FIELD_LABEL_GROUP_CLASS`
+      // is the same constant `document-identity-field.tsx` uses for its own (separate) DOM
+      // subtree — one source both read, rather than two literals that must be kept equal by hand.
+      className={cn("flex w-full flex-col gap-3", FIELD_LABEL_GROUP_CLASS, className)}
     >
       <CategoryField
         layout="inline"

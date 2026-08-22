@@ -81,15 +81,19 @@ export function buildSearchUrl(
   const names = { ...DEFAULT_QUERY_PARAMS, ...source.params }
   const pageSize = source.pageSize ?? DEFAULT_PAGE_SIZE
   const qs = new URLSearchParams()
-  // Scope params first, so a source that (wrongly) names a filter axis in `fixedParams`
-  // loses to the user's actual filter rather than silently overriding it.
-  for (const [k, v] of Object.entries(source.fixedParams ?? {})) qs.set(k, v)
   const q = filters.q.trim()
   if (q) qs.set(names.q, q)
   if (filters.tag) qs.set(names.tag, filters.tag)
   if (filters.category) qs.set(names.category, filters.category)
   qs.set(names.page, String(page))
   qs.set(names.pageSize, String(pageSize))
+  // Scope params LAST, so they win over a user filter rather than the other way round.
+  // `fixedParams` is the corpus's SCOPE, not a filter default — `types.ts`'s docblock calls it
+  // "not clearable by the user" for exactly this reason. Letting a user filter override it
+  // would widen the corpus past the scope the source declared (e.g. a site renaming a filter
+  // axis to `author` would leak other authors' documents onto an author-scoped page). `set`
+  // overwrites by key, so applying these after the filters above is what makes them win.
+  for (const [k, v] of Object.entries(source.fixedParams ?? {})) qs.set(k, v)
   const path = joinPath(source.baseUrl, source.endpoints.results)
   const query = qs.toString()
   return query ? `${path}?${query}` : path
@@ -139,8 +143,11 @@ async function fetchResults<Hit>(
   return (await res.json()) as SearchResultEnvelope<Hit>
 }
 
-/** Stable serialization of the scope so an inline `source` object can't loop the effect. */
-function sourceKeyOf(source: SearchSource): string {
+/** Stable serialization of the scope so an inline `source` object can't loop the effect.
+ *  `fixedParams` MUST be part of it: two sources differing only by scope (two
+ *  `PaperSearchView`s on one page, `authorSlug` apart) are different corpora and must not
+ *  share a cache/effect key. Pure + exported for testing. */
+export function sourceKeyOf(source: SearchSource): string {
   return JSON.stringify({
     baseUrl: source.baseUrl,
     endpoints: source.endpoints,

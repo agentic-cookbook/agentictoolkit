@@ -113,8 +113,12 @@ export function deriveDocumentTitle(content: string): string {
 
 /**
  * Return `content` with its frontmatter `title:` set to `title` — or removed, when `title` is
- * blank. Everything outside that single line is preserved byte for byte, and a `name:` line is
- * NEVER touched (see {@link TITLE_ONLY_LINE_RE}).
+ * blank. A `name:` line is NEVER touched (see {@link TITLE_ONLY_LINE_RE}). Everything else in
+ * the frontmatter block is reassembled from `split(/\r?\n/)`'d lines, so CRLF line endings
+ * inside the block come back out as LF — NOT "preserved byte for byte" (confirmed empirically:
+ * a CRLF-frontmatter document round-trips through this function with LF line endings). The
+ * normalisation is deliberate and harmless — YAML has no line-ending-sensitive syntax — this
+ * comment is just correcting what it used to claim.
  *
  * Clearing the last key removes the now-empty block entirely: a document whose whole
  * frontmatter was its title should not be left wearing an empty `---\n---`.
