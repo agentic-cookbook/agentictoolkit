@@ -8,6 +8,10 @@ export default defineConfig({
     'header/index': 'src/header/index.ts',
     // Its own entry so the preserved import below has something to resolve to.
     'header/recents': 'src/header/recents.ts',
+    // Same shape, same reason as recents above: module-level mutable state (`snapshot`,
+    // `listeners`) that the settings panel writes and the site menu reads, so it must be
+    // ONE copy. Its own entry + the preserved import below.
+    'header/hub-preferences': 'src/header/hub-preferences.ts',
     // The pluggable header AUTH SOURCES (Task 6.2) — the `HeaderAuthState`/
     // `HeaderAuthSource` contract plus the anonymous and smart-SSO sources. Its own
     // entry, published as the `./header-auth` subpath, rather than a member of
@@ -302,6 +306,15 @@ export default defineConfig({
     // path '@agentic-toolkit/adh/header/recents'. One surviving './recents' defeats
     // it. Enforced by frontend/tools/verify-bundle-boundaries.py.
     '@agentic-toolkit/adh/header/recents',
+    // hub-preferences.ts is recents.ts's twin: module-level mutable state ('snapshot',
+    // 'listeners') plus a 'use client' directive. Two entries reach it from opposite ends
+    // — the settings panel WRITES the chord, the header READS it — which is the exact
+    // shape that makes an inlined second copy invisible: each side would mutate its own
+    // snapshot, so saving a new shortcut in Settings would leave the menu still listening
+    // for the old one, with no type or build error and nothing wrong in dev (which
+    // resolves the `development` condition to src/). One surviving relative
+    // './hub-preferences' defeats it, exactly as one surviving './recents' would.
+    '@agentic-toolkit/adh/header/hub-preferences',
     // The hub workspace-path leaf (entry above). Two entries reach it — the `site` barrel
     // re-exports both predicates, and the header calls them from useSiteMenu and
     // activeMenuGroups — so without this it is inlined twice. Preserved import ⇒ one copy,

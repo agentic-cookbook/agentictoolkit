@@ -36,6 +36,11 @@
       "development": "./src/header/recents.ts",
       "import": "./dist/header/recents.js"
     },
+    "./header/hub-preferences": {
+      "types": "./dist/header/hub-preferences.d.ts",
+      "development": "./src/header/hub-preferences.ts",
+      "import": "./dist/header/hub-preferences.js"
+    },
     "./header-auth": {
       "types": "./dist/header/header-auth.d.ts",
       "development": "./src/header/header-auth.ts",

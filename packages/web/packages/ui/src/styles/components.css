@@ -50,6 +50,14 @@
 
 /* Dropdown menu primitive */
 .adh-dropdown-menu__content {
+  /* The popup root is a focus TARGET, not a control: the menu engine parks focus here
+   * whenever the active element is not a menu item — which the NavigationPopover reaches
+   * routinely, since its footer sits inside the popup but outside the item list, so
+   * pointing at the footer draws the UA's default focus ring around the entire menu. The
+   * items suppress the same ring one rule below; this is that rule's missing counterpart
+   * for their container. Nothing is lost for keyboard users: focus indication inside this
+   * popup is the row highlight, and the popup itself is never a tab stop. */
+  outline: none;
   z-index: 50;
   min-width: 14rem;
   overflow: hidden;

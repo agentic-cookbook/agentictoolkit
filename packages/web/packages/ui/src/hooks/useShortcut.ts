@@ -259,6 +259,58 @@ export function useRegisteredShortcuts(): RegisteredShortcut[] {
   );
 }
 
+/* ── Capture ──────────────────────────────────────────────────────────────── */
+
+/** `event.key` values that name a modifier rather than a chord — pressing one alone is a
+ *  user still mid-chord, not a chord. */
+const MODIFIER_KEYS = new Set(["meta", "control", "shift", "alt", "altgraph", "capslock"]);
+
+/** Keys a chord may never be RECORDED onto, whatever modifiers are held. Escape and Tab are
+ *  structural: Escape dismisses the surface a recorder runs inside, and Tab is how a keyboard
+ *  user leaves it, so capturing either would take away the way out of the recorder itself. */
+const UNBINDABLE_KEYS = new Set(["escape", "tab"]);
+
+/** Chord spellings for `event.key` values {@link parseChord}'s `+` split cannot carry. */
+const KEY_SPELLINGS: Record<string, string> = { " ": "space" };
+
+/**
+ * Turn a live keydown into the chord string that would match it — the inverse of
+ * {@link parseChord}, for a UI that records a shortcut by asking the user to press one.
+ *
+ * Returns `null` when the event is not a recordable chord: a bare modifier press, Escape or
+ * Tab, or the non-command modifier (Ctrl on Apple, ⌘ elsewhere) — which `matchesEvent` refuses
+ * outright, so a chord recorded from it could never fire again.
+ *
+ * `shift` is emitted only where `matchesEvent` actually reads it: alongside `mod`/`alt`, or on
+ * a NAMED key. For a bare character the character itself already records that shift was held
+ * (`"?"`, never `"shift+/"`) — see {@link ShortcutSpec.keys}.
+ */
+export function chordFromEvent(e: KeyboardEvent): string | null {
+  const key = e.key.toLowerCase();
+  if (MODIFIER_KEYS.has(key)) return null;
+  if (UNBINDABLE_KEYS.has(key)) return null;
+  const apple = isApplePlatform();
+  const command = apple ? e.metaKey : e.ctrlKey;
+  const other = apple ? e.ctrlKey : e.metaKey;
+  if (other) return null;
+  const parts: string[] = [];
+  if (command) parts.push("mod");
+  if (e.altKey) parts.push("alt");
+  const spelled = KEY_SPELLINGS[key] ?? key;
+  if (e.shiftKey && (command || e.altKey || spelled.length > 1)) parts.push("shift");
+  parts.push(spelled);
+  return parts.join("+");
+}
+
+/** Do two chord strings name the same keystroke? Compares the PARSED chords, so
+ *  `"mod+shift+k"` and `"shift+mod+K"` are recognised as one binding — which is what a
+ *  conflict check needs, since neither spelling is canonical. */
+export function sameChord(a: string, b: string): boolean {
+  const x = parseChord(a);
+  const y = parseChord(b);
+  return x.mod === y.mod && x.alt === y.alt && x.shift === y.shift && x.key === y.key;
+}
+
 /* ── Display ──────────────────────────────────────────────────────────────── */
 
 const NAMED_KEY_LABELS: Record<string, string> = {

@@ -20,6 +20,7 @@ import {
 // a visit recorded by the hub's recorder would be invisible to this subscriber. See
 // the matching `external` entries in both tsup configs.
 import { useRecents } from '@agentic-toolkit/adh/header/recents'
+import { useHubPreferences } from '@agentic-toolkit/adh/header/hub-preferences'
 import { useSiteMenu } from './useSiteMenu'
 import { useHeaderLinksCollapsed } from './useHeaderLinksCollapsed'
 import { buildSiteNavEntries } from './siteNavEntries'
@@ -235,6 +236,7 @@ export function SiteMenu({
   const pathname = usePathname() ?? '/'
   const workspacesMenu = useWorkspacesMenu()
   const recents = useRecents()
+  const { siteMenuShortcut } = useHubPreferences()
   const topSection = useMemo<PopoverEntry[]>(() => {
     if (!authenticated) {
       const out: PopoverEntry[] = []
@@ -399,6 +401,11 @@ export function SiteMenu({
   return (
     <NavigationPopover
       entries={allEntries}
+      // The site menu is the ONE popover that claims a global chord — it is the
+      // fleet's front door, and the user picks which chord in Settings ▸ Hub
+      // Preferences. An empty string there means they turned it off, and
+      // NavigationPopover takes that as "no shortcut" rather than falling back.
+      openShortcut={{ keys: siteMenuShortcut, label: 'Site menu' }}
       onChoose={navigate}
       triggerLabel={`${label} — switch site`}
       triggerText={label}

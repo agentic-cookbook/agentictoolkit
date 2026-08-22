@@ -74,6 +74,7 @@ import {
   LogIn,
   Mail,
   MessageCircle,
+  MessagesSquare,
   MonitorSmartphone,
   Network,
   Newspaper,
@@ -84,6 +85,7 @@ import {
   Route,
   School,
   ScrollText,
+  Send,
   Server,
   Settings,
   ShieldCheck,
@@ -220,6 +222,8 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   gamification: Trophy, // matches the '/gamification' route
   integrations: Plug, // matches the '/integrations' route
   knowledgebases: BookOpen, // matches FEATURE_META `knowledgebases`
+  messages: MessagesSquare, // the conversations themselves, read and written
+  messaging: Send, // what a PRODUCT sends out — email and SMS, not your own inbox
   notebook: NotebookPen, // "Notes" in the fleet menu
   notifications: Bell,
   orgs: Building, // "Organizations" in the fleet menu

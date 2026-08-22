@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { ADMIN_SITE_IDS, getSite, SITES } from '@agentic-toolkit/adh-registry'
 
-// The fleet tree — the family as nine top-level rows. Its contract is mostly about what
+// The fleet tree — the family as ten top-level rows. Its contract is mostly about what
 // a reader SEES, so most of this resolves the config through the engine rather than
 // reading the literal: a row whose icon or tagline is missing is missing on screen
 // whether the gap is in this file or in the registry it defers to.
@@ -43,9 +43,10 @@ function allLinks(groups: MenuGroup[] = FLEET_MENU_GROUPS): MenuLink[] {
 }
 
 describe('FLEET_MENU_GROUPS', () => {
-  it('is the nine top-level rows, in the order they are meant to be read', () => {
+  it('is the ten top-level rows, in the order they are meant to be read', () => {
     expect(resolve().map((e) => (e.kind === 'topic' ? e.label : e.item.label))).toEqual([
       'Bitbag',
+      'Messages',
       'Hub',
       'Organizations',
       'Learn',

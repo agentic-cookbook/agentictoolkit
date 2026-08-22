@@ -546,25 +546,30 @@
   padding: 0.7rem 0.75rem 0.55rem;
 }
 
-/* Set in the page's own face and inheriting currentColor, so one rule covers both
-   themes (see StudioWordmark for why this is text rather than an asset). Wide
-   tracking + lowercase is the mark; it is small and dim until hovered, because it
-   names the studio rather than offering somewhere to go. */
+/* The studio mark, set to match `.adh-footer__brand-link` — same mono face, same
+   size and tracking, same accent colour — because it is the same name in the same
+   product and two settings of it read as two studios. Text rather than an asset (see
+   StudioWordmark), so it needs no second copy for the dark theme.
+
+   It reads at accent weight rather than dimmed: the site footer states the studio
+   plainly on every page, and the menu's signature has no reason to whisper what the
+   page below it says out loud. The same host overrides apply, so a site that retints
+   its footer brand retints this with it. */
 .adh-nav-popover__wordmark {
-  color: var(--color-text-dim);
-  font-size: 0.68rem;
+  color: var(--adh-footer-brand-color, var(--color-accent));
+  font-family: var(--adh-footer-font, var(--font-mono));
+  font-size: var(--adh-footer-size, 0.7rem);
   font-weight: 400;
-  letter-spacing: 0.22em;
+  letter-spacing: var(--adh-footer-letter-spacing, 0.04em);
   line-height: 1;
   text-align: center;
   text-decoration: none;
-  text-transform: lowercase;
   transition: color calc(0.12s * var(--apt-anim-scale, 1)) ease-out;
 }
 
 .adh-nav-popover__wordmark:hover,
 .adh-nav-popover__wordmark:focus-visible {
-  color: var(--color-text);
+  color: var(--adh-footer-brand-color-hover, var(--color-accent-bright));
 }
 
 /* Topic row in the top-level list — a sub-trigger that pops out a flyout. The
