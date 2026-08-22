@@ -19,7 +19,7 @@ export { TagSetField } from "./tag-set-field"
 export { CategoriesAndTags } from "./categories-and-tags"
 // Its sibling for the single-valued, HIERARCHICAL vocabulary: same autocomplete + browse pair,
 // plus the breadcrumb that says where in the tree the chosen name sits and the rename behind it.
-export { CategoryField, categoryTrail, type CategoryTreeNode } from "./category-field"
+export { CategoryField, categoryTrails, type CategoryTreeNode } from "./category-field"
 export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
 // How to name the detail pane the user is actually looking at, rather than HTDV's outgoing
 // crossfade snapshot of the previous one. Re-exported here for app code that already imports from

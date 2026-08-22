@@ -45,7 +45,9 @@ vi.mock("@agentic-toolkit/data/notes", () => ({
   },
   taxonomyApi: {
     renameCategory: vi.fn(),
-    reparentCategory: vi.fn(),
+    categoryParents: vi.fn(),
+    addCategoryParent: vi.fn(),
+    removeCategoryParent: vi.fn(),
     deleteCategory: vi.fn(),
     renameTag: vi.fn(),
     deleteTag: vi.fn(),
@@ -95,8 +97,8 @@ const NOTE: Note = {
 /** A note written before a body was required — the shape the reported Save bug lives in. */
 const EMPTY_NOTE: Note = { ...NOTE, id: "note-2", title: "Untitled", content: "" };
 
-const WORK: NoteCategory = { id: "cat-1", name: "Work", parentId: null, sortOrder: 0 };
-const PERSONAL: NoteCategory = { id: "cat-2", name: "Personal", parentId: null, sortOrder: 1 };
+const WORK: NoteCategory = { id: "cat-1", name: "Work", parentIds: [], sortOrder: 0 };
+const PERSONAL: NoteCategory = { id: "cat-2", name: "Personal", parentIds: [], sortOrder: 1 };
 
 const ECOSYSTEM: Ecosystem = {
   id: "eco-1",

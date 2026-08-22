@@ -44,7 +44,7 @@ describe("categoryNodes", () => {
   const old = (items: string[]) => ({ items }) as unknown as MarkdownCategoryTreeBody;
 
   it("passes real nodes through unchanged (same reference, no needless copy)", () => {
-    const res = { items: ["Meetings"], nodes: [{ id: "c1", name: "Meetings", parentId: null, sortOrder: 0 }] };
+    const res = { items: ["Meetings"], nodes: [{ id: "c1", name: "Meetings", parentIds: [], sortOrder: 0 }] };
     expect(categoryNodes(res)).toBe(res.nodes);
   });
 
@@ -58,16 +58,16 @@ describe("categoryNodes", () => {
 
   it("rebuilds an older backend's flat names as roots, in the order it sent them", () => {
     expect(categoryNodes(old(["Admin", "Meetings", "Reading"]))).toEqual([
-      { id: "Admin", name: "Admin", parentId: null, sortOrder: 0 },
-      { id: "Meetings", name: "Meetings", parentId: null, sortOrder: 1 },
-      { id: "Reading", name: "Reading", parentId: null, sortOrder: 2 },
+      { id: "Admin", name: "Admin", parentIds: [], sortOrder: 0 },
+      { id: "Meetings", name: "Meetings", parentIds: [], sortOrder: 1 },
+      { id: "Reading", name: "Reading", parentIds: [], sortOrder: 2 },
     ]);
   });
 
   it("names each rebuilt row by its own name — the only identity such a backend has", () => {
     // A name is unique per owner, so it is a usable key for the rail's fold; and it never
     // travels back, because a flat list has no children and the only write taking an id is
-    // `createCategory({ parentId })` on a level the rail cannot publish.
+    // `createCategory({ parentIds })` on a level the rail cannot publish.
     const [meetings] = categoryNodes(old(["Meetings"]));
     expect(meetings?.id).toBe("Meetings");
     expect(meetings?.name).toBe("Meetings");

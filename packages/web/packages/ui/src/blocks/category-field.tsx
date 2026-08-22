@@ -18,35 +18,49 @@ import { DialogActions } from "../components/dialog-actions"
 import { ErrorText } from "../components/error-text"
 import { cn } from "../lib/utils"
 
-/** One category in the owner's tree. `parentId` is an app-level convention with no FK behind it,
- *  so the walk below tolerates a parent that is missing or cyclic rather than trusting it. */
+/** One category in the owner's hierarchy. It is a DAG: `parentIds` may hold any number of
+ *  parents, or none, so a category can sit in several places at once. The walk below also
+ *  tolerates a parent id naming no node, and a cycle, rather than trusting the data. */
 export interface CategoryTreeNode {
   id: string
   name: string
-  parentId: string | null
+  parentIds: string[]
 }
 
+/** How many trails one value may show. A DAG has exponentially many paths and this is a form
+ *  row; past a handful, the breadcrumb stops being the thing that made the name legible. */
+const MAX_TRAILS = 4
+
 /**
- * Walk from a node to the root, outermost first. Guards a broken tree two ways: a `parentId`
- * naming no node ends the walk, and a cycle is cut by the seen-set — either way the caller gets a
- * trail, never a hang.
+ * Every path from a root down to `leaf`, each outermost-first — one per place the category is
+ * filed. Guards a broken graph three ways: a parent id naming no node ends that branch, a
+ * parent already on the current path is skipped (so a cycle cannot recur), and the result is
+ * capped. The caller always gets at least one trail — `[leaf]` for a category with no
+ * reachable parent — never a hang.
  */
-export function categoryTrail(
+export function categoryTrails(
   nodes: readonly CategoryTreeNode[],
   leaf: CategoryTreeNode,
-): CategoryTreeNode[] {
+): CategoryTreeNode[][] {
   const byId = new Map(nodes.map((n) => [n.id, n]))
-  const trail: CategoryTreeNode[] = [leaf]
-  const seen = new Set<string>([leaf.id])
-  let cur = leaf
-  while (cur.parentId) {
-    const parent = byId.get(cur.parentId)
-    if (!parent || seen.has(parent.id)) break
-    trail.unshift(parent)
-    seen.add(parent.id)
-    cur = parent
+  const trails: CategoryTreeNode[][] = []
+  const walk = (node: CategoryTreeNode, below: CategoryTreeNode[], onPath: Set<string>): void => {
+    if (trails.length >= MAX_TRAILS) return
+    const trail = [node, ...below]
+    const parents = [...new Set(node.parentIds)]
+      .filter((id) => id !== node.id && !onPath.has(id))
+      .map((id) => byId.get(id))
+      .filter((p): p is CategoryTreeNode => p !== undefined)
+    if (parents.length === 0) {
+      trails.push(trail)
+      return
+    }
+    onPath.add(node.id)
+    for (const parent of parents) walk(parent, trail, onPath)
+    onPath.delete(node.id)
   }
-  return trail
+  walk(leaf, [], new Set())
+  return trails
 }
 
 /** The node a name refers to. Names are unique per owner across the whole tree, so this is exact;
@@ -65,23 +79,24 @@ function nodeForName(
 }
 
 /**
- * The family's CATEGORY editor: one form row for "this thing is filed in exactly one place in a
- * tree the owner maintains".
+ * The family's CATEGORY editor: one form row for "this thing carries one category from a
+ * hierarchy the owner maintains".
  *
  * Same `[Combobox autocomplete] + [Choose… browser]` pair as {@link TagSetField}, for the same
  * reason — the Combobox is for the category you can name, the chooser is for the one you have to
  * go and find, and it is also where a new one is minted. Two things are category-specific:
  *
- *  - **The value is shown as a BREADCRUMB, not a bare name.** The vocabulary is a tree, and
- *    "Design" under "Archive" is a different place from "Design" under "Active"; a flat name
- *    tells the user which name they picked but not where it sits.
- *  - **A crumb is clickable, and renames.** The tree is edited from wherever it is displayed
- *    rather than only from a separate management screen — the rename is the one edit that is
- *    always safe from here, because a rename moves nothing.
+ *  - **The value is shown as a BREADCRUMB, not a bare name** — one per place the category is
+ *    filed, because the vocabulary is a DAG and a category may sit under several parents.
+ *    A flat name tells the user which name they picked but not where it sits.
+ *  - **A crumb is clickable, and renames.** The hierarchy is edited from wherever it is
+ *    displayed rather than only from a separate management screen — the rename is the one edit
+ *    that is always safe from here, because a rename moves nothing.
  *
  * The picker itself stays FLAT (names, not a tree walk): a name is unique per owner across the
- * whole tree, so a name already names one place in it and typing three characters beats
- * navigating three levels. The breadcrumb is what makes the flat pick legible afterwards.
+ * whole hierarchy, so a name already names one category and typing three characters beats
+ * navigating three levels. The breadcrumbs are what make the flat pick legible afterwards —
+ * and the only place the second filing of a category is visible from a form.
  *
  * WORDS ARE THE HOST'S. `label` names the row; `noun` (singular, lowercase) builds the controls'
  * microcopy — nothing here hardcodes "category".
@@ -107,8 +122,8 @@ export function CategoryField({
   /** The names to offer. A SUGGESTION list, never a closed set — `value` may hold a name that is
    *  not in it (one just created, or one another surface added). */
   options: readonly string[]
-  /** The tree behind those names, when the host has it. Drives the breadcrumb and the rename;
-   *  omit it and the value renders as the single name it is. */
+  /** The hierarchy behind those names, when the host has it. Drives the breadcrumbs and the
+   *  rename; omit it and the value renders as the single name it is. */
   nodes?: readonly CategoryTreeNode[]
   /** The chosen name, or `""` for none. */
   value: string
@@ -128,7 +143,7 @@ export function CategoryField({
   const [busy, setBusy] = React.useState(false)
 
   const selected = nodeForName(nodes, value)
-  const trail = selected ? categoryTrail(nodes, selected) : []
+  const trails = selected ? categoryTrails(nodes, selected) : []
 
   function openRename(node: CategoryTreeNode): void {
     setRenaming(node)
@@ -177,39 +192,47 @@ export function CategoryField({
   return (
     <Field label={label} hint={hint} layout={layout} className={className}>
       <div className="flex w-full flex-col gap-2">
-        {trail.length > 0 && (
-          <nav aria-label={`${label} path`}>
-            <ol className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
-              {trail.map((node, i) => (
-                <li key={node.id} className="flex min-w-0 items-center gap-1">
-                  {i > 0 && (
-                    <ChevronRight size={12} aria-hidden className="shrink-0 text-apt-text-dim" />
-                  )}
-                  {onRename && !disabled ? (
-                    <button
-                      type="button"
-                      onClick={() => openRename(node)}
-                      aria-label={`Rename ${noun} ${node.name}`}
-                      className={cn(
-                        "truncate rounded font-mono text-xs tracking-[0.02em] outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40",
-                        i === trail.length - 1 ? "text-apt-gold" : "text-apt-text-muted",
-                      )}
-                    >
-                      {node.name}
-                    </button>
-                  ) : (
-                    <span
-                      className={cn(
-                        "truncate font-mono text-xs tracking-[0.02em]",
-                        i === trail.length - 1 ? "text-apt-gold" : "text-apt-text-muted",
-                      )}
-                    >
-                      {node.name}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ol>
+        {/* One breadcrumb per filing. Usually one line; a category filed under two parents
+            shows both, because "which of them" is not a question this row can answer for the
+            user — and a single line would silently pick one. */}
+        {trails.length > 0 && (
+          <nav aria-label={trails.length > 1 ? `${label} paths` : `${label} path`}>
+            {trails.map((trail) => (
+              <ol
+                key={trail.map((node) => node.id).join("/")}
+                className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5"
+              >
+                {trail.map((node, i) => (
+                  <li key={node.id} className="flex min-w-0 items-center gap-1">
+                    {i > 0 && (
+                      <ChevronRight size={12} aria-hidden className="shrink-0 text-apt-text-dim" />
+                    )}
+                    {onRename && !disabled ? (
+                      <button
+                        type="button"
+                        onClick={() => openRename(node)}
+                        aria-label={`Rename ${noun} ${node.name}`}
+                        className={cn(
+                          "truncate rounded font-mono text-xs tracking-[0.02em] outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40",
+                          i === trail.length - 1 ? "text-apt-gold" : "text-apt-text-muted",
+                        )}
+                      >
+                        {node.name}
+                      </button>
+                    ) : (
+                      <span
+                        className={cn(
+                          "truncate font-mono text-xs tracking-[0.02em]",
+                          i === trail.length - 1 ? "text-apt-gold" : "text-apt-text-muted",
+                        )}
+                      >
+                        {node.name}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            ))}
           </nav>
         )}
 

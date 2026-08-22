@@ -39,7 +39,7 @@ export type { MarkdownRouteAvailability } from "./wire";
 /** One category as this surface exposes it — id, name, and the parent pointer that
  *  makes the set a tree. Re-exported (not aliased) because a hierarchical consumer
  *  passes these rows around, not just their names. */
-export type { MarkdownCategoryNode, MarkdownCategoryCreateBody } from "./wire";
+export type { MarkdownCategoryNode, MarkdownCategoryCreateBody, MarkdownCategoryEdge } from "./wire";
 
 /** One tag as this surface exposes it — the label, and the id that addresses it. Re-exported
  *  for the same reason as {@link MarkdownCategoryNode}: a management UI passes the rows
@@ -105,7 +105,7 @@ export function withTags<T extends { tags: string[] }>(doc: T): T {
  *  The id it synthesizes is the name, which is not a fabricated row id: a name is unique
  *  per owner (see {@link MarkdownCategoryTreeBody}), so it is the only identity that
  *  backend has and the one it filters by. It also never travels back — the single write
- *  taking an id is `createCategory({ parentId })`, and a flat list has no children, so
+ *  taking an id is `createCategory({ parentIds })`, and a flat list has no children, so
  *  the rail never publishes a level with a parent to create under (`NotebookPane` breaks
  *  its level loop on `children.length === 0`).
  *
@@ -113,7 +113,7 @@ export function withTags<T extends { tags: string[] }>(doc: T): T {
 export function categoryNodes(res: MarkdownCategoryTreeBody): MarkdownCategoryNode[] {
   if (Array.isArray(res.nodes)) return res.nodes;
   const items = Array.isArray(res.items) ? res.items : [];
-  return items.map((name, i) => ({ id: name, name, parentId: null, sortOrder: i }));
+  return items.map((name, i) => ({ id: name, name, parentIds: [], sortOrder: i }));
 }
 
 /** Fold the tags response into rows — the tag twin of {@link categoryNodes}, and the same
@@ -243,7 +243,7 @@ export const markdownApi = {
     return (await authedJson<StringListBody>(`${BASE}/categories${workspaceQuery(opts)}`)).items;
   },
 
-  /** The same categories WITH their structure — `parentId` makes them a tree. The flat
+  /** The same categories WITH their structure — `parentIds` makes them a DAG. The flat
    *  `categories()` above is the autocomplete's view of this one set; a hierarchical
    *  browser needs the ids and parents, which names alone cannot carry.
    *
@@ -256,10 +256,12 @@ export const markdownApi = {
     );
   },
 
-  /** Create a category, optionally under another (POST /content/markdown/categories).
-   *  Re-creating an existing name under the SAME parent returns it unchanged; under a
-   *  different one the backend refuses with a 409 — a name is unique per owner, and this
-   *  call never moves an existing category. */
+  /** Create a category, optionally under one or more others (POST
+   *  /content/markdown/categories). Re-creating an existing name is idempotent when every
+   *  parent it asks for is ALREADY one of that category's parents; asking for one it does
+   *  not have is a 409 — a name is unique per owner, and this call never re-files an
+   *  existing category. Adding a parent to a category that exists is
+   *  {@link taxonomyApi.addCategoryParent}, where it is what it says it is. */
   async createCategory(
     body: MarkdownCategoryCreateBody,
     opts?: { workspace?: string },

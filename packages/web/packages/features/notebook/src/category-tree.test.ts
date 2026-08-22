@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { NoteCategory } from "@agentic-toolkit/data/notes";
 import {
   buildCategoryTree,
+  categoryKey,
   categoryNames,
   flattenCategoryTree,
   resolveCategoryChain,
@@ -9,8 +10,8 @@ import {
   type CategoryNode,
 } from "./category-tree";
 
-function row(id: string, name: string, parentId: string | null = null): NoteCategory {
-  return { id, name, parentId, sortOrder: 0 };
+function row(id: string, name: string, ...parentIds: string[]): NoteCategory {
+  return { id, name, parentIds, sortOrder: 0 };
 }
 
 /** Ids of a level, so a shape assertion reads as the rail would render it. */
@@ -44,24 +45,73 @@ describe("buildCategoryTree", () => {
     expect(ids(tree[0].children[0].children)).toEqual(["q3"]);
   });
 
+  it("draws a category under EVERY parent it is filed under", () => {
+    // The whole point of the DAG: "Q3" is genuinely filed in two places, and is reachable
+    // from either. Nothing here picks a winner — there is no primary parent.
+    const tree = buildCategoryTree([
+      row("work", "Work"),
+      row("planning", "Planning"),
+      row("q3", "Q3", "work", "planning"),
+    ]);
+    expect(ids(tree)).toEqual(["work", "planning"]);
+    expect(ids(tree[0].children)).toEqual(["q3"]);
+    expect(ids(tree[1].children)).toEqual(["q3"]);
+  });
+
+  it("gives the two drawings of one category distinct paths", () => {
+    // Its id repeats, so `path` is what a React key and a selection have to be built on.
+    const tree = buildCategoryTree([
+      row("work", "Work"),
+      row("planning", "Planning"),
+      row("q3", "Q3", "work", "planning"),
+    ]);
+    expect(categoryKey(tree[0].children[0])).toBe("work/q3");
+    expect(categoryKey(tree[1].children[0])).toBe("planning/q3");
+    expect(tree[0].children[0].parentIds).toEqual(["work", "planning"]);
+  });
+
+  it("draws a diamond's floor under both of its sides", () => {
+    const tree = buildCategoryTree([
+      row("top", "Top"),
+      row("left", "Left", "top"),
+      row("right", "Right", "top"),
+      row("floor", "Floor", "left", "right"),
+    ]);
+    expect(ids(tree)).toEqual(["top"]);
+    expect(ids(tree[0].children)).toEqual(["left", "right"]);
+    expect(ids(tree[0].children[0].children)).toEqual(["floor"]);
+    expect(ids(tree[0].children[1].children)).toEqual(["floor"]);
+    expect(categoryKey(tree[0].children[1].children[0])).toBe("top/right/floor");
+  });
+
   it("preserves the backend's sibling order", () => {
     const tree = buildCategoryTree([row("b", "Beta"), row("a", "Alpha")]);
     expect(ids(tree)).toEqual(["b", "a"]);
   });
 
-  it("promotes a category whose parent isn't in the rows to a root", () => {
-    // A pointer to another owner's row, or one that has been deleted. The category keeps
-    // its notes, so it must keep a place in the rail.
+  it("promotes a category whose every parent is missing from the rows to a root", () => {
+    // A link to another owner's row, or one deleted between the two reads. The category
+    // keeps its notes, so it must keep a place in the rail.
     const tree = buildCategoryTree([row("orphan", "Orphan", "missing")]);
     expect(ids(tree)).toEqual(["orphan"]);
   });
 
-  it("promotes a category in a cycle to a root instead of losing it", () => {
-    // The generic /content/categories CRUD can write these; the notebook's own POST can't.
+  it("files a category under its surviving parent when only one link is broken", () => {
+    // Not a root: one real parent is still a placement, so promoting it would move a
+    // category the user can see perfectly well.
+    const tree = buildCategoryTree([row("work", "Work"), row("q3", "Q3", "gone", "work")]);
+    expect(ids(tree)).toEqual(["work"]);
+    expect(ids(tree[0].children)).toEqual(["q3"]);
+  });
+
+  it("breaks a cycle where it closes, keeping both categories visible", () => {
+    // The backend refuses the edge that would close a loop, but a graph written before that
+    // guard is still served. Neither row can be a root by the parent rule, so the second
+    // pass seeds the first of them in row order and the walk stops when it returns.
     const tree = buildCategoryTree([row("a", "A", "b"), row("b", "B", "a")]);
-    expect(ids(tree).sort()).toEqual(["a", "b"]);
-    // Neither may claim the other as a child, or the rail would recurse forever.
-    expect(tree.every((node) => node.children.length === 0)).toBe(true);
+    expect(ids(tree)).toEqual(["a"]);
+    expect(ids(tree[0].children)).toEqual(["b"]);
+    expect(tree[0].children[0].children).toEqual([]);
   });
 
   it("promotes a self-parented category to a root", () => {
@@ -70,16 +120,26 @@ describe("buildCategoryTree", () => {
     expect(tree[0].children).toEqual([]);
   });
 
-  it("promotes a category hanging off a cycle rather than burying it", () => {
-    // "child" itself is sound, but every ancestor walk from it loops — so it can't be
-    // placed. Root is the only position from which the user can still reach its notes.
+  it("keeps a category hanging off a cycle in its place rather than losing it", () => {
     const tree = buildCategoryTree([
       row("a", "A", "b"),
       row("b", "B", "a"),
       row("child", "Child", "a"),
     ]);
-    expect(ids(tree).sort()).toEqual(["a", "b", "child"]);
-    expect(tree.every((node) => node.children.length === 0)).toBe(true);
+    expect(ids(tree)).toEqual(["a"]);
+    expect(ids(tree[0].children)).toEqual(["b", "child"]);
+  });
+
+  it("terminates on a graph with exponentially many paths, and stays bounded", () => {
+    // Each level filed under the two above it: the path count grows like Fibonacci, so
+    // thirty levels is millions of drawings. The cap is what makes this render at all.
+    const rows: NoteCategory[] = [row("c0", "c0"), row("c1", "c1", "c0")];
+    for (let i = 2; i < 30; i++) rows.push(row(`c${i}`, `c${i}`, `c${i - 1}`, `c${i - 2}`));
+    const flat = flattenCategoryTree(buildCategoryTree(rows));
+    expect(flat.length).toBeGreaterThan(100);
+    expect(flat.length).toBeLessThanOrEqual(4000);
+    // Bounded, but never at the cost of a row: every category is still somewhere on screen.
+    expect(new Set(flat.map(({ node }) => node.id)).size).toBe(rows.length);
   });
 
   it("returns nothing for no rows", () => {
@@ -118,6 +178,18 @@ describe("resolveCategoryChain", () => {
     expect(resolveCategoryChain(tree, ["meetings"])).toEqual([]);
   });
 
+  it("follows the parent the URL actually names, for a category filed twice", () => {
+    // Both chains end at the same category; which one the user is IN is the difference
+    // between the two breadcrumbs, so the chain carries the parent that got them there.
+    const dag = buildCategoryTree([
+      row("work", "Work"),
+      row("planning", "Planning"),
+      row("q3", "Q3", "work", "planning"),
+    ]);
+    expect(ids(resolveCategoryChain(dag, ["planning", "q3"]))).toEqual(["planning", "q3"]);
+    expect(categoryKey(resolveCategoryChain(dag, ["planning", "q3"])[1])).toBe("planning/q3");
+  });
+
   it("resolves the empty chain to the whole notebook", () => {
     expect(resolveCategoryChain(tree, [])).toEqual([]);
   });
@@ -140,8 +212,23 @@ describe("flattenCategoryTree", () => {
     ]);
   });
 
+  it("lists a multi-parent category once per filing", () => {
+    // Not a bug to dedupe: each row is a real link, and unfiling one leaves the other.
+    const tree = buildCategoryTree([
+      row("work", "Work"),
+      row("planning", "Planning"),
+      row("q3", "Q3", "work", "planning"),
+    ]);
+    expect(flattenCategoryTree(tree).map(({ node }) => categoryKey(node))).toEqual([
+      "work",
+      "work/q3",
+      "planning",
+      "planning/q3",
+    ]);
+  });
+
   it("shows a category whose parent is missing, as a root", () => {
-    // Same rule the fold applies: a corrupt pointer costs the row its PLACEMENT, never its
+    // Same rule the fold applies: a corrupt link costs the row its PLACEMENT, never its
     // existence — and the management view is exactly where that has to stay reachable.
     expect(flattenCategoryTree(buildCategoryTree([row("b", "Orphan", "gone")]))).toEqual([
       { node: expect.objectContaining({ id: "b" }), depth: 0 },

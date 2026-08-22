@@ -87,13 +87,30 @@ export interface StringListBody {
   items: string[];
 }
 
-/** One row of `GET /content/markdown/categories`'s `nodes`. `parentId` is what makes
- *  the category set a TREE; it is an app-level convention with no FK behind it, so a
- *  consumer folding the tree must tolerate a parent that is missing or cyclic. */
+/** One row of `GET /content/markdown/categories`'s `nodes`. `parentIds` is what makes the
+ *  category set a DAG rather than a tree: a category may sit under ANY number of parents,
+ *  or none — an empty array, never a null sentinel. A consumer folding it into a tree
+ *  therefore renders the same category in more than one place, which is the point.
+ *
+ *  The backend filters out parent ids that are not themselves in `nodes`, and refuses the
+ *  edge that would close a cycle, so a fold terminates. A defensive guard is still worth
+ *  keeping: this data crosses a network, and a client that hangs is worse than one that
+ *  draws a branch twice. */
 export interface MarkdownCategoryNode {
   id: string;
   name: string;
-  parentId: string | null;
+  parentIds: string[];
+  sortOrder: number;
+}
+
+/** One row of `content.category_edges` — a single parent→child link, as the generic CRUD
+ *  door returns it. It is what a link REMOVAL addresses: a {@link MarkdownCategoryNode}
+ *  carries the parent ids but not the edge ids, so `taxonomyApi.categoryParents` fetches
+ *  these at write time. */
+export interface MarkdownCategoryEdge {
+  id: string;
+  parentId: string;
+  childId: string;
   sortOrder: number;
 }
 
@@ -119,12 +136,14 @@ export interface MarkdownTagSetBody {
   nodes: MarkdownKeywordNode[];
 }
 
-/** `POST /content/markdown/categories` body. Omit `parentId` (or send null) for a root.
- *  A name is unique per owner across the whole tree, so this never MOVES a category:
- *  re-posting a name under a different parent is a 409. */
+/** `POST /content/markdown/categories` body. Omit `parentIds` (or send an empty array) for
+ *  an unfiled category. A name is unique per owner across the WHOLE hierarchy, so this
+ *  never RE-FILES a category: re-posting a name is idempotent when every parent it asks
+ *  for is already one of that category's parents, and a 409 otherwise. Adding a parent to
+ *  a category that already exists is an edge write (`POST /content/category-edges`). */
 export interface MarkdownCategoryCreateBody {
   name: string;
-  parentId?: string | null;
+  parentIds?: string[];
 }
 
 /* ── Buckets (bucket.buckets + bucket.bucket_types) ──────────────────────
