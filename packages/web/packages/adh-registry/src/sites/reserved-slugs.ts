@@ -66,11 +66,16 @@ export const RESERVED_SLUGS: Readonly<Record<string, readonly string[]>> = {
   registries: UNIVERSAL,
   consultants: UNIVERSAL,
   // research addresses an AUTHOR at its root segment (`/<authorSlug>`), so its static routes
-  // shadow any author who shares a name with one. UNIVERSAL already covers every static
-  // directory in its app/ tree except `papers`, which is named explicitly: that is the prefix
-  // this corpus is being moved OFF, and the URLs under it stay in crawler indexes and in
-  // support conversations long after the directory goes, so an author must not be handed it.
-  research: [...UNIVERSAL, 'papers'],
+  // shadow any author who shares a name with one. `papers` USED TO be added on top of
+  // UNIVERSAL here, reserved for the `/papers/<userSlug>` prefix this corpus was being
+  // moved OFF — but that route is gone now (research mounts `[workspace]/[paperSlug]`
+  // instead, see routes.generated.ts), so nothing shadows a `papers` author any more and
+  // reserving the word at signup only cost an author that name for no reason. What still
+  // shadows an author is the site's real static route tree; `research/src/lib/
+  // shadowing-segments.ts` derives that from `SITE_ROUTES.research` directly rather than
+  // trusting this list, which answers a different question (what is claimable at
+  // signup) from what that module answers (what is reachable on this site).
+  research: UNIVERSAL,
 }
 
 /**
