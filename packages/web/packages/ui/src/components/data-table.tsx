@@ -111,6 +111,14 @@ export interface DataTableProps<T> {
    *
    *  Ignored without `onSelectionChange`: an action-list table has no selection to show. */
   showSelectionCheckboxes?: boolean
+  /** Name a row for its selection checkbox ("Select …"), overriding the guess below.
+   *
+   *  The guess reads the row's first non-empty string field that isn't the id, which is right
+   *  often enough to be worth having and wrong in a way nothing catches: a table whose id IS its
+   *  descriptive field falls through to whatever comes next, and if that next field is a category
+   *  — a scope, a kind, a status — every checkbox on the page ends up with the same name. Pass
+   *  this wherever a row has an obvious label; `getRowId` is usually it. */
+  describeRow?: (row: T) => string
 }
 
 const NO_SELECTION: Set<string> = new Set()
@@ -135,6 +143,18 @@ function describeRowForSelection(row: unknown, id: string): string {
   return `row ${id}`
 }
 
+/** Adapt a row-shaped labeller to the id-shaped one the drag announcements want. */
+function describeIdWith<T>(
+  rows: T[],
+  getRowId: (row: T) => string,
+  describeRow: (row: T) => string,
+): (id: string) => string {
+  return (id) => {
+    const row = rows.find((r) => getRowId(r) === id)
+    return row === undefined ? id : describeRow(row)
+  }
+}
+
 function readWidths(key: string | undefined): ColumnWidths {
   if (!key || typeof window === "undefined") return {}
   try {
@@ -148,7 +168,7 @@ function readWidths(key: string | undefined): ColumnWidths {
 export function DataTable<T>({
   columns, rows, getRowId, selectedIds = NO_SELECTION, onSelectionChange, onRowActivate,
   sort, onSortChange, emptyLabel = "No items.", loading = false, ariaLabel, className,
-  autoSizeColumns = false, columnWidthsKey, reorder, showSelectionCheckboxes = false,
+  autoSizeColumns = false, columnWidthsKey, reorder, showSelectionCheckboxes = false, describeRow,
 }: DataTableProps<T>): React.ReactElement {
   const selectable = onSelectionChange != null
   const baseId = React.useId()
@@ -197,7 +217,7 @@ export function DataTable<T>({
         // leave one ticked.
         <span onClick={(e) => e.stopPropagation()} className="flex items-center">
           <Checkbox
-            aria-label={`Select ${describeRowForSelection(row, id)}`}
+            aria-label={`Select ${describeRow?.(row) ?? describeRowForSelection(row, id)}`}
             checked={selectedIds.has(id)}
             onCheckedChange={() => toggle(id)}
           />
@@ -527,7 +547,11 @@ export function DataTable<T>({
     <SortableSurface
       zones={zones}
       onDrop={reorder.onDrop}
-      describeItem={reorder.describeRow}
+      // A row has ONE name, so the drag announcements fall back to the table's own `describeRow`
+      // rather than making a table that reorders AND selects say two different things about the
+      // same row. `reorder.describeRow` still wins where it is given: it takes an id, so it can
+      // name a row this table is not currently holding.
+      describeItem={reorder.describeRow ?? (describeRow ? describeIdWith(rows, getRowId, describeRow) : undefined)}
       describeZone={() => ariaLabel}
     >
       <SortableZone id={ROWS_ZONE} itemIds={ids}>
