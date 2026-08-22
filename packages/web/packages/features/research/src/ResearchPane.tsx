@@ -383,15 +383,24 @@ export function ResearchPane({
   const slugVerdict = useSlugAvailability(slug, checkSlug);
   const [slugAlert, setSlugAlert] = useState(false);
 
-  // Both edit buffers are KEYED by id above (`titleEdit.id === selectedId`), which masks a
-  // buffer left over from a different document — but masking is not clearing. Leave a document
-  // mid-edit without pressing Cancel, select another, then come back, and the abandoned raw
-  // buffer would still be sitting in state, ready to resurrect the moment `selectedId` matches
-  // it again. Clear both explicitly on every selection change so an old buffer can never
-  // outlive the selection it belonged to.
+  // The two buffers are NOT the same kind of thing, and must NOT be cleared the same way —
+  // that "symmetry" was tried once and it destroyed authors' slugs (see the comment at the
+  // `slugEdit` declaration above for why the slug has no other copy to fall back to).
+  //
+  // `titleEdit` is a display buffer OVER a real store: the draft frontmatter is the store,
+  // `derivedTitle` re-derives from it on every render, and the buffer exists only to hold
+  // raw keystrokes (trailing space) between writes. Clearing it loses nothing — the title
+  // comes back from the draft — and it must be cleared on selection change, because a stale
+  // buffer keyed by a since-reused id would otherwise resurrect on this document too.
+  //
+  // `slugEdit` IS the store, not a view over one. An unpublished paper has no baseline slug
+  // anywhere else — `slug` falls back to `publicRoute ?? routeFromTitle(title)`, and
+  // `publicRoute` is null until publish — so clearing this buffer on selection change would
+  // silently replace a slug the author deliberately typed with the title-derived one, the
+  // moment they merely switched documents and switched back. That IS data loss, not hygiene:
+  // do not add `setSlugEdit(null)` here to "match" the title clear below.
   useEffect(() => {
     setTitleEdit(null);
-    setSlugEdit(null);
   }, [selectedId]);
 
   // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there is

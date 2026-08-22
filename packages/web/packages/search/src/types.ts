@@ -90,12 +90,21 @@ export interface SearchSource {
    * misconfigured source's scope leak past the corpus it declared.
    *
    * That "wins" rule holds for EVERY param name, including the paging axes — `buildSearchUrl`
-   * sets `page`/`pageSize` before it applies `fixedParams`, so a source that names either one
+   * sets the paging params before it applies `fixedParams`, so a source that names one of them
    * here pins it, permanently, the same as any other fixed param. There is no special-cased
    * exclusion for them: the simpler and more predictable rule is that a fixed param overrides
    * whatever query param shares its name, no exceptions, so a caller that deliberately wants a
-   * pinned page or page size is never silently ignored. Do not name `page` or `pageSize` in
-   * `fixedParams` unless pinning pagination is genuinely the intent.
+   * pinned page or page size is never silently ignored.
+   *
+   * The KEY has to be the query-string name, not the filter-axis name: `buildSearchUrl` writes
+   * paging under `names.page`/`names.pageSize` — `{ ...DEFAULT_QUERY_PARAMS, ...source.params }`,
+   * i.e. `source.params.page`/`source.params.pageSize` when this same source renames them, and
+   * only the literal `page`/`pageSize` when it does not — and applies `fixedParams` by its keys
+   * literally, with NO pass through that renaming. A source that renames `page` to `p` and then
+   * writes `fixedParams: { page: '1' }` pins nothing: it sets an inert `page` param the code
+   * never reads, while the actually-sent `p` param stays unpinned. Name whatever this source's
+   * OWN `params.page`/`params.pageSize` resolve to (or the `page`/`pageSize` default, unrenamed)
+   * — never the filter-axis name `page`/`pageSize` on faith.
    */
   fixedParams?: Record<string, string>
   /** Result page size (default 50). */

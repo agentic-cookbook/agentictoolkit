@@ -120,8 +120,37 @@ describe("PublishSection — draft", () => {
         onChanged={async () => {}}
       />,
     );
+    const publishButton = screen.getByRole("button", { name: /^publish$/i });
+    expect(publishButton).toBeDisabled();
+    // The FULL rendered copy (FIX E2) — not just a substring match against the verdict's own
+    // reason text, which would stay green even if the "Can't publish: " prefix were mangled or
+    // deleted.
+    const reason = document.querySelector('[data-slot="publish-disabled-reason"]');
+    expect(reason).toHaveTextContent("Can’t publish: That route is taken.");
+    // FIX E5: the reason is linked to the button via aria-describedby, the same pattern the
+    // identity field already uses for its own verdict — a screen-reader user landing on a
+    // disabled Publish button must hear WHY, not just that it's disabled.
+    expect(reason).toHaveAttribute("id");
+    expect(publishButton).toHaveAttribute("aria-describedby", reason?.id);
+  });
+
+  it("falls back to a generic reason when the verdict is unavailable but names none (FIX E2)", () => {
+    // Exercises the `verdict?.reason ?? "this slug is unavailable."` branch the test above
+    // cannot reach, since that test always supplies a `reason`.
+    render(
+      <PublishSection
+        doc={DRAFT}
+        route="taken-route"
+        verdict={{ status: "unavailable", reason: null }}
+        userSlug="mikefullerton"
+        workspaceSlug="mikefullerton"
+        onChanged={async () => {}}
+      />,
+    );
     expect(screen.getByRole("button", { name: /^publish$/i })).toBeDisabled();
-    expect(screen.getByText(/that route is taken/i)).toBeInTheDocument();
+    expect(
+      document.querySelector('[data-slot="publish-disabled-reason"]'),
+    ).toHaveTextContent("Can’t publish: this slug is unavailable.");
   });
 
   it("says nothing about a disabled Publish when the slug IS available", () => {
@@ -135,9 +164,12 @@ describe("PublishSection — draft", () => {
         onChanged={async () => {}}
       />,
     );
-    expect(screen.getByRole("button", { name: /^publish$/i })).toBeEnabled();
+    const publishButton = screen.getByRole("button", { name: /^publish$/i });
+    expect(publishButton).toBeEnabled();
     expect(screen.queryByText(/that route is taken/i)).toBeNull();
     expect(document.querySelector('[data-slot="publish-disabled-reason"]')).toBeNull();
+    // No reason paragraph exists, so nothing to point at (FIX E5).
+    expect(publishButton).not.toHaveAttribute("aria-describedby");
   });
 
   it("disables Publish for a route that fails the format check, verdict or no verdict — N6's original gap", () => {

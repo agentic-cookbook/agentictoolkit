@@ -1,5 +1,6 @@
 "use client";
 
+import { useId } from "react";
 import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 
 import { useAction } from "@agentic-toolkit/crud";
@@ -87,6 +88,12 @@ export function PublishSection({
 }) {
   const { busy, error, run } = useAction();
   const { copied, copy } = useClipboard();
+  // Same pattern as `document-identity-field.tsx`'s `slugStatusId`: an id the reason paragraph
+  // carries always, and the button points at only while the paragraph is actually rendered —
+  // an `aria-describedby` pointing at an absent id is as good as none, and a screen-reader user
+  // landing on a disabled Publish button with no announced cause is exactly the defect the C8
+  // reason paragraph existed to fix, just for users who can't see the paragraph appear.
+  const publishDisabledReasonId = useId();
 
   const trimmed = route.trim().toLowerCase();
   const routeValid = PUBLIC_ROUTE_RE.test(trimmed);
@@ -183,7 +190,11 @@ export function PublishSection({
         </p>
         <div className="flex flex-col items-end gap-1">
           {routeUnavailable && (
-            <p data-slot="publish-disabled-reason" className={`text-xs ${toneTextClass("error")}`}>
+            <p
+              data-slot="publish-disabled-reason"
+              id={publishDisabledReasonId}
+              className={`text-xs ${toneTextClass("error")}`}
+            >
               Can’t publish: {verdict?.reason ?? "this slug is unavailable."}
             </p>
           )}
@@ -191,6 +202,7 @@ export function PublishSection({
             type="button"
             size="sm"
             disabled={!routeValid || routeUnavailable || busy || disabled}
+            aria-describedby={routeUnavailable ? publishDisabledReasonId : undefined}
             onClick={publish}
           >
             {busy ? "Publishing…" : "Publish"}

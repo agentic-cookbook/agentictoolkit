@@ -93,6 +93,20 @@ const DOCUMENT: ResearchDocument = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // `update` and `publish` are the two mocks individual tests queue a ONE-SHOT response onto
+  // via `mockResolvedValueOnce`/`mockRejectedValueOnce`, to script exactly one call's result.
+  // `vi.clearAllMocks()` above only calls `.mockClear()` on every mock, which drops call
+  // history but NOT a still-queued once-implementation — so a test that throws (or otherwise
+  // returns) before reaching the call meant to consume its queued value leaves that value
+  // sitting in the queue, where it leaks forward and gets wrongly consumed by a LATER test's
+  // call to the same mock, producing a spurious failure with no connection to what that later
+  // test actually does. `.mockReset()` additionally drops the queue, so call it explicitly on
+  // these two. Not `vi.resetAllMocks()` for every mock: `routeAvailable`'s default resolved
+  // value is set once, in the `vi.mock` factory above, and is never re-established here — a
+  // global reset would wipe it for every test that relies on that default without setting its
+  // own, which is most of them.
+  update.mockReset();
+  publish.mockReset();
   list.mockResolvedValue([structuredClone(SUMMARY)]);
   get.mockResolvedValue(structuredClone(DOCUMENT));
   create.mockResolvedValue(structuredClone(DOCUMENT));
@@ -1091,5 +1105,65 @@ describe("ResearchFeature — title and slug", () => {
 
     // The stored/derived title, not the abandoned raw buffer with its trailing space intact.
     expect(screen.getByLabelText("Title")).toHaveValue("New Title");
+  });
+
+  it("does not lose a hand-typed slug on an unpublished paper when the selection leaves and returns (FIX E1)", async () => {
+    // Unlike `titleEdit`, `slugEdit` IS the store for an unpublished paper's slug — there is no
+    // `publicRoute` (DOCUMENT is private, `publicRoute: null`) to fall back to, so clearing this
+    // buffer on selection change would silently replace the author's typed slug with the
+    // title-derived one. This pins that `slugEdit` is NOT cleared by the `[selectedId]` effect,
+    // the way `titleEdit` deliberately is (see the test above).
+    const doc2: ResearchDocument = {
+      ...structuredClone(DOCUMENT),
+      id: "doc-2",
+      title: "Quantum notes",
+      content: "# Quantum notes\n\nOther body.",
+    };
+    get.mockImplementation(async (id) => structuredClone(id === "doc-2" ? doc2 : DOCUMENT));
+
+    const { rerender } = render(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        DOCUMENT.content,
+      ),
+    );
+
+    // A slug that is deliberately NOT what `routeFromTitle` would derive from the title, so a
+    // reversion to the title-derived fallback is observable.
+    fireEvent.change(screen.getByLabelText("Slug"), {
+      target: { value: "my-custom-slug" },
+    });
+    expect(screen.getByLabelText("Slug")).toHaveValue("my-custom-slug");
+
+    // Load doc-2 — cached by the time we return — then come back to doc-1. A cache hit, no
+    // fetch, nothing naturally remounts the field.
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-2" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        doc2.content,
+      ),
+    );
+
+    rerender(
+      <Harness>
+        <ResearchFeature basePath="/w1/research" docId="doc-1" />
+      </Harness>,
+    );
+    await waitFor(() =>
+      expect((screen.getByLabelText("Markdown body") as HTMLTextAreaElement).value).toBe(
+        DOCUMENT.content,
+      ),
+    );
+
+    // The typed slug survives the round trip — not reverted to the title-derived fallback.
+    expect(screen.getByLabelText("Slug")).toHaveValue("my-custom-slug");
   });
 });
