@@ -54,6 +54,7 @@ export type {
   ChatParticipant,
   ChatMessage,
   ChatResponse,
+  ChatStreamEvent,
   ChatMode,
   ContentOverlayProps,
   InlineChatSizing,
