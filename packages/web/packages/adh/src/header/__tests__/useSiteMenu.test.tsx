@@ -188,10 +188,11 @@ describe('useSiteMenu', () => {
 
     it('uses the REGISTRY segment, not the site id, wherever the two differ', () => {
       const entries = inHub()
-      // Seventeen entries in HUB_FEATURE_SEGMENT depart from `<id>: <id>`, always because
-      // the hub routed the feature under its own name before the site existed. Taking the
-      // id would mint URLs no route serves — `/acme/teamregistry` is a 404 — so the row has
-      // to ask the registry rather than assume. Three of the departures, one per reason:
+      // Five entries in HUB_FEATURE_SEGMENT depart from `<id>: <id>` (and two sites share
+      // `products`, so 47 ids make 45 segments), always because the hub routed the feature
+      // under its own name before the site existed. Taking the id would mint URLs no route
+      // serves — `/acme/teamregistry` is a 404 — so the row has to ask the registry rather
+      // than assume. Three of the five departures, one per reason:
       expect(row(entries, 'teamregistry')?.href).toBe('/acme/teams')      // hub's older name
       expect(row(entries, 'authentication')?.href).toBe('/acme/auth')     // hub's older name
       expect(row(entries, 'ecosystems')?.href).toBe('/acme/products')     // two sites, one pane
