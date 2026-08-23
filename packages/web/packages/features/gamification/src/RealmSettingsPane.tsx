@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
@@ -11,7 +11,12 @@ import {
   type RealmConfig,
   type RealmConfigInput,
 } from "@agentic-toolkit/data/gamification";
-import { EditActionBar, SettingsDirtyProvider, useReportSettingsDirty } from "@agentic-toolkit/resource";
+import {
+  EditActionBar,
+  SettingsDirtyProvider,
+  useReportSettingsDirty,
+  useSettingsDraft,
+} from "@agentic-toolkit/resource";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
@@ -181,30 +186,20 @@ export function RealmSettingsPane({
   );
   const writeConfig = useResourceItemWriter<RealmConfig>("realm-config");
 
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
-  // The saved baseline the draft is diffed against, so `dirty` is a real edit — not just a
-  // second render with structurally-equal values.
-  const baseline = useMemo(() => (config ? toDraft(config) : null), [config]);
-  const dirty = useMemo(
-    () => !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline),
-    [draft, baseline],
-  );
-
-  // Seed the draft from the server's copy — but NEVER over an unsaved edit. Caching is what makes
-  // that distinction necessary: a re-read can now land mid-edit, because it revalidates behind the
-  // instant paint, where the pre-cache code read once per realm and could not. Losing typing to a
-  // background refetch is the one thing this pane must not do; while the draft is dirty the save
-  // bar is up and Save or Cancel is the user's own call. `baseline` follows `config` either way, so
-  // a kept draft is diffed against what the server NOW has.
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  useEffect(() => {
-    if (config) setDraft((prev) => (prev && dirtyRef.current ? prev : toDraft(config)));
-  }, [config]);
+  // Seeding, dirty-tracking and the base a partial save diffs against all live in the hook —
+  // see `useSettingsDraft` for why each of those is subtler than it looks under caching.
+  const {
+    draft,
+    patch: patchDraft,
+    seed,
+    dirty,
+    commit,
+    reset,
+  } = useSettingsDraft<RealmConfig, Draft>(config, toDraft);
 
   // Validated only while seasons are ON, so a save with seasons untouched (or turned off) is
   // never blocked by a stale anchor/lengthDays left over from a prior edit.
@@ -216,38 +211,51 @@ export function RealmSettingsPane({
   // — the same wiring as Auth/Account/Profile.
   useReportSettingsDirty("gamification-realm", dirty);
 
-  const patch = useCallback((next: Partial<Draft>) => {
-    setSavedNote(null);
-    setDraft((prev) => (prev ? { ...prev, ...next } : prev));
-  }, []);
+  const patch = useCallback(
+    (next: Partial<Draft>) => {
+      setSavedNote(null);
+      patchDraft(next);
+    },
+    [patchDraft],
+  );
 
-  const setSurface = useCallback((key: SurfaceKey, on: boolean) => {
-    setSavedNote(null);
-    setDraft((prev) => (prev ? { ...prev, surfaces: { ...prev.surfaces, [key]: on } } : prev));
-  }, []);
+  const setSurface = useCallback(
+    (key: SurfaceKey, on: boolean) => {
+      if (!draft) return;
+      setSavedNote(null);
+      patchDraft({ surfaces: { ...draft.surfaces, [key]: on } });
+    },
+    [draft, patchDraft],
+  );
 
   const save = useCallback(async () => {
-    if (!ecosystemId || !draft || !baseline || !canSave) return;
+    if (!ecosystemId || !draft || !seed || !canSave) return;
     setSaving(true);
     setSaveError(null);
     setSavedNote(null);
 
-    // Send only the changed fields. When any surface changed, send the FULL 4-key map so the
-    // persisted state matches the UI regardless of the backend's merge-vs-replace semantics
-    // (a surface is ON unless explicitly false, so an explicit `true` is always harmless).
+    // Send only the changed fields — diffed against `seed`, the snapshot this draft was seeded
+    // from, NOT against the server's current copy. A field the user never touched must not be
+    // sent just because somebody else changed it meanwhile: `mode` is the field that makes that
+    // concrete, since another admin (or the games site's own switch) moving the realm to `game`
+    // would otherwise read as this pane's edit and be written back as `gamification`.
+    //
+    // When any surface changed, send the FULL 4-key map so the persisted state matches the UI
+    // regardless of the backend's merge-vs-replace semantics (a surface is ON unless explicitly
+    // false, so an explicit `true` is always harmless).
     const body: RealmConfigInput = {};
-    if (draft.mode !== baseline.mode) body.mode = draft.mode;
-    if (draft.skin !== baseline.skin) body.skin = draft.skin;
-    if (draft.timezone !== baseline.timezone) body.timezone = draft.timezone;
-    const surfacesChanged = SURFACES.some((s) => draft.surfaces[s.key] !== baseline.surfaces[s.key]);
+    if (draft.mode !== seed.mode) body.mode = draft.mode;
+    if (draft.skin !== seed.skin) body.skin = draft.skin;
+    if (draft.timezone !== seed.timezone) body.timezone = draft.timezone;
+    const surfacesChanged = SURFACES.some((s) => draft.surfaces[s.key] !== seed.surfaces[s.key]);
     if (surfacesChanged) body.surfaces = { ...draft.surfaces };
     // seasons: undefined (omitted) = leave unchanged; null = clear; an object sets the window.
     // Already blocked from reaching here while invalid (`canSave` above).
     const seasonsChanged =
-      draft.seasonsOn !== baseline.seasonsOn ||
+      draft.seasonsOn !== seed.seasonsOn ||
       (draft.seasonsOn &&
-        (draft.seasonsAnchor !== baseline.seasonsAnchor ||
-          draft.seasonsLengthDays !== baseline.seasonsLengthDays));
+        (draft.seasonsAnchor !== seed.seasonsAnchor ||
+          draft.seasonsLengthDays !== seed.seasonsLengthDays));
     if (seasonsChanged) {
       body.seasons = draft.seasonsOn
         ? { anchor: draft.seasonsAnchor, lengthDays: Number(draft.seasonsLengthDays) }
@@ -259,7 +267,7 @@ export function RealmSettingsPane({
       // The server's own answer, written straight into the cache rather than invalidated: it is
       // already in hand, so a re-read would spend a request to arrive back at these bytes.
       writeConfig(ecosystemId, res.config);
-      setDraft(toDraft(res.config));
+      commit(res.config);
       setSavedNote(
         res.replayed
           ? `Realm enabled — backfilled ${res.replayed.subjects} members, ${res.replayed.badges} badges.`
@@ -279,13 +287,13 @@ export function RealmSettingsPane({
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, draft, baseline, canSave, writeConfig]);
+  }, [ecosystemId, draft, seed, canSave, commit, writeConfig]);
 
   const cancel = useCallback(() => {
-    if (config) setDraft(toDraft(config));
+    reset();
     setSaveError(null);
     setSavedNote(null);
-  }, [config]);
+  }, [reset]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">

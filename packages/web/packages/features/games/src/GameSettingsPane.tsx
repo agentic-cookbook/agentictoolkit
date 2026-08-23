@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { isForbidden, useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
 import { gamesApi, type Game, type GameInput } from "@agentic-toolkit/data/games";
 import { gamificationApi, type GamingMode, type RealmConfig } from "@agentic-toolkit/data/gamification";
-import { EditActionBar, SettingsDirtyProvider, useReportSettingsDirty } from "@agentic-toolkit/resource";
+import {
+  EditActionBar,
+  SettingsDirtyProvider,
+  useReportSettingsDirty,
+  useSettingsDraft,
+} from "@agentic-toolkit/resource";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Switch } from "@agentic-toolkit/ui/components/switch";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -46,8 +51,15 @@ interface Draft {
   game: GameInput | null;
 }
 
-function toDraft(config: RealmConfig, gameRow: Game | null): Draft {
-  return { mode: config.mode, game: gameRow ? gameToInput(gameRow) : null };
+/** The two records this pane edits as one. `useSettingsDraft` takes a single loaded record;
+ *  what this pane loads is a pair, so the pair is the record. */
+interface Loaded {
+  config: RealmConfig;
+  game: Game | null;
+}
+
+function toDraft({ config, game }: Loaded): Draft {
+  return { mode: config.mode, game: game ? gameToInput(game) : null };
 }
 
 export function GameSettingsPane({
@@ -76,52 +88,59 @@ export function GameSettingsPane({
   const writeConfig = useResourceItemWriter<RealmConfig>(REALM_CONFIG_CACHE_KEY);
   const writeGame = useResourceItemWriter<Game | null>(GAME_FOR_ECOSYSTEM_CACHE_KEY);
 
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
-  // `ready` gates baseline construction on BOTH reads landing, not just the config: a save
-  // fired before the game-row read settles could not tell "no game yet" from "still loading",
-  // and would risk treating an existing row as absent.
-  const ready = config != null && gameSettled;
-  const baseline = useMemo(() => (ready ? toDraft(config!, gameRow ?? null) : null), [ready, config, gameRow]);
-  const dirty = useMemo(
-    () => !!draft && !!baseline && JSON.stringify(draft) !== JSON.stringify(baseline),
-    [draft, baseline],
+  // Held back until BOTH reads land, not just the config: a save fired before the game-row
+  // read settles could not tell "no game yet" from "still loading", and would risk treating
+  // an existing row as absent. Null until then, which is also what keeps the draft unseeded.
+  const loaded = useMemo<Loaded | null>(
+    () => (config != null && gameSettled ? { config, game: gameRow ?? null } : null),
+    [config, gameSettled, gameRow],
   );
-
-  // Same non-clobbering reseed as RealmSettingsPane: a background revalidation must never
-  // overwrite an edit in progress.
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  useEffect(() => {
-    if (baseline) setDraft((prev) => (prev && dirtyRef.current ? prev : baseline));
-  }, [baseline]);
+  const {
+    draft,
+    patch: patchDraft,
+    seed,
+    dirty,
+    commit,
+    reset,
+  } = useSettingsDraft<Loaded, Draft>(loaded, toDraft);
 
   const gameValidationError = draft?.game ? gameValidate(draft.game) : null;
   const canSave = dirty && !gameValidationError;
 
   useReportSettingsDirty("games-settings", dirty);
 
-  const patchMode = useCallback((mode: GamingMode) => {
-    setSavedNote(null);
-    setDraft((prev) => (prev ? { ...prev, mode } : prev));
-  }, []);
+  const patchMode = useCallback(
+    (mode: GamingMode) => {
+      setSavedNote(null);
+      patchDraft({ mode });
+    },
+    [patchDraft],
+  );
 
-  const patchGame = useCallback((next: GameInput) => {
-    setSavedNote(null);
-    setDraft((prev) => (prev ? { ...prev, game: next } : prev));
-  }, []);
+  const patchGame = useCallback(
+    (next: GameInput) => {
+      setSavedNote(null);
+      patchDraft({ game: next });
+    },
+    [patchDraft],
+  );
 
   const save = useCallback(async () => {
-    if (!ecosystemId || !draft || !baseline || !canSave) return;
+    if (!ecosystemId || !draft || !seed || !canSave) return;
     setSaving(true);
     setSaveError(null);
     setSavedNote(null);
 
-    const modeChanged = draft.mode !== baseline.mode;
-    const gameFieldsChanged = !!baseline.game && !!draft.game && gameDiffers(draft.game, baseline.game);
+    // Diffed against `seed` — what this draft was seeded from — and not against the current
+    // server copy, so "did the user change it" cannot be confused with "did it change under
+    // us". Mode is where that matters: another admin flipping this product to `game` while
+    // the pane sits open would otherwise read as an edit here and be written straight back.
+    const modeChanged = draft.mode !== seed.mode;
+    const gameFieldsChanged = !!seed.game && !!draft.game && gameDiffers(draft.game, seed.game);
 
     try {
       let nextConfig = config!;
@@ -154,7 +173,7 @@ export function GameSettingsPane({
         nextGameRow = updated;
       }
 
-      setDraft(toDraft(nextConfig, nextGameRow));
+      commit({ config: nextConfig, game: nextGameRow });
       setSavedNote(replayedNote ?? "Saved.");
     } catch (err) {
       if (!isForbidden(err)) {
@@ -170,13 +189,13 @@ export function GameSettingsPane({
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, draft, baseline, canSave, config, gameRow, writeConfig, writeGame]);
+  }, [ecosystemId, draft, seed, canSave, config, gameRow, commit, writeConfig, writeGame]);
 
   const cancel = useCallback(() => {
-    if (baseline) setDraft(baseline);
+    reset();
     setSaveError(null);
     setSavedNote(null);
-  }, [baseline]);
+  }, [reset]);
 
   const loadError = configError ?? gameError;
 

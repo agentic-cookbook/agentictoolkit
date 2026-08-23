@@ -111,6 +111,11 @@ export {
   useSettingsDirty,
   useReportSettingsDirty,
 } from "./settings-dirty";
+// The draft half of the same job: what a settings pane's local copy has to do to survive a
+// background refetch, and what a PARTIAL save has to diff against. Hand-rolled once per pane
+// until four copies had produced three distinct bugs.
+export { useSettingsDraft } from "./use-settings-draft";
+export type { SettingsDraft } from "./use-settings-draft";
 
 // The shared "gate didn't open" surfaces for a workspace-scoped feature (see workspace-gate).
 export { WorkspaceResolutionError, WorkspaceNotManageable, ComingSoon } from "./workspace-gate";

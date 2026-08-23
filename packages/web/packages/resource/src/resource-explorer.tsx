@@ -550,8 +550,13 @@ export function ResourceExplorer<T>({
             right={
               // `homeBarRight` wins outright rather than sitting beside `newLabel`'s button: a
               // host that passed both would be asking for two create controls in the same slot,
-              // the exact hazard `homeBarRight` exists to avoid (see its doc above). No current
-              // host passes both — games, the only `homeBarRight` caller, passes no `newLabel`.
+              // the exact hazard `homeBarRight` exists to avoid (see its doc above). NO host
+              // passes `homeBarRight` at all today: games was the only one, and its Create Game
+              // control left with the games-owned create dialog when a game stopped being
+              // something you create. The seam and the precedence rule are kept — and pinned by
+              // `__tests__/resource-explorer.homeBar.test.tsx` — because the next host that
+              // creates through its own control needs exactly this, and re-deriving it is how
+              // the two-`HomeBar`s bug got written the first time.
               //
               // `||`, not `??`: mirrors the gate above — a falsy `homeBarRight` (most likely
               // `false`, from a host's own `condition && <X/>`) falls through to `newLabel`'s

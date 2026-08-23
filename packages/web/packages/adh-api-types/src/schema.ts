@@ -13057,7 +13057,7 @@ export interface paths {
                 };
             };
         };
-        /** Update a realm’s gamification config (admin, partial) — enabling it (false → true) triggers a retroactive replay */
+        /** Update a realm’s gamification config (admin, partial) — moving mode out of `none` triggers a retroactive replay, and entering `game` mode provisions the ecosystem’s game */
         put: {
             parameters: {
                 query?: never;
@@ -13070,7 +13070,8 @@ export interface paths {
             requestBody?: {
                 content: {
                     "application/json": {
-                        enabled?: boolean;
+                        /** @enum {string} */
+                        mode?: "none" | "gamification" | "game";
                         /** @enum {string} */
                         skin?: "rpg" | "plain";
                         surfaces?: {
@@ -13084,7 +13085,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Updated config (with replay result when just enabled) */
+                /** @description Updated config (with replay result when mode just left `none`) */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -14790,13 +14791,14 @@ export interface paths {
         };
         /**
          * One game’s public artifact feed (anonymous, read replica)
-         * @description The hot path, and it carries no `security`: it serves published artifacts to signed-out visitors and runs on the read replica so it does not contend with authenticated traffic. Three predicates are the entire boundary — `visibility = 'public'`, `deleted_at is null`, and `ecosystem_id`. The ecosystem is taken from the resolved game row, never from the query string. A retired game is 404.
+         * @description The hot path, and it carries no `security`: it serves published artifacts to signed-out visitors and runs on the read replica so it does not contend with authenticated traffic. Three predicates are the entire boundary — `visibility = 'public'`, `deleted_at is null`, and `ecosystem_id`, which is taken from the resolved game row and never used as a caller-supplied filter. `ecosystem` only disambiguates which game a bare `slug` names — ecosystem slugs are unique under a parent, so two products really can both own a game called `chess`, and an unqualified ambiguous slug is a 409. A retired game is 404, and so is a product that is not in `game` mode.
          */
         get: {
             parameters: {
                 query?: {
                     game_id?: string;
                     slug?: string;
+                    ecosystem?: string;
                     page?: string;
                     page_size?: string;
                 };
@@ -15211,13 +15213,14 @@ export interface paths {
         };
         /**
          * A player’s public per-game profile, by account slug (anonymous)
-         * @description Addressed by the account’s own slug (§4.5.1: one account, one profile address) — a `character_name` is flavour and nothing is addressed by it. **Four independent gates, every failure the same 404**: the account exists and is not deleted; `customers.public_profile_enabled` (the account-wide opt-in, honoured here exactly as the sibling `/public/users/{slug}` routes honour it); the per-game `players.visibility` is `public` or `unlisted`; and the game is not retired. Distinguishing them would tell a caller that an account exists AND plays this game, which is the fact the setting exists to withhold. `characterName` is withheld when the game’s `character_names` is `off`, at read time — a name stored before the operator turned the feature off is still in the column.
+         * @description Addressed by the account’s own slug (§4.5.1: one account, one profile address) — a `character_name` is flavour and nothing is addressed by it. **Four independent gates, every failure the same 404**: the account exists and is not deleted; `customers.public_profile_enabled` (the account-wide opt-in, honoured here exactly as the sibling `/public/users/{slug}` routes honour it); the per-game `players.visibility` is `public` or `unlisted`; and the game is not retired. Distinguishing them would tell a caller that an account exists AND plays this game, which is the fact the setting exists to withhold. `characterName` is withheld when the game’s `character_names` is `off`, at read time — a name stored before the operator turned the feature off is still in the column. A fifth gate sits under all of them: the product must be in `game` mode. `ecosystem` disambiguates which game a bare `slug` names (an unqualified ambiguous slug is a 409).
          */
         get: {
             parameters: {
                 query?: {
                     game_id?: string;
                     slug?: string;
+                    ecosystem?: string;
                 };
                 header?: never;
                 path: {
@@ -54826,7 +54829,6 @@ export interface paths {
                         eventLog?: string;
                         eventRetentionDays?: number;
                         syncTxid?: number;
-                        id?: string;
                     };
                 };
             };
@@ -67837,8 +67839,11 @@ export interface components {
         } | null;
         GamificationRealmConfig: {
             ecosystemId: string;
-            /** @description false leaves telemetry flowing but suppresses awards/UI */
-            enabled: boolean;
+            /**
+             * @description 'none' leaves telemetry flowing but suppresses awards/UI; 'gamification' turns on badges/levels/streaks/leaderboards; 'game' is a dedicated playable game, which brings gamification with it
+             * @enum {string}
+             */
+            mode: "none" | "gamification" | "game";
             /** @enum {string} */
             skin: "rpg" | "plain";
             /** @description Per-surface toggles; a surface is ON unless set false */
@@ -67925,7 +67930,7 @@ export interface components {
             id: string;
             gameId: string;
             kind: string;
-            role: string;
+            role: string | null;
             origin: string;
             /** @enum {string} */
             visibility: "public" | "unlisted" | "private";
@@ -67951,7 +67956,7 @@ export interface components {
             id: string;
             gameId: string;
             kind: string;
-            role: string;
+            role: string | null;
             slot?: string | null;
             data?: {
                 [key: string]: unknown;

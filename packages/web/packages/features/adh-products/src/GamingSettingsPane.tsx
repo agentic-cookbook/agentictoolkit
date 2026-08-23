@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import type { ReactNode } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
@@ -16,6 +16,7 @@ import {
   EditActionBar,
   SettingsDirtyProvider,
   useReportSettingsDirty,
+  useSettingsDraft,
 } from "@agentic-toolkit/resource";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
@@ -27,6 +28,7 @@ import {
   gameNormalize,
   gameToInput,
   gameValidate,
+  loadGameRow,
   REALM_CONFIG_CACHE_KEY,
   useGameForEcosystem,
 } from "@agentic-toolkit/games";
@@ -83,20 +85,20 @@ function GamingModeSection({ ecosystemId }: { ecosystemId?: string }) {
     { reportErrors: false },
   );
   const writeConfig = useResourceItemWriter<RealmConfig>(REALM_CONFIG_CACHE_KEY);
+  const writeGame = useResourceItemWriter<Game | null>(GAME_FOR_ECOSYSTEM_CACHE_KEY);
 
-  const [draft, setDraft] = useState<GamingMode | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
-  const baseline = config?.mode ?? null;
-  const dirty = draft !== null && baseline !== null && draft !== baseline;
-
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  useEffect(() => {
-    if (config) setDraft((prev) => (prev !== null && dirtyRef.current ? prev : config.mode));
-  }, [config]);
+  // One field, but the same seeding rules as any settings draft — and this one shares its
+  // cache entry with two other controls over the same column (the reused realm switch below,
+  // the games site's own), so "the server's copy moved while I was looking at it" is the
+  // ordinary case here rather than the exotic one. See `useSettingsDraft`.
+  const { draft, replace: setDraft, dirty, commit, reset } = useSettingsDraft<RealmConfig, GamingMode>(
+    config,
+    (c) => c.mode,
+  );
 
   useReportSettingsDirty("gaming-mode", dirty);
 
@@ -109,7 +111,16 @@ function GamingModeSection({ ecosystemId }: { ecosystemId?: string }) {
     try {
       const res = await gamificationApi.updateRealmConfig(ecosystemId, body);
       writeConfig(ecosystemId, res.config);
-      setDraft(res.config.mode);
+      // Entering `game` mode MINTS this product's game server-side, and the PUT's own response
+      // carries only `{config, replayed}` — so the section below, which reads the game row
+      // through the shared cache entry, would go on rendering the `null` it cached before the
+      // mint and tell the operator there is no game to configure. Re-read it through the same
+      // loader that entry is populated by, exactly as `GameSettingsPane` does after its own
+      // mode write. Unconditional rather than only on `→ game`: leaving the mode does not
+      // delete the row, but this is also the moment a row deleted elsewhere becomes visible,
+      // and one request on an explicit save is not worth a condition that can go stale.
+      writeGame(ecosystemId, await loadGameRow(ecosystemId));
+      commit(res.config);
       setSavedNote(
         res.replayed
           ? `Enabled — backfilled ${res.replayed.subjects} members, ${res.replayed.badges} badges.`
@@ -129,13 +140,13 @@ function GamingModeSection({ ecosystemId }: { ecosystemId?: string }) {
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, draft, dirty, writeConfig]);
+  }, [ecosystemId, draft, dirty, commit, writeConfig, writeGame]);
 
   const cancel = useCallback(() => {
-    if (config) setDraft(config.mode);
+    reset();
     setSaveError(null);
     setSavedNote(null);
-  }, [config]);
+  }, [reset]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -205,19 +216,18 @@ function GameOperationalFieldsSection({ ecosystemId }: { ecosystemId?: string })
   const { game, error: loadError } = useGameForEcosystem(ecosystemId);
   const writeGame = useResourceItemWriter<Game | null>(GAME_FOR_ECOSYSTEM_CACHE_KEY);
 
-  const [draft, setDraft] = useState<GameInput | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
-  const baseline = useMemo(() => (game ? gameToInput(game) : null), [game]);
-  const dirty = useMemo(() => !!draft && !!baseline && gameDiffers(draft, baseline), [draft, baseline]);
-
-  const dirtyRef = useRef(dirty);
-  dirtyRef.current = dirty;
-  useEffect(() => {
-    if (game) setDraft((prev) => (prev && dirtyRef.current ? prev : gameToInput(game)));
-  }, [game]);
+  // `gameDiffers` rather than the hook's JSON default: a `GameInput`'s optional fields differ
+  // structurally in ways that are not differences (see `GameDetail`), and this is the same
+  // comparison every other pane editing this row already dirties on.
+  const { draft, replace: setDraft, dirty, commit, reset } = useSettingsDraft<Game, GameInput>(
+    game,
+    gameToInput,
+    (a, b) => !gameDiffers(a, b),
+  );
 
   const validationError = draft ? gameValidate(draft) : null;
   const canSave = dirty && !validationError;
@@ -237,7 +247,7 @@ function GameOperationalFieldsSection({ ecosystemId }: { ecosystemId?: string })
       // field to read back off `updated`, which is exactly why the id written here is the prop,
       // not anything pulled from the response.
       writeGame(ecosystemId, updated);
-      setDraft(gameToInput(updated));
+      commit(updated);
       setSavedNote("Saved.");
     } catch (err) {
       if (!isForbidden(err)) {
@@ -253,13 +263,13 @@ function GameOperationalFieldsSection({ ecosystemId }: { ecosystemId?: string })
     } finally {
       setSaving(false);
     }
-  }, [ecosystemId, game, draft, canSave, writeGame]);
+  }, [ecosystemId, game, draft, canSave, commit, writeGame]);
 
   const cancel = useCallback(() => {
-    if (game) setDraft(gameToInput(game));
+    reset();
     setSaveError(null);
     setSavedNote(null);
-  }, [game]);
+  }, [reset]);
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
