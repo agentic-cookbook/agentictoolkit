@@ -7,6 +7,7 @@ import {
   buildSiteHref,
   detectEnv,
   getSite,
+  hubFeatureSegment,
   siteWorkspaceHref,
   siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
@@ -150,6 +151,27 @@ export function useSiteMenu(
         workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : undefined
       // The site we're already on: a bare same-origin path either way.
       if (site.id === currentSiteId) return workspacePath ?? '/'
+      // Signed in, on the hub, inside a workspace: the target site's implementation is a ROUTE
+      // here — the hub mounts that site's own home model at `/<slug>/<segment>`, so the row can
+      // change the route instead of the origin. Same pane, same data, no page load, and the
+      // workspace the visitor is in comes along by construction rather than by carry.
+      //
+      // Everything below is skipped deliberately, not by omission: `siteUrl` (there is no other
+      // origin), the SSO wrap (`resolveHref` exists to establish a session at a destination that
+      // has none — this destination is the session) and the theme carry (a preview lives in this
+      // document's own <style> nodes and cookie; a client-side route change never leaves them).
+      //
+      // Ordered AFTER the same-site return so the hub's own row keeps giving `/<slug>` rather
+      // than a segment for itself, and BEFORE the `hostname` guard because a same-origin path
+      // needs no host at all.
+      //
+      // `external` rows (the dev site-family submenus) opt out with the same reasoning as the
+      // workspace carry above: that menu means "open this site", and answering it with a hub
+      // route would leave no way to reach the site at all.
+      if (currentSiteId === 'hub' && authenticated && workspaceSlug && !external) {
+        const segment = hubFeatureSegment(site.id)
+        if (segment) return `/${workspaceSlug}/${segment}`
+      }
       if (!hostname) return '#'
       // Tag the destination with the previewed theme BEFORE the SSO wrap below, so it
       // survives in resolveHref's encoded `return` param (a no-op in prod / non-http).
@@ -178,7 +200,16 @@ export function useSiteMenu(
         return href
       }
     },
-    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, carryTheme],
+    [
+      workspaceSlug,
+      hostname,
+      currentSiteId,
+      authenticated,
+      pathname,
+      resolveHref,
+      currentEnv,
+      carryTheme,
+    ],
   )
 
   // Resolve a hub-workspace ROUTE link to its href: a same-origin path on the hub

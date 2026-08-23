@@ -1142,6 +1142,7 @@ import {
   buildSiteHref,
   detectEnv,
   getSite,
+  hubFeatureSegment,
   siteWorkspaceHref,
   siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
@@ -1228,7 +1229,8 @@ import {
   UsersRound,
   Wrench
 } from "lucide-react";
-var MENU_ICONS = {
+import { SITE_FOR_HUB_SEGMENT } from "@agentic-toolkit/adh-registry";
+var ICONS = {
   // --- Hub + its ecosystem sites (inline sub-items under Hub) ---
   hub: Hexagon,
   bitbag: Bot,
@@ -1268,36 +1270,32 @@ var MENU_ICONS = {
   // menu's own permanent row, never recorded) — held to that by the hub's
   // recents-recorder test, which walks the registry set and resolves each one here.
   //
-  // Each glyph is the one hub's own FEATURE_META gives that feature, so a place looks
-  // the same in the menu as it does on the workspace rail it was visited from.
+  // Only the hub's OWN knobs are written out here. The other half of that set — the
+  // segments that are a SITE's implementation mounted in the hub — is folded in from
+  // the registry below, so a site added to HUB_FEATURE_SEGMENT arrives with the glyph
+  // its own menu row already wears instead of an empty slot.
   "/all-data": Database,
   "/applications": AppWindow,
-  "/auth": KeyRound,
-  "/billing": CreditCard,
-  "/dashboards": LayoutDashboard,
   "/email-signup": Mail,
   "/feature-flags": Flag,
-  "/gamification": Trophy,
-  "/integrations": Plug,
   "/invitations": UsersRound,
-  "/knowledgebases": BookOpen,
   "/llm-providers": Boxes,
   "/members": BookUser,
-  "/messaging": MessageCircle,
-  "/narratives": ScrollText,
   "/persona-services": Boxes,
-  "/personas": UserCircle,
-  "/products": Package,
-  "/projects": FolderKanban,
-  "/registries": Library,
-  // matches FEATURE_META `registries`
-  "/research": FlaskConical,
   "/server-bags": Server,
   "/settings": Settings2,
   "/signin-apps": LogIn,
-  "/storage": HardDrive,
-  "/teams": UsersRound,
   "/tokens": KeyRound,
+  // The three fleet segments whose HUB view is deliberately not its site's, so the
+  // derivation below must not decide them. A hand-written key always wins.
+  //   '/auth'      — the workspace's auth CONFIG (KeyRound, beside '/tokens'), not the
+  //                  Authentication product's identity glyph.
+  //   '/messaging' — labelled "Messages" in the hub and leading to the DM workspace; the
+  //                  site that owns the `messaging` segment is about email & SMS.
+  //   '/teams'     — the Teams feature, not the team DIRECTORY teamregistry.com is.
+  "/auth": KeyRound,
+  "/messaging": MessageCircle,
+  "/teams": UsersRound,
   // --- Fleet-menu rows the registry cannot name (see fleetMenuGroups) ---
   // The two grouping topics, which are no single site: a checklist for the things
   // you decide before writing anything, blocks for the things you assemble after.
@@ -1403,6 +1401,12 @@ var MENU_ICONS = {
   // test plans, runs, and the bugs they turn up
   tools: Hammer
 };
+for (const [segment, siteId] of Object.entries(SITE_FOR_HUB_SEGMENT)) {
+  const route = `/${segment}`;
+  const icon = ICONS[siteId];
+  if (icon !== void 0 && ICONS[route] === void 0) ICONS[route] = icon;
+}
+var MENU_ICONS = ICONS;
 function menuIcon(key) {
   return key ? MENU_ICONS[key] : void 0;
 }
@@ -1428,6 +1432,10 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
     (site, external) => {
       const workspacePath = workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : void 0;
       if (site.id === currentSiteId) return workspacePath ?? "/";
+      if (currentSiteId === "hub" && authenticated && workspaceSlug && !external) {
+        const segment = hubFeatureSegment(site.id);
+        if (segment) return `/${workspaceSlug}/${segment}`;
+      }
       if (!hostname) return "#";
       const href = carryTheme(
         workspacePath ? siteUrl(site.id, workspacePath, hostname) : buildSiteHref(site, hostname, external ? "/" : pathname)
@@ -1439,7 +1447,16 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
         return href;
       }
     },
-    [workspaceSlug, hostname, currentSiteId, pathname, resolveHref, currentEnv, carryTheme]
+    [
+      workspaceSlug,
+      hostname,
+      currentSiteId,
+      authenticated,
+      pathname,
+      resolveHref,
+      currentEnv,
+      carryTheme
+    ]
   );
   const routeHref = useCallback2(
     (route) => {

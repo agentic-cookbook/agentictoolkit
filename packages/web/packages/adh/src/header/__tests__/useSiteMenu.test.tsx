@@ -10,6 +10,12 @@ import { DEV_DEPLOYMENT_ENVS } from '@agentic-toolkit/adh-registry/deployment-en
 // menu-icons single source of truth, hrefs per DEPLOYMENT_ENV, the SSO wrap, the
 // cross-site theme carry — and the WORKSPACE carry, which is what makes picking a site
 // from inside a workspace land in that same workspace rather than on a landing page.
+//
+// One row resolves two different ways now, which is the thing to hold on to while reading
+// below: from inside a hub workspace, a signed-in visitor picking "Storage" gets the hub's
+// own `/<slug>/storage` route onto that site's implementation; from anywhere else — another
+// site's header, or the hub signed out — the same row is still the absolute
+// `https://agenticdeveloperstorage.com/<slug>` it has always been.
 
 const path = { current: '/' }
 vi.mock('next/navigation', () => ({
@@ -105,13 +111,17 @@ describe('useSiteMenu', () => {
       expect(row(entries, 'storage')?.href).toBe('/acme')
     })
 
-    it('carries the slug off a hub workspace path too', () => {
+    it('carries the slug off a hub workspace path too — as a hub ROUTE', () => {
       const entries = at('agenticdeveloperhub.com', '/acme/products', () =>
         renderHook(() =>
           useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', authenticated: true }),
         ).result.current.entries,
       )
-      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+      // This asserted `https://agenticdeveloperstorage.com/acme` until the fleet came home.
+      // The slug is still carried — that is what this describe block is about, and it is
+      // unchanged — but the hub mounts Storage's own implementation at `/acme/storage`, so
+      // the nearer copy wins. The full rule is the block below.
+      expect(row(entries, 'storage')?.href).toBe('/acme/storage')
     })
 
     it('carries nothing to a site that has no workspace of its own', () => {
@@ -146,6 +156,120 @@ describe('useSiteMenu', () => {
         ).result.current.entries,
       )
       expect(row(entries, 'projects')?.href).toBe('https://agenticdeveloperprojects.com/')
+    })
+  })
+
+  // ── The in-hub reroute ─────────────────────────────────────────────────────────
+  // The hub routes every fleet site's own workspace implementation under
+  // `/<slug>/<segment>`, so a row picked from inside a hub workspace changes the ROUTE
+  // instead of the origin: same pane, no page load, no sign-in hop. It is the narrowest
+  // possible override of the carry above — one branch, four conditions — and every one of
+  // those conditions is a case here, because each is a way to send someone to the wrong
+  // origin (or to no destination at all).
+  describe('in-hub reroute', () => {
+    /** The resolved rows for a signed-in visitor inside `/acme` on the hub. */
+    const inHub = (opts: { authenticated?: boolean } = { authenticated: true }) =>
+      at('agenticdeveloperhub.com', '/acme/products', () =>
+        renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', ...opts }))
+          .result.current.entries,
+      )
+
+    it('answers a routed site with a same-origin path under the active slug', () => {
+      const entries = inHub()
+      // A site whose segment IS its id — the default, and the shape 30 of the 47 take.
+      expect(row(entries, 'storage')?.href).toBe('/acme/storage')
+      expect(row(entries, 'games')?.href).toBe('/acme/games')
+      // A placeholder site routes exactly like an implemented one: the hub mounts whatever
+      // model that site exports, and "coming soon" is a model. Nothing here knows which is
+      // which, and that is deliberate — the day academy's model becomes real, this row is
+      // already pointing at it.
+      expect(row(entries, 'academy')?.href).toBe('/acme/academy')
+    })
+
+    it('uses the REGISTRY segment, not the site id, wherever the two differ', () => {
+      const entries = inHub()
+      // Seventeen entries in HUB_FEATURE_SEGMENT depart from `<id>: <id>`, always because
+      // the hub routed the feature under its own name before the site existed. Taking the
+      // id would mint URLs no route serves — `/acme/teamregistry` is a 404 — so the row has
+      // to ask the registry rather than assume. Three of the departures, one per reason:
+      expect(row(entries, 'teamregistry')?.href).toBe('/acme/teams')      // hub's older name
+      expect(row(entries, 'authentication')?.href).toBe('/acme/auth')     // hub's older name
+      expect(row(entries, 'ecosystems')?.href).toBe('/acme/products')     // two sites, one pane
+    })
+
+    it('leaves a site the hub does NOT route on its own origin', () => {
+      // `status` has no workspace at all, so no segment, so nothing to route to — the
+      // fallback below the branch runs and it lands on its landing, exactly as it does from
+      // every other site. The branch returning a path for every row is the failure this
+      // guards: `/acme/status` would be a hub 404 reached from a working menu.
+      expect(row(inHub(), 'status')?.href).toBe('https://status.agenticdeveloperhub.com/')
+    })
+
+    it('stays a cross-site hop signed OUT, where the hub has no workspace to show', () => {
+      // The hub's workspace paths are self-identifying (the first segment is a slug unless
+      // the route tree claimed the word), so a signed-out visitor on `/acme/products` still
+      // resolves a slug — which is exactly why the branch checks the session as well. Every
+      // one of these hub routes is behind the workspace gate, so rerouting here would put a
+      // sign-in wall between the visitor and a page the site itself would have shown them.
+      expect(row(inHub({}), 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+    })
+
+    it('stays a cross-site hop from another SITE, even in the same workspace', () => {
+      // The reroute is the hub's alone: nowhere else mounts these implementations, so the
+      // menu is still the cross-site navigator `siteWorkspaceHref` describes. Same slug,
+      // same target, different header — and a different answer.
+      const entries = at('agenticdeveloperproducts.com', '/acme', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'products', authenticated: true }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+    })
+
+    it('stays a cross-site hop off a hub path with no workspace', () => {
+      // The hub landing. There is no slug to build a route from, and inventing one from the
+      // personal slug would answer "switch to Storage" with someone's own workspace on a
+      // page they were reading anonymously.
+      const entries = at('agenticdeveloperhub.com', '/explore', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', authenticated: true }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/')
+    })
+
+    it('neither SSO-wraps nor theme-tags a reroute — it never leaves the document', () => {
+      // Both wraps exist to survive an ORIGIN change: `resolveHref` establishes a session at
+      // a destination that has none, and the theme fragment re-plants a preview the next
+      // document would not otherwise have. A route change carries both by staying put, and
+      // running either would corrupt the href — the SSO wrap would turn `/acme/storage` into
+      // an absolute AS URL and bounce the visitor out of the app to come back to where they
+      // already were.
+      //
+      // Asserted with the wrap PROVEN LIVE on the same render (status, which is not routed,
+      // goes through it), so this reads as the branch opting out rather than as a render
+      // with no wrap configured.
+      const resolveHref = vi.fn((href: string) => `https://as.test/authorize?return=${href}`)
+      const entries = at('agenticdeveloperhub.com', '/acme/products', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, {
+            currentSiteId: 'hub',
+            authenticated: true,
+            resolveHref,
+          }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'storage')?.href).toBe('/acme/storage')
+      expect(row(entries, 'status')?.href).toContain('https://as.test/authorize?return=')
+      expect(resolveHref).not.toHaveBeenCalledWith('/acme/storage')
+    })
+
+    it('leaves the hub\'s OWN row a bare workspace path', () => {
+      // `hub` has no HUB_FEATURE_SEGMENT entry — it is the host, not a guest — but the row
+      // is answered before the branch is even reached, by the same-site return. Both facts
+      // point the same way here, and if either changed alone this row would start pointing
+      // at a segment for itself.
+      expect(topic(inHub(), 'Hub')?.href).toBe('/acme')
     })
   })
 

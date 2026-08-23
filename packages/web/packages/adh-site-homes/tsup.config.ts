@@ -6,6 +6,9 @@ import { featureTsup } from '../features/tsup.preset'
 // the other 46. Generated alongside package.json's exports -- the two must
 // name the same 47 sites, which `pnpm lint` in this package proves by resolving them.
 export default featureTsup({
+  // The `.` entry: data only (FLEET_HOME_SITE_IDS), and it imports no model — see src/index.ts
+  // for why there is deliberately no barrel of the 47 here.
+  index: "src/index.ts",
   "sites/academy": "src/sites/academy.tsx",
   "sites/authentication": "src/sites/authentication.tsx",
   "sites/billing": "src/sites/billing.tsx",

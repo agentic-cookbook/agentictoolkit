@@ -8,6 +8,11 @@ export default defineConfig({
     'header/index': 'src/header/index.ts',
     // Its own entry so the preserved import below has something to resolve to.
     'header/recents': 'src/header/recents.ts',
+    // The menu-icon MAP, published as `./header/menu-icons`. Its own entry because the hub's
+    // workspace rail reads its glyphs from here (FEATURE_META no longer hand-copies them), and
+    // a data module should not drag the whole header barrel — SiteMenu, the popovers, the auth
+    // chrome — in front of a module the workspace pages import for one lucide component.
+    'header/menu-icons': 'src/header/menu-icons.ts',
     // Same shape, same reason as recents above: module-level mutable state (`snapshot`,
     // `listeners`) that the settings panel writes and the site menu reads, so it must be
     // ONE copy. Its own entry + the preserved import below.

@@ -36,6 +36,11 @@
       "development": "./src/header/recents.ts",
       "import": "./dist/header/recents.js"
     },
+    "./header/menu-icons": {
+      "types": "./dist/header/menu-icons.d.ts",
+      "development": "./src/header/menu-icons.ts",
+      "import": "./dist/header/menu-icons.js"
+    },
     "./header/hub-preferences": {
       "types": "./dist/header/hub-preferences.d.ts",
       "development": "./src/header/hub-preferences.ts",

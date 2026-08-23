@@ -684,70 +684,183 @@ export function buildSiteHref(target: SiteDef, currentHostname: string, pathname
 // ---------------------------------------------------------------------------
 // Hub workspace routes (hand-managed — NOT scaffolded; keep outside gen blocks).
 //
-// Each developer-feature site also has a view INSIDE the hub, under the active
-// workspace slug at `/<slug>/<feature>` (e.g. the Storage site's hub view is
-// `/<slug>/storage`). This maps the site to that segment.
+// Every fleet site's gated workspace ALSO exists inside the hub, under the active workspace slug
+// at `/<slug>/<segment>`, and this table says which segment. It is the whole roster now rather
+// than the eleven leftovers it held for a fortnight: the fleet's workspace implementations moved
+// into `@agentic-toolkit/adh-site-homes`, so the hub mounts the SAME model the site mounts on its
+// own domain (see the hub's FleetSiteRoute), and a signed-in user never has to leave
+// agenticdeveloperhub.com to work. The sites keep their domains, their deployments and their
+// landing decks; what changed is that the hub has a route onto each of them again.
 //
-// It is no longer a switch TARGET: the site menu is a cross-site navigator, so a
-// switch from a workspace lands on the site's OWN workspace route
-// ({@link siteWorkspaceHref}), never the hub's view of it. What this table is for
-// now is the other direction — naming which second segments of a hub path ARE
-// workspace routes, via {@link HUB_WORKSPACE_SEGMENTS}, which is how the menu knows
-// there is a workspace to carry at all.
+// Three things read it, and the third is new:
+//   - {@link HUB_WORKSPACE_SEGMENTS}, which names the second segments of a hub path that ARE
+//     workspace routes — how the menu knows there is a workspace to carry at all.
+//   - `useSiteMenu`'s hub branch: signed in, on the hub, inside a workspace, a site row resolves
+//     to `/<slug>/<segment>` — a ROUTE — instead of hopping to the site's origin. Signed out and
+//     from every other site the menu is still the cross-site navigator {@link siteWorkspaceHref}
+//     describes.
+//   - `frontend/tools/gen-hub-fleet-routes.py`, which writes the hub's route directory per entry
+//     that does not already have one, and `--check`s that the tree and this table agree.
+//
+// The DEFAULT is `<site id>: '<site id>'`. Every entry that departs from it says why below, and
+// the departures are all of one kind: the hub already routed that feature under a name of its own
+// before its site existed, and reusing the existing route is what keeps today's URLs working.
+// Two sites may share a segment (ecosystems + products) — the hub renders one pane, so the rail
+// draws one row, which is keyed by SEGMENT rather than by site.
 //
 // Values are bare feature SEGMENTS (no leading slash).
-export const HUB_FEATURE_SEGMENT: Partial<Record<SiteId, string>> = {
-  dashboards: 'dashboards',
-  // The persona-data CRUD workspace lives at /<slug>/all-data (the /<slug>/personas
-  // route is the persona editor); the 'personas' registry site switches into this view.
-  personas: 'all-data',
-  // (No `communities`. Its hub route only ever rendered "Coming soon" and has been removed, so
-  // the site has no workspace inside the hub — only its own marketing pages. Listing a segment
-  // here that the hub does not route would make HUB_WORKSPACE_SEGMENTS claim a workspace that
-  // isn't there.)
-  // The hub's DM workspace + notification inbox, at /<slug>/messaging. Keyed by
-  // `messages` — sending and receiving messages is what that site is — while the
-  // segment keeps the older `messaging` spelling, which is a route name and not a
-  // site name (as with personas → all-data). The `messaging` SITE has no hub view:
-  // it is about configuring email & SMS for your products, and the hub surface for
-  // that is the `integrations` feature.
+export const HUB_FEATURE_SEGMENT = {
+  // --- sites whose hub route predates them, under the hub's own name for it ---
+  // The persona EDITOR, which is what agenticdeveloperpersonas.com renders — the same
+  // @agentic-toolkit/personas surface, so the site's row leads to the hub's own copy of it. This
+  // used to point at `all-data`, the persona-DATA CRUD; that route is untouched and still reached
+  // from the rail, it simply is not this site's implementation. `all-data` keeps its place in
+  // HUB_EXTRA_FEATURE_SEGMENTS below.
+  personas: 'personas',
+  // The hub's DM workspace + notification inbox, at /<slug>/messaging. Keyed by `messages` —
+  // sending and receiving messages is what that site is — while the segment keeps the older
+  // `messaging` spelling, which is a route name and not a site name.
   messages: 'messaging',
-  // Ecosystems are managed as PRODUCTS in the hub (/<slug>/products — each product IS
-  // an ecosystem), so both the ecosystems and products sites switch into that view.
+  // The `messaging` SITE is email & SMS integrations for your products, and the hub surface for
+  // that has always been the `integrations` feature. It is a placeholder on its own domain, so
+  // pointing it at the feature that does the job beats minting a second Messaging row that leads
+  // to the inbox — a different product.
+  messaging: 'integrations',
+  // Ecosystems are managed as PRODUCTS in the hub (/<slug>/products — each product IS an
+  // ecosystem), so both the ecosystems and products sites resolve to that view.
   ecosystems: 'products',
   products: 'products',
-  storage: 'storage',
+  // Customer auth: the hub has routed it as `auth` since before the site existed.
+  authentication: 'auth',
+  // The teams feature is agenticteamregistry.com's implementation; the hub's route for it is
+  // `teams`, which is also what the header and the breadcrumb have always called it.
+  teamregistry: 'teams',
+  // --- sites whose hub route already carries their own name ---
   billing: 'billing',
+  dashboards: 'dashboards',
+  gamification: 'gamification',
+  integrations: 'integrations',
   knowledgebases: 'knowledgebases',
   narratives: 'narratives',
-  research: 'research',
+  projects: 'projects',
   registries: 'registries',
+  research: 'research',
+  storage: 'storage',
+  // --- the rest of the fleet, each at its own name (gen-hub-fleet-routes.py writes these) ---
+  academy: 'academy',
+  codereviews: 'codereviews',
+  // `communities` is BACK. Its hub route once rendered "Coming soon" and was removed when the
+  // features left; the site's own workspace model is that same placeholder, and the hub mounts
+  // it now rather than sending anyone to another origin to read it.
+  communities: 'communities',
+  community: 'community',
+  consultants: 'consultants',
+  consulting: 'consulting',
+  cookbook: 'cookbook',
+  customers: 'customers',
+  devices: 'devices',
+  devteam: 'devteam',
+  docs: 'docs',
+  domains: 'domains',
+  education: 'education',
+  games: 'games',
+  help: 'help',
+  news: 'news',
+  notebook: 'notebook',
+  notifications: 'notifications',
+  orgs: 'orgs',
+  personabuilder: 'personabuilder',
+  recipes: 'recipes',
+  registry: 'registry',
+  sites: 'sites',
+  store: 'store',
+  stores: 'stores',
+  support: 'support',
+  teambuilder: 'teambuilder',
+  testing: 'testing',
+  toolkit: 'toolkit',
+  tools: 'tools',
+} as const satisfies Partial<Record<SiteId, string>>
+
+/** A hub workspace segment that is some SITE's implementation — the values above, as a type.
+ *
+ *  `as const satisfies` rather than an annotation, so the literals survive: the hub's `FeatureId`
+ *  IS this union plus {@link HubExtraFeatureSegment}, which turns "the rail has a row for every
+ *  routed site" from a pair of vitest lockstep assertions into a compile error in the file that
+ *  would otherwise be missing the row. `satisfies` keeps the keys checked against `SiteId` exactly
+ *  as the annotation did. */
+export type HubFeatureSegment = (typeof HUB_FEATURE_SEGMENT)[keyof typeof HUB_FEATURE_SEGMENT]
+
+/** The hub segment that mounts site `id`'s workspace implementation, or undefined when the hub
+ *  has no view of it.
+ *
+ *  A function rather than a bare index because the map is `as const`: it carries only the sites
+ *  it names, so indexing it with an arbitrary {@link SiteId} is an error at the type level even
+ *  though "does the hub route this site?" is exactly the question every caller has. Asking it
+ *  here keeps the widening in ONE place instead of at each call site. */
+export function hubFeatureSegment(id: SiteId): HubFeatureSegment | undefined {
+  return (HUB_FEATURE_SEGMENT as Partial<Record<SiteId, HubFeatureSegment>>)[id]
 }
 
-/** Hub workspace feature segments with no DISTINCT registry site behind them:
- *  recognized as workspace routes (so the menu reads a slug to carry) but absent from
- *  HUB_FEATURE_SEGMENT, which is keyed by site. teams + projects are bespoke workspace
- *  features with no registry site of their own. `personas` is the persona-EDITOR route
- *  (`/<slug>/personas`), a first-class workspace route; the `personas` registry site's
- *  hub view is the persona-DATA CRUD at `/<slug>/all-data` (see HUB_FEATURE_SEGMENT),
- *  so `personas` lives here — one segment cannot map to two sites — and is recognized
- *  by isHubWorkspacePath all the same. That keeps the switcher/drawer in step with the
- *  app header, which treats /<slug>/personas as a workspace route via FEATURE_META. */
-const HUB_EXTRA_FEATURE_SEGMENTS: string[] = [
-  'teams', 'projects', 'personas', 'persona-services', 'tokens', 'integrations', 'members', 'settings',
+/** The site whose implementation a hub segment mounts — the reverse of {@link HUB_FEATURE_SEGMENT},
+ *  for the readers that have a segment and need the site's label, glyph or blurb (the hub's rail
+ *  rows are built from exactly those three).
+ *
+ *  Two sites can name one segment, so "the site" needs a rule rather than a last-write-wins
+ *  accident: the site whose ID IS the segment wins, and only when none is does the first mapping
+ *  take it. That gives `products` → the Products site (not Ecosystems, which also renders there)
+ *  and `integrations` → Integrations (not Messaging, which borrows it), which is what those rows
+ *  are called everywhere else. */
+export const SITE_FOR_HUB_SEGMENT: Record<HubFeatureSegment, SiteId> = (() => {
+  const out = {} as Record<HubFeatureSegment, SiteId>
+  for (const [siteId, segment] of Object.entries(HUB_FEATURE_SEGMENT) as [SiteId, HubFeatureSegment][]) {
+    if (out[segment] === undefined || siteId === segment) out[segment] = siteId
+  }
+  return out
+})()
+
+/** Hub workspace feature segments with no DISTINCT registry site behind them: recognized as
+ *  workspace routes (so the menu reads a slug to carry) but absent from HUB_FEATURE_SEGMENT,
+ *  which is keyed by site.
+ *
+ *  It SHRANK when the fleet came home, and the ones that left were not deleted — they moved.
+ *  `teams`, `projects`, `personas`, `integrations`, `gamification` and `auth` are each some
+ *  site's implementation (teamregistry, projects, personas, integrations, gamification,
+ *  authentication), so they are keyed by that site above, where they can also tell the site menu
+ *  and the route generator where the site lives. What is left here is what genuinely has no site:
+ *  hub knobs scoped to an ecosystem, and the persona-DATA CRUD.
+ *
+ *  `all-data` is the one arrival. It used to be reached through `personas: 'all-data'`, which is
+ *  now `personas: 'personas'` — the editor is what that site renders — so the CRUD route needs
+ *  its own line to stay a recognized workspace segment.
+ *
+ *  Exported, unlike before, because the hub builds `FEATURE_META` by spreading this half over the
+ *  fleet half and a consumer has to be able to count the two apart: a knob added here that
+ *  collides with a segment above is otherwise absorbed in silence by that spread, and the only
+ *  visible trace is a rail row missing its site. */
+export const HUB_EXTRA_FEATURE_SEGMENTS = [
+  'all-data', 'persona-services', 'tokens', 'members', 'settings',
   // Ecosystem topics + LLM Providers promoted onto the root workspace rail (each is a
   // `/<slug>/<segment>` route with a FEATURE_META entry, no distinct registry site to
   // switch into) — kept lockstep with FEATURE_META by the reverse-lockstep test (#9).
-  'applications', 'invitations', 'signin-apps', 'gamification', 'auth', 'feature-flags',
+  'applications', 'invitations', 'signin-apps', 'feature-flags',
   'server-bags', 'llm-providers',
   // Email Signup: a bespoke rail route (audience.* lists/templates/campaigns), no
   // distinct registry site of its own — same lockstep as the row above.
   'email-signup',
-]
+] as const
+
+/** A hub workspace segment with no site behind it — the hub's own knobs, as a type. */
+export type HubExtraFeatureSegment = (typeof HUB_EXTRA_FEATURE_SEGMENTS)[number]
+
+/** EVERY `/<workspace>/<segment>` the hub serves as a feature: the fleet's implementations plus
+ *  the hub's own knobs. The hub's `FeatureId` is defined as exactly this, so the two cannot drift
+ *  — see {@link HubFeatureSegment}. The value-level {@link HUB_WORKSPACE_SEGMENTS} below is the
+ *  same set, for the readers that hold a `string` and need to ask. */
+export type HubWorkspaceSegment = HubFeatureSegment | HubExtraFeatureSegment
 
 // The set of SECOND-path segments that name a hub workspace feature — `/<workspace>/<segment>`.
-// Object.values of a Partial record is (string | undefined)[] under strict mode, so the
-// type-guard filter is required to narrow.
+// The value-level twin of {@link HubWorkspaceSegment}, for the readers holding a plain `string`.
 //
 // `home` was a member until the route convergence, and its removal is the same fact from two
 // directions. A workspace's landing IS the bare `/<workspace>` now, so `home` names no route
@@ -761,7 +874,7 @@ const HUB_EXTRA_FEATURE_SEGMENTS: string[] = [
 // workspace path — see the note further down where that pair used to live.
 export const HUB_WORKSPACE_SEGMENTS = new Set<string>([
   ...HUB_EXTRA_FEATURE_SEGMENTS,
-  ...Object.values(HUB_FEATURE_SEGMENT).filter((s): s is string => s !== undefined),
+  ...Object.values(HUB_FEATURE_SEGMENT),
 ])
 
 // `isHubWorkspacePath` and `hubWorkspaceSlug` used to sit here, deciding by the SECOND path
@@ -779,9 +892,17 @@ export const HUB_WORKSPACE_SEGMENTS = new Set<string>([
  *  they picked. Returns undefined when `target` has no workspace route, and the
  *  caller falls back to the site's landing.
  *
- *  It sends the visitor to the SITE, never to the hub's own view of that site's
- *  feature (`/<slug>/<feature>`, see HUB_FEATURE_SEGMENT): the menu is a cross-site
- *  navigator, and picking "Storage" from it means the Storage site.
+ *  It sends the visitor to the SITE — never to the hub's own view of that site's feature
+ *  (`/<slug>/<feature>`, see {@link HUB_FEATURE_SEGMENT}), which is a different destination and
+ *  not this function's to pick.
+ *
+ *  That used to be the whole rule, stated here because the menu had no other: picking "Storage"
+ *  meant the Storage site, from wherever you picked it. It is now the rule for everywhere EXCEPT
+ *  the hub. The hub mounts every routed site's own implementation under `/<slug>/<segment>`, so
+ *  `useSiteMenu`'s hrefFor answers a signed-in in-workspace hub row with that route and never
+ *  reaches this function; a signed-out hub visitor, and every other site's header, still does.
+ *  The behaviour is unchanged HERE — a caller that asks for a site's workspace path still gets
+ *  the site's own — and the sentence above is about the one caller there is.
  *
  *  One line, and that is the route convergence's whole point: this used to switch on
  *  {@link SiteDef.workspaceRoute} for three destinations. The value still decides WHETHER

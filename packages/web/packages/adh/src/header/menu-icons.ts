@@ -101,9 +101,11 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
+import { SITE_FOR_HUB_SEGMENT } from '@agentic-toolkit/adh-registry'
 
-/** entry key → icon. See the module comment for the key scheme. */
-export const MENU_ICONS: Record<string, LucideIcon> = {
+/** entry key → icon. See the module comment for the key scheme. Not the export: the fleet's
+ *  own workspace-route keys are folded in below before this becomes {@link MENU_ICONS}. */
+const ICONS: Record<string, LucideIcon> = {
   // --- Hub + its ecosystem sites (inline sub-items under Hub) ---
   hub: Hexagon,
   bitbag: Bot, // the hub's AI persona
@@ -135,35 +137,33 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   // menu's own permanent row, never recorded) — held to that by the hub's
   // recents-recorder test, which walks the registry set and resolves each one here.
   //
-  // Each glyph is the one hub's own FEATURE_META gives that feature, so a place looks
-  // the same in the menu as it does on the workspace rail it was visited from.
+  // Only the hub's OWN knobs are written out here. The other half of that set — the
+  // segments that are a SITE's implementation mounted in the hub — is folded in from
+  // the registry below, so a site added to HUB_FEATURE_SEGMENT arrives with the glyph
+  // its own menu row already wears instead of an empty slot.
   '/all-data': Database,
   '/applications': AppWindow,
-  '/auth': KeyRound,
-  '/billing': CreditCard,
-  '/dashboards': LayoutDashboard,
   '/email-signup': Mail,
   '/feature-flags': Flag,
-  '/gamification': Trophy,
-  '/integrations': Plug,
   '/invitations': UsersRound,
-  '/knowledgebases': BookOpen,
   '/llm-providers': Boxes,
   '/members': BookUser,
-  '/messaging': MessageCircle,
-  '/narratives': ScrollText,
   '/persona-services': Boxes,
-  '/personas': UserCircle,
-  '/products': Package,
-  '/projects': FolderKanban,
-  '/registries': Library, // matches FEATURE_META `registries`
-  '/research': FlaskConical,
   '/server-bags': Server,
   '/settings': Settings,
   '/signin-apps': LogIn,
-  '/storage': HardDrive,
-  '/teams': UsersRound,
   '/tokens': KeyRound,
+
+  // The three fleet segments whose HUB view is deliberately not its site's, so the
+  // derivation below must not decide them. A hand-written key always wins.
+  //   '/auth'      — the workspace's auth CONFIG (KeyRound, beside '/tokens'), not the
+  //                  Authentication product's identity glyph.
+  //   '/messaging' — labelled "Messages" in the hub and leading to the DM workspace; the
+  //                  site that owns the `messaging` segment is about email & SMS.
+  //   '/teams'     — the Teams feature, not the team DIRECTORY teamregistry.com is.
+  '/auth': KeyRound,
+  '/messaging': MessageCircle,
+  '/teams': UsersRound,
 
   // --- Fleet-menu rows the registry cannot name (see fleetMenuGroups) ---
   // The two grouping topics, which are no single site: a checklist for the things
@@ -244,6 +244,21 @@ export const MENU_ICONS: Record<string, LucideIcon> = {
   testing: ClipboardCheck, // test plans, runs, and the bugs they turn up
   tools: Hammer,
 }
+
+// Every hub workspace segment that is a site's implementation gets its site's glyph, unless
+// a key above already claimed it. Derived rather than written out because the two facts it
+// joins — which site a hub segment mounts, and what that site's rows look like — both already
+// live here or in the registry: writing the join out again is the copy that goes stale the
+// next time the fleet grows, and its failure mode (a blank icon slot in Recents) is exactly
+// the one this block was added to end.
+for (const [segment, siteId] of Object.entries(SITE_FOR_HUB_SEGMENT)) {
+  const route = `/${segment}`
+  const icon = ICONS[siteId]
+  if (icon !== undefined && ICONS[route] === undefined) ICONS[route] = icon
+}
+
+/** entry key → icon. See the module comment for the key scheme. */
+export const MENU_ICONS: Record<string, LucideIcon> = ICONS
 
 /** Resolve a menu row's icon by its entry key, or undefined if none is mapped
  *  (the renderer leaves the icon slot empty rather than guessing). */

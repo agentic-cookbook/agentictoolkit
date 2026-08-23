@@ -815,17 +815,25 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
     for (const id of Object.keys(HUB_FEATURE_SEGMENT)) {
       expect(ids.has(id as (typeof SITES)[number]['id']), `${id} must be a registry site`).toBe(true)
     }
-    // Segments are unique per site — EXCEPT 'products': ecosystems are managed as
-    // PRODUCTS in the hub, so BOTH the ecosystems and products sites deliberately
-    // switch into /<slug>/products (see the map's comment). Any other duplicate
-    // segment is a drift bug.
+    // Segments are unique per site, with exactly TWO documented aliases — both cases of one
+    // hub pane genuinely being two sites' implementation:
+    //   products — ecosystems are managed as PRODUCTS in the hub, so the ecosystems and products
+    //              sites resolve to the same view;
+    //   integrations — the `messaging` site is email & SMS integrations, whose hub surface has
+    //              always been the integrations feature (a placeholder on its own domain).
+    // The rail is keyed by SEGMENT, so an alias draws one row rather than two. Any OTHER
+    // duplicate is a drift bug: two different features would be claiming one URL.
+    const ALIASES: Record<string, string[]> = {
+      products: ['ecosystems', 'products'],
+      integrations: ['integrations', 'messaging'],
+    }
     const bySegment = new Map<string, string[]>()
     for (const [id, seg] of Object.entries(HUB_FEATURE_SEGMENT)) {
       bySegment.set(seg!, [...(bySegment.get(seg!) ?? []), id])
     }
     for (const [seg, sites] of bySegment) {
-      if (seg === 'products') {
-        expect(sites.sort()).toEqual(['ecosystems', 'products'])
+      if (ALIASES[seg]) {
+        expect(sites.sort()).toEqual(ALIASES[seg])
       } else {
         expect(sites, `segment '${seg}' must map exactly one site`).toHaveLength(1)
       }
@@ -833,8 +841,30 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
       expect(seg).toMatch(/^[a-z-]+$/)
     }
   })
+  // The fleet came home, so this is a CLASS assertion rather than a spot check: a site with a
+  // workspace route of its own has an implementation the hub can mount, and the hub mounts all of
+  // them. Written both ways so neither adding a site nor retiring one can leave the table behind.
+  it('maps every site that has a workspace route, and only those', () => {
+    // Two exclusions, both structural rather than editorial:
+    //   hub — it IS the host; its own workspace is `/<slug>`, not a segment under it.
+    //   myagenticteams — a full family member with a workspace route, built from its OWN repo
+    //     since 2026-08-15 (see MAIN_SITE_IDS' note). Its model is not in
+    //     @agentic-toolkit/adh-site-homes, so there is nothing here for the hub to import. Named
+    //     rather than derived for the same reason that list names it: where a site's source sits
+    //     is a fact about one checkout, and this file is shared by all of them.
+    const NOT_MOUNTED: string[] = ['hub', 'myagenticteams']
+    for (const s of SITES) {
+      const expected = s.workspaceRoute !== undefined && !NOT_MOUNTED.includes(s.id)
+      expect(
+        HUB_FEATURE_SEGMENT[s.id] !== undefined,
+        `${s.id}: workspaceRoute=${String(s.workspaceRoute)} should${expected ? '' : ' not'} be mapped`,
+      ).toBe(expected)
+    }
+  })
   it('does not map sites whose workspace is not a hub feature route', () => {
-    for (const id of ['hub', 'cookbook', 'admin', 'status', 'bitbag'] as const) {
+    // `cookbook` used to be in this list and is not any more — it has a workspace route, so its
+    // workspace is now a hub route too. What is left is the sites that genuinely have none.
+    for (const id of ['hub', 'admin', 'status', 'bitbag', 'personaregistry', 'api'] as const) {
       expect(HUB_FEATURE_SEGMENT[id]).toBeUndefined()
     }
   })
