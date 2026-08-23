@@ -15,6 +15,7 @@ packages:
   - './packages/persona'
   - './packages/adh-registry'
   - './packages/adh-site-config'
+  - './packages/adh-site-homes'
   - './packages/adh-api-types'
   - './packages/deploy-platform'
   - './packages/next-preflight'

@@ -1,0 +1,303 @@
+{
+  "name": "@agentic-toolkit/adh-site-homes",
+  "version": "0.1.0",
+  "description": "Every fleet site's workspace implementation, one SiteHomeModel per entry. Each site re-exports its own; the hub mounts the same objects as routes under /<workspace>/<siteId>. One entry per site so a consumer pulls only what it mounts.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:exports": "One entry PER SITE, and deliberately no barrel of models: a barrel would import all 47 and defeat the per-route code splitting this package exists to keep. The `.` entry is data only (FLEET_HOME_SITE_IDS) and imports no model. `development` -> src so `next dev` gets HMR; prod resolves dist.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./academy": {
+      "types": "./dist/sites/academy.d.ts",
+      "development": "./src/sites/academy.tsx",
+      "import": "./dist/sites/academy.js"
+    },
+    "./authentication": {
+      "types": "./dist/sites/authentication.d.ts",
+      "development": "./src/sites/authentication.tsx",
+      "import": "./dist/sites/authentication.js"
+    },
+    "./billing": {
+      "types": "./dist/sites/billing.d.ts",
+      "development": "./src/sites/billing.tsx",
+      "import": "./dist/sites/billing.js"
+    },
+    "./codereviews": {
+      "types": "./dist/sites/codereviews.d.ts",
+      "development": "./src/sites/codereviews.tsx",
+      "import": "./dist/sites/codereviews.js"
+    },
+    "./communities": {
+      "types": "./dist/sites/communities.d.ts",
+      "development": "./src/sites/communities.tsx",
+      "import": "./dist/sites/communities.js"
+    },
+    "./community": {
+      "types": "./dist/sites/community.d.ts",
+      "development": "./src/sites/community.tsx",
+      "import": "./dist/sites/community.js"
+    },
+    "./consultants": {
+      "types": "./dist/sites/consultants.d.ts",
+      "development": "./src/sites/consultants.tsx",
+      "import": "./dist/sites/consultants.js"
+    },
+    "./consulting": {
+      "types": "./dist/sites/consulting.d.ts",
+      "development": "./src/sites/consulting.tsx",
+      "import": "./dist/sites/consulting.js"
+    },
+    "./cookbook": {
+      "types": "./dist/sites/cookbook.d.ts",
+      "development": "./src/sites/cookbook.tsx",
+      "import": "./dist/sites/cookbook.js"
+    },
+    "./customers": {
+      "types": "./dist/sites/customers.d.ts",
+      "development": "./src/sites/customers.tsx",
+      "import": "./dist/sites/customers.js"
+    },
+    "./dashboards": {
+      "types": "./dist/sites/dashboards.d.ts",
+      "development": "./src/sites/dashboards.tsx",
+      "import": "./dist/sites/dashboards.js"
+    },
+    "./devices": {
+      "types": "./dist/sites/devices.d.ts",
+      "development": "./src/sites/devices.tsx",
+      "import": "./dist/sites/devices.js"
+    },
+    "./devteam": {
+      "types": "./dist/sites/devteam.d.ts",
+      "development": "./src/sites/devteam.tsx",
+      "import": "./dist/sites/devteam.js"
+    },
+    "./docs": {
+      "types": "./dist/sites/docs.d.ts",
+      "development": "./src/sites/docs.tsx",
+      "import": "./dist/sites/docs.js"
+    },
+    "./domains": {
+      "types": "./dist/sites/domains.d.ts",
+      "development": "./src/sites/domains.tsx",
+      "import": "./dist/sites/domains.js"
+    },
+    "./ecosystems": {
+      "types": "./dist/sites/ecosystems.d.ts",
+      "development": "./src/sites/ecosystems.tsx",
+      "import": "./dist/sites/ecosystems.js"
+    },
+    "./education": {
+      "types": "./dist/sites/education.d.ts",
+      "development": "./src/sites/education.tsx",
+      "import": "./dist/sites/education.js"
+    },
+    "./games": {
+      "types": "./dist/sites/games.d.ts",
+      "development": "./src/sites/games.tsx",
+      "import": "./dist/sites/games.js"
+    },
+    "./gamification": {
+      "types": "./dist/sites/gamification.d.ts",
+      "development": "./src/sites/gamification.tsx",
+      "import": "./dist/sites/gamification.js"
+    },
+    "./help": {
+      "types": "./dist/sites/help.d.ts",
+      "development": "./src/sites/help.tsx",
+      "import": "./dist/sites/help.js"
+    },
+    "./integrations": {
+      "types": "./dist/sites/integrations.d.ts",
+      "development": "./src/sites/integrations.tsx",
+      "import": "./dist/sites/integrations.js"
+    },
+    "./knowledgebases": {
+      "types": "./dist/sites/knowledgebases.d.ts",
+      "development": "./src/sites/knowledgebases.tsx",
+      "import": "./dist/sites/knowledgebases.js"
+    },
+    "./messages": {
+      "types": "./dist/sites/messages.d.ts",
+      "development": "./src/sites/messages.tsx",
+      "import": "./dist/sites/messages.js"
+    },
+    "./messaging": {
+      "types": "./dist/sites/messaging.d.ts",
+      "development": "./src/sites/messaging.tsx",
+      "import": "./dist/sites/messaging.js"
+    },
+    "./narratives": {
+      "types": "./dist/sites/narratives.d.ts",
+      "development": "./src/sites/narratives.tsx",
+      "import": "./dist/sites/narratives.js"
+    },
+    "./news": {
+      "types": "./dist/sites/news.d.ts",
+      "development": "./src/sites/news.tsx",
+      "import": "./dist/sites/news.js"
+    },
+    "./notebook": {
+      "types": "./dist/sites/notebook.d.ts",
+      "development": "./src/sites/notebook.tsx",
+      "import": "./dist/sites/notebook.js"
+    },
+    "./notifications": {
+      "types": "./dist/sites/notifications.d.ts",
+      "development": "./src/sites/notifications.tsx",
+      "import": "./dist/sites/notifications.js"
+    },
+    "./orgs": {
+      "types": "./dist/sites/orgs.d.ts",
+      "development": "./src/sites/orgs.tsx",
+      "import": "./dist/sites/orgs.js"
+    },
+    "./personabuilder": {
+      "types": "./dist/sites/personabuilder.d.ts",
+      "development": "./src/sites/personabuilder.tsx",
+      "import": "./dist/sites/personabuilder.js"
+    },
+    "./personas": {
+      "types": "./dist/sites/personas.d.ts",
+      "development": "./src/sites/personas.tsx",
+      "import": "./dist/sites/personas.js"
+    },
+    "./products": {
+      "types": "./dist/sites/products.d.ts",
+      "development": "./src/sites/products.tsx",
+      "import": "./dist/sites/products.js"
+    },
+    "./projects": {
+      "types": "./dist/sites/projects.d.ts",
+      "development": "./src/sites/projects.tsx",
+      "import": "./dist/sites/projects.js"
+    },
+    "./recipes": {
+      "types": "./dist/sites/recipes.d.ts",
+      "development": "./src/sites/recipes.tsx",
+      "import": "./dist/sites/recipes.js"
+    },
+    "./registries": {
+      "types": "./dist/sites/registries.d.ts",
+      "development": "./src/sites/registries.tsx",
+      "import": "./dist/sites/registries.js"
+    },
+    "./registry": {
+      "types": "./dist/sites/registry.d.ts",
+      "development": "./src/sites/registry.tsx",
+      "import": "./dist/sites/registry.js"
+    },
+    "./research": {
+      "types": "./dist/sites/research.d.ts",
+      "development": "./src/sites/research.tsx",
+      "import": "./dist/sites/research.js"
+    },
+    "./sites": {
+      "types": "./dist/sites/sites.d.ts",
+      "development": "./src/sites/sites.tsx",
+      "import": "./dist/sites/sites.js"
+    },
+    "./storage": {
+      "types": "./dist/sites/storage.d.ts",
+      "development": "./src/sites/storage.tsx",
+      "import": "./dist/sites/storage.js"
+    },
+    "./store": {
+      "types": "./dist/sites/store.d.ts",
+      "development": "./src/sites/store.tsx",
+      "import": "./dist/sites/store.js"
+    },
+    "./stores": {
+      "types": "./dist/sites/stores.d.ts",
+      "development": "./src/sites/stores.tsx",
+      "import": "./dist/sites/stores.js"
+    },
+    "./support": {
+      "types": "./dist/sites/support.d.ts",
+      "development": "./src/sites/support.tsx",
+      "import": "./dist/sites/support.js"
+    },
+    "./teambuilder": {
+      "types": "./dist/sites/teambuilder.d.ts",
+      "development": "./src/sites/teambuilder.tsx",
+      "import": "./dist/sites/teambuilder.js"
+    },
+    "./teamregistry": {
+      "types": "./dist/sites/teamregistry.d.ts",
+      "development": "./src/sites/teamregistry.tsx",
+      "import": "./dist/sites/teamregistry.js"
+    },
+    "./testing": {
+      "types": "./dist/sites/testing.d.ts",
+      "development": "./src/sites/testing.tsx",
+      "import": "./dist/sites/testing.js"
+    },
+    "./toolkit": {
+      "types": "./dist/sites/toolkit.d.ts",
+      "development": "./src/sites/toolkit.tsx",
+      "import": "./dist/sites/toolkit.js"
+    },
+    "./tools": {
+      "types": "./dist/sites/tools.d.ts",
+      "development": "./src/sites/tools.tsx",
+      "import": "./dist/sites/tools.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentic-toolkit/adh": "workspace:*",
+    "@agentic-toolkit/adh-billing": "workspace:*",
+    "@agentic-toolkit/adh-ecosystem-panes": "workspace:*",
+    "@agentic-toolkit/adh-products": "workspace:*",
+    "@agentic-toolkit/adh-registry": "workspace:*",
+    "@agentic-toolkit/authentication": "workspace:*",
+    "@agentic-toolkit/dashboards": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/ecosystems": "workspace:*",
+    "@agentic-toolkit/games": "workspace:*",
+    "@agentic-toolkit/gamification": "workspace:*",
+    "@agentic-toolkit/integrations": "workspace:*",
+    "@agentic-toolkit/knowledgebases": "workspace:*",
+    "@agentic-toolkit/narratives": "workspace:*",
+    "@agentic-toolkit/notebook": "workspace:*",
+    "@agentic-toolkit/organizations": "workspace:*",
+    "@agentic-toolkit/personas": "workspace:*",
+    "@agentic-toolkit/projects": "workspace:*",
+    "@agentic-toolkit/research": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/teams": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2"
+  }
+}

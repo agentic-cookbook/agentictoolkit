@@ -232,6 +232,97 @@ importers:
 
   packages/adh-site-config: {}
 
+  packages/adh-site-homes:
+    dependencies:
+      '@agentic-toolkit/adh':
+        specifier: workspace:*
+        version: link:../adh
+      '@agentic-toolkit/adh-billing':
+        specifier: workspace:*
+        version: link:../features/adh-billing
+      '@agentic-toolkit/adh-ecosystem-panes':
+        specifier: workspace:*
+        version: link:../features/adh-ecosystem-panes
+      '@agentic-toolkit/adh-products':
+        specifier: workspace:*
+        version: link:../features/adh-products
+      '@agentic-toolkit/adh-registry':
+        specifier: workspace:*
+        version: link:../adh-registry
+      '@agentic-toolkit/authentication':
+        specifier: workspace:*
+        version: link:../features/authentication
+      '@agentic-toolkit/dashboards':
+        specifier: workspace:*
+        version: link:../features/dashboards
+      '@agentic-toolkit/data':
+        specifier: workspace:*
+        version: link:../data
+      '@agentic-toolkit/ecosystems':
+        specifier: workspace:*
+        version: link:../features/ecosystems
+      '@agentic-toolkit/games':
+        specifier: workspace:*
+        version: link:../features/games
+      '@agentic-toolkit/gamification':
+        specifier: workspace:*
+        version: link:../features/gamification
+      '@agentic-toolkit/integrations':
+        specifier: workspace:*
+        version: link:../features/integrations
+      '@agentic-toolkit/knowledgebases':
+        specifier: workspace:*
+        version: link:../features/knowledgebases
+      '@agentic-toolkit/narratives':
+        specifier: workspace:*
+        version: link:../features/narratives
+      '@agentic-toolkit/notebook':
+        specifier: workspace:*
+        version: link:../features/notebook
+      '@agentic-toolkit/organizations':
+        specifier: workspace:*
+        version: link:../features/organizations
+      '@agentic-toolkit/personas':
+        specifier: workspace:*
+        version: link:../features/personas
+      '@agentic-toolkit/projects':
+        specifier: workspace:*
+        version: link:../features/projects
+      '@agentic-toolkit/research':
+        specifier: workspace:*
+        version: link:../features/research
+      '@agentic-toolkit/resource':
+        specifier: workspace:*
+        version: link:../resource
+      '@agentic-toolkit/teams':
+        specifier: workspace:*
+        version: link:../features/teams
+    devDependencies:
+      '@types/react':
+        specifier: 19.2.16
+        version: 19.2.16
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.16)
+      esbuild-plugin-preserve-directives:
+        specifier: ^0.0.11
+        version: 0.0.11(esbuild@0.27.7)
+      next:
+        specifier: ^15.1.0
+        version: 15.5.18(@playwright/test@1.60.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.14)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.7.2
+        version: 5.9.3
+
   packages/api-explorer:
     dependencies:
       '@agentic-toolkit/auth':
