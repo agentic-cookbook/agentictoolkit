@@ -13,6 +13,11 @@ export default defineConfig({
     // a data module should not drag the whole header barrel — SiteMenu, the popovers, the auth
     // chrome — in front of a module the workspace pages import for one lucide component.
     'header/menu-icons': 'src/header/menu-icons.ts',
+    // The site menu's own topics, read as a grouping of the hub routes they point at — the
+    // hub workspace rail's group rows. Its own entry for exactly menu-icons' reason above: the
+    // hub's `workspace-features` data module reads it, and a data module should not drag
+    // SiteMenu and the popovers in front of a page that wants a list of labels.
+    'header/hub-rail-groups': 'src/header/hub-rail-groups.ts',
     // Same shape, same reason as recents above: module-level mutable state (`snapshot`,
     // `listeners`) that the settings panel writes and the site menu reads, so it must be
     // ONE copy. Its own entry + the preserved import below.

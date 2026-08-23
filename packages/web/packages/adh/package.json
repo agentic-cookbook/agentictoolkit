@@ -41,6 +41,11 @@
       "development": "./src/header/menu-icons.ts",
       "import": "./dist/header/menu-icons.js"
     },
+    "./header/hub-rail-groups": {
+      "types": "./dist/header/hub-rail-groups.d.ts",
+      "development": "./src/header/hub-rail-groups.ts",
+      "import": "./dist/header/hub-rail-groups.js"
+    },
     "./header/hub-preferences": {
       "types": "./dist/header/hub-preferences.d.ts",
       "development": "./src/header/hub-preferences.ts",

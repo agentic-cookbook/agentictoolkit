@@ -1,4 +1,4 @@
-import { type MenuGroup } from './SiteMenu';
+import type { MenuGroup } from './SiteMenu';
 /** The section every fleet row carries. See the module comment. */
 export declare const FLEET_SECTION = 1;
 /** The section {@link ADMIN_MENU_GROUPS} carries — one more than the fleet's, so a

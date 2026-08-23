@@ -1,5 +1,9 @@
 import { ADMIN_SITE_IDS } from '@agentic-toolkit/adh-registry'
-import { type MenuGroup, type MenuLink } from './SiteMenu'
+// `import type` at the STATEMENT level, not per-specifier: `hub-rail-groups.ts` is published
+// as its own entry so the hub's data layer can read this tree without the header barrel, and
+// a per-specifier form is only guaranteed to erase the specifiers — leaving a bare
+// `import './SiteMenu'` would pull the whole menu component into that entry to import nothing.
+import type { MenuGroup, MenuLink } from './SiteMenu'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The fleet tree — the whole family as ten rows, used identically by BOTH the
