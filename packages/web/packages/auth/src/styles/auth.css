@@ -310,3 +310,90 @@
     animation: none;
   }
 }
+
+/* ---- AuthCallback ----
+ *
+ * AuthCallback.tsx has emitted `.adh-auth-callback` since it was written, and
+ * until now NOTHING in this package — or any consumer's sheet — defined it. The
+ * failed-exchange branch was therefore a bare unstyled div with a browser-default
+ * `<button>`: the one screen a visitor reaches when sign-in breaks was the one
+ * screen with no design. Styled HERE, with the component that emits it, for the
+ * same reason the skeleton's rules moved here in Task 6.4 — a consumer cannot be
+ * expected to skin class names it does not own.
+ *
+ * Same token vocabulary and the same WITH-FALLBACK discipline as
+ * `.adh-auth-skeleton` above: a host that loads this sheet without a themes
+ * palette still gets the gold-on-dark defaults rather than transparent text.
+ * Deliberately NOT built on the `--auth-*` card variables — those are the login
+ * CARD's per-site theming contract, and this is not a card. */
+.adh-auth-callback {
+  --adh-cb-fg: var(--color-on-surface, #e8e6e3);
+  --adh-cb-muted: var(--color-on-surface-variant, #8a8a9a);
+  --adh-cb-raised: var(--color-surface-raised, #1c1c24);
+  --adh-cb-border: var(--color-border, #2a2a36);
+  --adh-cb-accent: var(--color-accent, #c4a35a);
+  --adh-cb-on-accent: var(--color-on-primary, #0c0c0f);
+  --adh-cb-error: var(--color-error, #d45454);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  min-height: 60vh;
+  padding: 2rem 1.5rem;
+  box-sizing: border-box;
+  text-align: center;
+  color: var(--adh-cb-muted);
+}
+
+/* The waiting line. One `<p>`, so it is addressed as the element rather than
+ * given a class the component would also have to start emitting. */
+.adh-auth-callback > p {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.adh-auth-callback__error {
+  width: 100%;
+  max-width: 28rem;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background: var(--adh-cb-raised);
+  /* The error colour carries the meaning, so it is on the border and the text
+   * both — a red rule alone is easy to miss on a dark surface, and red text
+   * alone reads as ordinary prose to anyone who cannot separate the two. */
+  border: 1px solid color-mix(in srgb, var(--adh-cb-error) 55%, var(--adh-cb-border));
+  box-sizing: border-box;
+}
+
+.adh-auth-callback__error > p {
+  margin: 0 0 1.25rem;
+  color: var(--adh-cb-error);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+/* The retry control restarts SSO at the authorization server, so it is the
+ * primary (and only) action on the screen — styled as one rather than left as a
+ * platform button that reads as debug chrome. */
+.adh-auth-callback__error > button {
+  appearance: none;
+  border: 0;
+  border-radius: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  background: var(--adh-cb-accent);
+  color: var(--adh-cb-on-accent);
+  font: inherit;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.adh-auth-callback__error > button:hover {
+  opacity: 0.9;
+}
+
+.adh-auth-callback__error > button:focus-visible {
+  outline: 2px solid var(--adh-cb-accent);
+  outline-offset: 2px;
+}
