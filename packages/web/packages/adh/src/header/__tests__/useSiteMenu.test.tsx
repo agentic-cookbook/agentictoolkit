@@ -114,7 +114,11 @@ describe('useSiteMenu', () => {
     it('carries the slug off a hub workspace path too — as a hub ROUTE', () => {
       const entries = at('agenticdeveloperhub.com', '/acme/products', () =>
         renderHook(() =>
-          useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', authenticated: true }),
+          useSiteMenu(FLEET_MENU_GROUPS, {
+            currentSiteId: 'hub',
+            authenticated: true,
+            hubOffersFeature: () => true,
+          }),
         ).result.current.entries,
       )
       // This asserted `https://agenticdeveloperstorage.com/acme` until the fleet came home.
@@ -167,11 +171,20 @@ describe('useSiteMenu', () => {
   // those conditions is a case here, because each is a way to send someone to the wrong
   // origin (or to no destination at all).
   describe('in-hub reroute', () => {
-    /** The resolved rows for a signed-in visitor inside `/acme` on the hub. */
-    const inHub = (opts: { authenticated?: boolean } = { authenticated: true }) =>
+    /** The resolved rows for a signed-in visitor inside `/acme` on the hub, in a workspace that
+     *  offers every fleet segment (an individual or an org — see the refusal cases below). */
+    const inHub = (
+      opts: { authenticated?: boolean; hubOffersFeature?: (segment: string) => boolean } = {},
+    ) =>
       at('agenticdeveloperhub.com', '/acme/products', () =>
-        renderHook(() => useSiteMenu(FLEET_MENU_GROUPS, { currentSiteId: 'hub', ...opts }))
-          .result.current.entries,
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, {
+            currentSiteId: 'hub',
+            authenticated: true,
+            hubOffersFeature: () => true,
+            ...opts,
+          }),
+        ).result.current.entries,
       )
 
     it('answers a routed site with a same-origin path under the active slug', () => {
@@ -212,7 +225,29 @@ describe('useSiteMenu', () => {
       // resolves a slug — which is exactly why the branch checks the session as well. Every
       // one of these hub routes is behind the workspace gate, so rerouting here would put a
       // sign-in wall between the visitor and a page the site itself would have shown them.
-      expect(row(inHub({}), 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+      expect(row(inHub({ authenticated: false }), 'storage')?.href).toBe(
+        'https://agenticdeveloperstorage.com/acme',
+      )
+    })
+
+    it('stays a cross-site hop when the workspace does not offer the segment', () => {
+      // A TEAM workspace. A team is a membership grouping, not an owning principal, so the
+      // hub's rail withholds every owner-scoped feature there and the route answers a visit
+      // with "…isn't available for a team". Rerouting anyway would point forty-odd rows at
+      // that one empty state and leave no way to reach the sites themselves — so the row that
+      // is not offered here keeps the destination that works.
+      const entries = inHub({ hubOffersFeature: (segment) => segment === 'teams' })
+      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
+      expect(row(entries, 'teamregistry')?.href).toBe('/acme/teams')
+    })
+
+    it('stays a cross-site hop with NO answer at all — the seam fails closed', () => {
+      // Every host but the hub omits the opt, and the hub itself omits it until its workspace
+      // list has landed. Absent must mean "do not reroute": a menu that hops origins is the
+      // navigator it has always been, while one that guesses sends people to routes their
+      // workspace may not serve.
+      const entries = inHub({ hubOffersFeature: undefined })
+      expect(row(entries, 'storage')?.href).toBe('https://agenticdeveloperstorage.com/acme')
     })
 
     it('stays a cross-site hop from another SITE, even in the same workspace', () => {
@@ -256,6 +291,7 @@ describe('useSiteMenu', () => {
           useSiteMenu(FLEET_MENU_GROUPS, {
             currentSiteId: 'hub',
             authenticated: true,
+            hubOffersFeature: () => true,
             resolveHref,
           }),
         ).result.current.entries,
@@ -263,6 +299,66 @@ describe('useSiteMenu', () => {
       expect(row(entries, 'storage')?.href).toBe('/acme/storage')
       expect(row(entries, 'status')?.href).toContain('https://as.test/authorize?return=')
       expect(resolveHref).not.toHaveBeenCalledWith('/acme/storage')
+    })
+
+    // ── `current` ──────────────────────────────────────────────────────────────
+    // Marking a row current answers "where is the visitor", and on the hub that stopped
+    // being the same question as "which site is this header" the moment a row could resolve
+    // to a route onto another site's implementation.
+    it('marks the row whose route the visitor is inside, not the hub', () => {
+      const entries = inHub()
+      // The Products row is the `Products` topic's own trigger — a destination as well as a
+      // flyout — so it is where `/acme/products` is marked.
+      expect(topic(entries, 'Products')?.current).toBe(true)
+      // The hub's own row points at `/acme`, the PARENT of where the visitor is. Marking it
+      // current highlighted the hub on all forty-odd of its own fleet routes.
+      expect(topic(entries, 'Hub')?.current).toBe(false)
+      expect(row(entries, 'storage')?.current).toBe(false)
+    })
+
+    it('marks BOTH rows that share one route', () => {
+      // ecosystems and products are one pane under one segment. "This row leads here" is
+      // true of each, so each is current — the alternative is picking a winner the menu has
+      // no basis for.
+      expect(row(inHub(), 'ecosystems')?.current).toBe(true)
+    })
+
+    it('marks a row current from a path BELOW its route', () => {
+      const entries = at('agenticdeveloperhub.com', '/acme/storage/buckets/logs', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, {
+            currentSiteId: 'hub',
+            authenticated: true,
+            hubOffersFeature: () => true,
+          }),
+        ).result.current.entries,
+      )
+      expect(row(entries, 'storage')?.current).toBe(true)
+      expect(topic(entries, 'Products')?.current).toBe(false)
+    })
+
+    it('never marks a row that fell through to its own origin', () => {
+      // The refusal case again, from the other side: both rows still point at their own
+      // domains, and you are not there. `current` follows the href, so a row that did not
+      // become a route cannot be marked by one.
+      const entries = inHub({ hubOffersFeature: () => false })
+      expect(row(entries, 'storage')?.current).toBe(false)
+      expect(topic(entries, 'Products')?.current).toBe(false)
+    })
+
+    it('keeps the hub current on the hub\'s OWN workspace knobs', () => {
+      // `/acme/tokens` is no site's route, so no row represents it and the header's site is
+      // the honest answer — the same one it gives on `/acme` itself.
+      const entries = at('agenticdeveloperhub.com', '/acme/tokens', () =>
+        renderHook(() =>
+          useSiteMenu(FLEET_MENU_GROUPS, {
+            currentSiteId: 'hub',
+            authenticated: true,
+            hubOffersFeature: () => true,
+          }),
+        ).result.current.entries,
+      )
+      expect(topic(entries, 'Hub')?.current).toBe(true)
     })
 
     it('leaves the hub\'s OWN row a bare workspace path', () => {

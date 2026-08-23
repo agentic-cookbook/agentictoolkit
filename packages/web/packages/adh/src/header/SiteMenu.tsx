@@ -140,6 +140,11 @@ export type SiteMenuChromeProps = {
    *  as the in-hub slug fallback on the slug-less workspace routes (`/home`,
    *  `/settings/*`). Supplied by the auth-aware header on the hub. */
   personalSlug?: string
+  /** Whether the workspace the visitor is in offers a fleet segment's hub route — forwarded
+   *  to {@link useSiteMenu}, which reroutes a site row to `/<slug>/<segment>` only when the
+   *  answer is yes. Supplied by the hub (the only host that knows what a workspace TYPE
+   *  grants); absent everywhere else, and then no row is rerouted. See UseSiteMenuOpts. */
+  hubOffersFeature?: (segment: string) => boolean
   /** When signed in, the command row swaps the "?" help button for a settings
    *  gear. `onSettings` (preferred) opens an in-app overlay over the current
    *  route; otherwise `settingsHref` makes the gear a link (satellites redirect
@@ -198,6 +203,7 @@ export function SiteMenu({
   triggerClassName,
   resolveHref,
   personalSlug,
+  hubOffersFeature,
   settingsHref,
   onSettings,
   loginHref,
@@ -227,6 +233,7 @@ export function SiteMenu({
     resolveHref,
     personalSlug,
     authenticated,
+    hubOffersFeature,
   })
 
   // The auth-conditional TOP section, above the fleet tree (section 0, so one divider

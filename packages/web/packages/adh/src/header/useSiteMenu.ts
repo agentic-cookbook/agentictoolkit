@@ -11,6 +11,7 @@ import {
   siteWorkspaceHref,
   siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
+  SITE_FOR_HUB_SEGMENT,
   siteUrl,
   type SiteDef,
   type SiteId,
@@ -54,6 +55,22 @@ export type UseSiteMenuOpts = {
    *  one on a signed-out visitor is a public page that happens to share its shape,
    *  and carrying its first segment as a slug would be a guess. */
   authenticated?: boolean
+  /** Whether the workspace the visitor is in actually OFFERS the hub route for a fleet
+   *  segment — injected by the hub, which is the only host that has the answer.
+   *
+   *  A hub route is not offered to every workspace. A TEAM is a membership grouping, not an
+   *  owning principal, so the backend's workspace-owner resolver 404s a team slug by design
+   *  and the hub's own rail withholds every owner-scoped feature there; the fleet route
+   *  answers such a visit with "…isn't available for a team". Without this seam every site row
+   *  on a team slug would resolve to one of those — forty-odd rows all leading to the same
+   *  empty state, and no way left to reach the sites themselves.
+   *
+   *  Fails CLOSED: absent (every host but the hub, and the hub before its workspace list has
+   *  landed) means no row is rerouted and the menu stays the cross-site navigator it is
+   *  everywhere else — a working destination, never a dead one. The toolkit cannot answer it
+   *  itself: which features a workspace type grants is the hub's `WORKSPACE_FEATURES`, and
+   *  shared chrome may not import a site. */
+  hubOffersFeature?: (segment: string) => boolean
 }
 
 /**
@@ -64,7 +81,7 @@ export type UseSiteMenuOpts = {
  */
 export function useSiteMenu(
   groups: MenuGroup[],
-  { currentSiteId, resolveHref, personalSlug, authenticated }: UseSiteMenuOpts,
+  { currentSiteId, resolveHref, personalSlug, authenticated, hubOffersFeature }: UseSiteMenuOpts,
 ): {
   entries: PopoverEntry[]
   navigate: (item: PopoverItem) => void
@@ -137,6 +154,17 @@ export function useSiteMenu(
     [previewTheme],
   )
 
+  // The fleet segment the visitor is INSIDE right now — `/acme/games` on the hub → 'games';
+  // null everywhere else, including the hub's own knobs (`/acme/tokens` is no site's route) and
+  // every other site's header. It answers ONE question, for the hub's own row: is the visitor in
+  // a place some OTHER site's row represents? See `current` below.
+  const activeFleetSegment = useMemo<string | null>(() => {
+    if (currentSiteId !== 'hub' || !workspaceSlug) return null
+    const [slug, segment] = (pathname || '/').split('/').filter(Boolean)
+    if (slug !== workspaceSlug || segment === undefined) return null
+    return Object.hasOwn(SITE_FOR_HUB_SEGMENT, segment) ? segment : null
+  }, [currentSiteId, workspaceSlug, pathname])
+
   const hrefFor = useCallback(
     (site: SiteDef, external?: boolean): string => {
       // Carry the workspace: switching sites from inside one lands in the SAME
@@ -170,7 +198,10 @@ export function useSiteMenu(
       // route would leave no way to reach the site at all.
       if (currentSiteId === 'hub' && authenticated && workspaceSlug && !external) {
         const segment = hubFeatureSegment(site.id)
-        if (segment) return `/${workspaceSlug}/${segment}`
+        // `hubOffersFeature` is the workspace's own answer, not a formality — see the opt. A
+        // segment it refuses falls through to the cross-site hop below, which is where that
+        // site's workspace actually works.
+        if (segment && hubOffersFeature?.(segment) === true) return `/${workspaceSlug}/${segment}`
       }
       if (!hostname) return '#'
       // Tag the destination with the previewed theme BEFORE the SSO wrap below, so it
@@ -205,6 +236,7 @@ export function useSiteMenu(
       hostname,
       currentSiteId,
       authenticated,
+      hubOffersFeature,
       pathname,
       resolveHref,
       currentEnv,
@@ -287,14 +319,33 @@ export function useSiteMenu(
       }
       const site = getSite(link.site)
       if (!site) return null
+      const href = hrefFor(site, link.external)
+      // `current` asks WHERE THE VISITOR IS, and on the hub that stopped being answered by
+      // "which site is this header" the moment a row could resolve to a ROUTE onto another
+      // site's implementation. Inside `/acme/games` the Games row is the place you are; the Hub
+      // row's own destination `/acme` is its parent, and marking it current highlighted the hub
+      // on all forty-odd of its own fleet routes.
+      //
+      // So the two cases are asked separately:
+      //   - another site's row is current when it RESOLVED to an in-hub route and the path is
+      //     at or below it. A row that fell through to its own origin (signed out, or a
+      //     workspace that does not offer the segment) is never current — you are not there.
+      //     Two rows CAN share one route (ecosystems and products both render at `products`),
+      //     and both are then current, which is what "this row leads here" means for each.
+      //   - the header's own site is current unless a fleet route has claimed the path. Off the
+      //     hub `activeFleetSegment` is always null, so this stays plainly true there.
+      const inHubRoute = href.startsWith('/') && !href.startsWith('//')
       // Icon from the single source of truth (menu-icons), keyed by the site id.
       return {
         key: site.id,
         label: link.label ?? site.label,
         description: link.description ?? site.description,
-        href: hrefFor(site, link.external),
+        href,
         icon: menuIcon(site.id),
-        current: site.id === currentSiteId,
+        current:
+          site.id === currentSiteId
+            ? activeFleetSegment === null
+            : inHubRoute && (path === href || path.startsWith(`${href}/`)),
       }
     }
     const out: PopoverEntry[] = []
@@ -337,7 +388,7 @@ export function useSiteMenu(
       }
     }
     return out
-  }, [groups, pathname, routeHref, hrefFor, currentSiteId])
+  }, [groups, pathname, routeHref, hrefFor, currentSiteId, activeFleetSegment])
 
   // Navigate a chosen row. Same-origin destinations (a leading "/", i.e. in-hub
   // workspace routes + the current site's own "/") go through the Next router so the

@@ -58,6 +58,11 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
      *  The hub's header passes the signed-in `user.slug`; harmless (and ignored) off
      *  the hub. */
     personalSlug?: string;
+    /** Whether the workspace the visitor is in offers a fleet segment's hub route — forwarded
+     *  to {@link useSiteMenu}, which reroutes a site row to `/<slug>/<segment>` only when the
+     *  answer is yes. Supplied by the hub (the only host that knows what a workspace TYPE
+     *  grants); absent everywhere else, and then no row is rerouted. See UseSiteMenuOpts. */
+    hubOffersFeature?: (segment: string) => boolean;
     /** OAuth client id for the login redirect (default 'adh', the shared brand-site
      *  client). Forwarded to the auth source, which decides what to do with it. */
     clientId?: string;
@@ -95,5 +100,5 @@ export type SiteHeaderProps = Omit<AdhHeaderAuthProps, 'user' | 'onLogin' | 'onL
  * @adh-shared auth-shim wrapper that used to supply it into this component, so there is
  * one SiteHeader again — a site cannot get the registry half without the auth half.
  */
-export declare function SiteHeader({ siteId, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, previewNotice, previewDetail, routes, personalSlug, clientId, onAfterLogout, useAuthSource, ...authOverrides }: SiteHeaderProps): ReactElement;
+export declare function SiteHeader({ siteId, pageTitle, center, badges, leadingActions, navLinks, trailingNavLinks, previewNotice, previewDetail, routes, personalSlug, hubOffersFeature, clientId, onAfterLogout, useAuthSource, ...authOverrides }: SiteHeaderProps): ReactElement;
 //# sourceMappingURL=SiteHeader.d.ts.map

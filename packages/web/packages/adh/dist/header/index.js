@@ -1146,6 +1146,7 @@ import {
   siteWorkspaceHref,
   siteWorkspaceSlug,
   HUB_WORKSPACE_SEGMENTS,
+  SITE_FOR_HUB_SEGMENT as SITE_FOR_HUB_SEGMENT2,
   siteUrl
 } from "@agentic-toolkit/adh-registry";
 import { hubWorkspaceSlug, isHubWorkspacePath } from "@agentic-toolkit/adh/site/hubWorkspacePath";
@@ -1412,7 +1413,7 @@ function menuIcon(key) {
 }
 
 // src/header/useSiteMenu.ts
-function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authenticated }) {
+function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authenticated, hubOffersFeature }) {
   const pathname = usePathname2() ?? "/";
   const router = useRouter();
   const currentSite = getSite(currentSiteId);
@@ -1428,13 +1429,19 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
     (href) => process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "local" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "testing" || process.env.NEXT_PUBLIC_DEPLOYMENT_ENV === "staging" ? appendThemePreview(href, previewTheme) : href,
     [previewTheme]
   );
+  const activeFleetSegment = useMemo2(() => {
+    if (currentSiteId !== "hub" || !workspaceSlug) return null;
+    const [slug, segment] = (pathname || "/").split("/").filter(Boolean);
+    if (slug !== workspaceSlug || segment === void 0) return null;
+    return Object.hasOwn(SITE_FOR_HUB_SEGMENT2, segment) ? segment : null;
+  }, [currentSiteId, workspaceSlug, pathname]);
   const hrefFor = useCallback2(
     (site, external) => {
       const workspacePath = workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : void 0;
       if (site.id === currentSiteId) return workspacePath ?? "/";
       if (currentSiteId === "hub" && authenticated && workspaceSlug && !external) {
         const segment = hubFeatureSegment(site.id);
-        if (segment) return `/${workspaceSlug}/${segment}`;
+        if (segment && hubOffersFeature?.(segment) === true) return `/${workspaceSlug}/${segment}`;
       }
       if (!hostname) return "#";
       const href = carryTheme(
@@ -1452,6 +1459,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
       hostname,
       currentSiteId,
       authenticated,
+      hubOffersFeature,
       pathname,
       resolveHref,
       currentEnv,
@@ -1480,14 +1488,14 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
     const path = pathname || "/";
     const toItem = (link) => {
       if ("route" in link) {
-        const href = routeHref(link.route);
+        const href2 = routeHref(link.route);
         return {
           key: `route:${link.route}`,
           label: link.label,
           description: link.description,
-          href,
+          href: href2,
           icon: menuIcon(link.route),
-          current: href.startsWith("/") && !href.startsWith("//") && (path === href || path.startsWith(`${href}/`))
+          current: href2.startsWith("/") && !href2.startsWith("//") && (path === href2 || path.startsWith(`${href2}/`))
         };
       }
       if ("href" in link) {
@@ -1501,13 +1509,15 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
       }
       const site = getSite(link.site);
       if (!site) return null;
+      const href = hrefFor(site, link.external);
+      const inHubRoute = href.startsWith("/") && !href.startsWith("//");
       return {
         key: site.id,
         label: link.label ?? site.label,
         description: link.description ?? site.description,
-        href: hrefFor(site, link.external),
+        href,
         icon: menuIcon(site.id),
-        current: site.id === currentSiteId
+        current: site.id === currentSiteId ? activeFleetSegment === null : inHubRoute && (path === href || path.startsWith(`${href}/`))
       };
     };
     const out = [];
@@ -1539,7 +1549,7 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
       }
     }
     return out;
-  }, [groups, pathname, routeHref, hrefFor, currentSiteId]);
+  }, [groups, pathname, routeHref, hrefFor, currentSiteId, activeFleetSegment]);
   const navigate = useCallback2(
     (item) => {
       const href = item.href;
@@ -1784,6 +1794,7 @@ function SiteMenu({
   triggerClassName,
   resolveHref,
   personalSlug,
+  hubOffersFeature,
   settingsHref,
   onSettings,
   loginHref,
@@ -1800,7 +1811,8 @@ function SiteMenu({
     currentSiteId,
     resolveHref,
     personalSlug,
-    authenticated
+    authenticated,
+    hubOffersFeature
   });
   const pathname = usePathname3() ?? "/";
   const workspacesMenu = useWorkspacesMenu2();
@@ -2258,6 +2270,7 @@ function SiteHeader({
   previewDetail,
   routes,
   personalSlug,
+  hubOffersFeature,
   clientId,
   onAfterLogout,
   useAuthSource = useAnonymousHeaderAuth,
@@ -2302,6 +2315,7 @@ function SiteHeader({
           currentSiteId: siteId,
           resolveHref: resolveSwitchHref,
           personalSlug,
+          hubOffersFeature,
           authenticated: user != null,
           userIsAdmin,
           onSettings: resolvedOnSettings,

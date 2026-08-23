@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 // isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
 // @agentic-toolkit/adh/site, whose reserved-slug list is what now answers them, and their cases
 // went with them (`adh/src/site/__tests__/hubWorkspacePath.test.ts`).
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, SITE_FOR_HUB_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -839,6 +839,38 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
       }
       // a bare single segment, e.g. 'storage' — no leading slash, never nested
       expect(seg).toMatch(/^[a-z-]+$/)
+    }
+  })
+  // The two aliases above are the reason SITE_FOR_HUB_SEGMENT needs a RULE, and a rule that is
+  // only stated in a docstring is a rule that drifts. The map decides which of two sites a shared
+  // segment is named after, and every rail row, glyph and blurb for that segment reads the
+  // answer — so a silent flip (a re-ordered registry, a third site joining a segment) would
+  // rename a live row with nothing failing. Pinned here, where the collisions themselves are.
+  it('names the documented winner for each shared segment, and the site itself for the rest', () => {
+    expect(SITE_FOR_HUB_SEGMENT.products).toBe('products')
+    expect(SITE_FOR_HUB_SEGMENT.integrations).toBe('integrations')
+    // The general rule the two above are instances of, stated over the whole map: when one of
+    // the sites mapping to a segment is NAMED after it, that site wins; otherwise the segment
+    // has no rightful owner and first-mapping-wins decides. Either way the winner must be a
+    // site that actually maps there — resolving a segment to a site that renders somewhere
+    // else is the drift this catches.
+    //
+    // Being a site id is NOT enough on its own, and `messaging` is why: the `messages` site
+    // owns the `messaging` segment, while the site literally called `messaging` (email & SMS)
+    // maps to `integrations`. The rule reads the mapping, never the name alone.
+    const bySeg = new Map<string, string[]>()
+    for (const [id, seg] of Object.entries(HUB_FEATURE_SEGMENT)) {
+      bySeg.set(seg!, [...(bySeg.get(seg!) ?? []), id])
+    }
+    for (const [segment, siteId] of Object.entries(SITE_FOR_HUB_SEGMENT)) {
+      const claimants = bySeg.get(segment) ?? []
+      expect(claimants, `segment '${segment}' must resolve to a site that maps to it`).toContain(
+        siteId,
+      )
+      if (claimants.includes(segment)) {
+        expect(siteId, `'${segment}' is claimed by the site named after it`).toBe(segment)
+      }
+      expect(HUB_FEATURE_SEGMENT[siteId], `${siteId} must map back to '${segment}'`).toBe(segment)
     }
   })
   // The fleet came home, so this is a CLASS assertion rather than a spot check: a site with a

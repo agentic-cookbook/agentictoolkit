@@ -105,6 +105,11 @@ export type SiteHeaderProps = Omit<
    *  The hub's header passes the signed-in `user.slug`; harmless (and ignored) off
    *  the hub. */
   personalSlug?: string
+  /** Whether the workspace the visitor is in offers a fleet segment's hub route — forwarded
+   *  to {@link useSiteMenu}, which reroutes a site row to `/<slug>/<segment>` only when the
+   *  answer is yes. Supplied by the hub (the only host that knows what a workspace TYPE
+   *  grants); absent everywhere else, and then no row is rerouted. See UseSiteMenuOpts. */
+  hubOffersFeature?: (segment: string) => boolean
   /** OAuth client id for the login redirect (default 'adh', the shared brand-site
    *  client). Forwarded to the auth source, which decides what to do with it. */
   clientId?: string
@@ -155,6 +160,7 @@ export function SiteHeader({
   previewDetail,
   routes,
   personalSlug,
+  hubOffersFeature,
   clientId,
   onAfterLogout,
   useAuthSource = useAnonymousHeaderAuth,
@@ -285,6 +291,7 @@ export function SiteHeader({
           currentSiteId={siteId}
           resolveHref={resolveSwitchHref}
           personalSlug={personalSlug}
+          hubOffersFeature={hubOffersFeature}
           authenticated={user != null}
           // Appends the admin consoles to the family tree, and nothing else — the
           // rest of the menu is identical for an admin. See SiteMenu's `userIsAdmin`

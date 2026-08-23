@@ -24,6 +24,8 @@ var help_en_default = {
   storage: "Buckets and files in the workspace's default ecosystem.",
   integrations: "Outbound service connections \u2014 email, SMS, webhooks \u2014 for this workspace.",
   tokens: "API token principals the workspace owns \u2014 mint, list, and revoke.",
+  auth: "Who may sign up and sign in to the workspace's default ecosystem \u2014 sign-up mode (open, invite-only, or closed) and whether sign-in is allowed.",
+  billing: "How this workspace charges for its products \u2014 Stripe setup, the offers it sells, who pays, and the billing events behind them.",
   products: "The products this workspace owns. Each product is its own ecosystem.",
   projects: "Plan and track work across the workspace.",
   members: "Everyone in this organization, across its teams.",
