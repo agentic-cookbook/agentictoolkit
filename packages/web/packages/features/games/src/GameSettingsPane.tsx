@@ -58,6 +58,24 @@ interface Loaded {
   game: Game | null;
 }
 
+/**
+ * What the Enable Gaming switch writes when it is turned OFF.
+ *
+ * NOT unconditionally `none`: `mode` is one ordered axis (`none` < `gamification` < `game`)
+ * and this switch owns only its top value. A product carrying gamification support — set from
+ * the Products site's three-valued control, and invisible from this pane — renders the switch
+ * off, so flipping it on and back off has to put the product back where it started rather than
+ * silently strip a mode nothing here shows. `game` is the only value this control may take
+ * away, and the SEEDED mode is the one to return to because it is what the user saw before
+ * touching the switch.
+ *
+ * The gamification pane makes the same rule from the other end: its switch is checked AND
+ * disabled while mode is `game`, so neither control can spend the other's half of the axis.
+ */
+export function modeAfterGamingOff(seeded: GamingMode | null): GamingMode {
+  return seeded !== null && seeded !== "game" ? seeded : "none";
+}
+
 function toDraft({ config, game }: Loaded): Draft {
   return { mode: config.mode, game: game ? gameToInput(game) : null };
 }
@@ -107,6 +125,8 @@ export function GameSettingsPane({
     commit,
     reset,
   } = useSettingsDraft<Loaded, Draft>(loaded, toDraft);
+
+  const gamingOff = modeAfterGamingOff(seed?.mode ?? null);
 
   const gameValidationError = draft?.game ? gameValidate(draft.game) : null;
   const canSave = dirty && !gameValidationError;
@@ -235,12 +255,19 @@ export function GameSettingsPane({
                     Turning this on mints this product&rsquo;s game and its realm, and backfills
                     existing members. Turning it off keeps the game&rsquo;s configuration —
                     nothing is deleted, and turning it back on resumes the same game.
+                    {gamingOff === "gamification" && (
+                      <>
+                        {" "}
+                        This product has gamification support, so turning gaming off returns it to
+                        that rather than switching everything off.
+                      </>
+                    )}
                   </p>
                 </div>
                 <Switch
                   id="games-enabled"
                   checked={draft.mode === "game"}
-                  onCheckedChange={(on) => patchMode(on ? "game" : "none")}
+                  onCheckedChange={(on) => patchMode(on ? "game" : gamingOff)}
                 />
               </div>
 
