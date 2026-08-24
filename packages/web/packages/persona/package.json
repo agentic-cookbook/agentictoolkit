@@ -51,7 +51,7 @@
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
-    "build:css": "mkdir -p dist/css && cp -R src/styles/. dist/css/",
+    "build:css": "node ../../copy-css.mjs --src src/styles --dest dist/css",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",

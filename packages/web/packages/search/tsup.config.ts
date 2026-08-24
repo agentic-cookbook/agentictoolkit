@@ -18,7 +18,12 @@ export default defineConfig({
   target: 'es2022',
   platform: 'browser',
   sourcemap: true,
-  clean: true,
+  // Everything in dist EXCEPT the CSS. `build:css` runs tailwind into dist/styles.css a build
+  // step AFTER tsup, so a plain `clean: true` leaves a window in which dist holds the JS and no
+  // stylesheet — and anything resolving this package's CSS export during it (a running dev
+  // server, a site building in parallel) gets "no valid target file was found" and caches the
+  // failure. Nothing goes stale: tailwind overwrites the one file it owns.
+  clean: ['!**/*.css'],
   dts: false,
   bundle: true,
   splitting: true,

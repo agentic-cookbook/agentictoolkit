@@ -16,7 +16,12 @@ export default defineConfig({
   target: 'es2022',
   platform: 'browser',
   sourcemap: true,
-  clean: true,
+  // Everything in dist EXCEPT the CSS. `build:css` writes dist/**/*.css a build step AFTER
+  // tsup, so a plain `clean: true` leaves a window in which dist holds the JS and none of the
+  // styles — and anything resolving this package's `./css/*` exports during it (a running dev
+  // server, a site building in parallel) gets "no valid target file was found" and caches the
+  // failure. Negating them costs nothing in staleness: copy-css.mjs prunes the orphans.
+  clean: ['!**/*.css'],
   dts: false,
   bundle: true,
   splitting: false,
