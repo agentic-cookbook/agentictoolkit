@@ -92,6 +92,15 @@ describe('isHubWorkspacePath', () => {
     expect(isHubWorkspacePath('/features/projects')).toBe(false)
   })
 
+  it('matches a workspace’s own /profile route — the public profile converged INTO the workspace tree', () => {
+    // The public profile used to be its own static prefix off the hub root, `/user/<slug>`
+    // (removed by commit 7f12eb7b). It lives at `/[workspace]/profile` now — the workspace's own
+    // root segment doubles as the profile address — so a profile link is a workspace path like
+    // any other, not a rejected one.
+    expect(isHubWorkspacePath('/acme/profile')).toBe(true)
+    expect(hubWorkspaceSlug('/acme/profile')).toBe('acme')
+  })
+
   it('answers TRUE for a slug nobody holds, and that is the honest answer', () => {
     // Not the "route test by exclusion" trap: the claim is about what the URL ADDRESSES, and
     // `/typo` addresses a workspace — one the caller is not in, which the route's own gate

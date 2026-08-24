@@ -140,6 +140,7 @@ function TopicList({
   selectionStyle = "bar",
   rowDisclosure = false,
   hoverBar = true,
+  hideItemIcons = false,
   onPrefetch,
 }: {
   items: TopicDetailItem[]
@@ -167,6 +168,11 @@ function TopicList({
    *  `false` removes it: the cascading menus want no hover bar — there, hover is conveyed by the row
    *  UN-DIMMING, and a second white bar on top of that just reads as noise. */
   hoverBar?: boolean
+  /** Drop the LEADING icon from every row in this list. Expanded list only: the collapsed
+   *  and covered strips are icon-only — the icon is the entire row there — so this is
+   *  ignored while `iconOnly` is true. For lists whose rows have no identity icon worth
+   *  showing (research's documents), where the fallback `Circle` was noise. */
+  hideItemIcons?: boolean
   /** Trailing chevron on every selectable row, signalling that picking it discloses another pane —
    *  the narrow (nav-stack) layout's only affordance for that, since it has no peeking sibling column
    *  to hint at what a tap pushes in. Hidden on a `disabled` row (it isn't going anywhere) and in the
@@ -231,6 +237,8 @@ function TopicList({
   const itemButton = (item: TopicDetailItem, active: boolean) => {
     const hideLabel = iconOnly
     const centered = !!collapsed
+    // Never in the icon-only strips: there the icon IS the row.
+    const hideIcon = hideItemIcons && !iconOnly
     // Every row is guaranteed a leading icon so the icon-only strip never shows a blank slot.
     const icon = item.icon || FALLBACK_ICON
     // A deletable expanded row reserves extra right padding so the label never runs under the
@@ -316,19 +324,33 @@ function TopicList({
           <span aria-hidden className="absolute inset-y-0 -left-0.5 w-0.5 bg-apt-gold" />
         )}
         {/* Decorative: the label (text or aria-label) is the name, so the icon is hidden from AT. */}
-        <span aria-hidden data-htd-icon className="relative flex shrink-0">
-          {icon}
-          {/* The blocked marker rides the ICON rather than the trailing accessory slot, because
-              the accessory is dropped in the collapsed / covered icon strips — exactly the modes
-              where the user can't read the label and most needs to see WHICH topic is holding
-              Save down. The ring punches it out of whatever the row sits on. */}
-          {item.blocked && (
-            <span
-              data-htd-blocked
-              className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-apt-orange ring-2 ring-apt-nav"
-            />
-          )}
-        </span>
+        {!hideIcon && (
+          <span aria-hidden data-htd-icon className="relative flex shrink-0">
+            {icon}
+            {/* The blocked marker rides the ICON rather than the trailing accessory slot, because
+                the accessory is dropped in the collapsed / covered icon strips — exactly the modes
+                where the user can't read the label and most needs to see WHICH topic is holding
+                Save down. The ring punches it out of whatever the row sits on. */}
+            {item.blocked && (
+              <span
+                data-htd-blocked
+                className="absolute -top-0.5 -right-1 h-1.5 w-1.5 rounded-full bg-apt-orange ring-2 ring-apt-nav"
+              />
+            )}
+          </span>
+        )}
+        {/* No icon to ride, so the marker stands on its own. `hideItemIcons` is about
+            IDENTITY — a level saying its rows need no leading glyph to tell them apart — and
+            `blocked` is STATE, which no level asked to hide. Dropping the dot with the icon
+            left the sr-only announcement below with nothing visible behind it: a row that
+            reads "needs attention" and looks exactly like its neighbours. */}
+        {hideIcon && item.blocked && (
+          <span
+            aria-hidden
+            data-htd-blocked
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-apt-orange"
+          />
+        )}
         {!hideLabel && (
           <span
             data-htd-label
@@ -374,7 +396,12 @@ function TopicList({
         {/* Colour alone is not a signal. The dot lives inside the aria-hidden icon, so the row's
             accessible name carries the state instead — appended AFTER the label here (an
             accessible name is content order), and folded into `aria-label` when the label is
-            hidden, since aria-label REPLACES the content and would silence this span. */}
+            hidden, since aria-label REPLACES the content and would silence this span.
+
+            Gated on !hideLabel but NOT on hideIcon, and that is now correct: a level setting
+            hideItemIcons still draws the standalone dot above, so this announcement always has
+            a visible counterpart. (It used to have none — the dot was nested inside the icon
+            span, so hideItemIcons hid state along with identity.) */}
         {item.blocked && !hideLabel && <span className="sr-only">, needs attention</span>}
         {!hideLabel && (item.trailing || rowDisclosure) && (
           <span className="ml-auto flex shrink-0 items-center gap-1 pl-1.5">
@@ -537,6 +564,7 @@ export function TopicRail({
   closeLabel,
   denseBottom = false,
   hoverBar = true,
+  hideItemIcons = false,
   onPrefetch,
 }: {
   items: TopicDetailItem[]
@@ -628,6 +656,8 @@ export function TopicRail({
   /** Whether hovering an unselected row previews the left bar. Default true; the cascade menus pass
    *  false (see TopicList's `hoverBar`). */
   hoverBar?: boolean
+  /** Drop the leading row icon in the EXPANDED list (see TopicList). Forwarded verbatim. */
+  hideItemIcons?: boolean
   /** Warm a row before it is clicked — see {@link TopicList}'s `onPrefetch`. Forwarded straight
    *  through; this component neither calls it nor knows what it warms (data, a route, or both).
    *  It cannot: warming a ROUTE needs a router, and this package owns no router instance. */
@@ -883,6 +913,7 @@ export function TopicRail({
           isRoot={isRoot}
           selectionStyle={selectionStyle}
           hoverBar={hoverBar}
+          hideItemIcons={hideItemIcons}
           rowDisclosure={rowDisclosure}
           onPrefetch={onPrefetch}
         />
@@ -913,6 +944,7 @@ export function TopicDetail({
   onNew,
   newLabel,
   newActive,
+  hideItemIcons,
   panePadding = true,
   collapsed: collapsedProp,
   onCollapsedChange,
@@ -935,6 +967,9 @@ export function TopicDetail({
   newLabel?: string
   /** Tint the `+` gold to signal an in-progress create (nothing selected in the list). */
   newActive?: boolean
+  /** Drop the leading row icon in the expanded list — for lists whose rows carry no identity
+   *  icon (see TopicList.hideItemIcons). */
+  hideItemIcons?: boolean
   /** Default true: the pane carries the standard content inset (px-6 py-4 +
    *  gap-6). Pass false for edge-to-edge content (hub's .settings-content has
    *  no inset — each row carries its own, e.g. a ButtonBar) so consumers never
@@ -999,6 +1034,7 @@ export function TopicDetail({
         onNew={onNew}
         newLabel={newLabel}
         newActive={newActive}
+        hideItemIcons={hideItemIcons}
         collapsed={collapsed}
         onToggle={toggleCollapsed}
         onResize={onResize}

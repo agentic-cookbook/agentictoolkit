@@ -67,7 +67,11 @@ describe("AvatarMenu", () => {
       />,
     );
     fireEvent.click(screen.getByRole("button", { name: "Open Mike Fullerton menu" }));
-    const link = await screen.findByRole("link", { name: "Profile" });
+    // The row's accessible role is "menuitem", not "link": Base UI's MenuLinkItem renders an
+    // `<a>` but assigns it the ARIA menuitem role (the WAI-ARIA menu pattern requires every
+    // child of role="menu" to expose role="menuitem", regardless of the underlying element) —
+    // so `getByRole("link", …)` never matches a row inside this popup.
+    const link = await screen.findByRole("menuitem", { name: "Profile" });
     expect(link.getAttribute("href")).toBe("/mikefullerton/profile");
   });
 

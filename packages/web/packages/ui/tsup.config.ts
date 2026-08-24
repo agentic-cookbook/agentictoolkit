@@ -19,6 +19,17 @@ export default defineConfig({
     'src/components/*.tsx',
     'src/blocks/index.ts',
     'src/blocks/*.tsx',
+    // Blocks are not all components: `category-tree.ts` is the pure DAG fold behind
+    // them, and the `exports` map's `./blocks/*` promises a `dist/blocks/*.js` for it
+    // like any other. Without this line `tsc --emitDeclarationOnly` emitted its `.d.ts`
+    // and tsup emitted no `.js`, so the subpath type-checked and failed to resolve.
+    'src/blocks/*.ts',
+    // Colocated tests are SOURCE, not surface. Globbed entries made each one a public
+    // `dist/blocks/<name>.test.js` — and because they import vitest, tsup bundled the
+    // whole runner into shared chunks that every block then pulled in (~1.1 MB of it).
+    // The `exports` wildcards expand over `src/`, so they were reachable subpaths too.
+    '!src/**/*.test.ts',
+    '!src/**/*.test.tsx',
   ],
   outDir: 'dist',
   format: ['esm'],

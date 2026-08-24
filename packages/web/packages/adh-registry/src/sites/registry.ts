@@ -132,6 +132,30 @@ export interface SiteDef {
    *  is a PUBLIC persona/user handle, and Next permits one dynamic name per level. See the
    *  comment on its entry below. */
   workspaceRoute?: 'root' | 'hub'
+  /** The site's `[workspace]` segment is a PUBLISHED PUBLIC HANDLE, not a private
+   *  workspace — `/<workspace>` is a public index and its children are public pages,
+   *  not an authenticated shell. That flips two things the template otherwise does
+   *  unconditionally at `app/[workspace]/layout.tsx`:
+   *   - the segment is NOT gated there (no `WorkspaceOrProfileGate`, no
+   *     `PublicProfileEscape`) — each private child gates itself instead;
+   *   - the segment is NOT blanket-noindexed there — a public handle and its public
+   *     children must be crawlable, so the layout emits no metadata at all and lets
+   *     each child decide its own `robots`.
+   *  A consequence, not a separate declaration: the site mounts NO
+   *  `[workspace]/[[...path]]` catch-all. Next allows exactly one dynamic segment
+   *  name per directory level, and this site's public child is a NAMED dynamic
+   *  segment (research: `[paperSlug]`), which already claims that slot.
+   *
+   *  `research` is the site this exists for. `personaregistry` solved the identical
+   *  problem the other way — by giving up `[workspace]` entirely and moving its public
+   *  handle to `app/[slug]` (see its entry below) — which works when nothing needs the
+   *  authenticated workspace shape at the root. Research still does (`workspaceRoute:
+   *  'root'`, `hasHome: true`, an authenticated `home/` and `edit/`), so it keeps
+   *  `[workspace]` and spends it on the public handle instead.
+   *
+   *  Absent or false ⇒ the template's default, gated arrangement — the same for all
+   *  other sites with a `[workspace]` route today. */
+  publicWorkspaceSegment?: true
   /** Part of the derived family roster ({@link LISTED_SITES}, and the footer
    *  interlinks under it). Defaults to true; set false to keep a site in the registry
    *  — so its own header still resolves a label and its pages keep serving — while
@@ -249,7 +273,7 @@ export const SITES: SiteDef[] = [
   { id: 'teambuilder', label: 'Team Builder', fullLabel: 'Agentic Team Builder', description: 'Build agentic teams', prodHost: 'agenticteambuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'codereviews', label: 'Code Reviews', fullLabel: 'Agentic Developer Code Reviews', description: 'Code reviews', prodHost: 'agenticdevelopercodereviews.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'personabuilder', label: 'Persona Builder', fullLabel: 'Agentic Persona Builder', description: 'Configure personas', prodHost: 'agenticpersonabuilder.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
-  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'research', label: 'Research', fullLabel: 'Agentic Developer Research', description: 'Store & review research', prodHost: 'agenticdeveloperresearch.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root', publicWorkspaceSegment: true },
   { id: 'consultants', label: 'Consultants', fullLabel: 'Agentic Development Consultants', description: 'Find consultants', prodHost: 'agenticdeveloperconsultants.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'orgs', label: 'Organizations', fullLabel: 'Agentic Developer Organizations', description: 'Manage organizations', prodHost: 'agenticdeveloperorgs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'notebook', label: 'Notebook', fullLabel: 'Agentic Developer Notebook', description: 'Notes & notebooks', prodHost: 'agenticdevelopernotes.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
@@ -976,8 +1000,8 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   // and a word only it serves would make the lockstep case fail. The three stay reserved
   // family-wide by `SITE_ROUTE_SEGMENTS` in `@agentic-toolkit/adh/site`, which is a different
   // question: this set says "not a slug", that one says "nobody may claim it".
-  // research — public papers and the search page.
-  'papers',
+  // research — the finder. A paper's own address is `/<author>/<paper-slug>`, whose first
+  // segment IS the workspace slug, so `search` is the only word of research's that lands here.
   'search',
   // registries + consultants — the public registry and profile pages beside the workspace.
   // `search` above is theirs too: all three sites put a finder at their root, and a Set
@@ -986,6 +1010,8 @@ export const SITE_LANDING_SEGMENTS = new Set<string>([
   'registry',
   // integrations — the OAuth return the site owns at its own root.
   'integrations',
+  // billing — where a checkout comes back to be attached to an account.
+  'claim',
   // toolkit — the component demo.
   'demo',
   // billing — where a purchase made before signing in is attached to an account

@@ -14,7 +14,7 @@
     "dist",
     "src/styles"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale. Wildcards: components/* and blocks/* are all .tsx (blocks/index.ts is served by the exact ./blocks key, never the wildcard).",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it \u2192 dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale. Wildcards: components/* and blocks/* are all .tsx (blocks/index.ts is served by the exact ./blocks key, never the wildcard).",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -101,6 +101,11 @@
       "development": "./src/hooks/useIsomorphicLayoutEffect.ts",
       "import": "./dist/hooks/useIsomorphicLayoutEffect.js"
     },
+    "./hooks/useLastPresent": {
+      "types": "./dist/hooks/useLastPresent.d.ts",
+      "development": "./src/hooks/useLastPresent.ts",
+      "import": "./dist/hooks/useLastPresent.js"
+    },
     "./hooks/useClipboard": {
       "types": "./dist/hooks/useClipboard.d.ts",
       "development": "./src/hooks/useClipboard.ts",
@@ -163,6 +168,11 @@
       "development": "./src/blocks/index.ts",
       "import": "./dist/blocks/index.js"
     },
+    "./blocks/category-tree": {
+      "types": "./dist/blocks/category-tree.d.ts",
+      "development": "./src/blocks/category-tree.ts",
+      "import": "./dist/blocks/category-tree.js"
+    },
     "./blocks/*": {
       "types": "./dist/blocks/*.d.ts",
       "development": "./src/blocks/*.tsx",
@@ -206,6 +216,7 @@
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",

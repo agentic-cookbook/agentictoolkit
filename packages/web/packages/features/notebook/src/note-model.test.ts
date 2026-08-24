@@ -11,7 +11,6 @@ import {
   noteToInput,
   noteValidate,
   normalizeTags,
-  resolveListCategory,
   tagsOf,
   toCreateBody,
   toUpdateBody,
@@ -126,61 +125,6 @@ describe("noteToInput / noteBlank", () => {
 
   it("round-trips a blank draft through the create body as content-only", () => {
     expect(toCreateBody({ ...noteBlank(), content: "x" })).toEqual({ content: "x" });
-  });
-});
-
-describe("resolveListCategory", () => {
-  const all = { kind: "all" } as const;
-  const none = { kind: "uncategorized" } as const;
-  const work = { kind: "named", name: "Work" } as const;
-
-  it("asks for nothing when the whole notebook is showing", () => {
-    expect(resolveListCategory(all, "")).toEqual({
-      query: "",
-      uncategorizedOnly: false,
-      empty: false,
-    });
-  });
-
-  it("lets the bar narrow an unscoped list", () => {
-    expect(resolveListCategory(all, "Work").query).toBe("Work");
-  });
-
-  it("asks for the rail's category when the bar is not narrowing", () => {
-    expect(resolveListCategory(work, "").query).toBe("Work");
-  });
-
-  it("keeps ONE query when both axes name the same category", () => {
-    // Case-insensitively the same place. Sending it once is not a shortcut — `?category=` takes
-    // one value, so the alternative is choosing which spelling to send.
-    expect(resolveListCategory(work, "work")).toEqual({
-      query: "Work",
-      uncategorizedOnly: false,
-      empty: false,
-    });
-  });
-
-  it("reports the contradiction instead of letting one axis win", () => {
-    // A note has exactly one category, so "in Work" ∩ "in Personal" is empty. The honest answer
-    // is no notes; silently showing one of the two would look like a filter that half works.
-    expect(resolveListCategory(work, "Personal").empty).toBe(true);
-  });
-
-  it("filters uncategorized on the client, because the backend has no parameter for it", () => {
-    expect(resolveListCategory(none, "")).toEqual({
-      query: "",
-      uncategorizedOnly: true,
-      empty: false,
-    });
-  });
-
-  it("treats uncategorized narrowed to a category as empty", () => {
-    expect(resolveListCategory(none, "Work").empty).toBe(true);
-  });
-
-  it("ignores surrounding whitespace in the filter", () => {
-    expect(resolveListCategory(all, "  ").query).toBe("");
-    expect(resolveListCategory(none, "   ").uncategorizedOnly).toBe(true);
   });
 });
 

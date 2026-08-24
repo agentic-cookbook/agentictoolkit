@@ -1,4 +1,5 @@
 export { cn } from './lib/utils'
 export { noAutofillProps, noAutofillPropsFor } from './lib/autofill'
 export { useIsomorphicLayoutEffect } from './hooks/useIsomorphicLayoutEffect'
+export { useLastPresent } from './hooks/useLastPresent'
 export { useDirtyDraft, type DirtyDraft } from './hooks/useDirtyDraft'

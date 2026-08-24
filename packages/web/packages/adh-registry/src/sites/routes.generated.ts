@@ -7,6 +7,12 @@
 // pass no curated `routes` prop. `gen-site-routes.py --check` re-derives this map in
 // adh's CI, so a page added, moved, or removed anywhere in the family fails there
 // until the script is re-run.
+//
+// NOT dev-only tooling: `frontend/src/sites/research/src/lib/sitemap-routes.ts` reads
+// `SITE_ROUTES.research` at build time to derive which top-level and `[workspace]`-child
+// segments are STATIC — i.e. which author or paper slugs would be shadowed by a real
+// route — so research's public sitemap is a second, load-bearing consumer of this map,
+// not just the flyout above. Do not prune this file for being unused outside dev tooling.
 import type { SiteId } from './registry'
 
 export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
@@ -569,14 +575,15 @@ export const SITE_ROUTES: Partial<Record<SiteId, readonly string[]>> = {
   ],
   research: [
     '/',
-    '/[workspace]/[[...path]]',
+    '/[workspace]',
+    '/[workspace]/[paperSlug]',
+    '/[workspace]/edit/[paperUuid]',
+    '/[workspace]/home/[[...path]]',
     '/[workspace]/profile',
     '/auth/callback',
     '/details',
     '/details/[topic]',
     '/home',
-    '/papers/[userSlug]',
-    '/papers/[userSlug]/[paperRoute]',
     '/privacy',
     '/search',
     '/terms',

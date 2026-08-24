@@ -10,7 +10,7 @@ import Foundation
 /// what actually syncs. `pullOnly` mirrors backend pushMode 'route' — resources
 /// whose writes stay on bespoke routes; /sync/push refuses a generic write.
 public enum ADHSyncCatalog {
-    /// Every catalog resource (95), each with its schemaVersion.
+    /// Every catalog resource (96), each with its schemaVersion.
     public static let all: [SyncResource] = [
         SyncResource(resource: "bucket.bucket_types", schemaVersion: 1),
         SyncResource(resource: "bucket.buckets", schemaVersion: 1),
@@ -18,6 +18,7 @@ public enum ADHSyncCatalog {
         SyncResource(resource: "content.attachments", schemaVersion: 1),
         SyncResource(resource: "content.bookmarks", schemaVersion: 1),
         SyncResource(resource: "content.categories", schemaVersion: 1),
+        SyncResource(resource: "content.category_edges", schemaVersion: 1),
         SyncResource(resource: "content.category_items", schemaVersion: 1),
         SyncResource(resource: "content.contacts", schemaVersion: 1),
         SyncResource(resource: "content.counters", schemaVersion: 1),

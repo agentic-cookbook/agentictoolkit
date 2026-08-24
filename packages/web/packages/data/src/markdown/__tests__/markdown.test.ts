@@ -1,4 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
+
+vi.mock("../../http", async (orig) => ({
+  ...(await orig<Record<string, unknown>>()),
+  authedJson: vi.fn(),
+  authedRequest: vi.fn(),
+}));
+
 import { withTags, categoryNodes, tagNodes } from "../markdown";
 import type { MarkdownCategoryTreeBody, MarkdownTagSetBody } from "../wire";
 
@@ -37,7 +44,7 @@ describe("categoryNodes", () => {
   const old = (items: string[]) => ({ items }) as unknown as MarkdownCategoryTreeBody;
 
   it("passes real nodes through unchanged (same reference, no needless copy)", () => {
-    const res = { items: ["Meetings"], nodes: [{ id: "c1", name: "Meetings", parentId: null, sortOrder: 0 }] };
+    const res = { items: ["Meetings"], nodes: [{ id: "c1", name: "Meetings", parentIds: [], sortOrder: 0 }] };
     expect(categoryNodes(res)).toBe(res.nodes);
   });
 
@@ -51,16 +58,16 @@ describe("categoryNodes", () => {
 
   it("rebuilds an older backend's flat names as roots, in the order it sent them", () => {
     expect(categoryNodes(old(["Admin", "Meetings", "Reading"]))).toEqual([
-      { id: "Admin", name: "Admin", parentId: null, sortOrder: 0 },
-      { id: "Meetings", name: "Meetings", parentId: null, sortOrder: 1 },
-      { id: "Reading", name: "Reading", parentId: null, sortOrder: 2 },
+      { id: "Admin", name: "Admin", parentIds: [], sortOrder: 0 },
+      { id: "Meetings", name: "Meetings", parentIds: [], sortOrder: 1 },
+      { id: "Reading", name: "Reading", parentIds: [], sortOrder: 2 },
     ]);
   });
 
   it("names each rebuilt row by its own name — the only identity such a backend has", () => {
     // A name is unique per owner, so it is a usable key for the rail's fold; and it never
     // travels back, because a flat list has no children and the only write taking an id is
-    // `createCategory({ parentId })` on a level the rail cannot publish.
+    // `createCategory({ parentIds })` on a level the rail cannot publish.
     const [meetings] = categoryNodes(old(["Meetings"]));
     expect(meetings?.id).toBe("Meetings");
     expect(meetings?.name).toBe("Meetings");
@@ -96,5 +103,35 @@ describe("tagNodes", () => {
 
   it("yields [] when NEITHER field is an array, rather than throwing", () => {
     expect(tagNodes({} as unknown as MarkdownTagSetBody)).toEqual([]);
+  });
+});
+
+// `routeAvailable` — the editor's "is this slug free?" question, answered by the endpoint
+// Task 2 added. The transport is mocked because what is worth pinning here is the URL: the
+// route travels as a PATH SEGMENT, so it must be encoded, and the workspace must ride along
+// (an org member editing an org document asks about the ORG's slug space, not their own).
+describe("markdownApi.routeAvailable", () => {
+  it("asks the author-scoped endpoint with both segments encoded", async () => {
+    const { authedJson } = await import("../../http");
+    const spy = vi.mocked(authedJson);
+    spy.mockResolvedValueOnce({ available: true, reason: "ok" });
+    const { markdownApi } = await import("../markdown");
+
+    await markdownApi.routeAvailable("doc 1", "a/b", { workspace: "acme" });
+
+    expect(spy).toHaveBeenCalledWith(
+      "/api/content/markdown/doc%201/route-available/a%2Fb?workspace=acme",
+    );
+  });
+
+  it("returns the backend's verdict unchanged — the reason drives the message", async () => {
+    const { authedJson } = await import("../../http");
+    vi.mocked(authedJson).mockResolvedValueOnce({ available: false, reason: "reserved" });
+    const { markdownApi } = await import("../markdown");
+
+    expect(await markdownApi.routeAvailable("d1", "home")).toEqual({
+      available: false,
+      reason: "reserved",
+    });
   });
 });

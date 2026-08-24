@@ -87,6 +87,13 @@ export function buildSearchUrl(
   if (filters.category) qs.set(names.category, filters.category)
   qs.set(names.page, String(page))
   qs.set(names.pageSize, String(pageSize))
+  // Scope params LAST, so they win over a user filter rather than the other way round.
+  // `fixedParams` is the corpus's SCOPE, not a filter default — `types.ts`'s docblock calls it
+  // "not clearable by the user" for exactly this reason. Letting a user filter override it
+  // would widen the corpus past the scope the source declared (e.g. a site renaming a filter
+  // axis to `author` would leak other authors' documents onto an author-scoped page). `set`
+  // overwrites by key, so applying these after the filters above is what makes them win.
+  for (const [k, v] of Object.entries(source.fixedParams ?? {})) qs.set(k, v)
   const path = joinPath(source.baseUrl, source.endpoints.results)
   const query = qs.toString()
   return query ? `${path}?${query}` : path
@@ -98,7 +105,13 @@ export function buildFacetUrl(
   facet: 'tags' | 'categories',
 ): string | null {
   const path = source.endpoints[facet]
-  return path ? joinPath(source.baseUrl, path) : null
+  if (!path) return null
+  const url = joinPath(source.baseUrl, path)
+  // The facet corpus has to mirror the results corpus, so the scope rides here too — a facet
+  // option outside the scope is an option that yields no results.
+  const qs = new URLSearchParams(Object.entries(source.fixedParams ?? {}))
+  const query = qs.toString()
+  return query ? `${url}?${query}` : url
 }
 
 /**
@@ -130,14 +143,30 @@ async function fetchResults<Hit>(
   return (await res.json()) as SearchResultEnvelope<Hit>
 }
 
-/** Stable serialization of the scope so an inline `source` object can't loop the effect. */
-function sourceKeyOf(source: SearchSource): string {
+/** Stable serialization of the scope so an inline `source` object can't loop the effect.
+ *  `fixedParams` MUST be part of it: two sources differing only by scope (two
+ *  `PaperSearchView`s on one page, `authorSlug` apart) are different corpora and must not
+ *  share a cache/effect key. Pure + exported for testing. */
+export function sourceKeyOf(source: SearchSource): string {
   return JSON.stringify({
     baseUrl: source.baseUrl,
     endpoints: source.endpoints,
     params: source.params ?? null,
+    fixedParams: source.fixedParams ?? null,
     pageSize: source.pageSize ?? null,
   })
+}
+
+/** Stable serialization of the three filter fields, for `sourceKeyOf`'s reason: the fetch
+ *  effect depends on this key, so a key that two DIFFERENT filter states can spell is a filter
+ *  change the fetch never sees. It used to be `` `${q} ${tag} ${category}` ``, which is not
+ *  injective over free text — tags and categories are NAMES, not slugs (the facet endpoint
+ *  serves the distinct values as the author typed them), so `{q: "a b", tag: ""}` and
+ *  `{q: "a", tag: "b"}` joined the same string. The controls always move (they render from
+ *  `filters`); on a collision the results do not, leaving the previous query's hits sitting
+ *  under the new query's chips. Pure + exported for testing. */
+export function filterKeyOf(filters: SearchFilters): string {
+  return JSON.stringify([filters.q, filters.tag, filters.category])
 }
 
 export interface UseDocumentSearchOptions {
@@ -181,7 +210,7 @@ export function useDocumentSearch<Hit>(
   const immediateRef = useRef(false)
 
   const sourceKey = useMemo(() => sourceKeyOf(source), [source])
-  const filterKey = `${filters.q} ${filters.tag} ${filters.category}`
+  const filterKey = filterKeyOf(filters)
 
   const refresh = useCallback(() => {
     immediateRef.current = true

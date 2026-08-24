@@ -15,7 +15,7 @@ import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
 import { HomeBarHost } from "@agentic-toolkit/resource";
 
 // src/profile/ProfileFallback.tsx
-import { useEffect as useEffect3, useState as useState4 } from "react";
+import { useEffect as useEffect3, useMemo, useState as useState4 } from "react";
 
 // src/profile/normalize.ts
 function principalFromUserCard(body) {
@@ -284,6 +284,7 @@ import { jsx as jsx3 } from "react/jsx-runtime";
 function ProfileFallback({ slug, siteId, section }) {
   const [state, setState] = useState4({ status: "loading" });
   const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null);
+  const viewerSection = useMemo(() => viewer ? section?.(viewer) : void 0, [viewer, section]);
   useEffect3(() => {
     let cancelled = false;
     setState({ status: "loading" });
@@ -316,7 +317,7 @@ function ProfileFallback({ slug, siteId, section }) {
     };
   }, [slug]);
   if (viewer)
-    return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false, children: section?.(viewer) });
+    return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false, children: viewerSection });
   if (state.status === "loading") return null;
   if (state.status === "found")
     return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId, upgrade: false, children: section?.(state.principal) });
@@ -383,7 +384,7 @@ function WorkspaceBar({
 }
 
 // src/home/useWorkspaceRoute.ts
-import { useCallback as useCallback2, useEffect as useEffect4, useMemo, useRef as useRef2, useState as useState5 } from "react";
+import { useCallback as useCallback2, useEffect as useEffect4, useMemo as useMemo2, useRef as useRef2, useState as useState5 } from "react";
 import { useRouter } from "next/navigation";
 import {
   useResourceItemQuery,
@@ -439,7 +440,7 @@ function useWorkspaceRoute({
   useEffect4(() => {
     if (prefs?.slug && !wroteLocally) writeCachedWorkspace(prefs.slug);
   }, [prefs, wroteLocally]);
-  const resolved = useMemo(() => {
+  const resolved = useMemo2(() => {
     if (workspaces === null) return void 0;
     const known = (s) => s && workspaces.some((w) => w.slug === s) ? s : null;
     const fromUrl = known(workspaceSlug);
@@ -485,12 +486,19 @@ function workspacePathTail(pathname) {
 // src/home/SiteHomeShell.tsx
 import { Fragment, jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
 var loadWorkspaces = () => workspacesApi.list();
-function SiteHomeShell({ workspaceSlug, children }) {
+function SiteHomeShell({
+  workspaceSlug,
+  workspaceHref,
+  children
+}) {
   const { items: workspaces, error, isFetching } = useResourceList(
     "workspaces",
     loadWorkspaces
   );
-  const hrefFor = useCallback3((slug) => `/${slug}`, []);
+  const hrefFor = useCallback3(
+    (slug) => workspaceHref?.(slug) ?? `/${slug}`,
+    [workspaceHref]
+  );
   const pathname = usePathname() ?? "";
   const switchHrefFor = useCallback3(
     (slug) => `/${[slug, ...workspacePathTail(pathname)].join("/")}`,
@@ -535,14 +543,25 @@ function SiteHomeShell({ workspaceSlug, children }) {
 
 // src/home/SiteHomeRoute.tsx
 import { jsx as jsx7 } from "react/jsx-runtime";
-function SiteHomeRoute({ model }) {
+function SiteHomeRoute({
+  model,
+  path
+}) {
   const params = useParams();
   const raw = params?.path;
-  const rest = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
+  const fromUrl = raw === void 0 ? [] : Array.isArray(raw) ? raw : [raw];
+  const rest = path !== void 0 ? path : fromUrl;
   const workspaceSlug = params?.workspace;
   const view = model.parse(rest);
   const Shell = model.shell ?? SiteHomeShell;
-  return /* @__PURE__ */ jsx7(Shell, { workspaceSlug, children: (scope) => model.render({ ...scope, view }) });
+  return /* @__PURE__ */ jsx7(
+    Shell,
+    {
+      workspaceSlug,
+      ...model.workspaceHref !== void 0 ? { workspaceHref: model.workspaceHref } : {},
+      children: (scope) => model.render({ ...scope, view })
+    }
+  );
 }
 
 // src/home/SiteHomeModel.ts

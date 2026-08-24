@@ -79,6 +79,34 @@ export interface SearchSource {
   endpoints: SearchSourceEndpoints
   /** Optional query-param name overrides (merged over {@link DEFAULT_QUERY_PARAMS}). */
   params?: Partial<SearchQueryParamMap>
+  /**
+   * Params that are part of the SCOPE rather than the query — sent on EVERY request, results
+   * and facets alike, and not clearable by the user (e.g. `{ author: 'ada' }` for one author's
+   * corpus). Kept separate from {@link SearchQueryParamMap}, which renames the user's filter
+   * axes: a scope param has no filter axis behind it, and putting it there would make it look
+   * like something the UI could clear. "Not clearable" also means it WINS if a source misuses
+   * this for a name that collides with a filter param: `buildSearchUrl` applies these last, so
+   * they overwrite rather than lose to the same-named user filter — the alternative would let a
+   * misconfigured source's scope leak past the corpus it declared.
+   *
+   * That "wins" rule holds for EVERY param name, including the paging axes — `buildSearchUrl`
+   * sets the paging params before it applies `fixedParams`, so a source that names one of them
+   * here pins it, permanently, the same as any other fixed param. There is no special-cased
+   * exclusion for them: the simpler and more predictable rule is that a fixed param overrides
+   * whatever query param shares its name, no exceptions, so a caller that deliberately wants a
+   * pinned page or page size is never silently ignored.
+   *
+   * The KEY has to be the query-string name, not the filter-axis name: `buildSearchUrl` writes
+   * paging under `names.page`/`names.pageSize` — `{ ...DEFAULT_QUERY_PARAMS, ...source.params }`,
+   * i.e. `source.params.page`/`source.params.pageSize` when this same source renames them, and
+   * only the literal `page`/`pageSize` when it does not — and applies `fixedParams` by its keys
+   * literally, with NO pass through that renaming. A source that renames `page` to `p` and then
+   * writes `fixedParams: { page: '1' }` pins nothing: it sets an inert `page` param the code
+   * never reads, while the actually-sent `p` param stays unpinned. Name whatever this source's
+   * OWN `params.page`/`params.pageSize` resolve to (or the `page`/`pageSize` default, unrenamed)
+   * — never the filter-axis name `page`/`pageSize` on faith.
+   */
+  fixedParams?: Record<string, string>
   /** Result page size (default 50). */
   pageSize?: number
   /** Optional fetch init merged into every request (e.g. `{ cache: 'no-store' }`). */

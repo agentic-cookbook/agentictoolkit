@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
 import { CategoryField, type CategoryTreeNode } from "@agentic-toolkit/ui/blocks/category-field";
 import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
-import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
+import { MarkdownDocumentEditor } from "@agentic-toolkit/markdown";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { NoteInput } from "./note-model";
@@ -59,13 +59,19 @@ export function NoteFields({
 }: NoteFieldsProps) {
   return (
     <div className="flex flex-col gap-5">
-      <MarkdownEditor
+      <MarkdownDocumentEditor
         label="Note"
         placeholder={"My note\n\nThe first line is the note's title."}
         value={draft.content}
         onChange={(content) => onChange({ ...draft, content })}
         onUpload={(text) => onChange({ ...draft, content: text })}
         disabled={disabled}
+        // Unbounded host (a plain flex column, no fixed height) — `fill` would collapse
+        // the textarea to its intrinsic 2 rows instead of the fixed 16-row box below.
+        fill={false}
+        // Matches the textarea's own fixed-`rows` bulk (rows=16 default), so switching to
+        // the Preview tab doesn't shrink the card and jump the Category/Tags fields below it.
+        previewClassName="min-h-[20rem]"
         toolbarExtras={
           <MarkdownSpellCheck
             value={draft.content}

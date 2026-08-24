@@ -7,33 +7,39 @@
 //   /<base>/-/<noteId>                     → an uncategorised note open
 //   /<base>/work/meetings/-/<noteId>       → a note open inside that chain
 //
-// WHY THE SEPARATOR. Categories are a TREE of arbitrary depth, so the chain has no fixed
-// length — and nothing in a slug distinguishes the last category from the note id, so a
-// bare `[…tail]` is unparseable. `-` says where the chain ends. It is preferred over
-// sniffing for a UUID (a grammar that silently changes shape if ids ever do) and over a
-// reserved word like `note` (which a category NAMED "Note" would collide with, since a
-// category's URL identity is `slugify(name)`). `slugify` collapses runs of
-// non-alphanumerics and trims them from both ends, so it can never emit a bare `-`: no
-// category can wear the separator's name, whatever it is called.
-
-/** The separator between the category chain and the open note's id. */
-export const NOTE_SEPARATOR = "-";
-
-// TWO MORE RESERVED TOKENS, on the same guarantee. The category rail leads with two rows
-// that are not categories — "All" and "Uncategorized" — and each needs an identity no real
-// category can wear. `slugify` trims non-alphanumerics from both ends, so a slug never
-// STARTS with `-`; that one fact is what reserves the whole `-*` space, and it is written
-// down here rather than at either use site so there is one place to check it.
+// THREE RESERVED TOKENS, on one guarantee. The separator between the chain and the note id,
+// and the category rail's two synthetic rows ("All" and "Uncategorized"), all live off the
+// same fact — `slugify` (see `ui/src/lib/slug.ts`) trims non-alphanumerics from both ends, so
+// a slug built from a real category NAME can never start with `-`, which reserves the whole
+// `-*` space for these tokens. The canonical writeup — including WHY the separator exists
+// rather than a UUID sniff or a reserved word — now lives in `@agentic-toolkit/categories`'
+// `category-scope.ts`, the shared home of these values for every markdown surface's rail
+// (research's `parse-path.ts` needs the identical grammar). This package depends on
+// `@agentic-toolkit/categories` (it builds its category levels from the shared
+// `useCategoryLevels` hook), so these are real re-exports rather than mirrors: the values do
+// not change, only where they come from.
 //
-// Only `Uncategorized` reaches the URL (`/<base>/-none`, a state the list can actually be
-// in). `All` is the absence of a category, which the grammar already spells as no segments
-// at all — so its token is a ROW id only, and a URL never contains it.
+// Only `Uncategorized` and the separator reach the URL (`/<base>/-none`,
+// `/<base>/-/<noteId>` — states the list can actually be in). `All` is the absence of a
+// category, which the grammar already spells as no segments at all — so its token is a ROW id
+// only, and a URL never contains it.
 
-/** The category rail's "Uncategorized" row — notes with no category. Appears in the URL. */
-export const UNCATEGORIZED_SLUG = "-none";
-
-/** The category rail's "All" row. A row id only; the URL for "all" is the bare base. */
-export const ALL_CATEGORIES_ID = "-all";
+// Re-exported (not re-declared) so nothing downstream that imports these from this module has
+// to change; `NOTE_SEPARATOR` is `CHAIN_SEPARATOR` under its old local name.
+//
+// FROM `@agentic-toolkit/categories/chain`, NOT the categories barrel. This module is built as
+// its own directive-free chunk (the `./parse` subpath) so a server component can CALL the
+// parser — but the categories barrel is a whole-file `"use client"` module and the toolkit
+// packages are `external` in this build, so a barrel import survives verbatim into the
+// server-safe chunk and hands an RSC an opaque client reference instead of the string `"-"`.
+// `indexOf` then never matches and every `/<base>/-/<noteId>` URL parses as a category chain
+// with no note open — silently, invisibly to `tsc` and vitest alike. No RSC calls this parser
+// today; it is written this way so that the first one to try does not rediscover the bug
+// research already shipped. See `categories/src/chain.ts`.
+export { CHAIN_SEPARATOR as NOTE_SEPARATOR, UNCATEGORIZED_SLUG, ALL_CATEGORIES_ID } from "@agentic-toolkit/categories/chain";
+// A separate import (a re-export alone creates no local binding) so the functions below can
+// still read the separator by its established local name.
+import { CHAIN_SEPARATOR as NOTE_SEPARATOR } from "@agentic-toolkit/categories/chain";
 
 /** The selection NotebookFeature renders, parsed from a route's path segments.
  *  Maps 1:1 onto NotebookFeature's props (the host supplies `basePath`). */

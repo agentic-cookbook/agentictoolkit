@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, type ReactElement, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 'react'
 import type { SiteId } from '@agentic-toolkit/adh-registry'
 import { principalFromOrgCard, principalFromUserCard, type OrgCardBody, type UserCardBody } from './normalize'
 import { ProfileNotFound } from './ProfileNotFound'
@@ -78,6 +78,12 @@ export interface ProfileFallbackProps {
 export function ProfileFallback({ slug, siteId, section }: ProfileFallbackProps): ReactElement | null {
   const [state, setState] = useState<State>({ status: 'loading' })
   const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null)
+  // Memoized on `viewer` (not recomputed on every render): the anonymous pair keeps racing in
+  // the background after the viewer branch has already won, and each of its settlements is a
+  // `setState` — a render this component must survive without calling `section` again for the
+  // SAME principal. Recomputing here on every render would call it once per background
+  // settlement, defeating "even while the anonymous pair is still 404ing" (profileFallback.test.tsx).
+  const viewerSection = useMemo(() => (viewer ? section?.(viewer) : undefined), [viewer, section])
 
   useEffect(() => {
     let cancelled = false
@@ -119,7 +125,7 @@ export function ProfileFallback({ slug, siteId, section }: ProfileFallbackProps)
   if (viewer)
     return (
       <ProfileView principal={viewer} siteId={siteId} upgrade={false}>
-        {section?.(viewer)}
+        {viewerSection}
       </ProfileView>
     )
   if (state.status === 'loading') return null

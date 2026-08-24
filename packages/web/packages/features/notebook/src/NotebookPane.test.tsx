@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 //
-// Component test for NotebookPane — the notes workspace. Only the two data domain boundaries
-// (@agentic-toolkit/data/notes, .../ecosystems) and @agentic-toolkit/auth's telemetry are
-// mocked, so the level-publish → filter → create → save wiring is exercised, not the transport.
+// Component test for NotebookPane — the notes workspace. Only the one data domain boundary
+// (@agentic-toolkit/data/notes) and @agentic-toolkit/auth's telemetry are mocked, so the
+// level-publish → filter → create → save wiring is exercised, not the transport.
 //
 // The pane PUBLISHES its lists as rail levels rather than rendering them. The harness below
 // stands in for the rail host twice over: it renders the published levels (so their rows are
@@ -28,10 +28,6 @@ vi.mock("@agentic-toolkit/auth", () => ({
   reportUnexpectedAuthError: vi.fn(),
 }));
 
-vi.mock("@agentic-toolkit/data/ecosystems", () => ({
-  ecosystemsApi: { list: vi.fn(), listForWorkspace: vi.fn() },
-}));
-
 vi.mock("@agentic-toolkit/data/notes", () => ({
   notesApi: {
     list: vi.fn(),
@@ -45,7 +41,9 @@ vi.mock("@agentic-toolkit/data/notes", () => ({
   },
   taxonomyApi: {
     renameCategory: vi.fn(),
-    reparentCategory: vi.fn(),
+    categoryParents: vi.fn(),
+    addCategoryParent: vi.fn(),
+    removeCategoryParent: vi.fn(),
     deleteCategory: vi.fn(),
     renameTag: vi.fn(),
     deleteTag: vi.fn(),
@@ -54,7 +52,6 @@ vi.mock("@agentic-toolkit/data/notes", () => ({
 
 import { getToolkitQueryClient } from "@agentic-toolkit/data/query";
 import { NotebookPane } from "./NotebookPane";
-import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
   notesApi,
   taxonomyApi,
@@ -69,7 +66,6 @@ const create = vi.mocked(notesApi.create);
 const update = vi.mocked(notesApi.update);
 const categories = vi.mocked(notesApi.categories);
 const tagSet = vi.mocked(notesApi.tagSet);
-const listForWorkspace = vi.mocked(ecosystemsApi.listForWorkspace);
 const renameTag = vi.mocked(taxonomyApi.renameTag);
 
 const SUMMARY: NoteSummary = {
@@ -95,19 +91,8 @@ const NOTE: Note = {
 /** A note written before a body was required — the shape the reported Save bug lives in. */
 const EMPTY_NOTE: Note = { ...NOTE, id: "note-2", title: "Untitled", content: "" };
 
-const WORK: NoteCategory = { id: "cat-1", name: "Work", parentId: null, sortOrder: 0 };
-const PERSONAL: NoteCategory = { id: "cat-2", name: "Personal", parentId: null, sortOrder: 1 };
-
-const ECOSYSTEM: Ecosystem = {
-  id: "eco-1",
-  identifier: "core",
-  name: "Core",
-  description: "",
-  region: "us",
-  domain: "example.com",
-  createdAt: "",
-  updatedAt: "",
-};
+const WORK: NoteCategory = { id: "cat-1", name: "Work", parentIds: [], sortOrder: 0 };
+const PERSONAL: NoteCategory = { id: "cat-2", name: "Personal", parentIds: [], sortOrder: 1 };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -123,7 +108,6 @@ beforeEach(() => {
     { id: "kw-1", label: "meeting" },
     { id: "kw-2", label: "retro" },
   ]);
-  listForWorkspace.mockResolvedValue([structuredClone(ECOSYSTEM)]);
 });
 
 afterEach(cleanup);
@@ -244,17 +228,20 @@ function renderPane(props: PaneProps = {}) {
 }
 
 describe("the rail", () => {
-  it("leads with the workspace's ecosystems, read-only", async () => {
+  it("leads with the categories — nothing unselectable stands in front of them", async () => {
     renderPane();
+    await screen.findByRole("button", { name: "Work" });
 
-    expect(await screen.findByRole("button", { name: "Core" })).not.toBeNull();
-    const level = levelById("notebook-ecosystems");
-    // Read-only is three absences and one presence: nothing creates, nothing is selected, and
-    // every row is dimmed rather than looking clickable and doing nothing.
-    expect(level.onNew).toBeUndefined();
-    expect(level.selectedId).toBeNull();
-    expect(level.items.every((i) => i.disabled)).toBe(true);
-    expect(listForWorkspace).toHaveBeenCalledWith("acme");
+    // Not a style rule. The rail host renders levels up to the FIRST one with no selection and
+    // stops (`stack-frontier.ts`), so a level that can never take a selection — a read-only
+    // ecosystems list whose every row was `disabled`, which is what used to lead here — pins the
+    // frontier at itself and the categories and the notes are never drawn at all. In a browser
+    // that read as a notebook with no notes in it. Hence both halves of this assertion: the
+    // categories come first, and every level published is one a click can advance past.
+    expect(levels[0]!.id).toBe("notebook-categories-0");
+    for (const level of levels) {
+      expect(level.items.some((i) => !i.disabled)).toBe(true);
+    }
   });
 
   it("no longer offers a `+` on the categories or the notes level", async () => {
@@ -596,9 +583,9 @@ describe("the cache", () => {
   });
 });
 
-// What the conversion is FOR. Every list this pane shows — the notes, the categories, the tags,
-// the ecosystems — now reads through the shared cache, so a scope already visited paints on the
-// first frame instead of blanking to "Loading…" while it is read again.
+// What the conversion is FOR. Every list this pane shows — the notes, the categories, the tags —
+// now reads through the shared cache, so a scope already visited paints on the first frame
+// instead of blanking to "Loading…" while it is read again.
 describe("the lists read through the cache", () => {
   const WORK_NOTE: NoteSummary = { ...SUMMARY, id: "note-9", title: "Roadmap", category: "Work" };
 
@@ -652,24 +639,90 @@ describe("the lists read through the cache", () => {
     expect(list).toHaveBeenCalledTimes(2);
   });
 
-  it("paints all four lists from cache on a remount, reading each once", async () => {
+  it("paints all three lists from cache on a remount, reading each once", async () => {
     renderPane();
     expect(await screen.findByRole("button", { name: "Standup" })).not.toBeNull();
-    expect(await screen.findByRole("button", { name: "Core" })).not.toBeNull();
+    expect(await screen.findByRole("button", { name: "Work" })).not.toBeNull();
     expect(list).toHaveBeenCalledTimes(1);
     expect(categories).toHaveBeenCalledTimes(1);
     expect(tagSet).toHaveBeenCalledTimes(1);
-    expect(listForWorkspace).toHaveBeenCalledTimes(1);
     cleanup();
 
-    // Synchronous: the notes, the category rows and the ecosystems are all on the FIRST paint.
+    // Synchronous: the notes and the category rows are both on the FIRST paint.
     renderPane();
     expect(screen.getByRole("button", { name: "Standup" })).not.toBeNull();
     expect(screen.getByRole("button", { name: "Work" })).not.toBeNull();
-    expect(screen.getByRole("button", { name: "Core" })).not.toBeNull();
     expect(list).toHaveBeenCalledTimes(1);
     expect(categories).toHaveBeenCalledTimes(1);
     expect(tagSet).toHaveBeenCalledTimes(1);
-    expect(listForWorkspace).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── The rail draws a DAG ───────────────────────────────────────────────────────────────
+//
+// `category-tree.test.ts` pins the FOLD in isolation. What these add is the pane: that a
+// category filed in two places is reachable from both through the levels the rail actually
+// publishes, and that the chain a click produces names the parent the user came through.
+// That last part is the whole reason a node carries its `path` — with only an id, both
+// routes to Q3 would be the same string and the breadcrumb would be a coin toss.
+describe("the rail, for a category filed in two places", () => {
+  const PLANNING: NoteCategory = { id: "cat-3", name: "Planning", parentIds: [], sortOrder: 2 };
+  const Q3: NoteCategory = {
+    id: "cat-4",
+    name: "Q3",
+    parentIds: ["cat-1", "cat-3"],
+    sortOrder: 3,
+  };
+
+  beforeEach(() => {
+    categories.mockResolvedValue([
+      structuredClone(WORK),
+      structuredClone(PLANNING),
+      structuredClone(Q3),
+    ]);
+  });
+
+  it("lists both parents at the root, sorted by name after the two synthetic rows", async () => {
+    renderPane();
+    await screen.findByRole("button", { name: "Work" });
+
+    const level = levelById("notebook-categories-0");
+    // The shared hook sorts every level by name; the two synthetic rows still lead. No
+    // sublabel: the spec says a category row shows the name and nothing else.
+    expect(level.items.map((i) => i.label)).toEqual(["All", "Uncategorized", "Planning", "Work"]);
+  });
+
+  it("shows Q3 under Work", async () => {
+    renderPane({ categorySlugs: ["work"] });
+    await screen.findByRole("button", { name: "Work" });
+
+    expect(levelById("notebook-categories-1").items.map((i) => i.label)).toEqual(["Q3"]);
+  });
+
+  it("shows the same Q3 under Planning", async () => {
+    // The assertion that would be false for a tree: one row, two homes, neither of them a
+    // copy the user has to keep in sync.
+    renderPane({ categorySlugs: ["planning"] });
+    await screen.findByRole("button", { name: "Planning" });
+
+    expect(levelById("notebook-categories-1").items.map((i) => i.label)).toEqual(["Q3"]);
+  });
+
+  it("navigates through the parent the user actually came from", async () => {
+    const { onSelectCategory } = renderPane({ categorySlugs: ["planning"] });
+    await screen.findByRole("button", { name: "Planning" });
+
+    levelById("notebook-categories-1").onSelect?.("q3");
+    // ["work", "q3"] would end at the same category and still be the wrong answer: it is the
+    // route, not the destination, that the breadcrumb and the Back button are built from.
+    expect(onSelectCategory).toHaveBeenLastCalledWith(["planning", "q3"]);
+  });
+
+  it("selects Q3 in the level it was reached through", async () => {
+    renderPane({ categorySlugs: ["planning", "q3"] });
+    await screen.findByRole("button", { name: "Planning" });
+
+    expect(levelById("notebook-categories-1").selectedId).toBe("q3");
+    expect(levelById("notebook-categories-0").selectedId).toBe("planning");
   });
 });

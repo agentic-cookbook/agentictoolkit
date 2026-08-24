@@ -266,11 +266,12 @@ function ProfileNotFound() {
 }
 
 // src/profile/ProfileFallback.tsx
-import { useEffect as useEffect3, useState as useState4 } from "react";
+import { useEffect as useEffect3, useMemo, useState as useState4 } from "react";
 import { jsx as jsx3 } from "react/jsx-runtime";
 function ProfileFallback({ slug, siteId, section }) {
   const [state, setState] = useState4({ status: "loading" });
   const { principal: viewer, pending: viewerPending } = useViewerPrincipal(slug, null);
+  const viewerSection = useMemo(() => viewer ? section?.(viewer) : void 0, [viewer, section]);
   useEffect3(() => {
     let cancelled = false;
     setState({ status: "loading" });
@@ -303,7 +304,7 @@ function ProfileFallback({ slug, siteId, section }) {
     };
   }, [slug]);
   if (viewer)
-    return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false, children: section?.(viewer) });
+    return /* @__PURE__ */ jsx3(ProfileView, { principal: viewer, siteId, upgrade: false, children: viewerSection });
   if (state.status === "loading") return null;
   if (state.status === "found")
     return /* @__PURE__ */ jsx3(ProfileView, { principal: state.principal, siteId, upgrade: false, children: section?.(state.principal) });

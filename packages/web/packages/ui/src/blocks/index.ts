@@ -1,34 +1,95 @@
-export { AppTabs, type AppTab } from "./app-tabs"
-export { EditorSection, type EditorSectionItem } from "./editor-section"
-export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor"
-export { Field } from "./field"
-export { FieldGroup } from "./field-group"
+export { AppTabs, type AppTab } from "./app-tabs";
+export { EditorSection, type EditorSectionItem } from "./editor-section";
+export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor";
+export { Field } from "./field";
+export { FieldGroup } from "./field-group";
+// What a document is called and where it lives — the title/slug pair, with a live
+// "available / unavailable" verdict for the slug. The slug rule is injected, so a host's
+// route alphabet stays the host's.
+export {
+  DocumentIdentityField,
+  useSlugAvailability,
+  type DocumentIdentityFieldProps,
+  type SlugStatus,
+  type SlugVerdict,
+} from "./document-identity-field";
 // The tag-set row (autocomplete + browse/add chooser + chips) — one affordance for every
 // surface that edits a set of labels, so research tags and work-item labels behave alike.
-export { TagSetField } from "./tag-set-field"
+export { TagSetField } from "./tag-set-field";
+export { CategoriesAndTags } from "./categories-and-tags";
 // Its sibling for the single-valued, HIERARCHICAL vocabulary: same autocomplete + browse pair,
 // plus the breadcrumb that says where in the tree the chosen name sits and the rename behind it.
-export { CategoryField, categoryTrail, type CategoryTreeNode } from "./category-field"
-export { TopicDetail, type TopicDetailItem, type RailSlot } from "./topic-detail"
+export {
+  CategoryField,
+  categoryTrails,
+  type CategoryTreeNode,
+} from "./category-field";
+// The DAG fold behind every hierarchical category surface — the rail's level-per-depth walk,
+// the management view's flattening, and the breadcrumb trails, from one materialisation so
+// they cannot disagree about a corrupt link.
+export {
+  buildCategoryTree,
+  resolveCategoryChain,
+  flattenCategoryTree,
+  categoryKey,
+  chainAfterRename,
+  chainAfterMove,
+  chainAfterDelete,
+  categoryNames,
+  slugFor,
+  nodeForName,
+  MAX_TREE_NODES,
+  type CategoryNode,
+  type FlatCategory,
+} from "./category-tree";
+// Picking a PLACE in the hierarchy — the modal behind "Move…". Distinct from CategoryField's
+// flat chooser, which picks a category for a document; see the component's own note.
+export {
+  CategoryPickerDialog,
+  type CategoryPickerDialogProps,
+} from "./category-picker-dialog";
+// The two writes to the vocabulary that need a confirm step of their own — rename (safe,
+// but global) and delete (which takes the filing, never the filed thing). CategoryField is
+// the rename dialog's first consumer; the gear menu is its second.
+export {
+  CategoryRenameDialog,
+  type CategoryRenameDialogProps,
+} from "./category-rename-dialog";
+export {
+  CategoryDeleteDialog,
+  type CategoryDeleteDialogProps,
+} from "./category-delete-dialog";
+// The gear in a category list's header. Renders four verbs and reports the choice; every
+// dialog and write behind them belongs to the host.
+export {
+  CategoryGearMenu,
+  type CategoryGearAction,
+  type CategoryGearMenuProps,
+} from "./category-gear-menu";
+export {
+  TopicDetail,
+  type TopicDetailItem,
+  type RailSlot,
+} from "./topic-detail";
 // How to name the detail pane the user is actually looking at, rather than HTDV's outgoing
 // crossfade snapshot of the previous one. Re-exported here for app code that already imports from
 // `blocks`; a Playwright spec should take the React-free `@agentic-toolkit/ui/lib/detail-pane`
 // subpath instead (the snapshot is hidden from the accessibility tree, not from the DOM).
-export { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "../lib/detail-pane"
+export { DETAIL_PANE_ATTR, LIVE_DETAIL_PANE } from "../lib/detail-pane";
 // TopicSelectHint is THE "select something" placeholder card — every pane that waits on a
 // choice renders it (the stack frontier does so automatically); EmptyState stays the home
 // for genuinely empty/loading/error panes.
-export { TopicSelectHint } from "./topic-select-hint"
+export { TopicSelectHint } from "./topic-select-hint";
 export {
   HierarchicalTopicDetail,
   type TopicLevel,
   type PaneExitGuard,
   type TopicSelectOptions,
-} from "./hierarchical-topic-detail"
-export { deepestSelectedLevel } from "./stack-frontier"
+} from "./hierarchical-topic-detail";
+export { deepestSelectedLevel } from "./stack-frontier";
 // Hierarchical Menu Details View — the cascading (vertical nested-menu) experiment, isolated as its
 // own component so HTDV stays at its pre-experiment shape. Shares HTDV's TopicLevel/PaneExitGuard.
-export { HierarchicalMenuDetail } from "./hierarchical-menu-detail"
+export { HierarchicalMenuDetail } from "./hierarchical-menu-detail";
 // The switch between the two while the experiment runs. Consumers render HierarchicalDetailView and
 // the host app picks the view once, via the provider; the two components above are then an
 // implementation detail. Default (no provider) = HTDV, so nothing changes for an app that opts out.
@@ -37,13 +98,13 @@ export {
   HierarchicalDetailViewProvider,
   useHierarchicalMenuDetailView,
   type HierarchicalDetailViewProps,
-} from "./hierarchical-detail-view"
+} from "./hierarchical-detail-view";
 // Dev-only debug switches (mouse-detection frames, 10x-slow animations). They live here because
 // this package owns the behaviour; a consuming app's Debug panel flips them, and the app applies
 // `slowAnimationVars` to <html> once (see its AppShell) so portaled dialogs/menus scale too.
 // The HTDV layout log: host-flipped tracing of the wide/narrow decision and the stacks' fit passes
 // (the adh shell turns it on everywhere except production). See htdv-log.ts.
-export { setHtdvLayoutLog, getHtdvLayoutLog } from "./htdv-log"
+export { setHtdvLayoutLog, getHtdvLayoutLog } from "./htdv-log";
 export {
   useShowDebugFrames,
   setShowDebugFrames,
@@ -56,7 +117,7 @@ export {
   getCascadeLog,
   slowAnimationVars,
   SLOW_ANIM_FACTOR,
-} from "./debug-options"
+} from "./debug-options";
 // HDV — Hierarchical Document View: the long-form document reader (nav tree,
 // breadcrumbs, prose, frontmatter, scrollspy ToC). Router-agnostic by design; a
 // host injects `LinkComponent` and passes a plain `activePath`. `doc-types.ts` is
@@ -69,8 +130,8 @@ export type {
   DocNavTopLink,
   HdvNavNode,
   HeadingEntry,
-} from "./doc-types"
-export { DefaultDocLink, type DefaultDocLinkProps } from "./doc-link"
+} from "./doc-types";
+export { DefaultDocLink, type DefaultDocLinkProps } from "./doc-link";
 export {
   DocNav,
   DocNavTree,
@@ -86,19 +147,19 @@ export {
   DOC_NAV_BRANCH_LIST_CLASS,
   type DocNavProps,
   type DocNavTreeProps,
-} from "./doc-nav"
-export { DocBreadcrumbs, type DocBreadcrumbsProps } from "./doc-breadcrumbs"
-export { DocMetadata, type DocMetadataProps } from "./doc-metadata"
+} from "./doc-nav";
+export { DocBreadcrumbs, type DocBreadcrumbsProps } from "./doc-breadcrumbs";
+export { DocMetadata, type DocMetadataProps } from "./doc-metadata";
 export {
   DocArticle,
   DOC_ARTICLE_PROSE_CLASS,
   type DocArticleProps,
-} from "./doc-article"
+} from "./doc-article";
 export {
   DocTableOfContents,
   DOC_TABLE_OF_CONTENTS_CLASS,
   type DocTableOfContentsProps,
-} from "./doc-table-of-contents"
+} from "./doc-table-of-contents";
 export {
   HierarchicalDocumentView,
   DocPage,
@@ -108,34 +169,81 @@ export {
   DOC_PAGE_ARTICLE_CLASS,
   type HierarchicalDocumentViewProps,
   type DocPageProps,
-} from "./hierarchical-document-view"
+} from "./hierarchical-document-view";
 export {
   ViewSourceDisclosure,
   VIEW_SOURCE_DISCLOSURE_CLASS,
   VIEW_SOURCE_TRIGGER_CLASS,
   VIEW_SOURCE_PRE_CLASS,
   type ViewSourceDisclosureProps,
-} from "./view-source-disclosure"
-export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar"
-export { ButtonBar, type ButtonBarActions } from "./button-bar"
-export { PopupMenu, type PopupMenuItem } from "./popup-menu"
-export { FocusedTopicDetail, type FocusedTopicDetailItem } from "./focused-topic-detail"
-export { ResourceCard } from "./resource-card"
-export { SectionHeader } from "./section-header"
-export { InfoPanel, INFO_PANEL_HEADER_HEIGHT, type InfoPanelProps } from "./info-panel"
-export { StatCard, type StatCardProps, type StatCardStat } from "./stat-card"
-export { StatList, StatListRow, type StatListProps, type StatListRowProps } from "./stat-list"
-export { DeleteEntitySection, type DeleteEntitySectionProps } from "./delete-entity-section"
-export { TransferOwnershipSection, type TransferOwnershipSectionProps, type TransferTarget, type TransferPreviewResult } from "./transfer-ownership-section"
-export { ListHeader, type ListHeaderProps, type ListHeaderSearch } from "./list-header"
-export { ListWithDetailsPane, type ListWithDetailsPaneProps, type ListAction } from "./list-with-details-pane"
-export { SelectionActions, type SelectionActionsProps } from "./selection-actions"
+} from "./view-source-disclosure";
+export { ViewTabBar, type ViewTabItem, type ViewTabLink } from "./view-tab-bar";
+export { ButtonBar, type ButtonBarActions } from "./button-bar";
+export { PopupMenu, type PopupMenuItem } from "./popup-menu";
+export {
+  FocusedTopicDetail,
+  type FocusedTopicDetailItem,
+} from "./focused-topic-detail";
+export { ResourceCard } from "./resource-card";
+export { SectionHeader } from "./section-header";
+export {
+  InfoPanel,
+  INFO_PANEL_HEADER_HEIGHT,
+  type InfoPanelProps,
+} from "./info-panel";
+export { StatCard, type StatCardProps, type StatCardStat } from "./stat-card";
+export {
+  StatList,
+  StatListRow,
+  type StatListProps,
+  type StatListRowProps,
+} from "./stat-list";
+export {
+  DeleteEntitySection,
+  type DeleteEntitySectionProps,
+} from "./delete-entity-section";
+export {
+  TransferOwnershipSection,
+  type TransferOwnershipSectionProps,
+  type TransferTarget,
+  type TransferPreviewResult,
+} from "./transfer-ownership-section";
+export {
+  ListHeader,
+  type ListHeaderProps,
+  type ListHeaderSearch,
+} from "./list-header";
+export {
+  ListWithDetailsPane,
+  type ListWithDetailsPaneProps,
+  type ListAction,
+} from "./list-with-details-pane";
+export {
+  SelectionActions,
+  type SelectionActionsProps,
+} from "./selection-actions";
 // Batch select: the Select/Done mode a list enters to act on several rows at once. Shared because
 // LEAVING the mode must clear the selection — a hidden selection is one a bulk action still acts on.
-export { useBatchSelect, BatchSelectButton, type BatchSelect, type BatchSelectButtonProps } from "./batch-select"
-export { SendInvitationModal, type SendInvitationModalProps, type SendInvitationPayload } from "./send-invitation-modal"
-export { AddUsersModal, type AddUsersModalProps, type DraftUser } from "./add-users-modal"
-export { CreateResourceDialog, type CreateResourceDialogProps } from "./create-resource-dialog"
+export {
+  useBatchSelect,
+  BatchSelectButton,
+  type BatchSelect,
+  type BatchSelectButtonProps,
+} from "./batch-select";
+export {
+  SendInvitationModal,
+  type SendInvitationModalProps,
+  type SendInvitationPayload,
+} from "./send-invitation-modal";
+export {
+  AddUsersModal,
+  type AddUsersModalProps,
+  type DraftUser,
+} from "./add-users-modal";
+export {
+  CreateResourceDialog,
+  type CreateResourceDialogProps,
+} from "./create-resource-dialog";
 // The modal a long, partly-failable batch runs behind. It HALTS on the first error and asks
 // Continue or Stop, and it does not close itself: a dialog that dismisses on completion takes the
 // only record of what happened with it.
@@ -144,7 +252,7 @@ export {
   type ProgressModalProps,
   type ProgressResult,
   type ProgressError,
-} from "./progress-modal"
+} from "./progress-modal";
 // The command palette (⌘K) — the one surface that finds a thing by NAME rather than by place. It
 // renders the groups it is handed and filters nothing; `filterCommandItems` is the shared definition
 // of "matches", for a host narrowing its own static commands. Pairs with `hooks/useShortcut`.
@@ -154,10 +262,14 @@ export {
   type CommandPaletteProps,
   type CommandGroup,
   type CommandItem,
-} from "./command-palette"
+} from "./command-palette";
 // Pick an rdid: the palette, pointed at the identifier registry. Scoping is the CALLER's — it
 // closes over its own entityType when it builds `search`, so this never owns a list of scopes.
-export { RdidPicker, type RdidPickerProps, type RdidOption } from "./rdid-picker"
+export {
+  RdidPicker,
+  type RdidPickerProps,
+  type RdidOption,
+} from "./rdid-picker";
 export {
   UserCard,
   UserCardSkeleton,
@@ -166,9 +278,9 @@ export {
   type UserCardSocialLink,
   type UserCardAddress,
   type UserCardPersona,
-} from "./user-card"
-export { NotesAndHistory } from "./notes-and-history"
-export { AdminNotesModal } from "./admin-notes-modal"
+} from "./user-card";
+export { NotesAndHistory } from "./notes-and-history";
+export { AdminNotesModal } from "./admin-notes-modal";
 export {
   InvitationRequestsPane,
   InvitationPendingUsersPane,

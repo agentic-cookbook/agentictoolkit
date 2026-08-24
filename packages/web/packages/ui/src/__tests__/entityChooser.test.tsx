@@ -5,7 +5,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
-import { EntityChooser } from '../components/entity-chooser'
+import { EntityChooser, EntitySelectionChips } from '../components/entity-chooser'
 
 const CATEGORIES = ['architecture', 'engineering', 'research']
 const TAGS = ['attention', 'transformers', 'vision']
@@ -111,5 +111,77 @@ describe('EntityChooser — multi', () => {
     fireEvent.change(input, { target: { value: 'vision' } })
     fireEvent.keyDown(input, { key: 'Enter' })
     expect(onChange).not.toHaveBeenCalled()
+  })
+})
+
+describe('EntityChooser — multi, selectionPlacement="host"', () => {
+  // Inline, the trigger is one item flowing among the chips, so it hugs its content and
+  // `className` sizes the GROUP. Handed to a host, the trigger is the whole control this
+  // renders — so `className` has to reach it, or a caller that sizes its column (TagSetField's
+  // `w-44 shrink-0`, matching CategoryField's) silently gets a content-width button instead.
+  it('renders ONLY the trigger, sized by the caller', () => {
+    const { container } = render(
+      <EntityChooser
+        multiple
+        selectionPlacement="host"
+        options={TAGS}
+        value={['vision']}
+        onChange={vi.fn()}
+        ariaLabel="Tags"
+        className="w-44 shrink-0"
+      />,
+    )
+    expect(container.querySelector('[role="group"]')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Remove vision' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Tags' }).closest('.w-44')).not.toBeNull()
+  })
+
+  it('leaves the inline layout exactly as it was', () => {
+    const { container } = render(
+      <EntityChooser
+        multiple
+        options={TAGS}
+        value={['vision']}
+        onChange={vi.fn()}
+        ariaLabel="Tags"
+        className="min-w-64"
+      />,
+    )
+    const group = container.querySelector('[role="group"]') as HTMLElement
+    expect(group.className).toContain('min-w-64')
+    expect(group).toContainElement(screen.getByRole('button', { name: 'Remove vision' }))
+    expect(group).toContainElement(screen.getByRole('button', { name: 'Tags' }))
+  })
+})
+
+describe('EntitySelectionChips', () => {
+  it('renders the set as removable chips in a group named for it', () => {
+    const onRemove = vi.fn()
+    render(<EntitySelectionChips values={['vision', 'rag']} ariaLabel="Tags" onRemove={onRemove} />)
+    const group = screen.getByRole('group', { name: 'Tags' })
+    expect(group).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Remove rag' }))
+    expect(onRemove).toHaveBeenCalledWith('rag')
+  })
+
+  // An empty row still costs height, and a field with no selection should cost none — the rule
+  // CategoryField's breadcrumb row already follows.
+  it('renders nothing at all for an empty set with no empty-state label', () => {
+    const { container } = render(
+      <EntitySelectionChips values={[]} ariaLabel="Tags" onRemove={vi.fn()} />,
+    )
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('renders the empty-state label when the host asks for one', () => {
+    render(
+      <EntitySelectionChips
+        values={[]}
+        ariaLabel="Labels"
+        emptySelectionLabel="Any labels"
+        onRemove={vi.fn()}
+      />,
+    )
+    expect(screen.getByText('Any labels')).toBeInTheDocument()
   })
 })

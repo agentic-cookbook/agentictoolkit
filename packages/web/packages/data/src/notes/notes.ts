@@ -32,7 +32,7 @@ export type Note = ResearchDocument;
 export type NoteSummary = ResearchSummary;
 /** The same three axes the research list filters on: free text, category, tag. */
 export type NoteFilters = ResearchFilters;
-/** One category, with the parent pointer that makes the set a tree. */
+/** One category, with the parent ids that make the set a hierarchy. */
 export type NoteCategory = MarkdownCategoryNode;
 /** One tag, with the id that addresses it for a rename or a delete. */
 export type NoteTag = MarkdownKeywordNode;
@@ -71,14 +71,15 @@ export const notesApi = {
     return markdownApi.remove(id, opts);
   },
 
-  /** The workspace's category TREE — the notebook's rail is these rows folded by
-   *  `parentId`. Shared with research's flat category vocabulary by construction:
-   *  one owner has one set of categories, seen two ways. */
+  /** The workspace's category HIERARCHY — the notebook's rail is these rows folded by
+   *  `parentIds`. Shared with research's flat category vocabulary by construction: one
+   *  owner has one set of categories, seen two ways. A category may sit under several
+   *  parents, so the fold draws some of them in more than one place. */
   categories(opts?: { workspace?: string }): Promise<NoteCategory[]> {
     return markdownApi.categoryTree(opts);
   },
 
-  /** Create a category, optionally under another. */
+  /** Create a category, optionally under one or more others. */
   createCategory(
     body: MarkdownCategoryCreateBody,
     opts?: { workspace?: string },
@@ -97,7 +98,7 @@ export const notesApi = {
   },
 };
 
-/** Renaming, re-parenting and retiring those categories and tags. Re-exported rather than
+/** Renaming, filing, unfiling and retiring those categories and tags. Re-exported rather than
  *  folded into `notesApi`: unlike everything above it, the taxonomy is NOT the notebook's —
  *  one owner has one vocabulary spanning notes, research papers and board cards, so a rename
  *  here is a rename there. Keeping it a separate object is what says so at the call site.

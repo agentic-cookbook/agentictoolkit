@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/research",
   "version": "0.1.0",
-  "description": "The Research feature: markdown research documents — search, editor, publish flow.",
+  "description": "The Research feature: markdown research documents \u2014 search, editor, publish flow.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
+  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -28,17 +28,20 @@
     }
   },
   "scripts": {
-    "build": "tsup && pnpm run build:types",
+    "build": "tsup && pnpm run build:types && pnpm run check:directives",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
     "dev": "tsup --watch",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check:directives": "python3 ../tools/check-directives.py"
   },
   "dependencies": {
     "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/categories": "workspace:*",
     "@agentic-toolkit/crud": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/markdown": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "lucide-react": "^1.16.0"
@@ -61,5 +64,12 @@
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"
+  },
+  "comment:directives": "`./parse` is the URL grammar an RSC host page CALLS, so it must stay directive-free TRANSITIVELY: `@agentic-toolkit/*` stays external in this build, so whatever it imports is resolved inside the caller's server component. The one allowed import is the categories package's own server-safe entry.",
+  "directives": {
+    "index": "client",
+    "parse-path": [
+      "@agentic-toolkit/categories/chain"
+    ]
   }
 }

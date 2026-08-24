@@ -39,6 +39,31 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
 export interface SiteHomeShellProps {
     /** The workspace segment as it stands in the URL, if any. */
     workspaceSlug?: string;
+    /**
+     * Where a workspace's GATED surface lives on this host, given its slug. Defaults to
+     * `/<slug>` — the workspace itself — which is what 38 of the 39 sites mean and why this is
+     * optional rather than required.
+     *
+     * Used for ONE thing: the seeding replace out of `/home`. `/home` is the address the whole
+     * family hands out — the header's Home link, the SSO return target, the registry's post-login
+     * landing — and it names no workspace, so the shell resolves one and rewrites the URL. On a
+     * site whose `/<slug>` is PUBLIC content that rewrite lands a signed-in visitor on the public
+     * page instead of the app. research is that site: `/<author>` is their published paper index
+     * and the gated surface is `/<author>/home`, so it passes ``(slug) => `/${slug}/home` ``.
+     *
+     * Deliberately NOT `scopedBase`, which stays `/<slug>` on every site including research. The
+     * workspace IS `/<slug>`; `home` and `edit` are two surfaces the host mounts under it, and the
+     * host appends those itself. Conflating the two would double the suffix on every link the
+     * feature builds.
+     *
+     * Not `switchHrefFor` either, which needs no seam: that carries the segments BELOW the
+     * workspace across a switch, and on research those segments already START with `home` or
+     * `edit`, so `/ada/home` → `/bob/home` falls out of the existing rule.
+     *
+     * An effect dependency inside `useWorkspaceRoute` — pass a stable identity (module scope, or
+     * `useCallback`), or the seeding effect re-runs on every render.
+     */
+    workspaceHref?: (slug: string) => string;
     /** The site's view. Called — not rendered — once a workspace is resolved AND in the URL. */
     children: (scope: SiteHomeScope) => ReactNode;
 }
@@ -59,9 +84,11 @@ export interface SiteHomeModel<View> {
      * consumed — a site that reads it here is reading the wrong layer, and `scopedBase` /
      * `workspaceSlug` are how it gets that.
      *
-     * There is no `basePath` above it and no site declares one: the workspace IS the first segment
-     * on every site, so the count of segments above it is zero everywhere and a field that can only
-     * hold one value is a field three sites got to disagree about.
+     * There is no `basePath` above it: the workspace is the FIRST segment on every site, so the
+     * count of segments above it is zero everywhere. What CAN differ is where a site's gated
+     * surface sits BELOW the workspace — research's is `/<slug>/home`, because `/<slug>` is its
+     * public author page — and that is `workspaceHref` below, which affects only where `/home`
+     * seeds to. The segments handed here are still the ones below the workspace.
      *
      * This is also where a site says a path does NOT exist, by calling `notFound()` — the route
      * mounts one optional catch-all in every site, so "there is nothing at this depth" is a
@@ -94,6 +121,20 @@ export interface SiteHomeModel<View> {
      * has no such check of its own.
      */
     shell?: ComponentType<SiteHomeShellProps>;
+    /**
+     * This site's answer to {@link SiteHomeShellProps.workspaceHref} — where its gated surface
+     * lives under a workspace. Omit it and the shell seeds the bare `/<slug>`, which is right for
+     * every site whose root segment is the app rather than someone's public content.
+     *
+     * Declared on the MODEL rather than passed at each mount because it is a fact about the SITE,
+     * and the site has three mounts (`app/home/page.tsx` and the two gated routes) that must not be
+     * able to disagree about it. Contrast `SiteHomeRoute`'s `path`, which is a fact about ONE
+     * route's shape and therefore belongs at the mount.
+     *
+     * Must be a stable identity — declare it at module scope alongside the model, never inline in
+     * a component. It reaches an effect dependency array in `useWorkspaceRoute`.
+     */
+    workspaceHref?: (slug: string) => string;
     /**
      * This site's public section on a principal's profile at `/<slug>/profile`.
      *

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Folder, Inbox, LayoutList, NotebookPen } from "lucide-react";
+import { NotebookPen } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
@@ -23,7 +23,6 @@ import {
   useResourceItemWriter,
   useResourceList,
 } from "@agentic-toolkit/data";
-import { ecosystemsApi, type Ecosystem } from "@agentic-toolkit/data/ecosystems";
 import {
   notesApi,
   taxonomyApi,
@@ -32,12 +31,8 @@ import {
   type NoteSummary,
   type NoteTag,
 } from "@agentic-toolkit/data/notes";
-import {
-  buildCategoryTree,
-  categoryNames,
-  resolveCategoryChain,
-  type CategoryNode,
-} from "./category-tree";
+import { categoryNames, type CategoryNode } from "@agentic-toolkit/ui/blocks";
+import { useCategoryLevels } from "@agentic-toolkit/categories";
 import {
   noteBlank,
   noteDiffers,
@@ -47,10 +42,9 @@ import {
   resolveListCategory,
   toCreateBody,
   toUpdateBody,
-  type CategoryScope,
   type NoteInput,
 } from "./note-model";
-import { ALL_CATEGORIES_ID, UNCATEGORIZED_SLUG } from "./parse-path";
+import { UNCATEGORIZED_SLUG } from "./parse-path";
 import { usePreviewLines } from "./preview-lines";
 import { NoteDetail, NoteFields } from "./NoteDetail";
 import { NoteButtonBar, type FilterState } from "./NoteButtonBar";
@@ -81,9 +75,8 @@ function sameFilters(a: FilterState, b: FilterState): boolean {
  * are the whole feature:
  *
  *  1. **No publishing.** A note has no public route, no visibility, and no publish section.
- *  2. **The category list is a TREE, and it is the rail.** Research publishes one flat
- *     document level; this publishes a read-only ecosystems level, then one level per
- *     category depth, then the notes. Selecting a category narrows the notes to the ones
+ *  2. **The category list is a DAG, and it is the rail.** Research publishes one flat
+ *     document level; this publishes one level per category depth, then the notes. Selecting a category narrows the notes to the ones
  *     filed DIRECTLY in it — its subcategories are the next rail level, exactly as a folder
  *     holds its own files and its subfolders hold theirs. With nothing selected the list is
  *     the whole notebook, which is the useful landing: you open the notebook and see your
@@ -192,42 +185,36 @@ export function NotebookPane({
   );
   const tagRows = tagItems ?? [];
 
-  // The workspace's ecosystems — the rail's read-only root level. Nothing in the notebook writes
-  // an ecosystem, so nothing here ever invalidates it; the cache is what makes that "read once"
-  // hold across a remount too, which is what an effect could never do.
-  const loadEcosystems = useCallback(async () => {
-    try {
-      return workspaceSlug
-        ? await ecosystemsApi.listForWorkspace(workspaceSlug)
-        : await ecosystemsApi.list();
-    } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "ecosystems" });
-      throw err instanceof Error ? err : new Error("Failed to load ecosystems.");
-    }
-  }, [workspaceSlug]);
+  const refreshRef = useRef<() => void | Promise<void>>(() => {});
+  // `refresh` is keyed on the list scope THIS hook computes, so it cannot be declared above the
+  // call that needs it. The hook only ever invokes `onChanged` from an event, by which time the
+  // ref is filled — and the indirection keeps the identity stable, which a hook dependency
+  // array needs and a function redeclared each render does not have.
+  const onCategoriesChanged = useCallback(() => refreshRef.current(), []);
 
-  // The empty slug is not a missing key: it is the CALLER's own scope, which is the other route
-  // this fetcher can take.
-  const { items: ecosystems, error: ecosystemsError } = useResourceList<Ecosystem>(
-    `ecosystems:workspace:${workspaceSlug ?? ""}`,
-    loadEcosystems,
-    { reportErrors: false },
-  );
+  // The category levels are the shared ones - the same rail the research surface draws, from
+  // @agentic-toolkit/categories. This pane contributes the notes level below them. The RAW URL
+  // slugs go in; the resolved chain comes back out, and everything the pane still needs about
+  // where it is standing is derived from that rather than re-resolved here.
+  const {
+    levels: categoryLevels,
+    scope,
+    chain,
+    dialogs: categoryDialogs,
+  } = useCategoryLevels({
+    rows: categoryRows,
+    error: categoriesError,
+    chainSlugs: categorySlugs,
+    onSelectChain: onSelectCategory,
+    onChanged: onCategoriesChanged,
+    itemNoun: "notes",
+    idPrefix: "notebook",
+    workspaceSlug,
+  });
 
-  // ── The category tree + the chain the URL names ──────────────────────────
-  const tree = useMemo(() => buildCategoryTree(categoryRows ?? []), [categoryRows]);
-  // Keyed on the JOINED slugs: the parser hands us a fresh array every render, so the array
-  // itself is never a stable dep.
-  const slugKey = categorySlugs.join("/");
-  // "Uncategorized" is a rail row, not a category, so it never resolves against the tree —
-  // it is recognised by its reserved slug and short-circuits the whole chain.
-  const uncategorized = categorySlugs[0] === UNCATEGORIZED_SLUG;
-  const chain = useMemo(
-    () => (uncategorized ? [] : resolveCategoryChain(tree, slugKey ? slugKey.split("/") : [])),
-    [tree, slugKey, uncategorized],
-  );
   // The RESOLVED chain is what every navigation is built from, not the raw URL slugs, so a
   // stale deep link normalises to what still exists the moment anything is clicked.
+  const uncategorized = scope.kind === "uncategorized";
   const chainSlugs = uncategorized ? [UNCATEGORIZED_SLUG] : chain.map((node) => node.slug);
   const activeCategory: CategoryNode | null = chain[chain.length - 1] ?? null;
   const activeCategoryName = activeCategory?.name ?? "";
@@ -238,14 +225,19 @@ export function NotebookPane({
   // What the rail's placement and the bar's category filter jointly ask for. Derived here rather
   // than inside the fetcher so the KEY can be built from the same answer: the plan is what
   // decides whether there is a request at all, and two different scopes must never share a key.
-  const plan = useMemo(() => {
-    const scope: CategoryScope = uncategorized
-      ? { kind: "uncategorized" }
-      : activeCategoryName
-        ? { kind: "named", name: activeCategoryName }
-        : { kind: "all" };
-    return resolveListCategory(scope, applied.category);
-  }, [uncategorized, activeCategoryName, applied.category]);
+  // `scope`'s identity is NOT stable across every render that leaves it semantically unchanged:
+  // it is memoized on `[slugKey, chain]` inside the hook, and `chain` is memoized on `[tree,
+  // slugKey]` — so a categories read resolving (a new `categoryRows` array, hence a new `tree`)
+  // produces a new `chain` and a new `scope` object even though the URL, and so the resolved
+  // scope's VALUE, has not moved. `plan`'s identity is a refetch trigger (see the note at the
+  // top of this file), so keying this memo on `scope` directly spends a second notes read on
+  // every categories load — confirmed by this file's own "reads each category scope once"
+  // suite. Keep it keyed on the primitives that fully determine the scope instead.
+  const plan = useMemo(
+    () => resolveListCategory(scope, applied.category),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [uncategorized, activeCategoryName, applied.category],
+  );
 
   const loadNotes = useCallback(async () => {
     // The rail and the filter name two different categories: nothing can match, so there is
@@ -296,6 +288,7 @@ export function NotebookPane({
       .then(() => undefined)
       .catch(() => {});
   }, [reloadNotes, reloadCategories, reloadTags, listKey, listPrefix]);
+  refreshRef.current = refresh;
 
   // ── Selection + draft ─────────────────────────────────────────────────────
   const selectedId = noteId ?? null;
@@ -455,103 +448,6 @@ export function NotebookPane({
     }
   }
 
-  // ── The rail ───────────────────────────────────────────────────────────────
-  // The workspace's ecosystems, purely as context: they say which vocabulary the categories
-  // and tags below belong to. Every row is `disabled`, which is this list's whole contract —
-  // a row that looked clickable and did nothing would read as broken, and there is nothing
-  // for a click to do while the notebook is scoped by the WORKSPACE rather than by one
-  // ecosystem within it.
-  const ecosystemsLevel: TopicLevel = {
-    id: "notebook-ecosystems",
-    title: "Ecosystems",
-    items: (ecosystems ?? []).map(
-      (eco): TopicDetailItem => ({
-        id: eco.id,
-        label: eco.name,
-        icon: <Boxes />,
-        sublabel: eco.identifier || undefined,
-        disabled: true,
-      }),
-    ),
-    selectedId: null,
-    itemNoun: "ecosystem",
-    onSelect: () => {},
-    onClear: () => {},
-    emptyLabel:
-      ecosystemsError ?? (ecosystems === null ? "Loading…" : "No ecosystems in this workspace."),
-  };
-
-  // One level per category DEPTH, then the notes. The loop publishes the root list, then a
-  // child list for each selected category that HAS children — so the rail is exactly as deep
-  // as the tree the user has walked into, and a leaf category doesn't publish an empty list.
-  const categoryLevels: TopicLevel[] = [];
-  {
-    let siblings = tree;
-    let title = "Categories";
-    for (let depth = 0; ; depth++) {
-      const picked: CategoryNode | undefined = chain[depth];
-      const ancestors = chainSlugs.slice(0, depth);
-      // The root list leads with the two rows that are not categories. Both name a SCOPE the
-      // list can be in but no category expresses: the whole notebook, and the notes filed
-      // nowhere. Their ids come from the reserved `-*` space (see parse-path) so neither can
-      // ever collide with a real category's slug.
-      const leadRows: TopicDetailItem[] =
-        depth === 0
-          ? [
-              { id: ALL_CATEGORIES_ID, label: "All", icon: <LayoutList /> },
-              { id: UNCATEGORIZED_SLUG, label: "Uncategorized", icon: <Inbox />, dividerAfter: true },
-            ]
-          : [];
-      categoryLevels.push({
-        id: `notebook-categories-${depth}`,
-        title,
-        items: [
-          ...leadRows,
-          ...siblings.map(
-            (node): TopicDetailItem => ({
-              id: node.slug,
-              label: node.name,
-              icon: <Folder />,
-              sublabel:
-                node.children.length === 1
-                  ? "1 subcategory"
-                  : node.children.length > 1
-                    ? `${node.children.length} subcategories`
-                    : undefined,
-            }),
-          ),
-        ],
-        selectedId:
-          picked?.slug ??
-          (depth > 0 ? null : uncategorized ? UNCATEGORIZED_SLUG : ALL_CATEGORIES_ID),
-        // Every category discloses more lists (its notes, and any subcategories), so the
-        // detail pane holds through an intermediate pick.
-        leadsTo: "list",
-        itemNoun: "category",
-        onSelect: (slug) => {
-          if (depth === 0 && slug === ALL_CATEGORIES_ID) return onSelectCategory([]);
-          if (depth === 0 && slug === UNCATEGORIZED_SLUG) {
-            return onSelectCategory([UNCATEGORIZED_SLUG]);
-          }
-          onSelectCategory([...ancestors, slug]);
-        },
-        onClear: () => onSelectCategory(ancestors),
-        // The error first, for the same reason the ecosystems level puts it first: a failed read
-        // leaves the rows null, and "Loading…" forever is a lie the user can't act on.
-        emptyLabel:
-          categoriesError ??
-          (categoryRows === null
-            ? "Loading…"
-            : depth === 0
-              ? "No categories yet."
-              : "No subcategories."),
-      });
-      if (!picked || picked.children.length === 0) break;
-      siblings = picked.children;
-      title = picked.name;
-    }
-  }
-
   const rows = notes ?? [];
   const filtering = Boolean(filters.q || filters.category || filters.tag);
   const notesLevel: TopicLevel = {
@@ -664,10 +560,19 @@ export function NotebookPane({
         />
       </HomeBarPortal>
 
-      {/* Every level in one publication: the ecosystems, the category chain, then the notes.
-          StackLevels (not useStackLevel) because the count VARIES with the depth walked into,
-          and it advances the depth for the leaf below by exactly that many. */}
-      <StackLevels levels={[ecosystemsLevel, ...categoryLevels, notesLevel]}>
+      {/* Every level in one publication: the category chain, then the notes. StackLevels (not
+          useStackLevel) because the count VARIES with the depth walked into, and it advances the
+          depth for the leaf below by exactly that many.
+
+          Nothing precedes the category chain here, and that is load-bearing rather than tidy. The
+          stack's frontier is the FIRST level with no selection (`stack-frontier.ts`), and every
+          level below it is not rendered at all. A read-only level — an ecosystems list whose rows
+          were all `disabled`, which is what used to sit at index 0 — can never take a selection, so
+          it pinned the frontier at itself and the rail never drew the categories or the notes: the
+          whole notebook was one list saying which ecosystems the workspace has. A level that cannot
+          be selected is not a level; if the ecosystems belong on this surface, they belong beside
+          the rail, not in front of it. */}
+      <StackLevels levels={[...categoryLevels, notesLevel]}>
         <MasterDetailLeaf
           form={{ actions, editing, draft }}
           trailing={renderRecordAffordance?.({
@@ -732,6 +637,11 @@ export function NotebookPane({
           )}
         />
       )}
+
+      {/* The gear's own dialogs — rename/move/delete/add, scoped to whichever category level
+          the gear was opened from. The flat manager below is the other editor: every category
+          on screen at once, for multi-parent filing and unfiling the gear doesn't reach. */}
+      {categoryDialogs}
 
       {editingCategories && (
         <CategoryManagerDialog

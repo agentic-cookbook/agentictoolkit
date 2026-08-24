@@ -13,6 +13,9 @@
 export { SearchView } from './components/SearchView'
 export type { SearchViewProps } from './components/SearchView'
 
+export { PaperSearchView, paperSearchSource } from './components/PaperSearchView'
+export type { PaperSearchViewProps } from './components/PaperSearchView'
+
 // Configurable seams — types
 export type {
   SearchSource,

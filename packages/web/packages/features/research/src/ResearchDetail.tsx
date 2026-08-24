@@ -1,31 +1,35 @@
 "use client";
 
+import type { ReactNode } from "react";
+
+import { MarkdownDocumentEditor } from "@agentic-toolkit/markdown";
 import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { CategoryField } from "@agentic-toolkit/ui/blocks/category-field";
-import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
-import { MarkdownEditor } from "@agentic-toolkit/ui/blocks/markdown-editor";
+import { CategoriesAndTags } from "@agentic-toolkit/ui/blocks/categories-and-tags";
 import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import type { ResearchInput } from "./research-model";
 
 /**
- * Controlled, fields-only research-document editor — the raw markdown body, plus the
- * category and tags that classify it. Save/Cancel/Delete live in the EditorSection toolbar
- * and publishing lives in its own section; this component only renders the draft and reports
- * edits.
+ * Controlled, fields-only research-document editor — the document's identity, its markdown
+ * body (with a live preview and a side-by-side layout), and the category and tags that
+ * classify it. Save/Cancel/Delete live in the leaf's button bar and publishing lives in the
+ * pane's footer; this component only renders the draft and reports edits.
  *
- * There is no Title field: the backend derives the title (an authored frontmatter title,
- * else the body's first line), so it is the same string in this editor, the list row, the
- * public paper index and the API. A field here could only disagree with them.
+ * The title is still DERIVED — the API accepts none, so every client shows the same string —
+ * and the identity field above does not change that: it writes the frontmatter `title:` key
+ * INSIDE the body, which is the one place an author may state a title. The field is passed in
+ * as `identity` rather than built here because the slug half of it is the PANE's state (see
+ * ResearchPane: a slug has nowhere to be persisted until the paper is published).
  *
- * Category and tags are the shared blocks — {@link CategoryField} for the single value and
- * {@link TagSetField} for the set — so a document classifies exactly the way a note does.
- * This surface passes no category TREE: research reads its categories as the distinct labels
- * present across the user's documents, which is a vocabulary, not a hierarchy, so the field
- * renders its autocomplete/browse pair with no breadcrumb.
+ * This is the shared {@link MarkdownDocumentEditor} — the same editing view any document
+ * surface gets. Nothing here imports its stylesheet: `@agentic-toolkit/markdown/styles` (and
+ * the Tailwind @source registration it carries for the package's own components) already
+ * reaches every family site through adh-family.css -> adh-help.css. A second import from
+ * inside a tsup-built feature package would be a duplicate, not a safeguard.
  */
 export function ResearchDetail({
   draft,
+  identity,
   onChange,
   categoryOptions,
   tagOptions,
@@ -33,6 +37,8 @@ export function ResearchDetail({
   disabled = false,
 }: {
   draft: ResearchInput;
+  /** The title/slug pair, rendered as the editor's header. */
+  identity: ReactNode;
   onChange: (next: ResearchInput) => void;
   categoryOptions: string[];
   tagOptions: string[];
@@ -43,9 +49,16 @@ export function ResearchDetail({
   disabled?: boolean;
 }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-5">
-        <MarkdownEditor
+    // NO `min-h-0` on either box. They are the rest of the editor's chain (see
+    // MarkdownDocumentEditor's root): waiving the content-based minimum here let a short pane
+    // crush the card and the fields inside it painted over each other. `flex-1` without
+    // `min-h-0` still fills a tall pane — it just refuses to go below what it holds, which the
+    // pane's scroller (MasterDetailLeaf's content region) then absorbs.
+    <Card className="flex flex-1 flex-col">
+      <CardContent className="flex flex-1 flex-col gap-5">
+        <MarkdownDocumentEditor
+          fill
+          header={identity}
           label="Markdown body"
           placeholder={"# My research\n\nWrite or paste markdown here, or upload a .md file."}
           value={draft.content}
@@ -61,23 +74,21 @@ export function ResearchDetail({
           }
         />
 
-        <CategoryField
-          label="Category"
-          noun="category"
-          hint="Optional — a single classification label. Type to autocomplete, or Choose to browse."
-          options={categoryOptions}
-          value={draft.category}
-          onChange={(category) => onChange({ ...draft, category })}
-          disabled={disabled}
-        />
-
-        <TagSetField
-          label="Tags"
-          noun="tag"
-          hint="Optional — a set of labels. Type to autocomplete, or Choose to browse."
-          options={tagOptions}
-          value={draft.tags}
-          onChange={(tags) => onChange({ ...draft, tags })}
+        <CategoriesAndTags
+          category={{
+            label: "Categories",
+            noun: "category",
+            options: categoryOptions,
+            value: draft.category,
+            onChange: (category) => onChange({ ...draft, category }),
+          }}
+          tags={{
+            label: "Tags",
+            noun: "tag",
+            options: tagOptions,
+            value: draft.tags,
+            onChange: (tags) => onChange({ ...draft, tags }),
+          }}
           disabled={disabled}
         />
 

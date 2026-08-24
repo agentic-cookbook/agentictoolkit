@@ -25,6 +25,30 @@ export interface ResearchInput {
 // invalid route before the request (and the backend index is the real guard).
 export const PUBLIC_ROUTE_RE = /^[a-z0-9][a-z0-9_-]{1,127}$/;
 
+/** The public route is 2–128 chars (PUBLIC_ROUTE_RE), so the slug is capped there. */
+const MAX_ROUTE = 128;
+
+/**
+ * The slug a title suggests: lowercased, non-alphanumerics collapsed to single dashes,
+ * trimmed of leading/trailing dashes, capped at the route length.
+ *
+ * Deliberately NOT `@agentic-toolkit/ui/lib/slug`'s `slugify`: that one enforces the USER
+ * HANDLE alphabet (≤40 chars, no `_`). A paper route is a different rule with a different
+ * limit, and sharing the function would silently truncate long titles at 40.
+ *
+ * Returns "" when the title yields nothing PUBLIC_ROUTE_RE would accept (empty, all
+ * punctuation, or a single character) — an empty suggestion the caller can leave alone,
+ * rather than a slug the API is guaranteed to reject.
+ */
+export function routeFromTitle(title: string): string {
+  const slug = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .slice(0, MAX_ROUTE)
+    .replace(/^-+|-+$/g, "");
+  return PUBLIC_ROUTE_RE.test(slug) ? slug : "";
+}
+
 export function researchBlank(): ResearchInput {
   return { content: "", category: "", tags: [] };
 }

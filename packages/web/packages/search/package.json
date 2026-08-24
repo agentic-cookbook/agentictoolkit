@@ -47,6 +47,8 @@
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
     "tailwindcss": "^4.0.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",

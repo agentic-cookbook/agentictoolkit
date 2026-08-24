@@ -95,48 +95,16 @@ export function toUpdateBody(input: NoteInput): UpdateNoteBody {
   };
 }
 
-/** Where in the notebook the RAIL is standing. `all` is the whole notebook; `uncategorized`
- *  is the rail row for notes filed nowhere; `named` is a category chain's leaf. */
-export type CategoryScope =
-  | { kind: "all" }
-  | { kind: "uncategorized" }
-  | { kind: "named"; name: string };
-
-/** What a list request can actually ask for, once the rail's scope and the bar's filter are
- *  folded together. */
-export interface ListCategoryQuery {
-  /** The one `?category=` name the request carries — `""` for no category parameter. */
-  query: string;
-  /** Keep only notes with NO category. The backend has no parameter for this axis (a blank
-   *  `category` means "don't filter"), so the caller applies it to the rows it gets back. */
-  uncategorizedOnly: boolean;
-  /** The two axes contradict each other, so nothing can match and no request is worth making. */
-  empty: boolean;
-}
-
-/**
- * Fold the rail's SCOPE and the button bar's category FILTER into one list query.
- *
- * They are two different questions — "which part of the notebook am I in" and "narrow that to
- * this category" — but both are exact category names, and a note has exactly one category. So
- * two DIFFERENT names intersect to nothing. That is reported as `empty` rather than letting one
- * axis quietly win: a user who scoped to Work and then filtered to Personal asked for notes in
- * both, and an empty list is the true answer. Silently showing one or the other would look like
- * a working filter that ignores half of what was asked.
- */
-export function resolveListCategory(scope: CategoryScope, filter: string): ListCategoryQuery {
-  const narrowed = filter.trim();
-  const none = { query: "", uncategorizedOnly: false, empty: false };
-  if (scope.kind === "uncategorized") {
-    // A note in a named category is by definition not uncategorized.
-    if (narrowed) return { ...none, empty: true };
-    return { ...none, uncategorizedOnly: true };
-  }
-  if (scope.kind === "all") return narrowed ? { ...none, query: narrowed } : none;
-  if (!narrowed) return { ...none, query: scope.name };
-  if (narrowed.toLowerCase() === scope.name.toLowerCase()) return { ...none, query: scope.name };
-  return { ...none, empty: true };
-}
+// The rail's scope and the fold that combines it with the button bar's filter now live in
+// @agentic-toolkit/categories/src/category-scope.ts — verbatim the same union and the same
+// function body — because Task 8's research pane needs the identical fold and a second copy
+// is the duplication this move exists to remove. Re-exported here so nothing that imports
+// them from `note-model` has to change.
+export {
+  resolveListCategory,
+  type CategoryScope,
+  type ListCategoryQuery,
+} from "@agentic-toolkit/categories";
 
 /** Distinct, sorted tags present across a set of notes (for the filter dropdown). */
 export function tagsOf(notes: { tags: string[] }[]): string[] {

@@ -37,6 +37,11 @@ export function ErrorText({
  * changes under a screen reader with nothing to announce it, and there is no other
  * route to the reason. Every confirm dialog that can fail in place renders this, so
  * the markup and that reasoning live once instead of once per dialog.
+ *
+ * The TREATMENT is `ErrorText`’s, to the token: same `text-sm`, same `text-apt-red`. The
+ * element is the only thing that differs, because the element is the only thing the `<p>`
+ * nesting rule forces — a second colour here would mean two consecutive failures of the same
+ * kind (a rename refused, then a delete refused) rendering in two different reds.
  */
 export function DialogErrorText({
   error,
@@ -46,7 +51,7 @@ export function DialogErrorText({
   className?: string
 }) {
   return error ? (
-    <span role="alert" className={cn("mt-2 block text-destructive", className)}>
+    <span role="alert" className={cn("mt-2 block text-sm text-apt-red", className)}>
       {error}
     </span>
   ) : null
