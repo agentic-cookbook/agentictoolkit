@@ -3,11 +3,11 @@ id: c57b1aed-ef38-4803-b38a-2d7e0aeced5f
 title: SearchFilterBar
 domain: agenticdeveloperhub://recipes/search-filter-bar
 type: ingredient
-version: 1.0.0
+version: 1.1.0
 status: draft
 language: en
 created: '2026-06-26'
-modified: '2026-06-26'
+modified: '2026-08-24'
 author: Mike Fullerton
 copyright: 2026 Mike Fullerton
 license: MIT
@@ -56,14 +56,27 @@ adapter that maps its `{ q, category, tag }` state onto this component).
   order, with a leading all-pass option whose value is the empty string and whose
   text is `allLabel`.
 - **must-list-caller-options**: The SearchFilterBar MUST render each filter's
-  `options` (in order) as `<option>`s after the all-pass entry, using the string
-  as both the value and the visible text.
+  `options` (in order) as `<option>`s after the all-pass entry. A bare string
+  option MUST be used as both the value and the visible text; a
+  `{ value, label }` option MUST store `value` and read as `label`. The two forms
+  MUST be mixable on one axis.
 - **must-reflect-and-report-filter-value**: The SearchFilterBar MUST set each
   select's current value from the filter's `value` and call that filter's
   `onChange` with the newly selected value (the empty string when the all-pass
   entry is chosen).
+- **must-render-extra-controls-in-filter-row**: The SearchFilterBar MUST render
+  `children` in the filter row, after any `filters`, so a caller-supplied control
+  is one more axis on the same row rather than a second bar.
 - **must-omit-empty-filter-row**: The SearchFilterBar MUST NOT render the filter
-  row when `filters` is empty or omitted (a search-only bar).
+  row when it would be empty — no `filters` and no `children` that React would
+  actually render (a `false`/`null` child does not open the row).
+- **must-lay-out-by-orientation**: The SearchFilterBar MUST stack the filter row
+  under the search field by default (`orientation="stacked"`), and MUST lay the
+  field and the row out as one wrapping line when `orientation="inline"`, the
+  search field taking the free space with a minimum width of its own.
+- **may-scope-autofill-with-a-form**: The SearchFilterBar MAY root itself on a
+  `<form>` instead of a `<div>` when `asForm` is set, carrying `role="search"`
+  onto that element and cancelling its `submit`. It MUST default to the `<div>`.
 
 ## Appearance
 
@@ -77,13 +90,19 @@ role="search"
 └─────────────────────┘ └─────────────────────┘
 ```
 
-- Root: `flex flex-col gap-2` (+ any `className`), `role="search"`.
+- Root: `flex flex-col gap-2` when stacked, `flex flex-wrap items-center gap-2`
+  when inline (+ any `className`), `role="search"` — on a `<div>`, or on a
+  `<form>` when `asForm` is set.
 - Search: the shared `Input` (`type="search"`, `className="pl-8"`) with a
   `lucide-react` `Search` icon absolutely positioned at the left
   (`absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-apt-text-muted`,
   `aria-hidden`, `pointer-events-none`).
 - Filter row: `flex gap-2`, each child the shared `Select` (full-width, so two
-  selects share the row evenly and stack gracefully on narrow viewports).
+  selects share the row evenly and stack gracefully on narrow viewports),
+  followed by any `children`.
+- Inline only: the search field's wrapper takes `min-w-48 flex-1` — a bare
+  `flex-1` would let an empty field collapse to its icon, since a flex item's
+  floor is its content width and an empty search box has none.
 - Colors are inherited from the `Input`/`Select` primitives — `apt-*` tokens only,
   no raw hex, no `!important`.
 
@@ -100,7 +119,11 @@ role="search"
 
 ## Accessibility
 
-- The container is a `role="search"` landmark region.
+- The container is a `role="search"` landmark region, optionally named by
+  `aria-label` — recommended when a page carries more than one search region.
+  `asForm` moves that role onto a `<form>`, which changes nothing for assistive
+  tech: a `<form>` is a landmark only once it is named, and this one's name and
+  role are the region's.
 - The search field is labelled by `search.label` via `aria-label` (icon-only, no
   visible `<label>`), and is a `type="search"` box (`role="searchbox"`).
 - Each filter `Select` is labelled by its `label` via `aria-label`.
@@ -118,6 +141,11 @@ role="search"
 | T4 | must-render-one-select-per-filter, must-list-caller-options | Two filters (`category` opts `[Agents, Retrieval]`, `tag` opts `[rag]`) | Two labelled selects; `category` lists `All categories`, `Agents`, `Retrieval` (in order); `tag` lists `All tags`, `rag` |
 | T5 | must-reflect-and-report-filter-value | `category.value="Agents"`; select `Retrieval` | Select shows `Agents` initially; `category.onChange("Retrieval")` fires |
 | T6 | must-reflect-and-report-filter-value | `category.value="Agents"`; choose `All categories` | `category.onChange("")` fires |
+| T7 | must-list-caller-options | One axis, `options: [{ value: "st-1", label: "Todo" }, { value: "st-2", label: "Done" }]`; select `Done` | Options read `Todo`/`Done` and none reads `st-1`; `onChange("st-2")` fires |
+| T8 | must-list-caller-options | One axis, `options: ["Backlog", { value: "it-1", label: "Sprint 3" }]` | Option `Backlog` has value `Backlog`; option `Sprint 3` has value `it-1` |
+| T9 | must-render-extra-controls-in-filter-row, must-omit-empty-filter-row | One filter plus a `<button>Platforms</button>` child; then the same child with no filters; then `{false}` as the only child | Button and select share one row; the child alone still draws the row; `{false}` draws no row (one child element under the root) |
+| T10 | must-lay-out-by-orientation | Render default, then rerender `orientation="inline"` | Root has `flex-col` by default; inline drops it for `flex-wrap`, and the field wrapper carries `flex-1 min-w-48` |
+| T11 | may-scope-autofill-with-a-form | Render default, then rerender `asForm` | Root is a `DIV`, then a `FORM`; exactly one `role="search"` either way; `fireEvent.submit` on the form reports the event cancelled |
 
 ## Edge Cases
 
@@ -138,8 +166,12 @@ role="search"
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `search` | `SearchFieldConfig` | — (required) | The search field config (see below) |
-| `filters` | `FilterSelectConfig[]` | `[]` | Filter selects rendered in a row under the search field |
+| `filters` | `FilterSelectConfig[]` | `[]` | Filter selects rendered in the filter row |
+| `orientation` | `"stacked" \| "inline"` | `"stacked"` | Filter row under the field, or one wrapping line with it |
+| `children` | `React.ReactNode` | — | Extra filter controls, rendered in the row after `filters` |
+| `asForm` | `boolean` | `false` | Root on a `<form>` (submit cancelled) rather than a `<div>`, to scope autofill |
 | `className` | `string` | — | Extra classes on the `role="search"` root |
+| `aria-label` | `string` | — | Accessible name for the `role="search"` landmark |
 
 ```ts
 interface SearchFieldConfig {
@@ -147,13 +179,19 @@ interface SearchFieldConfig {
   onChange: (value: string) => void   // called per keystroke
   label: string                       // accessible name (icon-only field)
   placeholder?: string
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void
+}
+
+interface FilterSelectOption {
+  value: string                       // what the axis stores and reports
+  label: string                       // what the option reads as
 }
 
 interface FilterSelectConfig {
   name: string                        // stable React key / axis id
   label: string                       // accessible name for the select
   value: string                       // selected value ("" = all-pass)
-  options: string[]                   // value === visible text
+  options: readonly (string | FilterSelectOption)[]  // bare string = value is the text
   allLabel: string                    // text of the leading all-pass option
   onChange: (value: string) => void   // called with the new value ("" = all-pass)
 }
@@ -161,7 +199,11 @@ interface FilterSelectConfig {
 interface SearchFilterBarProps {
   search: SearchFieldConfig
   filters?: FilterSelectConfig[]
+  orientation?: "stacked" | "inline"
+  children?: React.ReactNode
+  asForm?: boolean
   className?: string
+  "aria-label"?: string
 }
 export function SearchFilterBar(props: SearchFilterBarProps): React.ReactElement
 ```
@@ -175,9 +217,16 @@ fetch + telemetry), not by the bar.
 ## Platform Notes
 
 - **React / Web (TypeScript):** Component at
-  `websites/shared/ui/src/components/search-filter-bar.tsx`, composing the shared
-  `Input` and `Select` primitives. Demoed in `ui-showcase` (Forms group). The hub
-  `ResearchFilters` adapts its `{ q, category, tag }` `FilterState` onto it.
+  `packages/web/packages/ui/src/components/search-filter-bar.tsx` in the
+  agentictoolkit repo, composing the shared `Input` and `Select` primitives.
+  Demoed in `ui-showcase` (Forms group). The hub `ResearchFilters` adapts its
+  `{ q, category, tag }` `FilterState` onto it.
+- **iOS / Safari:** a search field with no `<form>` ancestor is scoped for
+  autofill against the whole document, so on a page that also carries
+  contact-shaped content iOS can offer "AutoFill Contact" over the search box.
+  `asForm` is the fix for those pages; the attribute bag the shared `Input`
+  applies (`autocomplete="off"` plus the password-manager opt-outs) is not
+  sufficient on its own.
 - **SwiftUI / Compose:** Not applicable — web-only shared component.
 
 ## Design Decisions
@@ -187,10 +236,27 @@ fetch + telemetry), not by the bar.
   implicit — the bar owns no list/data state; it cannot desync from the consumer,
   and the consumer keeps option universes stable so narrowing never empties a
   dropdown.
-- **Decision**: Options are plain `string[]` (value === text), not
-  `{ value, label }`. **Rationale**: yagni — the only consumer uses string-equals
-  options; a richer option type is a cheap, reversible addition if a future
-  consumer needs value != label.
+- **Decision**: An option is a bare string *or* a `{ value, label }` pair, and the
+  two mix on one axis. **Rationale**: the original `string[]` was a yagni bet that
+  a consumer proved wrong — an axis over *records* (a status, an iteration, an
+  owner) filters by id and reads as a name. Making the caller keep a label↔id
+  codec of its own would be a lossy guess about data it already holds correctly:
+  two ids can share a display name, and two names can share an id. The bare string
+  stays as the shorthand for the case where they coincide, so no existing caller
+  had to change.
+- **Decision**: `children` land in the filter row rather than in a config union.
+  **Rationale**: yagni / optimize-for-change — `filters` covers the single-select
+  axis, which is most of them; an axis that is genuinely a different control (a
+  multi-select, a date range, a toggle group) composes at the call site instead of
+  growing a union that has to describe every control the platform will ever filter
+  with. The bar supplies the landmark, the field and the row.
+- **Decision**: `asForm` lives here, off by default, rather than each host
+  wrapping the bar in its own `<form>`. **Rationale**: dry — "a search field with
+  no form ancestor is autofilled against the whole document" is a property of
+  search fields, not of any one page, and it is a measured platform quirk that
+  needs a paragraph to be legible at a call site. Default-off because a bar
+  rendered inside a host's own form would nest one, which the parser resolves by
+  dropping it.
 - **Decision**: Compose the existing `Input` + `Select` primitives rather than
   restyle. **Rationale**: dry / consistency — the bar inherits the standard
   focus-ring and token treatment, so it matches every other field on the platform.
@@ -211,3 +277,4 @@ fetch + telemetry), not by the bar.
 | Version | Date | Author | Summary |
 |---|---|---|---|
 | 1.0.0 | 2026-06-26 | Mike Fullerton | Initial recipe — extracted from the hub research filter bar into `@adh-shared/ui`. |
+| 1.1.0 | 2026-08-24 | Mike Fullerton | Added `asForm` for the iOS autofill scoping the registry search needs. Brought the spec back level with the component: `{ value, label }` options, `orientation`, `children`, `aria-label`, `onKeyDown`, and the moved source path. |

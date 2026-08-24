@@ -91,6 +91,22 @@ export interface SearchFilterBarProps {
    * bar supplies the landmark, the field and the row.
    */
   children?: React.ReactNode;
+  /**
+   * Render the root as a `<form>` that submits nothing, instead of a `<div>`.
+   *
+   * This is an autofill fix, not a submission mechanism — every axis is already
+   * live through `onChange`, and the form's `onSubmit` is cancelled. A field with
+   * no `<form>` ancestor is scoped for autofill against the whole DOCUMENT, so a
+   * page that also carries name/email/address content can offer "AutoFill
+   * Contact" over a search box. Measured on iOS 26 in the chat composer: stripping
+   * every attribute off the input did not move it, and giving the field a form of
+   * its own did. The attribute bag {@link Input} already applies is the other half
+   * of the fix and is not sufficient alone.
+   *
+   * Off by default, because a bar rendered inside a host's own `<form>` would
+   * nest one — which the HTML parser resolves by dropping it.
+   */
+  asForm?: boolean;
   /** Extra classes on the `role="search"` root. */
   className?: string;
   /**
@@ -113,6 +129,7 @@ export function SearchFilterBar({
   filters = [],
   orientation = "stacked",
   children,
+  asForm = false,
   className,
   "aria-label": ariaLabel,
 }: SearchFilterBarProps): React.ReactElement {
@@ -121,15 +138,16 @@ export function SearchFilterBar({
   // the row is drawn for what React would actually render, not for whether the prop
   // was passed.
   const hasControls = filters.length > 0 || Boolean(children);
-  return (
-    <div
-      role="search"
-      aria-label={ariaLabel}
-      className={cn(
-        inline ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2",
-        className,
-      )}
-    >
+  const rootProps = {
+    role: "search",
+    "aria-label": ariaLabel,
+    className: cn(
+      inline ? "flex flex-wrap items-center gap-2" : "flex flex-col gap-2",
+      className,
+    ),
+  };
+  const body = (
+    <>
       {/* `min-w-48` rather than a bare `flex-1`: a flex item's floor is its content
           width, and an empty search field has none, so on a narrow bar the field
           would collapse to the icon and hand every spare pixel to the controls. */}
@@ -168,6 +186,16 @@ export function SearchFilterBar({
           {children}
         </div>
       )}
-    </div>
+    </>
+  );
+  // `role="search"` rides on whichever element is the root: a `<form>` is a
+  // landmark only once it is named, so the two shapes read identically to
+  // assistive tech.
+  return asForm ? (
+    <form {...rootProps} onSubmit={(e) => e.preventDefault()}>
+      {body}
+    </form>
+  ) : (
+    <div {...rootProps}>{body}</div>
   );
 }

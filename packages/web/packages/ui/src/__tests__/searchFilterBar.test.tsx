@@ -219,4 +219,39 @@ describe('SearchFilterBar', () => {
     expect(field.className).toContain('flex-1')
     expect(field.className).toContain('min-w-48')
   })
+
+  it('roots on a div by default and on a form when asked to', () => {
+    // The form is an autofill fix, not a submission mechanism: a field with no
+    // form ancestor is scoped for autofill against the whole document, so a page
+    // carrying contact-shaped content can offer "AutoFill Contact" over a search
+    // box. The default stays a div because a bar inside a host's own form would
+    // nest one, and the parser resolves that by dropping it.
+    const { container, rerender } = render(<SearchFilterBar search={baseSearch()} />)
+    const root = () => container.querySelector('[role="search"]')!
+    expect(root().tagName).toBe('DIV')
+
+    rerender(<SearchFilterBar search={baseSearch()} asForm />)
+    expect(root().tagName).toBe('FORM')
+    // Still exactly one landmark — the role moves with the root, it is not added.
+    expect(screen.getAllByRole('search')).toHaveLength(1)
+  })
+
+  it('cancels a submit rather than letting the form navigate', () => {
+    // Every axis is already live through `onChange`, so a submit has nothing to
+    // do — and an uncancelled one reloads the page with the field in the query
+    // string. `fireEvent` reports a cancelled event as `false`.
+    const { container } = render(<SearchFilterBar search={baseSearch()} asForm />)
+    expect(fireEvent.submit(container.querySelector('form')!)).toBe(false)
+  })
+
+  it('keeps the autofill attribute bag on the field', () => {
+    // The form is one half of the fix; the attributes the shared `Input` applies
+    // are the other, and they are what the password managers read. Asserted here
+    // because a field that quietly loses them looks identical.
+    render(<SearchFilterBar search={baseSearch()} asForm />)
+    const box = screen.getByRole('searchbox')
+    expect(box).toHaveAttribute('autocomplete', 'off')
+    expect(box).toHaveAttribute('data-1p-ignore')
+    expect(box).toHaveAttribute('data-lpignore')
+  })
 })
