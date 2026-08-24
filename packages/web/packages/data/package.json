@@ -62,6 +62,11 @@
       "development": "./src/notes/index.ts",
       "import": "./dist/notes/index.js"
     },
+    "./docs": {
+      "types": "./dist/docs/index.d.ts",
+      "development": "./src/docs/index.ts",
+      "import": "./dist/docs/index.js"
+    },
     "./personas": {
       "types": "./dist/personas/index.d.ts",
       "development": "./src/personas/index.ts",

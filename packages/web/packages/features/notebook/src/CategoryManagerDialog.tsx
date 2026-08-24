@@ -16,7 +16,8 @@ import {
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
-import { notesApi, taxonomyApi, type NoteCategory } from "@agentic-toolkit/data/notes";
+import { markdownApi } from "@agentic-toolkit/data/markdown";
+import { taxonomyApi, type NoteCategory } from "@agentic-toolkit/data/notes";
 
 import {
   buildCategoryTree,
@@ -77,8 +78,10 @@ function errorText(err: unknown, fallback: string): string {
  *
  * Four things about the writes are worth knowing at this call site:
  *
- *  - **Add goes through the MARKDOWN door** (`notesApi.createCategory`), not the generic CRUD
- *    one the others use. Only that door resolves `?workspace=` to the owning principal, so a
+ *  - **Add goes through the MARKDOWN door** (`markdownApi.createCategory`), not the generic CRUD
+ *    one the others use. It is reached directly rather than through a corpus client because the
+ *    category vocabulary is not any one corpus's — notes, docs and papers share it, and the
+ *    per-corpus clients only ever forwarded this call to exactly this function. Only that door resolves `?workspace=` to the owning principal, so a
  *    category added while looking at an ORG workspace belongs to the org rather than to
  *    whoever clicked Add. Rename/file/unfile/delete address a row BY ID, which is already
  *    unambiguous, so they need no such resolution.
@@ -189,7 +192,7 @@ export function CategoryManagerDialog({
       return;
     }
     const ok = await run("new", "create", () =>
-      notesApi.createCategory(
+      markdownApi.createCategory(
         { name: newName.trim(), parentIds: newParent === "" ? [] : [newParent] },
         { workspace: workspaceSlug },
       ),

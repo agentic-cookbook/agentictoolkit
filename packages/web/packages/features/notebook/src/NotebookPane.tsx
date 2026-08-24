@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { NotebookPen } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
@@ -24,7 +23,6 @@ import {
   useResourceList,
 } from "@agentic-toolkit/data";
 import {
-  notesApi,
   taxonomyApi,
   type Note,
   type NoteCategory,
@@ -45,6 +43,7 @@ import {
   type NoteInput,
 } from "./note-model";
 import { UNCATEGORIZED_SLUG } from "./parse-path";
+import { NOTES_CORPUS, type NotebookCorpus } from "./corpus";
 import { usePreviewLines } from "./preview-lines";
 import { NoteDetail, NoteFields } from "./NoteDetail";
 import { NoteButtonBar, type FilterState } from "./NoteButtonBar";
@@ -101,6 +100,7 @@ export function NotebookPane({
   onSelectCategory,
   onSelectNote,
   workspaceSlug,
+  corpus = NOTES_CORPUS,
 }: {
   /** The selected category chain from the URL, outermost first. */
   categorySlugs: string[];
@@ -121,7 +121,12 @@ export function NotebookPane({
    *  carries only its creator's stamp. Org-SHARED note semantics are still undesigned — the
    *  placeholder is deliberate, and it lives at this one seam. */
   workspaceSlug?: string;
+  /** WHICH SHELF this pane is standing in front of — see {@link NotebookCorpus}. Defaults to
+   *  the owner's notes, so every existing caller means what it always did; `DOCS_CORPUS` is
+   *  the same surface over `content.docs`. */
+  corpus?: NotebookCorpus;
 }) {
+  const { api, noun } = corpus;
   // ── Data ────────────────────────────────────────────────────────────────
   // Two filter values, not one. `filters` is what the button bar shows and changes on every
   // keystroke; `applied` is what the list READS, and lags it by the debounce. The debounce used
@@ -153,33 +158,41 @@ export function NotebookPane({
   // to the same owner it scopes the documents to, so the workspace is in the key.
   const loadCategories = useCallback(async () => {
     try {
-      return await notesApi.categories({ workspace: workspaceSlug });
+      return await api.categories({ workspace: workspaceSlug });
     } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
-      throw err instanceof Error ? err : new Error("Failed to load categories.");
+      reportUnexpectedAuthError(err, {
+        feature: corpus.feature,
+        step: "taxonomy",
+      });
+      throw err instanceof Error
+        ? err
+        : new Error("Failed to load categories.");
     }
-  }, [workspaceSlug]);
+  }, [api, corpus.feature, workspaceSlug]);
 
   const loadTags = useCallback(async () => {
     try {
-      return await notesApi.tagSet({ workspace: workspaceSlug });
+      return await api.tagSet({ workspace: workspaceSlug });
     } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "taxonomy" });
+      reportUnexpectedAuthError(err, {
+        feature: corpus.feature,
+        step: "taxonomy",
+      });
       throw err;
     }
-  }, [workspaceSlug]);
+  }, [api, corpus.feature, workspaceSlug]);
 
   const {
     items: categoryRows,
     error: categoriesError,
     reload: reloadCategories,
   } = useResourceList<NoteCategory>(
-    `notes:${workspaceSlug ?? ""}:categories`,
+    `${corpus.cacheKey}:${workspaceSlug ?? ""}:categories`,
     loadCategories,
     { reportErrors: false },
   );
   const { items: tagItems, reload: reloadTags } = useResourceList<NoteTag>(
-    `notes:${workspaceSlug ?? ""}:tags`,
+    `${corpus.cacheKey}:${workspaceSlug ?? ""}:tags`,
     loadTags,
     { reportErrors: false },
   );
@@ -207,19 +220,27 @@ export function NotebookPane({
     chainSlugs: categorySlugs,
     onSelectChain: onSelectCategory,
     onChanged: onCategoriesChanged,
-    itemNoun: "notes",
-    idPrefix: "notebook",
+    itemNoun: noun.many,
+    idPrefix: corpus.idPrefix,
     workspaceSlug,
   });
 
   // The RESOLVED chain is what every navigation is built from, not the raw URL slugs, so a
   // stale deep link normalises to what still exists the moment anything is clicked.
   const uncategorized = scope.kind === "uncategorized";
-  const chainSlugs = uncategorized ? [UNCATEGORIZED_SLUG] : chain.map((node) => node.slug);
+  const chainSlugs = uncategorized
+    ? [UNCATEGORIZED_SLUG]
+    : chain.map((node) => node.slug);
   const activeCategory: CategoryNode | null = chain[chain.length - 1] ?? null;
   const activeCategoryName = activeCategory?.name ?? "";
-  const categoryOptions = useMemo(() => categoryNames(categoryRows ?? []), [categoryRows]);
-  const tagOptions = useMemo(() => (tagItems ?? []).map((tag) => tag.label), [tagItems]);
+  const categoryOptions = useMemo(
+    () => categoryNames(categoryRows ?? []),
+    [categoryRows],
+  );
+  const tagOptions = useMemo(
+    () => (tagItems ?? []).map((tag) => tag.label),
+    [tagItems],
+  );
   const previewLines = usePreviewLines();
 
   // What the rail's placement and the bar's category filter jointly ask for. Derived here rather
@@ -247,24 +268,36 @@ export function NotebookPane({
     try {
       // `category` is an EXACT name match on the backend, which is what makes a category
       // hold only its own notes; the subcategories are their own levels.
-      const rows = await notesApi.list(
+      const rows = await api.list(
         { q: applied.q, tag: applied.tag, category: plan.query },
         { workspace: workspaceSlug },
       );
-      return plan.uncategorizedOnly ? rows.filter((row) => !row.category) : rows;
+      return plan.uncategorizedOnly
+        ? rows.filter((row) => !row.category)
+        : rows;
     } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "list" });
+      reportUnexpectedAuthError(err, { feature: corpus.feature, step: "list" });
       // `errorText`'s wording, raised here so it survives the hook's own generic fallback.
-      throw err instanceof Error ? err : new Error("Failed to load notes.");
+      throw err instanceof Error
+        ? err
+        : new Error(`Failed to load ${noun.many}.`);
     }
-  }, [plan, applied.q, applied.tag, workspaceSlug]);
+  }, [
+    api,
+    corpus.feature,
+    noun.many,
+    plan,
+    applied.q,
+    applied.tag,
+    workspaceSlug,
+  ]);
 
   // Keyed by the rail's SCOPE as well as the filters: walking into a category and back out is
   // two keys, each already read, so the second walk is a repaint rather than a round trip. The
   // scope has to be in the key spelled out — "uncategorized" is a scope no category name can
   // express, and an unfiltered list under a named category is not the whole notebook.
   const scopeKey = uncategorized ? UNCATEGORIZED_SLUG : activeCategoryName;
-  const listPrefix = `notes:${workspaceSlug ?? ""}:list:`;
+  const listPrefix = `${corpus.cacheKey}:${workspaceSlug ?? ""}:list:`;
   const listKey = `${listPrefix}${scopeKey}|${applied.q}|${applied.category}|${applied.tag}`;
   const {
     items: notes,
@@ -301,7 +334,10 @@ export function NotebookPane({
   // and read back only while that note is still open (see `formError` below). The loader this
   // pane used to own cleared the message on every selection change; deriving it does the same
   // for the URL path — Back, a deep link — which never runs through a click handler.
-  const [raisedError, setRaisedError] = useState<{ id: string | null; text: string } | null>(null);
+  const [raisedError, setRaisedError] = useState<{
+    id: string | null;
+    text: string;
+  } | null>(null);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   // Re-entrancy latch for `onSave`. The `saving` STATE can't do this job: it is a render
@@ -313,10 +349,10 @@ export function NotebookPane({
   // ── The open note ──────────────────────────────────────────────────────────
   // Cached per WORKSPACE, because `?workspace=` decides which principal's copy a read returns —
   // one key for a note id would let an org workspace paint the caller's own copy of it.
-  const noteCacheKey = `notes:${workspaceSlug ?? ""}`;
+  const noteCacheKey = `${corpus.cacheKey}:${workspaceSlug ?? ""}`;
   const loadNote = useCallback(
-    (id: string) => notesApi.get(id, { workspace: workspaceSlug }),
-    [workspaceSlug],
+    (id: string) => api.get(id, { workspace: workspaceSlug }),
+    [api, workspaceSlug],
   );
   // Replaces the loader this pane hand-rolled: a `loadBody` + an out-of-order token + a "which
   // id is the form bound to" ref + a URL-sync effect that had to remember to skip itself. All
@@ -337,7 +373,9 @@ export function NotebookPane({
   const writeNote = useResourceItemWriter<Note>(noteCacheKey);
 
   // The server's copy, as the form would hold it.
-  const baseline: NoteInput | null = selectedNote ? noteToInput(selectedNote) : null;
+  const baseline: NoteInput | null = selectedNote
+    ? noteToInput(selectedNote)
+    : null;
   // The user's in-progress edits, or null when the form is simply showing what the server has.
   //
   // It carries the id it belongs to, and the draft is DERIVED from it rather than copied into
@@ -345,24 +383,34 @@ export function NotebookPane({
   // all. A revalidation landing under a user who is not typing is adopted immediately; one
   // landing under a user who IS typing loses to the override; and a selection change discards
   // it, because an override for another note is not this note's draft.
-  const [override, setOverride] = useState<{ id: string; value: NoteInput } | null>(null);
-  const draft = override && override.id === selectedId ? override.value : baseline;
+  const [override, setOverride] = useState<{
+    id: string;
+    value: NoteInput;
+  } | null>(null);
+  const draft =
+    override && override.id === selectedId ? override.value : baseline;
 
   // The scoped read/write pair for `raisedError` above. Clearing is unscoped on purpose: there
   // is only ever one message, so "no error" needs no id to be about.
-  const formError = raisedError && raisedError.id === selectedId ? raisedError.text : null;
+  const formError =
+    raisedError && raisedError.id === selectedId ? raisedError.text : null;
   const setFormError = useCallback(
-    (text: string | null) => setRaisedError(text === null ? null : { id: selectedId, text }),
+    (text: string | null) =>
+      setRaisedError(text === null ? null : { id: selectedId, text }),
     [selectedId],
   );
 
   const dirty = Boolean(draft && baseline && noteDiffers(draft, baseline));
-  const validationError = draft ? noteValidate(draft) : null;
+  const validationError = draft ? noteValidate(draft, noun.one) : null;
   // Dirty AND valid AND settled. `isSettled` is the successor to the old `!loadingNote` term and
   // carries one more rule with it: a save composed against a CACHED copy would PUT fields the
   // server has since changed. The busy term stays at the button, which already renders
   // `disabled={!canSave || saving}`.
-  const canSave = Boolean(draft && baseline) && dirty && validationError === null && isSettled;
+  const canSave =
+    Boolean(draft && baseline) &&
+    dirty &&
+    validationError === null &&
+    isSettled;
   // Delete waits on the same signal for the same reason: it is a write against a copy that may
   // already be out of date.
   const canDelete = selectedId !== null && isSettled && !saving && !deleting;
@@ -386,7 +434,7 @@ export function NotebookPane({
     // Already in flight — swallow the duplicate. Reporting `false` is right for the exit
     // guard too: nothing has been persisted YET, so leaving now would still lose the edit.
     if (savingRef.current) return false;
-    const problem = noteValidate(draft);
+    const problem = noteValidate(draft, noun.one);
     if (problem) {
       setFormError(problem);
       return false;
@@ -398,7 +446,7 @@ export function NotebookPane({
     try {
       // Create is a modal (see the CreateResourceDialog below); onSave only ever UPDATES.
       if (selectedId) {
-        const updated = await notesApi.update(selectedId, toUpdateBody(input), {
+        const updated = await api.update(selectedId, toUpdateBody(input), {
           workspace: workspaceSlug,
         });
         await refresh();
@@ -410,7 +458,7 @@ export function NotebookPane({
       }
       return true;
     } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "save" });
+      reportUnexpectedAuthError(err, { feature: corpus.feature, step: "save" });
       setFormError(errorText(err, "Failed to save."));
       return false;
     } finally {
@@ -431,7 +479,7 @@ export function NotebookPane({
     if (!selectedId) return;
     setDeleting(true);
     try {
-      await notesApi.remove(selectedId, { workspace: workspaceSlug });
+      await api.remove(selectedId, { workspace: workspaceSlug });
       setPendingDelete(false);
       // Forget the body BEFORE leaving. Keeping it would paint a note we know is gone if the
       // user navigated back to its URL, and only the GET behind that paint would take it away.
@@ -440,7 +488,10 @@ export function NotebookPane({
       setOverride(null);
       await refresh();
     } catch (err) {
-      reportUnexpectedAuthError(err, { feature: "notebook-pane", step: "delete" });
+      reportUnexpectedAuthError(err, {
+        feature: corpus.feature,
+        step: "delete",
+      });
       setFormError(errorText(err, "Failed to delete."));
       setPendingDelete(false);
     } finally {
@@ -451,32 +502,31 @@ export function NotebookPane({
   const rows = notes ?? [];
   const filtering = Boolean(filters.q || filters.category || filters.tag);
   const notesLevel: TopicLevel = {
-    id: "notebook-notes",
-    title: "Notes",
-    items: rows.map(
-      (note): TopicDetailItem => ({
-        id: note.id,
-        label: note.title || "Untitled",
-        icon: <NotebookPen />,
-        // Inside a category every row shares it, so the one sublabel line spends itself on
-        // tags; in the whole-notebook list the category is the row's most useful fact.
-        sublabel:
-          [activeCategory ? null : note.category, ...note.tags].filter(Boolean).join(" · ") ||
-          undefined,
-        preview: previewLines > 0 ? note.excerpt || undefined : undefined,
-        previewLines,
-        // The open note can't be saved, and the row is where the user is looking when they
-        // wonder why Save is grey. The reason itself is on the field, in the editor.
-        blocked: note.id === selectedId && validationError !== null,
-      }),
-    ),
+    id: corpus.levelId,
+    title: noun.Many,
+    items: rows.map((note): TopicDetailItem => ({
+      id: note.id,
+      label: note.title || "Untitled",
+      icon: corpus.icon,
+      // Inside a category every row shares it, so the one sublabel line spends itself on
+      // tags; in the whole-notebook list the category is the row's most useful fact.
+      sublabel:
+        [activeCategory ? null : note.category, ...note.tags]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      preview: previewLines > 0 ? note.excerpt || undefined : undefined,
+      previewLines,
+      // The open note can't be saved, and the row is where the user is looking when they
+      // wonder why Save is grey. The reason itself is on the field, in the editor.
+      blocked: note.id === selectedId && validationError !== null,
+    })),
     selectedId,
-    itemNoun: "note",
+    itemNoun: noun.one,
     onSelect: (id) => onSelectNote(id, chainSlugs),
     // Hovering (or tabbing to) a row for a moment warms its body, so the click that follows has
     // nothing left to wait for.
     onPrefetch: prefetchNote,
-    // The spinner in front of "Notes" — the one signal that a read is happening, now that the
+    // The spinner in front of the level title — the one signal that a read is happening, now that the
     // editor paints the cached copy instead of blanking to "Loading…".
     busy: fetchingNote,
     onClear: onCancel,
@@ -484,12 +534,12 @@ export function NotebookPane({
       notes === null
         ? "Loading…"
         : filtering
-          ? "No notes match these filters."
+          ? `No ${noun.many} match these filters.`
           : uncategorized
-            ? "Every note is filed in a category."
+            ? `Every ${noun.one} is filed in a category.`
             : activeCategory
-              ? "No notes in this category yet."
-              : "No notes yet.",
+              ? `No ${noun.many} in this category yet.`
+              : `No ${noun.many} yet.`,
     titleActions: <NoteListOptions />,
   };
 
@@ -525,13 +575,14 @@ export function NotebookPane({
     categoryNodes: categoryRows ?? [],
     onRenameCategory: renameCategory,
     tagOptions,
+    noun,
   };
 
   // The frontier leaf: a portaled Save/Cancel/Delete bar over the editor (or a placeholder).
   // The lists live in the published rail above, so this renders ONLY the editor half.
   const actions: MasterDetailActions = {
     onCreate: () => setNewNoteOpen(true),
-    createLabel: "New note",
+    createLabel: `New ${noun.one}`,
     onCancel,
     canCancel: editing,
     onSave: () => void onSave(),
@@ -557,6 +608,7 @@ export function NotebookPane({
           onEditCategories={() => setEditingCategories(true)}
           onEditTags={() => setEditingTags(true)}
           onCreateNote={() => setNewNoteOpen(true)}
+          noun={noun}
         />
       </HomeBarPortal>
 
@@ -578,7 +630,7 @@ export function NotebookPane({
           trailing={renderRecordAffordance?.({
             path: "/content/markdown/{id}",
             pathValues: { id: selectedId },
-            title: "Note API",
+            title: `${noun.One} API`,
           })}
           error={listError ?? formError ?? noteError}
           emptyTitle={
@@ -586,7 +638,7 @@ export function NotebookPane({
             // cached note and the editor below renders instead.
             fetchingNote || notes === null
               ? "Loading…"
-              : "Select a note to edit, or write a new one."
+              : `Select a ${noun.one} to edit, or write a new one.`
           }
           renderDetail={(d) => (
             <div className="flex flex-col gap-4">
@@ -613,12 +665,18 @@ export function NotebookPane({
           being unable to say otherwise. */}
       {newNoteOpen && (
         <CreateResourceDialog<NoteInput, Note>
-          ariaLabel="New note"
-          heading={activeCategory ? `New note in ${activeCategory.name}` : "New note"}
+          ariaLabel={`New ${noun.one}`}
+          heading={
+            activeCategory
+              ? `New ${noun.one} in ${activeCategory.name}`
+              : `New ${noun.one}`
+          }
           blank={() => ({ ...noteBlank(), category: activeCategoryName })}
-          validate={noteValidate}
+          validate={(d) => noteValidate(d, noun.one)}
           create={(d) =>
-            notesApi.create(toCreateBody(noteNormalize(d)), { workspace: workspaceSlug })
+            api.create(toCreateBody(noteNormalize(d)), {
+              workspace: workspaceSlug,
+            })
           }
           onClose={() => setNewNoteOpen(false)}
           onCreated={(created) => {
@@ -633,7 +691,12 @@ export function NotebookPane({
             setFormError(null);
           }}
           renderForm={(d, onDraftChange, error) => (
-            <NoteFields {...noteFieldProps} draft={d} onChange={onDraftChange} error={error} />
+            <NoteFields
+              {...noteFieldProps}
+              draft={d}
+              onChange={onDraftChange}
+              error={error}
+            />
           )}
         />
       )}
@@ -663,8 +726,8 @@ export function NotebookPane({
       <AlertModal
         open={pendingDelete}
         destructive
-        title="Delete note?"
-        description="This soft-deletes the note and removes it from your notes bucket."
+        title={`Delete ${noun.one}?`}
+        description={`This soft-deletes the ${noun.one} and removes it from your ${noun.many} bucket.`}
         confirmLabel="Delete"
         cancelLabel="Cancel"
         busy={deleting}

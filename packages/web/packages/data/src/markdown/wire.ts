@@ -48,7 +48,10 @@ export interface MarkdownListResponse {
 /** `POST /content/markdown` body. `author` exists on the backend but no hub
  *  call site ever sets it, so it's omitted. `note: true` files the new document in
  *  the owner's `notes` storage bucket — the ONLY thing that distinguishes a note
- *  from any other markdown document (see the notes client).
+ *  from any other markdown document (see the notes client). `doc: true` is the same
+ *  gesture for the owner's `docs` bucket, and the two are independent rather than one
+ *  `corpus` field because the markers they mint are independent rows: nothing in the
+ *  schema stops one text from sitting on both shelves.
  *
  *  There is no `title` here or on the update body, deliberately: the backend DERIVES
  *  it from the content (frontmatter, else the first line), so one document reads the
@@ -59,6 +62,7 @@ export interface MarkdownCreateBody {
   category?: string;
   tags?: string[];
   note?: boolean;
+  doc?: boolean;
 }
 
 /** `PUT /content/markdown/{id}` body — `category` may be explicitly nulled to

@@ -13,3 +13,8 @@ export { NotebookFeature } from "./NotebookFeature";
 // The pane without the URL wiring, for a host that wants the notebook embedded in a
 // surface it already routes (the way the hub embeds ResearchPane in its topic rail).
 export { NotebookPane } from "./NotebookPane";
+
+// The same surface over the owner's DOCS shelf, and the corpus descriptor that binds it —
+// exported so a host can mount a third shelf without this package having to know about it.
+export { DocsFeature } from "./DocsFeature";
+export { NOTES_CORPUS, DOCS_CORPUS, type NotebookCorpus, type CorpusNoun } from "./corpus";

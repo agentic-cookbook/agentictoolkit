@@ -7,7 +7,11 @@
 // four fields research edits — minus everything about PUBLISHING. There is no public-route
 // regex here because a note has no public route: the notebook has no publish flow, and the
 // backend never mints a `content.papers` marker for a document created through it.
-import type { CreateNoteBody, Note, UpdateNoteBody } from "@agentic-toolkit/data/notes";
+import type {
+  CreateNoteBody,
+  Note,
+  UpdateNoteBody,
+} from "@agentic-toolkit/data/notes";
 
 /** The fields the editor binds to: the raw markdown body + classification.
  *
@@ -57,10 +61,19 @@ export function noteNormalize(input: NoteInput): NoteInput {
 }
 
 /** Returns an error message, or null when the draft is valid. The limits are the
- *  backend's own (`markdownDocuments.ts`), stated here so the form refuses first. */
-export function noteValidate(input: NoteInput): string | null {
-  if (!input.content.trim()) return "A note body is required.";
-  if (input.category.length > 200) return "Category must be 200 characters or fewer.";
+ *  backend's own (`markdownDocuments.ts`), stated here so the form refuses first.
+ *
+ *  `itemNoun` is the corpus's singular — "note", "document" — so the one message a user
+ *  actually reads names the thing they are writing. It is a bare string rather than the
+ *  `CorpusNoun` object because this module is pure and deliberately holds no import of the
+ *  corpus descriptors (which carry React icons and the data clients). */
+export function noteValidate(
+  input: NoteInput,
+  itemNoun = "note",
+): string | null {
+  if (!input.content.trim()) return `A ${itemNoun} body is required.`;
+  if (input.category.length > 200)
+    return "Category must be 200 characters or fewer.";
   return null;
 }
 

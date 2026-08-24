@@ -7,6 +7,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { Separator } from "@agentic-toolkit/ui/components/separator";
 import { HomeBar } from "@agentic-toolkit/resource";
+import { NOTES_CORPUS, type CorpusNoun } from "./corpus";
 
 /**
  * The three axes the notes list narrows on. All three are FILTERS over whatever the rail is
@@ -50,6 +51,7 @@ export function NoteButtonBar({
   onEditCategories,
   onEditTags,
   onCreateNote,
+  noun = NOTES_CORPUS.noun,
 }: {
   filters: FilterState;
   onChange: (next: FilterState) => void;
@@ -60,6 +62,9 @@ export function NoteButtonBar({
   onEditCategories: () => void;
   onEditTags: () => void;
   onCreateNote: () => void;
+  /** The corpus's nouns — what "Search notes…" and "Create Note" say when this bar is over a
+   *  shelf other than the notebook. Defaults to the notes wording. */
+  noun?: CorpusNoun;
 }) {
   return (
     <HomeBar
@@ -73,8 +78,8 @@ export function NoteButtonBar({
             <Input
               type="search"
               value={filters.q}
-              aria-label="Search notes"
-              placeholder="Search notes…"
+              aria-label={`Search ${noun.many}`}
+              placeholder={`Search ${noun.many}…`}
               className="pl-8"
               onChange={(e) => onChange({ ...filters, q: e.target.value })}
             />
@@ -132,7 +137,7 @@ export function NoteButtonBar({
           {/* `data-icon="inline-start"` and no `size`: `Button` sizes its own icons and
               tightens the padding on the icon's side. See `resource-explorer.tsx`. */}
           <Plus data-icon="inline-start" aria-hidden />
-          Create Note
+          Create {noun.One}
         </Button>
       }
     />

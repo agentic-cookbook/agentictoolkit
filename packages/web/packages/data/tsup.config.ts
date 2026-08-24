@@ -12,6 +12,7 @@ export default defineConfig({
     'src/monitored-sites/index.ts',
     'src/markdown/index.ts',
     'src/notes/index.ts',
+    'src/docs/index.ts',
     'src/personas/index.ts',
     'src/security/index.ts',
     'src/integrations/index.ts',

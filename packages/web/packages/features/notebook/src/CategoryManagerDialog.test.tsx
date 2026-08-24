@@ -16,8 +16,13 @@ vi.mock("@agentic-toolkit/auth", () => ({
   reportUnexpectedAuthError: vi.fn(),
 }));
 
+// Add goes through the shared markdown door, not a per-corpus client: the category vocabulary
+// is one owner's, spanning notes, docs and papers alike.
+vi.mock("@agentic-toolkit/data/markdown", () => ({
+  markdownApi: { createCategory: vi.fn() },
+}));
+
 vi.mock("@agentic-toolkit/data/notes", () => ({
-  notesApi: { createCategory: vi.fn() },
   taxonomyApi: {
     renameCategory: vi.fn(),
     addCategoryParent: vi.fn(),
@@ -26,10 +31,11 @@ vi.mock("@agentic-toolkit/data/notes", () => ({
   },
 }));
 
-import { notesApi, taxonomyApi, type NoteCategory } from "@agentic-toolkit/data/notes";
+import { markdownApi } from "@agentic-toolkit/data/markdown";
+import { taxonomyApi, type NoteCategory } from "@agentic-toolkit/data/notes";
 import { CategoryManagerDialog } from "./CategoryManagerDialog";
 
-const createCategory = vi.mocked(notesApi.createCategory);
+const createCategory = vi.mocked(markdownApi.createCategory);
 const renameCategory = vi.mocked(taxonomyApi.renameCategory);
 const addCategoryParent = vi.mocked(taxonomyApi.addCategoryParent);
 const removeCategoryParent = vi.mocked(taxonomyApi.removeCategoryParent);

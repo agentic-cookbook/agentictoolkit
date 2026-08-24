@@ -60,12 +60,14 @@ const BASE = "/api/content/markdown";
 // shows everything at once (no pagination UI). 200 is the backend's page cap.
 const PAGE_SIZE = 200;
 
-/** List options: the workspace to scope to, and `noted` to narrow to the owner's NOTES
- *  (the documents in their `notes` storage bucket). `noted: false` is NOT "everything
- *  except notes" — the backend offers no such set — it is simply the unfiltered list. */
+/** List options: the workspace to scope to, and one flag per CORPUS — `noted` for the
+ *  owner's notes, `doc` for their docs (the documents in the matching storage bucket).
+ *  A `false` is NOT "everything except that corpus" — the backend offers no such set —
+ *  it is simply the unfiltered list. */
 export interface MarkdownListOptions {
   workspace?: string;
   noted?: boolean;
+  doc?: boolean;
 }
 
 function listQuery(filters: ResearchFilters, opts?: MarkdownListOptions): string {
@@ -77,6 +79,7 @@ function listQuery(filters: ResearchFilters, opts?: MarkdownListOptions): string
   const tag = filters.tag?.trim();
   if (tag) params.set("tag", tag);
   if (opts?.noted) params.set("noted", "true");
+  if (opts?.doc) params.set("doc", "true");
   if (opts?.workspace) params.set("workspace", opts.workspace);
   return params.toString();
 }
