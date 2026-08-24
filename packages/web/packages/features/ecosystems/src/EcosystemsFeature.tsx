@@ -279,6 +279,23 @@ function groupMembers(
 }
 
 /**
+ * Every group MEMBER id → the group that holds it, derived from {@link groupMembers} itself so
+ * it can never fall behind it (the renders are never called here; only the ids are read).
+ *
+ * Three of these ids — `auth`, `signin-apps`, `tokens` — were top-level rows of this rail before
+ * they became members of Authentication, and `buckets`/`access`/`all-data` were the same for
+ * Storage. Keeping their ids is only half of "the deep links still resolve": ResourceExplorer
+ * matches the URL's topic segment against the TOP-LEVEL list, so without this map the old address
+ * matches nothing and renders "Select a topic to view." — an apparently empty product, with no
+ * 404 and nothing in the console. With it, the old address redirects into the group.
+ */
+const GROUP_MEMBER_GROUP: Record<string, string> = Object.fromEntries(
+  Object.entries(groupMembers(undefined, (label) => label, () => null, () => null)).flatMap(
+    ([group, members]) => members.map((member) => [member.id, group]),
+  ),
+);
+
+/**
  * An ecosystem id, as a create's PARENT — i.e. as the thing a derived address hangs off.
  *
  * Only an rdid can play that part: an address is `<parent address>.<slug>`, so a parent known
@@ -791,6 +808,7 @@ export function EcosystemsFeature({
           nameSuffix={singular}
           itemIcon={<Network size={16} aria-hidden />}
           topics={topics}
+          topicAliases={GROUP_MEMBER_GROUP}
           newLabel={`New ${singular}…`}
           rail={{
             title: plural,
@@ -863,6 +881,7 @@ export function EcosystemsFeature({
         nameSuffix={singular}
         itemIcon={<Network size={16} aria-hidden />}
         topics={topics}
+        topicAliases={GROUP_MEMBER_GROUP}
         newLabel={`New ${singular}…`}
       />
       {createDialog}

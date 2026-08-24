@@ -72,6 +72,9 @@ export {
   workspacesApi,
   checkWorkspaceSlugAvailable,
   WORKSPACES_QUERY_KEY,
+  WORKSPACES_CHANGED_EVENT,
+  notifyWorkspacesChanged,
+  onWorkspacesChanged,
   type SlugAvailability,
   type Workspace,
 } from "./workspaces";

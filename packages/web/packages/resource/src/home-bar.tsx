@@ -87,20 +87,26 @@ export function HomeBarTaken({
  * outer host would silently stop drawing a strip at all, and the bar would appear in the inner
  * host's position instead of the page's.
  *
- * `placeholder` opts a host OUT of that "draws nothing" default: pass it and the strip is always
- * there, showing the placeholder while nobody has claimed it. That is what the hub's workspace
- * shell wants — every one of its 45 routes then has the same chrome, so moving between a feature
- * that publishes controls and one that does not stops shifting everything below it by the height
- * of a bar. It is opt-in rather than the rule because the same host sits above every fleet site's
- * home, and most of those genuinely have no controls to promise.
+ * `reserveStrip` opts a host OUT of that "draws nothing" default: pass it and the strip is always
+ * there, EMPTY while nobody has claimed it. That is what the hub's workspace shell wants — every
+ * one of its 45 routes then has the same chrome, so moving between a feature that publishes
+ * controls and one that does not stops shifting everything below it by the height of a bar. It is
+ * opt-in rather than the rule because the same host sits above every fleet site's home, and a
+ * fleet home is one page, with nothing to hold still against.
+ *
+ * The reserved strip says NOTHING. It carried the words "Coming soon" first, and that copy was a
+ * claim this host is in no position to make: whether anyone publishes into the bar is a fact about
+ * one feature's controls, not about whether the feature is built — Billing, Settings, Members and
+ * Gamification are all finished, all publish nothing here, and all were labelled unbuilt. A route
+ * that genuinely IS a placeholder says so in its own pane, where the truth is known.
  */
 export function HomeBarHost({
   children,
-  placeholder,
+  reserveStrip,
 }: {
   children: ReactNode;
-  /** Drawn in the strip while no publisher holds a claim. Omit to keep the strip absent instead. */
-  placeholder?: ReactNode;
+  /** Keep the strip drawn (and empty) while no publisher holds a claim, instead of omitting it. */
+  reserveStrip?: boolean;
 }): ReactElement {
   const [claims, setClaims] = useState<ReadonlySet<string>>(() => new Set());
   const [slot, setSlot] = useState<HTMLElement | null>(null);
@@ -126,24 +132,11 @@ export function HomeBarHost({
           a single button. `w-full` on the inner row because the row is a flex container and a bar
           with a flexible space in it has to own the whole width to place anything at its right
           edge. */}
-      {(claims.size > 0 || placeholder !== undefined) && (
+      {(claims.size > 0 || reserveStrip) && (
         <div
           data-testid="home-bar"
           className="flex min-h-[var(--adh-chrome-bar-height,2.75rem)] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-1"
         >
-          {/* Before the slot, so the placeholder reads from the left edge like a feature's search
-              does. The slot's `w-full` still shrinks around it (flex items shrink by default), and
-              the moment anyone claims, the placeholder is gone and the slot has the row to itself
-              again — so a publisher's right-justified action lands exactly where it always has.
-
-              `shrink-0 whitespace-nowrap` on the wrapper because the slot beside it is `w-full`:
-              a flex item asking for the whole row squeezes its sibling down to min-content, and
-              two words of placeholder then wrap onto two lines and push the bar TALLER than
-              `--adh-chrome-bar-height`. The wrapper belongs here rather than in what a host
-              passes, because the squeeze is a fact about this row, not about the node. */}
-          {claims.size === 0 && placeholder !== undefined ? (
-            <div className="shrink-0 whitespace-nowrap">{placeholder}</div>
-          ) : null}
           <div ref={setSlot} className="flex w-full items-center gap-2" />
         </div>
       )}

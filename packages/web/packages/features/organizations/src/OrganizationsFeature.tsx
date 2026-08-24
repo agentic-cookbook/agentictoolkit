@@ -5,7 +5,7 @@ import type { ReactElement } from "react";
 import { Building2, KeyRound, Server, Settings, UsersRound } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { ResourceExplorer, type ResourceTopic } from "@agentic-toolkit/resource";
-import { useResourceItemPrefetch } from "@agentic-toolkit/data";
+import { notifyWorkspacesChanged, useResourceItemPrefetch } from "@agentic-toolkit/data";
 import {
   organizationsApi,
   ORGANIZATIONS_QUERY_KEY,
@@ -133,6 +133,13 @@ export function OrganizationsFeature({
   // and every memo'd child and effect downstream would re-run with it. `refetch` is stable.
   const reload = useCallback(async () => {
     await orgsQuery.refetch();
+    // This list is not the only one a created or archived org changes: an org IS a workspace, so
+    // the switcher, the header's workspaces flyout and every chooser reading the workspace list
+    // are stale the moment this row appears. Refetching here reached none of them — the hub's list
+    // lives in the HOST's react-query client, a different physical copy of the library that no
+    // hook in this package can address. `notifyWorkspacesChanged` is the announcement that
+    // crosses; see its docstring for the three caches involved.
+    notifyWorkspacesChanged();
   }, [orgsQuery.refetch]);
 
   // Where a rename or an archive lands the browser, expressed in THIS host's URL space. Both are

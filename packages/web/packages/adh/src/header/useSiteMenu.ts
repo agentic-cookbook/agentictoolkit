@@ -154,16 +154,24 @@ export function useSiteMenu(
     [previewTheme],
   )
 
-  // The fleet segment the visitor is INSIDE right now — `/acme/games` on the hub → 'games';
-  // null everywhere else, including the hub's own knobs (`/acme/tokens` is no site's route) and
-  // every other site's header. It answers ONE question, for the hub's own row: is the visitor in
-  // a place some OTHER site's row represents? See `current` below.
+  // The fleet segment the visitor is INSIDE right now AND some other row leads to — `/acme/games`
+  // on the hub → 'games'; null everywhere else, including the hub's own knobs (`/acme/tokens` is
+  // no site's route) and every other site's header. It answers ONE question, for the hub's own
+  // row: is the visitor in a place some OTHER row represents? See `current` below.
+  //
+  // The `authenticated` / `hubOffersFeature` half is not decoration — it is the SAME condition
+  // `hrefFor` reroutes on, and asking a weaker one here left a gap where NO row was current.
+  // A segment this workspace cannot stand on (any segment at all on a team slug) keeps its
+  // off-origin href, so its own row never lights up via `inHubRoute`; suppressing the hub's row
+  // as well showed the visitor as nowhere. If no row leads here, the row for the site you are
+  // ON is the true answer.
   const activeFleetSegment = useMemo<string | null>(() => {
-    if (currentSiteId !== 'hub' || !workspaceSlug) return null
+    if (currentSiteId !== 'hub' || !workspaceSlug || !authenticated) return null
     const [slug, segment] = (pathname || '/').split('/').filter(Boolean)
     if (slug !== workspaceSlug || segment === undefined) return null
-    return Object.hasOwn(SITE_FOR_HUB_SEGMENT, segment) ? segment : null
-  }, [currentSiteId, workspaceSlug, pathname])
+    if (!Object.hasOwn(SITE_FOR_HUB_SEGMENT, segment)) return null
+    return hubOffersFeature?.(segment) === true ? segment : null
+  }, [currentSiteId, workspaceSlug, authenticated, pathname, hubOffersFeature])
 
   const hrefFor = useCallback(
     (site: SiteDef, external?: boolean): string => {
@@ -332,7 +340,9 @@ export function useSiteMenu(
       //     workspace that does not offer the segment) is never current — you are not there.
       //     Two rows CAN share one route (ecosystems and products both render at `products`),
       //     and both are then current, which is what "this row leads here" means for each.
-      //   - the header's own site is current unless a fleet route has claimed the path. Off the
+      //   - the header's own site is current unless a fleet route has claimed the path — asked
+      //     with `activeFleetSegment`, which is gated on the very reroute that makes the other
+      //     row current, so the two cases meet exactly and exactly one row lights up. Off the
       //     hub `activeFleetSegment` is always null, so this stays plainly true there.
       const inHubRoute = href.startsWith('/') && !href.startsWith('//')
       // Icon from the single source of truth (menu-icons), keyed by the site id.

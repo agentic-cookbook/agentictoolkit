@@ -36,8 +36,12 @@ export const PRODUCT_TOPICS = [
   // (oauth.clients — the apps a developer registers so their site can sign its own customers in
   // via GitHub-through-ADH), the storage tokens its machines authenticate with, and the waitlist
   // people join before any of it applies (Email Signup). They were `auth`, `signin-apps` and
-  // `tokens` as top-level rows; the ids are unchanged, so every deep link still resolves — only
-  // where the row is OFFERED moved. Members live in EcosystemsFeature's `groupMembers`.
+  // `tokens` as top-level rows. The ids are unchanged, and the OLD ADDRESSES redirect: keeping an
+  // id is only half of it, because ResourceExplorer matches the URL's topic segment against THIS
+  // top-level list, so `…/<product>/tokens` would match nothing and render "Select a topic to
+  // view." — an apparently empty product, no 404, nothing in the console. EcosystemsFeature's
+  // `GROUP_MEMBER_GROUP` (derived from `groupMembers`) is what closes it, via the explorer's
+  // `topicAliases`. Members themselves live in EcosystemsFeature's `groupMembers`.
   { id: "authentication", label: "Authentication", dividerAfter: false },
   // (Communities sat here, was removed for having no surface on any host, and came back below
   // with the rest of the hub's Products group — parked deliberately this time, because the

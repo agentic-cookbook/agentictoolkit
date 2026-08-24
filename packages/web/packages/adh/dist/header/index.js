@@ -1430,11 +1430,12 @@ function useSiteMenu(groups, { currentSiteId, resolveHref, personalSlug, authent
     [previewTheme]
   );
   const activeFleetSegment = useMemo2(() => {
-    if (currentSiteId !== "hub" || !workspaceSlug) return null;
+    if (currentSiteId !== "hub" || !workspaceSlug || !authenticated) return null;
     const [slug, segment] = (pathname || "/").split("/").filter(Boolean);
     if (slug !== workspaceSlug || segment === void 0) return null;
-    return Object.hasOwn(SITE_FOR_HUB_SEGMENT2, segment) ? segment : null;
-  }, [currentSiteId, workspaceSlug, pathname]);
+    if (!Object.hasOwn(SITE_FOR_HUB_SEGMENT2, segment)) return null;
+    return hubOffersFeature?.(segment) === true ? segment : null;
+  }, [currentSiteId, workspaceSlug, authenticated, pathname, hubOffersFeature]);
   const hrefFor = useCallback2(
     (site, external) => {
       const workspacePath = workspaceSlug && !external ? siteWorkspaceHref(site, workspaceSlug) : void 0;

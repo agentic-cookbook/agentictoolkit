@@ -183,7 +183,13 @@ var HUB_RAIL_GROUPS = (() => {
   const claimed = /* @__PURE__ */ new Set();
   const group = (label, seed) => {
     const existing = byLabel.get(label);
-    if (existing) return existing;
+    if (existing) {
+      if (seed?.description !== void 0 && existing.description === void 0)
+        existing.description = seed.description;
+      if (seed?.iconKey !== void 0 && existing.iconKey === void 0)
+        existing.iconKey = seed.iconKey;
+      return existing;
+    }
     const made = { id: railGroupId(label), label, ...seed, segments: [] };
     byLabel.set(label, made);
     groups.push(made);

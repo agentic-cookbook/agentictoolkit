@@ -3,6 +3,7 @@
 import {
   Fragment,
   useCallback,
+  useEffect,
   useState,
   type ReactElement,
   type ReactNode,
@@ -117,6 +118,7 @@ export function ResourceExplorer<T>({
   renderDialog,
   reload,
   prefetchItem,
+  topicAliases,
   homeBarRight,
 }: {
   all?: boolean;
@@ -146,6 +148,16 @@ export function ResourceExplorer<T>({
   /** Suffix in feature titles, e.g. "Ecosystem" → "Applications (Core Ecosystem)". */
   nameSuffix: string;
   topics: ResourceTopic[];
+  /** Topic ids the URL may still name from BEFORE they became members of a grouping topic:
+   *  member id → the group that now holds it.
+   *
+   *  A group's members keep their old ids precisely so the links people already hold keep
+   *  working — but `topics` is the top-level list, so an id that moved INTO a group stops
+   *  matching it and the pane silently falls back to "Select a topic to view.": no 404, no
+   *  redirect, nothing to notice. This is what actually makes the ids-are-unchanged promise
+   *  true: the old address redirects (replace, not push, so Back still leaves) to the same
+   *  pane at its current address, carrying the leaf and inner-entity segments with it. */
+  topicAliases?: Record<string, string>;
   /** The resource rail's naming — required for the classic list-first arrangement; omit in
    *  `promoteTopics` mode, which has no resource rail (the resource list moves into a topic). */
   rail?: ResourceRailConfig<T>;
@@ -246,6 +258,28 @@ export function ResourceExplorer<T>({
   // No auto-select: an absent/unknown topic is "nothing selected" (the topics list shows with no
   // focus), NOT a coerced first topic.
   const topic = !isAll && activeTopic && validTopics.has(activeTopic) ? activeTopic : null;
+
+  // An id that used to be a top-level topic and is now a group member — `/…/<id>/tokens` for
+  // `/…/<id>/authentication/tokens`. The old segments slide one place right: what was the leaf
+  // (a sign-in app, a bucket) becomes the member's inner entity.
+  const aliasGroup =
+    activeTopic && !validTopics.has(activeTopic) ? topicAliases?.[activeTopic] : undefined;
+  useEffect(() => {
+    if (!aliasGroup || !activeTopic || !scopedId) return;
+    const tail = [activeLeafId, activeMemberEntityId].filter(Boolean).join("/");
+    router.replace(
+      `${basePath}/${scopedId}/${aliasGroup}/${activeTopic}${tail ? `/${tail}` : ""}`,
+      { scroll: false },
+    );
+  }, [
+    aliasGroup,
+    activeTopic,
+    scopedId,
+    activeLeafId,
+    activeMemberEntityId,
+    basePath,
+    router,
+  ]);
 
   const active = items?.find((i) => getId(i) === scopedId);
   // "Members (Core Platform Ecosystem)" — but the entity topic's label already IS the

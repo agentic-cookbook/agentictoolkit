@@ -90,9 +90,25 @@ export const HUB_RAIL_GROUPS: HubRailGroup[] = (() => {
   const byLabel = new Map<string, HubRailGroup>()
   const claimed = new Set<HubFeatureSegment>()
 
+  // FILLS IN, never overwrites. A label can be claimed WITHOUT a seed before the seeded topic of
+  // the same name is reached — which is exactly what happens to Hub, whose three promoted rows
+  // (bitbag, messages, orgs) are `leaf`/`inline` entries and reach `group(PROMOTED_GROUP_LABEL)`
+  // seedless. Returning the existing group unchanged dropped the seed on the floor, and the
+  // symptom was quiet: the rail renders a HelpPopover only for a group carrying a description, so
+  // the one row gathering this branch's whole fleet was the sole group with no help affordance
+  // (the icon loss hid too — the fallback happens to be the same Hexagon).
+  //
+  // First seed wins for a field already set, which keeps the "a segment claimed twice goes to the
+  // FIRST" rule reading the same way for a group's own fields.
   const group = (label: string, seed?: { description?: string; iconKey?: string }): HubRailGroup => {
     const existing = byLabel.get(label)
-    if (existing) return existing
+    if (existing) {
+      if (seed?.description !== undefined && existing.description === undefined)
+        existing.description = seed.description
+      if (seed?.iconKey !== undefined && existing.iconKey === undefined)
+        existing.iconKey = seed.iconKey
+      return existing
+    }
     const made: HubRailGroup = { id: railGroupId(label), label, ...seed, segments: [] }
     byLabel.set(label, made)
     groups.push(made)

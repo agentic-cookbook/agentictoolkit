@@ -15,6 +15,8 @@
 
 import { authedJson } from "./http";
 import { sortByText } from "./client-helpers";
+import { getToolkitQueryClient } from "./query";
+import { revalidateResources } from "./use-resource-list";
 
 /** A principal the caller can scope a feature to: their personal workspace, or an org's. */
 export interface Workspace {
@@ -30,6 +32,47 @@ export interface Workspace {
  * same cache entry rather than each holding a private key for the same endpoint.
  */
 export const WORKSPACES_QUERY_KEY = ["workspaces"] as const;
+
+/** The window event {@link notifyWorkspacesChanged} fires. Exported for tests and for a host that
+ *  would rather listen directly than through {@link onWorkspacesChanged}. */
+export const WORKSPACES_CHANGED_EVENT = "adh:workspaces-changed";
+
+/**
+ * Announce that the workspace LIST gained or lost a row. Creating an organization is the action
+ * that does it today; archiving one is the other direction.
+ *
+ * A WINDOW EVENT rather than an invalidation, because the list is cached more than once and the
+ * copies do not share a client:
+ *
+ *  - the toolkit's client, under {@link WORKSPACES_QUERY_KEY} — the fleet's switcher;
+ *  - the toolkit's resource cache, under `useResourceList('workspaces')` — SiteHomeShell's chooser,
+ *    which is a different entry over the same endpoint;
+ *  - **the host app's own client**, which is a different PHYSICAL react-query module from this one
+ *    (see `@agentic-toolkit/data/query`). The hub bundles its own copy, so its provider is
+ *    invisible to any toolkit component and no `useQueryClient()` here can ever reach it. That is
+ *    the bug this exists for: an org created from the Organizations rail refetched the org list and
+ *    left the hub's workspace switcher showing the pre-create list for the whole 5-minute
+ *    `staleTime`. `colorMode` crosses the same boundary the same way.
+ *
+ * The two caches this module CAN reach are swept here, so one call is the whole announcement. A
+ * host with its own cache subscribes with {@link onWorkspacesChanged}.
+ */
+export function notifyWorkspacesChanged(): void {
+  void getToolkitQueryClient()
+    .invalidateQueries({ queryKey: WORKSPACES_QUERY_KEY })
+    .catch(() => {});
+  revalidateResources((cacheKey) => cacheKey === "workspaces");
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(WORKSPACES_CHANGED_EVENT));
+}
+
+/** Subscribe a host's own cache to {@link notifyWorkspacesChanged}. Returns the unsubscribe, so it
+ *  is an effect body on its own: `useEffect(() => onWorkspacesChanged(fn), [fn])`. */
+export function onWorkspacesChanged(listener: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(WORKSPACES_CHANGED_EVENT, listener);
+  return () => window.removeEventListener(WORKSPACES_CHANGED_EVENT, listener);
+}
 
 /** `GET /auth/slug-available/:slug`, verbatim: `reason` says which test refused it. */
 export interface SlugAvailability {
