@@ -121,13 +121,15 @@ export function HomeBarHost({
     <HomeBarContext.Provider value={value}>
       {/* The strip wears the classes the HTDV's `toolbar` strip wears
           (`hierarchical-topic-detail.tsx:196`), unchanged, so the bar keeps its exact appearance
-          while changing owner. `w-full` on the inner row because the row is a flex container and
-          a bar with a flexible space in it has to own the whole width to place anything at its
-          right edge. */}
+          while changing owner — `--adh-chrome-bar-height` included, which is what makes this bar
+          exactly as tall as the breadcrumb under it whether a feature publishes a search field or
+          a single button. `w-full` on the inner row because the row is a flex container and a bar
+          with a flexible space in it has to own the whole width to place anything at its right
+          edge. */}
       {(claims.size > 0 || placeholder !== undefined) && (
         <div
           data-testid="home-bar"
-          className="flex shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-2"
+          className="flex min-h-[var(--adh-chrome-bar-height,2.75rem)] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-1"
         >
           {/* Before the slot, so the placeholder reads from the left edge like a feature's search
               does. The slot's `w-full` still shrinks around it (flex items shrink by default), and

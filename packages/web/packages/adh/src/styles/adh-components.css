@@ -933,7 +933,7 @@
 }
 
 /* The sticky-chrome geometry, in one place. Two readers, and they want DIFFERENT
-   numbers, which is why this is three vars rather than one:
+   numbers, which is why this is four vars rather than one:
 
    - `--adh-header-height` is the TOTAL height of the sticky banner — the preview
      strip plus the bar. It is what a page offsets its OWN sticky elements by
@@ -948,13 +948,29 @@
    Keep the strip's height a fixed token rather than letting its content size it: the
    total above is computed from it, so a content-derived height would make
    `--adh-header-height` a number nothing actually measures. `.adh-header__preview`
-   centres its text in exactly this height. */
+   centres its text in exactly this height.
+
+   - `--adh-chrome-bar-height` is every bar UNDER the workspace chooser: the home bar
+     (`resource`'s strip), the stack's toolbar strip and its breadcrumb strip. They were
+     each sized by their own content and so came out ragged — a bar holding a search
+     field (`Input` is `h-9`) stood 53px, one holding a `size="sm"` button 45px, the
+     breadcrumb 33px. One token, read as a `min-height` by all three, makes them exactly
+     equal at 2.75rem for any content up to 36px tall, which is the tallest control any
+     of them carries. A MINIMUM and not a fixed height because the breadcrumb trail
+     wraps: a two-line trail must make its bar taller rather than be clipped by it.
+     Chosen to fit that 36px control with the `py-1` the bars keep, so the common case
+     lands on the token exactly rather than merely above it.
+
+     The chooser itself is deliberately NOT on this token — it is the workspace-level
+     bar, one step up from the page-level bars this sizes, and it keeps its own height
+     the way the header above it keeps `--adh-header-bar-height`. */
 :root {
   --adh-header-bar-height: 3.5rem;
   --adh-header-preview-height: 1.125rem;
   --adh-header-height: calc(
     var(--adh-header-bar-height) + var(--adh-header-preview-height)
   );
+  --adh-chrome-bar-height: 2.75rem;
 }
 
 /* Shared not-found body. */

@@ -191,14 +191,20 @@ function TopBar({
     <>
       {/* The strip is a plain flex row: alignment belongs to the toolbar content, which is the
           only thing that knows whether it is one right-hand button or a full-width bar with a
-          flexible space in it. A `justify-end` here would make the second shape impossible. */}
+          flexible space in it. A `justify-end` here would make the second shape impossible.
+
+          Both strips are sized by `--adh-chrome-bar-height` rather than by what they hold, so
+          every bar under the workspace chooser is exactly as tall as every other one — see the
+          token's note in `adh-components.css`. `min-h` and `py-1` rather than a fixed height:
+          the breadcrumb `ol` wraps, and a wrapped trail must grow its bar instead of being cut
+          off by it. */}
       {toolbar && (
-        <div className="flex shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-2">
+        <div className="flex min-h-[var(--adh-chrome-bar-height,2.75rem)] shrink-0 items-center gap-2 border-b border-apt-border bg-apt-bg px-4 py-1">
           {toolbar}
         </div>
       )}
       {hasCrumbs && (
-        <div className="flex min-w-0 shrink-0 items-center gap-3 border-b border-apt-border bg-apt-nav px-4 py-2">
+        <div className="flex min-h-[var(--adh-chrome-bar-height,2.75rem)] min-w-0 shrink-0 items-center gap-3 border-b border-apt-border bg-apt-nav px-4 py-1">
           <nav aria-label="Breadcrumb" className="min-w-0 flex-1">
             <ol className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5">
               {trail.map((c, i) => {
