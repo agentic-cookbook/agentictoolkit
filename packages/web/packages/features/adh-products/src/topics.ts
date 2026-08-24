@@ -36,8 +36,9 @@ export const PRODUCT_TOPICS = [
   // Vended sign-in CLIENTS (oauth.clients) for this product's customer realm — the apps a
   // developer registers so their site can sign its own customers in via GitHub-through-ADH.
   { id: "signin-apps", label: "Sign-in apps", dividerAfter: false },
-  // (Communities sat here. Every host rendered it as "Coming soon" and there is no communities
-  // surface to route to on any of them, so the row is gone rather than parked.)
+  // (Communities sat here, was removed for having no surface on any host, and came back below
+  // with the rest of the hub's Products group — parked deliberately this time, because the
+  // workspace rail offered it and moving that rail down whole is what dropping it would undo.)
   // The product's gaming shape — a host-owned GROUP (see ProductsFeature's
   // productTopicPaneRenderer) whose member list depends on the realm's mode ('none' /
   // 'gamification' / 'game'): badges/levels/streaks engagement on a regular product, or a
@@ -50,7 +51,22 @@ export const PRODUCT_TOPICS = [
   // key → JSON config values this product's apps / backend read at runtime.
   { id: "feature-flags", label: "Feature flags", dividerAfter: false },
   { id: "server-bags", label: "Server bags", dividerAfter: false },
-  { id: "billing", label: "Billing", dividerAfter: true },
+  { id: "billing", label: "Billing", dividerAfter: false },
+  // ── The rows that came DOWN from the hub's workspace rail (2026-08-24) ──────────────────────
+  // Each one is a surface OF a product — a product has customers, devices, domains, a store;
+  // a workspace does not — so the hub stopped offering them workspace-wide and they are topics
+  // here, applied to the product the rail's parent level picked. They arrive together and they
+  // arrive without panes: every one is a fleet site whose own workspace implementation is still
+  // the shared placeholder, so {@link PLACEHOLDER_TOPIC_IDS} answers all eight in-package rather
+  // than making both hosts write the same "coming soon" eight times.
+  { id: "communities", label: "Communities", dividerAfter: false },
+  { id: "customers", label: "Customers", dividerAfter: false },
+  { id: "devices", label: "Devices", dividerAfter: false },
+  { id: "domains", label: "Domains", dividerAfter: false },
+  { id: "education", label: "Education", dividerAfter: false },
+  { id: "notifications", label: "Notifications", dividerAfter: false },
+  { id: "sites", label: "Sites", dividerAfter: false },
+  { id: "stores", label: "Stores", dividerAfter: true },
   // The product's own entity/settings pane (name/slug/description + Danger). Last in the
   // rail; selected by id === "settings" in the toolkit's EcosystemsFeature.
   { id: "settings", label: "Ecosystem Settings", dividerAfter: false },
@@ -74,4 +90,26 @@ export const HOST_RENDERED_TOPIC_IDS = [
   "dashboards",
   "billing",
   "all-data",
+] as const;
+
+/**
+ * The topics whose surface does not exist yet — the eight that came down from the hub's workspace
+ * rail with the shared site placeholder behind them. The package renders one "coming soon" pane
+ * for all of them (see ProductsFeature's productTopicPaneRenderer), which is why they are NOT in
+ * {@link HOST_RENDERED_TOPIC_IDS}: neither host owns a pane, so asking both for one would be two
+ * copies of the same nothing.
+ *
+ * A topic leaves this list the day it gains a real pane — either in-package, or by moving to
+ * HOST_RENDERED_TOPIC_IDS if the two hosts answer it differently. The package's own test asserts
+ * every id here is a PRODUCT_TOPICS id and that the two lists are disjoint.
+ */
+export const PLACEHOLDER_TOPIC_IDS = [
+  "communities",
+  "customers",
+  "devices",
+  "domains",
+  "education",
+  "notifications",
+  "sites",
+  "stores",
 ] as const;

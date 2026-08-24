@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { PRODUCT_TOPICS, HOST_RENDERED_TOPIC_IDS } from "../topics";
+import { PRODUCT_TOPICS, HOST_RENDERED_TOPIC_IDS, PLACEHOLDER_TOPIC_IDS } from "../topics";
 import { PRODUCT_TOPIC_CONFIGS, productTopicPaneRenderer } from "../ProductsFeature";
 
 // Two invariants that hold the rail together and that nothing else can see: a topic renders a
@@ -72,6 +72,32 @@ describe("the host-rendered seam", () => {
     );
     for (const id of withEco) {
       expect(render(id, { ecosystemId: undefined, title: id }), id).not.toBeNull();
+    }
+  });
+});
+
+describe("the placeholder topics", () => {
+  // The list exists so both hosts DON'T write the same "coming soon" eight times, which only
+  // holds while every id on it is a real rail row the package actually answers. An id that is
+  // neither is a promise to nobody.
+  it("names only real topics", () => {
+    const topicIds = new Set<string>(PRODUCT_TOPICS.map((t) => t.id));
+    expect(PLACEHOLDER_TOPIC_IDS.filter((id) => !topicIds.has(id))).toEqual([]);
+  });
+
+  // Disjoint from the host seam, in both directions: an id in both lists tells the host to build
+  // a pane the package will never ask it for, and the host's copy rots unnoticed.
+  it("is disjoint from the host-rendered seam", () => {
+    const hostRendered = new Set<string>(HOST_RENDERED_TOPIC_IDS);
+    expect(PLACEHOLDER_TOPIC_IDS.filter((id) => hostRendered.has(id))).toEqual([]);
+  });
+
+  // And the package really does answer them — the whole point of NOT putting them on the seam.
+  // A miss here reads as a decline, and the host's exhaustive default renders the raw topic id.
+  it("is claimed by the package's own pane renderer", () => {
+    const render = productTopicPaneRenderer({ workspaceSlug: "acme" });
+    for (const id of PLACEHOLDER_TOPIC_IDS) {
+      expect(render(id, { ecosystemId: "eco_1", title: id }), id).not.toBeNull();
     }
   });
 });

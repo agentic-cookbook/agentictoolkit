@@ -16,6 +16,14 @@ import {
   MessageCircle,
   LayoutDashboard,
   CreditCard,
+  Users,
+  Contact,
+  MonitorSmartphone,
+  Globe,
+  School,
+  Bell,
+  LayoutTemplate,
+  Store,
 } from "lucide-react";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import {
@@ -43,7 +51,7 @@ import {
 import { AccessPane } from "@agentic-toolkit/authentication";
 import { SubjectProjectPane } from "@agentic-toolkit/projects";
 import { helpFor } from "@agentic-toolkit/adh/help/store";
-import { PRODUCT_TOPICS } from "./topics";
+import { PLACEHOLDER_TOPIC_IDS, PRODUCT_TOPICS } from "./topics";
 import { GamingGroup } from "./GamingGroup";
 
 // The PRODUCTS feature — @agentic-toolkit/ecosystems's EcosystemsFeature presented as Products
@@ -85,8 +93,39 @@ const ICONS: Record<string, ReactNode> = {
   "feature-flags": <Flag size={16} aria-hidden />,
   "server-bags": <Server size={16} aria-hidden />,
   billing: <CreditCard size={16} aria-hidden />,
+  // The eight that came down from the hub's workspace rail. Each wears the glyph its SITE wears
+  // in the site menu (adh/header/menu-icons), which is where the hub's own rail row got its icon
+  // from too — so the row looks the same whether you reached it as a workspace feature before or
+  // as a product topic now. (Copied, not imported: see the note above about FEATURE_META.)
+  communities: <Users size={16} aria-hidden />,
+  customers: <Contact size={16} aria-hidden />,
+  devices: <MonitorSmartphone size={16} aria-hidden />,
+  domains: <Globe size={16} aria-hidden />,
+  education: <School size={16} aria-hidden />,
+  notifications: <Bell size={16} aria-hidden />,
+  sites: <LayoutTemplate size={16} aria-hidden />,
+  stores: <Store size={16} aria-hidden />,
   settings: <Settings size={16} aria-hidden />,
 };
+
+/** O(1) membership for the switch below — the list is data (topics.ts owns it) and this is the
+ *  lookup, so adding a placeholder topic never touches this file. */
+const PLACEHOLDERS: ReadonlySet<string> = new Set<string>(PLACEHOLDER_TOPIC_IDS);
+
+/** The one pane every not-yet-built product topic renders. Deliberately says what it is scoped to:
+ *  these rows moved from the workspace rail to a PRODUCT, so "for this product" is the part of the
+ *  move a reader can otherwise only infer from the URL. */
+function ComingSoonPane({ title }: { title?: ReactNode }): ReactElement {
+  return (
+    <section className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      <h2 className="text-lg font-medium text-apt-text">{title}</h2>
+      <p className="font-mono text-sm uppercase tracking-widest text-apt-text-dim">Coming soon</p>
+      <p className="max-w-prose text-sm text-apt-text-muted">
+        {title} for this product will be configured here.
+      </p>
+    </section>
+  );
+}
 
 /** The rail as EcosystemsFeature wants it: PRODUCT_TOPICS with each topic's icon resolved and its
  *  overview-card description sourced from the unified help store (the same `ecosystems/<topic>`
@@ -284,6 +323,10 @@ export function productTopicPaneRenderer({
           />
         );
       default:
+        // The topics with no surface anywhere yet (PLACEHOLDER_TOPIC_IDS) are answered HERE rather
+        // than declined, because declining routes them to a host seam that has nothing to say
+        // either — and then both hosts write the same "coming soon" eight times over.
+        if (PLACEHOLDERS.has(topicId)) return <ComingSoonPane title={ctx.title} />;
         // Declined — EcosystemsFeature falls through to the host's renderFeaturePanel. The ids
         // that reach it are HOST_RENDERED_TOPIC_IDS (see ./topics), plus "settings", which the
         // feature renders itself and never asks either seam for.
