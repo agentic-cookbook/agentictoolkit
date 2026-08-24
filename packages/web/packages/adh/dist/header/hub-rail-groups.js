@@ -176,6 +176,7 @@ function segmentOf(link) {
 function railGroupId(label) {
   return `group:${label.toLowerCase()}`;
 }
+var HUB_PROMOTED_GROUP_ID = railGroupId(PROMOTED_GROUP_LABEL);
 var HUB_RAIL_GROUPS = (() => {
   const groups = [];
   const byLabel = /* @__PURE__ */ new Map();
@@ -217,6 +218,7 @@ var HUB_RAIL_GROUP_FOR_SEGMENT = (() => {
   return out;
 })();
 export {
+  HUB_PROMOTED_GROUP_ID,
   HUB_RAIL_GROUPS,
   HUB_RAIL_GROUP_FOR_SEGMENT
 };

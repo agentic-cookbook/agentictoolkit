@@ -59,7 +59,7 @@ const ACME: Organization = {
 /** The same org after someone renamed it elsewhere — what a revalidation brings back. */
 const RENAMED: Organization = { ...ACME, name: "Acme Inc" };
 
-/** The group with Profile selected, inside a real rail host so the spinner under test is the one
+/** The group with Settings selected, inside a real rail host so the spinner under test is the one
  *  the user sees rather than a harness stand-in for the flag.
  *
  *  Two query clients are in play and only one of them is this file's subject. The record under
@@ -136,7 +136,9 @@ describe("the organization's own record", () => {
     // The group's four rows are static, so the spinner is reporting the BODY behind the selected
     // one — the only read this group makes.
     expect(spinning()).toBe(true);
-    expect(within(rail()).getByRole("button", { name: "Profile" })).not.toBeNull();
+    // Labelled "Settings" and last in the list; the leaf id is still `profile`, which is why the
+    // deep link above resolves to it.
+    expect(within(rail()).getByRole("button", { name: "Settings" })).not.toBeNull();
     expect(screen.getByText("Loading…")).not.toBeNull();
 
     land(ACME);

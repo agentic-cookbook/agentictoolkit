@@ -16,7 +16,7 @@ import { useBillingContext } from "@agentic-toolkit/adh-billing/context";
  *
  * The hub answers the same seam with its whole workspace feature-panel registry, because on the
  * hub every one of these ids is ALSO a rail feature with a route of its own. Here there is no
- * such registry and no such route, so this is the list itself — three ids, and the switch is
+ * such registry and no such route, so this is the list itself — four ids, and the switch is
  * exhaustive over them (the `never` default makes an id added to that list a compile error here,
  * which is the point of the list being exported data rather than a switch's fall-through).
  *
@@ -82,12 +82,32 @@ export function productFeaturePanelRenderer({
         // DefaultCrudShell: the hub passes a variant only because it has rail chrome of its own
         // to publish the schema ▸ table rails into, and this site has none.
         return <AllDataPane />;
+      case "email-signup":
+        // The Authentication group's fourth member, and the one pane this site genuinely cannot
+        // draw: the panel is the hub's, built on hub-local workspace context and API clients, and
+        // there is no package to import it from. Say where it lives rather than rendering the raw
+        // id (what the `never` default would do) or an empty pane — both of which read as a bug.
+        // This case becomes `<EmailSignupPanel/>` the day that panel moves into a package.
+        return <ElsewherePane title="Email Signup" where="Agentic Developer Hub" />;
       default: {
         const exhaustive: never = feature;
         return exhaustive;
       }
     }
   };
+}
+
+/** A surface that exists, but not on this host. Names both halves — what it is and where it is —
+ *  because "not here" without "there" is indistinguishable from "not built". */
+function ElsewherePane({ title, where }: { title: string; where: string }): ReactNode {
+  return (
+    <section className="flex flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
+      <h2 className="text-lg font-medium text-apt-text">{title}</h2>
+      <p className="max-w-prose text-sm text-apt-text-muted">
+        {title} for this product is managed in the {where}.
+      </p>
+    </section>
+  );
 }
 
 function ProductBillingPanel({ workspaceSlug }: { workspaceSlug: string }): ReactNode {

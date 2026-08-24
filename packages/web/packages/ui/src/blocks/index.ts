@@ -176,3 +176,25 @@ export {
   type NotesSlots,
   type InvitationSendPayload,
 } from "./invitation-panes"
+
+// The one shape every editable list takes: a button bar carrying the search, the facets and every
+// action, over a resizable sortable table that scrolls rather than pages. Lived on the admin site
+// until the ecosystem panes needed the same list of the same rows; the reasoning for each of its
+// choices — no pager, no per-row buttons, error replaces the table only when there is nothing to
+// replace — is on the component. `./editable-list-types` and `./use-editable-list` are `.ts`, so
+// they reach a consumer through THIS barrel rather than the `./blocks/*` wildcard, which is `.tsx`.
+export { EditableList, type EditableListProps } from "./editable-list"
+export { FacetMenu, type FacetMenuProps } from "./facet-menu"
+export {
+  useEditableList,
+  isSortable,
+  isSearchable,
+  type EditableListController,
+  type UseEditableListOptions,
+} from "./use-editable-list"
+export type {
+  EditableListColumn,
+  EditableListFacet,
+  EditableListTextFilter,
+  ListSort,
+} from "./editable-list-types"

@@ -4,10 +4,11 @@
  * section (see FTD spec §4–§5). Creating products happens on the Products landing / the
  * selector popup's "New Product…" dialog (rendered above these).
  *
- * Storage / Users are GROUP topics: each renders a nested topic→detail sub-rail
- * of its members (defined in the toolkit's EcosystemsFeature), not a single pane —
+ * Storage / Users / Authentication are GROUP topics: each renders a nested topic→detail
+ * sub-rail of its members (defined in the toolkit's EcosystemsFeature), not a single pane —
  * Storage = Buckets / Access / All Data, Users (topic id "invitations", for deep-link
- * stability) = Users / Requests / Pending users / Invites.
+ * stability) = Users / Requests / Pending users / Invites, Authentication = User Auth /
+ * Sign-in apps / Storage Access Tokens / Email Signup.
  *
  * These rows are all scoped to the OPEN PRODUCT's ecosystem. Several of them name a surface
  * that ALSO exists at workspace level, scoped to the workspace's default ecosystem instead —
@@ -21,21 +22,23 @@
  * It lives here rather than in the hub because BOTH hosts of the Products feature render it, and
  * a copy per host is two rails that nothing makes agree. */
 export const PRODUCT_TOPICS = [
-  // The product's auto-provisioned project (subject-linked at create / deploy backfill).
-  { id: "project", label: "Project", dividerAfter: false },
   { id: "storage", label: "Storage", dividerAfter: false },
   { id: "integrations", label: "Integrations", dividerAfter: false },
   // Messaging: send email/SMS to this product's customers via its OWN connected
   // Postmark/Twilio integration (the promoted admin Messaging tool). Always shown; each
   // channel is disabled until its provider is connected on Integrations.
   { id: "messaging", label: "Messaging", dividerAfter: false },
-  { id: "tokens", label: "Tokens", dividerAfter: false },
   { id: "applications", label: "Applications", dividerAfter: false },
   { id: "dashboards", label: "Dashboards", dividerAfter: true },
   { id: "invitations", label: "Users", dividerAfter: false },
-  // Vended sign-in CLIENTS (oauth.clients) for this product's customer realm — the apps a
-  // developer registers so their site can sign its own customers in via GitHub-through-ADH.
-  { id: "signin-apps", label: "Sign-in apps", dividerAfter: false },
+  // Everything about HOW someone gets in, as one GROUP rather than four rows spread down the
+  // rail: the product's own auth policy (User Auth), the sign-in clients it vends
+  // (oauth.clients — the apps a developer registers so their site can sign its own customers in
+  // via GitHub-through-ADH), the storage tokens its machines authenticate with, and the waitlist
+  // people join before any of it applies (Email Signup). They were `auth`, `signin-apps` and
+  // `tokens` as top-level rows; the ids are unchanged, so every deep link still resolves — only
+  // where the row is OFFERED moved. Members live in EcosystemsFeature's `groupMembers`.
+  { id: "authentication", label: "Authentication", dividerAfter: false },
   // (Communities sat here, was removed for having no surface on any host, and came back below
   // with the rest of the hub's Products group — parked deliberately this time, because the
   // workspace rail offered it and moving that rail down whole is what dropping it would undo.)
@@ -44,9 +47,6 @@ export const PRODUCT_TOPICS = [
   // 'gamification' / 'game'): badges/levels/streaks engagement on a regular product, or a
   // full dedicated game (engine/content/connections/effects) with gamification tuned for it.
   { id: "gaming", label: "Gaming", dividerAfter: false },
-  // Explicit per-product auth policy (signup mode / login enabled) for this
-  // product's vended customer realm — the conceptual "Auth settings" home.
-  { id: "auth", label: "Auth", dividerAfter: false },
   // Per-product feature flags + server bags — named on/off toggles and arbitrary
   // key → JSON config values this product's apps / backend read at runtime.
   { id: "feature-flags", label: "Feature flags", dividerAfter: false },
@@ -83,13 +83,20 @@ export type ProductTopicId = (typeof PRODUCT_TOPICS)[number]["id"];
  * package's own test asserts it against PRODUCT_TOPICS, so a topic added above without a pane
  * here fails loudly instead of rendering blank.
  *
- * "all-data" is not a topic — it is the third member of the Storage GROUP, reached through the
- * same seam, which is why it is listed with them.
+ * "all-data" and "email-signup" are not topics — they are GROUP members (Storage's third,
+ * Authentication's fourth), reached through the same seam, which is why they are listed here
+ * with the two that are rows.
  */
 export const HOST_RENDERED_TOPIC_IDS = [
   "dashboards",
   "billing",
   "all-data",
+  // The Authentication group's fourth member, and the only one whose pane the two hosts cannot
+  // share: the hub's EmailSignupPanel reads its own workspace context and lives in the hub app
+  // (18 files, ~5.5k lines, over hub-local API clients), so it is not importable from here. The
+  // seam is how the hub renders the real thing while the products site says where it is managed
+  // instead of drawing a blank pane.
+  "email-signup",
 ] as const;
 
 /**

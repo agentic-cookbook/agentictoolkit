@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database } from "lucide-react";
+import {
+  Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database,
+  ShieldCheck, LogIn, MailPlus,
+} from "lucide-react";
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
@@ -154,7 +157,7 @@ export interface EcosystemsFeatureProps {
 
 /** The topic groups whose detail pane is a nested topic→detail sub-rail — the single source for
  *  both the membership check and the per-group members map below. */
-const GROUP_IDS = ["storage", "invitations"] as const;
+const GROUP_IDS = ["storage", "invitations", "authentication"] as const;
 type GroupId = (typeof GROUP_IDS)[number];
 const isGroupId = (id: string): id is GroupId => (GROUP_IDS as readonly string[]).includes(id);
 
@@ -252,6 +255,25 @@ function groupMembers(
       { id: "invites", label: "Invites", icon: <Send size={16} aria-hidden />,
         description: "Invitations you've sent and their status.",
         render: () => (ecoId ? <EcoInvitesPane ecosystemRdid={ecoId} /> : null) },
+    ],
+    // Authentication: everything about how someone (or something) gets in. Three of these were
+    // top-level rows on this rail — `auth`, `signin-apps`, `tokens` — and their MEMBER ids are
+    // those same ids, so the host's topic-pane switch answers them with no new cases and every
+    // existing deep link still resolves. Email Signup is the fourth and the odd one: no host-owned
+    // config pane exists for it in-package, so it goes through `renderFeaturePanel` like All Data.
+    authentication: [
+      { id: "auth", label: "User Auth", icon: <ShieldCheck size={16} aria-hidden />,
+        description: "Signup mode and login policy for the people who authenticate here.",
+        render: () => renderTopicPane("auth", { ecosystemId: ecoId, title: titleFor("User Auth") }) },
+      { id: "signin-apps", label: "Sign-in apps", icon: <LogIn size={16} aria-hidden />,
+        description: "The apps you've registered to sign your own users in.",
+        render: (subLeaf) => renderTopicPane("signin-apps", { ecosystemId: ecoId, title: titleFor("Sign-in apps"), leaf: subLeaf }) },
+      { id: "tokens", label: "Storage Access Tokens", icon: <KeyRound size={16} aria-hidden />,
+        description: "Long-lived tokens that read and write this ecosystem's buckets.",
+        render: () => renderTopicPane("tokens", { ecosystemId: ecoId, title: titleFor("Storage Access Tokens") }) },
+      { id: "email-signup", label: "Email Signup", icon: <MailPlus size={16} aria-hidden />,
+        description: "Waitlists and campaigns for people signing up before they can get in.",
+        render: () => renderFeaturePanel("email-signup") },
     ],
   };
 }

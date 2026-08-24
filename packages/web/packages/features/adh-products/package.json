@@ -47,7 +47,6 @@
     "@agentic-toolkit/gamification": "workspace:*",
     "@agentic-toolkit/games": "workspace:*",
     "@agentic-toolkit/integrations": "workspace:*",
-    "@agentic-toolkit/projects": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "lucide-react": "^1.16.0"

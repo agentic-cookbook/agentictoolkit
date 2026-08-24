@@ -10,7 +10,6 @@ import {
 } from "../api/customers";
 import { Users } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { Field } from "@agentic-toolkit/ui/blocks";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
@@ -21,6 +20,7 @@ import { useMasterDetailForm } from "@agentic-toolkit/resource";
 import { useMasterDetailLevel } from "@agentic-toolkit/resource";
 import type { TopicLeaf } from "@agentic-toolkit/resource";
 import { UserDetail, userBlank, userToInput, userValidate } from "./UserDetail";
+import { UsersTable } from "./UsersTable";
 
 function userDiffers(a: EcosystemUserInput, b: EcosystemUserInput): boolean {
   return (Object.keys(a) as (keyof EcosystemUserInput)[]).some(
@@ -118,7 +118,6 @@ export function UsersPane({
 
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-      <ErrorText error={loadError} className="px-6 pt-4" />
       <ButtonBar
         actions={form.actions}
         showCreate={false}
@@ -141,8 +140,17 @@ export function UsersPane({
             error={form.error}
           />
         ) : (
-          <EmptyState
-            title={users === null ? "Loading…" : "Select a user to edit, or create a new one."}
+          // Not an empty state telling you to pick a row from a list that is somewhere else. This
+          // is the list — the ecosystem's users, in the same table the admin site shows its own in
+          // — so "select a user" is a thing you can do from here rather than an instruction about
+          // the rail. It also carries the load failure, which is why the `ErrorText` that used to
+          // sit above the bar is gone: `EditableList` replaces the table with the error when there
+          // are no rows, and strips it over the rows when a REFETCH fails, and both readings are
+          // better than an error line above an empty table saying "No users yet."
+          <UsersTable
+            users={users}
+            error={loadError}
+            onOpen={(id) => (leaf ? leaf.onSelect(id) : form.select(id))}
           />
         )}
       </div>

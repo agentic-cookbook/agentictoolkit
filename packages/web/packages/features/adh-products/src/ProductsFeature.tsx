@@ -5,12 +5,10 @@ import {
   Settings,
   AppWindow,
   UsersRound,
-  KeyRound,
-  LogIn,
-  FolderKanban,
   Flag,
   Server,
   Gamepad2,
+  ShieldCheck,
   HardDrive,
   Plug,
   MessageCircle,
@@ -49,7 +47,6 @@ import {
   StorageTokensPanel,
 } from "@agentic-toolkit/ecosystem-config";
 import { AccessPane } from "@agentic-toolkit/authentication";
-import { SubjectProjectPane } from "@agentic-toolkit/projects";
 import { helpFor } from "@agentic-toolkit/adh/help/store";
 import { PLACEHOLDER_TOPIC_IDS, PRODUCT_TOPICS } from "./topics";
 import { GamingGroup } from "./GamingGroup";
@@ -77,19 +74,18 @@ import { GamingGroup } from "./GamingGroup";
 // both, or the same feature wears different icons depending on whether you reached it from the
 // hub rail or from inside a product.
 const ICONS: Record<string, ReactNode> = {
-  project: <FolderKanban size={16} aria-hidden />,
   storage: <HardDrive size={16} aria-hidden />,
   integrations: <Plug size={16} aria-hidden />,
   messaging: <MessageCircle size={16} aria-hidden />,
-  tokens: <KeyRound size={16} aria-hidden />,
   applications: <AppWindow size={16} aria-hidden />,
   dashboards: <LayoutDashboard size={16} aria-hidden />,
   // The "Users" topic keeps id "invitations" for deep-link stability (its members are
   // Users + Requests / Pending users / Invites); a people icon matches the label.
   invitations: <UsersRound size={16} aria-hidden />,
-  "signin-apps": <LogIn size={16} aria-hidden />,
+  // The GROUP that absorbed the old auth / signin-apps / tokens rows. Its members keep their own
+  // glyphs (EcosystemsFeature's groupMembers); this is the row that discloses them.
+  authentication: <ShieldCheck size={16} aria-hidden />,
   gaming: <Gamepad2 size={16} aria-hidden />,
-  auth: <KeyRound size={16} aria-hidden />,
   "feature-flags": <Flag size={16} aria-hidden />,
   "server-bags": <Server size={16} aria-hidden />,
   billing: <CreditCard size={16} aria-hidden />,
@@ -144,38 +140,9 @@ export const PRODUCT_TOPIC_CONFIGS: EcosystemsTopicConfig[] = PRODUCT_TOPICS.map
 // the ORG'S tokens for this product's ecosystem, not the signed-in user's personal ones).
 // `ecosystemId` still narrows to this product's bucket ecosystem.
 //
-// The product's auto-provisioned project needs the same slug for its Access member, and takes
-// `leaf` (the 4th URL segment) to deep-link the member.
-
-/** The product's auto-provisioned project — subject-linked by the product's ecosystem id (an rdid
- *  here; the backend resolves it at the edge).
- *
- *  A COMPONENT rather than an inline `if (!ecosystemId) return null` in the switch below, and that
- *  is load-bearing: EcosystemsFeature reads a falsy `renderTopicPane` result as the host DECLINING
- *  the topic and falls through to `renderFeaturePanel(topicId)`. `ecosystemId` is legitimately
- *  `undefined` while the ecosystem resolves (the feature threads `string | undefined` throughout),
- *  so declining there would hand "project" to a host that owns no such panel — the exhaustive
- *  `never` default, which renders the literal id into the pane. Returning an element that renders
- *  nothing keeps the claim and blanks the pane for that tick instead. */
-function ProductProjectPane({
-  ecosystemId,
-  workspaceSlug,
-  leaf,
-}: {
-  ecosystemId?: string;
-  workspaceSlug: string;
-  leaf?: TopicLeaf;
-}): ReactElement | null {
-  if (!ecosystemId) return null;
-  return (
-    <SubjectProjectPane
-      subjectKind="ecosystem"
-      subjectId={ecosystemId}
-      workspaceSlug={workspaceSlug || undefined}
-      memberSelection={leaf ? { selectedId: leaf.leafId, onSelect: leaf.onSelect } : undefined}
-    />
-  );
-}
+// (A "Project" row used to sit at the top of this rail, rendering the product's auto-provisioned
+// project. It is gone: Projects is a workspace-level row of its own now, and a product's project
+// is reached from there. The auto-provisioning is untouched — only the duplicate rail row went.)
 
 /** Exported for the package's own seam test, which asks the REAL switch which topic ids it
  *  claims rather than re-listing them — a hand-kept copy of these cases only ever fails when a
@@ -190,14 +157,6 @@ export function productTopicPaneRenderer({
 }): (topicId: string, ctx: RenderTopicPaneCtx) => ReactNode {
   return function renderProductTopicPane(topicId, ctx) {
     switch (topicId) {
-      case "project":
-        return (
-          <ProductProjectPane
-            ecosystemId={ctx.ecosystemId}
-            workspaceSlug={workspaceSlug}
-            leaf={ctx.leaf}
-          />
-        );
       case "applications":
         return (
           <ApplicationsPane
@@ -289,7 +248,7 @@ export function productTopicPaneRenderer({
             helpFor={helpFor}
           />
         );
-      // The three group-member panes (Storage ▸ Buckets / Access, Users ▸ Users). The
+      // The group-member panes (Storage ▸ Buckets / Access, Users ▸ Users). The
       // help-key mapping is the ORIGINAL, non-uniform one — the Buckets member's help key is
       // "schemas", not "buckets" (a CONTENT key under the `ecosystems/` namespace, not a URL).
       case "buckets":

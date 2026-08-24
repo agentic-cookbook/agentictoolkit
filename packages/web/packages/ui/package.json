@@ -51,6 +51,11 @@
       "development": "./src/lib/errors.ts",
       "import": "./dist/lib/errors.js"
     },
+    "./lib/timestamps": {
+      "types": "./dist/lib/timestamps.d.ts",
+      "development": "./src/lib/timestamps.ts",
+      "import": "./dist/lib/timestamps.js"
+    },
     "./lib/typography": {
       "types": "./dist/lib/typography.d.ts",
       "development": "./src/lib/typography.ts",

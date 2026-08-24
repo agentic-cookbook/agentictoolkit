@@ -65,6 +65,16 @@ function railGroupId(label: string): string {
   return `group:${label.toLowerCase()}`
 }
 
+/** The Hub group's rail id, named so a host can PLACE that group rather than only read it out of
+ *  the derived list. The hub's rail draws it at the tail — last row above Settings, under a
+ *  divider — because it is the family's own front door (Help, Support, the two registries, the
+ *  Academy) rather than an area of anyone's work, and the tail is where the rows about the
+ *  product-you-are-using-rather-than-the-work-you-are-doing belong.
+ *
+ *  Derived from the label rather than written as the literal `'group:hub'`, so the two cannot
+ *  disagree about the namespacing rule {@link railGroupId} owns. */
+export const HUB_PROMOTED_GROUP_ID: string = railGroupId(PROMOTED_GROUP_LABEL)
+
 /**
  * The fleet's groups, in the menu's order, each carrying the hub segments its rows lead to.
  *

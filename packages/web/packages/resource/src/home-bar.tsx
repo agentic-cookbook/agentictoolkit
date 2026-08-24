@@ -134,8 +134,16 @@ export function HomeBarHost({
           {/* Before the slot, so the placeholder reads from the left edge like a feature's search
               does. The slot's `w-full` still shrinks around it (flex items shrink by default), and
               the moment anyone claims, the placeholder is gone and the slot has the row to itself
-              again — so a publisher's right-justified action lands exactly where it always has. */}
-          {claims.size === 0 && placeholder}
+              again — so a publisher's right-justified action lands exactly where it always has.
+
+              `shrink-0 whitespace-nowrap` on the wrapper because the slot beside it is `w-full`:
+              a flex item asking for the whole row squeezes its sibling down to min-content, and
+              two words of placeholder then wrap onto two lines and push the bar TALLER than
+              `--adh-chrome-bar-height`. The wrapper belongs here rather than in what a host
+              passes, because the squeeze is a fact about this row, not about the node. */}
+          {claims.size === 0 && placeholder !== undefined ? (
+            <div className="shrink-0 whitespace-nowrap">{placeholder}</div>
+          ) : null}
           <div ref={setSlot} className="flex w-full items-center gap-2" />
         </div>
       )}

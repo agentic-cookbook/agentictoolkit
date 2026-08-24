@@ -26,12 +26,13 @@ describe("the product topic rail", () => {
 
 describe("the host-rendered seam", () => {
   // A POSITIVE assertion about the SETTLED list, not a spot-check of four names: every id a host
-  // is told to expect is either a real topic or the Storage group's All Data member. An id that
-  // is neither would be a seam contract for a pane that can never be asked for.
-  it("names only real topics (plus the one group member that is not one)", () => {
+  // is told to expect is either a real topic or a GROUP MEMBER — All Data under Storage, Email
+  // Signup under Authentication. An id that is neither would be a seam contract for a pane that
+  // can never be asked for.
+  it("names only real topics (plus the group members that are not ones)", () => {
     const topicIds = new Set<string>(PRODUCT_TOPICS.map((t) => t.id));
     const notATopic = HOST_RENDERED_TOPIC_IDS.filter((id) => !topicIds.has(id));
-    expect(notATopic).toEqual(["all-data"]);
+    expect(notATopic).toEqual(["all-data", "email-signup"]);
   });
 
   // The other direction, and the one that actually fails on a change: EVERY topic on the rail has
@@ -48,10 +49,11 @@ describe("the host-rendered seam", () => {
     const claims = (id: string) => render(id, { ecosystemId: "eco_1", title: id }) != null;
     const PACKAGE_PANES = PRODUCT_TOPICS.map((t) => t.id).filter(claims);
 
-    // Rendered by EcosystemsFeature itself, asked of NEITHER seam: the two GROUP topics, whose
+    // Rendered by EcosystemsFeature itself, asked of NEITHER seam: the three GROUP topics, whose
     // nested sub-rails it owns (their members come back through the seams — Buckets/Access/Users
-    // to the switch above, All Data to the host), and the product's own entity pane.
-    const FEATURE_OWNED = ["storage", "invitations", "settings"];
+    // and User Auth/Sign-in apps/Storage Access Tokens to the switch above, All Data and Email
+    // Signup to the host), and the product's own entity pane.
+    const FEATURE_OWNED = ["storage", "invitations", "authentication", "settings"];
     const owned = new Set<string>([...PACKAGE_PANES, ...FEATURE_OWNED, ...HOST_RENDERED_TOPIC_IDS]);
     const unowned = PRODUCT_TOPICS.map((t) => t.id).filter((id) => !owned.has(id));
     expect(unowned).toEqual([]);

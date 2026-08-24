@@ -113,34 +113,11 @@ export function TeamsFeature({
   // so the affordance is unreachable anyway.)
   const canCreate = slug != null && lookup !== "failed" && lookup !== "none";
 
-  // Entity-first topics (FTD spec §4): the team itself, then Members, Permissions.
+  // What the team IS comes first — Members, then Permissions — and its Settings last. The topic
+  // used to lead, labelled "Team", which restated the row you had just picked and put the least
+  // used pane in the most reachable place. The id is unchanged (`settings`), so every deep link
+  // still resolves; only the label and the position moved.
   const topics: ResourceTopic[] = [
-    {
-      id: "settings",
-      label: "Team",
-      icon: <Settings size={16} aria-hidden />,
-      render: (teamId, titleFor) => (
-        <TeamSettingsPane
-          teamId={teamId}
-          items={teams}
-          ecosystemId={ecosystemId}
-          refresh={reload}
-          loadError={error}
-          title={titleFor("Team")}
-          onDelete={
-            teamId
-              ? makeEntityDeleteHandler({
-                  basePath,
-                  id: teamId,
-                  router,
-                  del: teamsApi.delete,
-                  reload,
-                })
-              : undefined
-          }
-        />
-      ),
-    },
     {
       id: "members",
       label: "Members",
@@ -155,6 +132,32 @@ export function TeamsFeature({
       icon: <Shield size={16} aria-hidden />,
       render: (_teamId, titleFor, leaf) => (
         <TeamPermissionsPane workspaceSlug={slug} title={titleFor("Permissions")} leaf={leaf} />
+      ),
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      icon: <Settings size={16} aria-hidden />,
+      render: (teamId, titleFor) => (
+        <TeamSettingsPane
+          teamId={teamId}
+          items={teams}
+          ecosystemId={ecosystemId}
+          refresh={reload}
+          loadError={error}
+          title={titleFor("Settings")}
+          onDelete={
+            teamId
+              ? makeEntityDeleteHandler({
+                  basePath,
+                  id: teamId,
+                  router,
+                  del: teamsApi.delete,
+                  reload,
+                })
+              : undefined
+          }
+        />
       ),
     },
   ];
@@ -179,10 +182,11 @@ export function TeamsFeature({
       rail={{
         title: "All teams",
         help: "Pick a team to manage its settings, members, and permissions.",
-        // The reverse-domain identifier is the team's unique key — display names are free text
-        // and two teams in one workspace may share one. It is also what `teamValidate` checks
-        // for collisions, so it is the value a user needs to see before naming a new team.
-        getSublabel: (t) => t.identifier,
+        // No `getSublabel`. It showed the reverse-domain identifier under every name, which is a
+        // fact about the team a reader needs exactly twice — when checking a collision before
+        // naming a new one, and when reading a URL — and it is on the Settings pane both times.
+        // On the list it doubled every row's height to disambiguate names that are almost never
+        // ambiguous.
         // A failed list leaves `items` null forever (`useResourceList` sets the error and
         // never fills the array), so without this the rail would sit on "Loading…" and the
         // error would be invisible — the rail is the only surface that can show it.
