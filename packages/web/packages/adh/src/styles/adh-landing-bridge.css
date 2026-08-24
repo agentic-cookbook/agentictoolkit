@@ -1,6 +1,6 @@
 /* adh/src/styles/adh-landing-bridge.css
  *
- * Assigns @agentic-toolkit/landing's 54-token contract from the M3 role vars
+ * Assigns @agentic-toolkit/landing's 63-token contract from the M3 role vars
  * <AdhThemeStyle /> injects. It lives HERE and not in `landing` because that
  * package depends on nothing and never assigns a :root — every token is read
  * as var(--lp-x, fallback), so a host override always wins whatever the import
@@ -27,6 +27,45 @@
     circle,
     color-mix(in srgb, var(--color-primary) 13%, transparent),
     transparent 65%
+  );
+
+  /* Flow tones — the band system that arrived beside the deck.
+   *
+   * `Flow` stacks full-bleed bands in three tones, and the package names the
+   * two it cannot derive: a band one step off the ground, and a LIGHT band on a
+   * dark page. The light one is not a tint of anything above — `.lp-band--paper`
+   * re-points `--lp-ink`/`--lp-ink-dim` inside itself from the two paper tokens
+   * here, because inverting the page's text colours is not the same as dimming
+   * them (landing's own comment on that rule says so). M3 has exactly this pair
+   * already: `inverse-surface` IS the surface drawn in the opposite tone, with
+   * `inverse-on-surface` as its text. So the paper band is the theme's inverse
+   * pair, not a hand-picked near-white, and it flips with the theme instead of
+   * staying light when the theme goes light.
+   *
+   * `--lp-paper-dim` has no third role to reach for: it is landing's own ratio
+   * (its #5c5c5c between #171717 ink and #f4f4f4 paper, ~69% of the way to the
+   * ink) re-expressed as a mix of the two roles, so it stays a *quiet* paper
+   * ink at whatever the two ends turn out to be. */
+  --lp-tone-soft: var(--color-surface-container-low);
+  --lp-tone-paper: var(--color-inverse-surface);
+  --lp-paper-ink: var(--color-inverse-on-surface);
+  --lp-paper-dim: color-mix(
+    in srgb,
+    var(--color-inverse-on-surface) 69%,
+    var(--color-inverse-surface)
+  );
+
+  /* The hero's ground, as one value. The package deliberately ships no gradient
+   * here — its comment calls a hero wash "the single most site-specific surface
+   * on the page", and defaults to the flat ground rather than hold an opinion
+   * about a brand. Assigning the flat ground back would be that same non-answer
+   * spelled twice, so this is the opinion, kept to the roles: a breath of
+   * primary at the top settling into the page ground before the first band's
+   * seam cuts across it. */
+  --lp-hero-wash: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--color-primary) 7%, var(--color-surface)),
+    var(--color-surface) 62%
   );
 
   /* Minted shades — landing's fallbacks, re-sampled against the roles. */
@@ -69,6 +108,16 @@
   --lp-font-mono: var(--font-mono);
   --lp-font-serif: var(--font-serif, ui-serif, Georgia, serif);
 
+  /* The flow layout's headline face — its hero `h1` and its band headings, the
+   * only two places the deck asks for a face that is not the body's. The role
+   * var by the same name, by the reasoning directly above read the other way:
+   * `--lp-font-serif` names a serif so it takes `--font-serif`, and this one
+   * names the display face so it takes `--font-display`. That the adh themes
+   * currently alias the two to one another is the theme's business, not this
+   * file's — a theme that stops doing so is exactly when this mapping earns
+   * its keep. */
+  --lp-font-display: var(--font-display, var(--font-mono));
+
   /* Geometry. Measure follows devteam (72rem), not landing's 70rem default.
    *
    * So does the root size, and that one is an OVERRIDE: the package ships
@@ -84,6 +133,22 @@
   --lp-measure: 72rem;
   --lp-radius: 14px;
   --lp-gap: clamp(3.75rem, 8vw, 6.5rem);
+
+  /* The flow layout's three dials, at the package's own values — the deck's
+   * rhythm was drawn against them and nothing here wants it moved. They are
+   * restated rather than left to fall through for the reason the header gives:
+   * every token landing reads is assigned in this one place, so the value a
+   * band is actually laid out on can be read off the host's stylesheet instead
+   * of hunted for as a fallback inside the package.
+   *
+   * `--lp-seam` is the depth of the diagonal a band cuts off its own edge, and
+   * it is load-bearing twice over: the clip-path and the negative margin that
+   * refills the vacated triangle both read it, and the band's extra padding is
+   * `--lp-band-pad + --lp-seam` so content never lands inside the cut. Moving
+   * either one alone is what tears a seam open. */
+  --lp-band-pad: clamp(4.5rem, 9vw, 8rem);
+  --lp-bleed: clamp(2.5rem, 10vw, 9rem);
+  --lp-seam: 4.5vw;
   --lp-dock-clear: 0px;
   --lp-screen-pad-top: clamp(5.5rem, 14svh, 9rem);
   --lp-hero-pad-top: 6.5rem;
