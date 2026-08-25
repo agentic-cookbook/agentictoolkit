@@ -139,6 +139,18 @@ export interface EntryRow {
    * allows is a 400 naming the field, not a silent clamp.
    */
   valueVisibility: Record<string, FieldVisibility>;
+  /**
+   * When this registrant signed up — READ-ONLY, which is why `EntryWrite` subtracts it.
+   *
+   * The column has been in the response all along (`GET /entries` selects the row whole)
+   * and is `required` on the spec's `RegistryEntry`; it was simply unnamed here, so the one
+   * surface that wants it — the owner's roster of everyone in the registry — had no way to
+   * read it. Naming it costs the subtraction below and nothing else.
+   *
+   * A Postgres `timestamp` carries no zone, so render it through
+   * `@agentic-toolkit/ui/lib/timestamps`, never a bare `new Date()` — which reads it as local.
+   */
+  createdAt: string;
 }
 
 /**
@@ -149,8 +161,12 @@ export interface EntryRow {
  * ever holds real settings. Typing the write off the read type alone would leave the
  * backend's documented clear-a-key semantics unreachable from this client — not a compile
  * error anywhere, just a capability no caller could name.
+ *
+ * `createdAt` is subtracted for the opposite reason: it is a column the server owns, so a
+ * write type that admitted it would let an editor offer to change a signup date that no
+ * handler reads.
  */
-export type EntryWrite = Partial<Omit<EntryRow, 'valueVisibility'>> & {
+export type EntryWrite = Partial<Omit<EntryRow, 'valueVisibility' | 'createdAt'>> & {
   valueVisibility?: Record<string, FieldVisibility | null>;
 };
 
@@ -208,7 +224,7 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 /**
- * `json`'s void sibling, for the three DELETE endpoints that return no body. Without
+ * `json`'s void sibling, for the DELETE endpoints that return no body. Without
  * this, a delete method that called `fetcher` directly and returned its `Promise<Response>`
  * would resolve successfully on a non-ok response (403/404/409/500) under a bare-`fetch`
  * fetcher — the one branch the `Fetcher` docblock above calls load-bearing.
@@ -308,6 +324,18 @@ export function createRegistryClient(fetcher: Fetcher) {
       send<EntryRow>(`${BASE}/${seg(registryId)}/entries`, 'POST', body),
     updateEntry: (registryId: string, id: string, body: EntryWrite) =>
       send<EntryRow>(`${BASE}/${seg(registryId)}/entries/${seg(id)}`, 'PATCH', body),
+
+    /**
+     * Take a registrant out of the registry — SOFT server-side, which is also what frees
+     * their slug and their one-per-registry owner slot for a fresh signup.
+     *
+     * Gated on `D` for the entry, which `assertEntryVerb` grants to the entry's own author
+     * AND to the registry's owner — the same pairing that lets an owner approve a
+     * submission. Irreversible from every client surface (nothing here un-deletes), so the
+     * host owns the confirmation, exactly as `deleteRegistry` says above.
+     */
+    deleteEntry: (registryId: string, id: string) =>
+      del(`${BASE}/${seg(registryId)}/entries/${seg(id)}`),
 
     listServices: (registryId: string, entryId: string) =>
       send<{ items: ServiceRow[] }>(`${BASE}/${seg(registryId)}/entries/${seg(entryId)}/services`, 'GET'),
