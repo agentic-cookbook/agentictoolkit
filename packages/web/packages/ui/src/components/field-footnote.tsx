@@ -27,15 +27,29 @@ import { cn } from "../lib/utils"
 export function FieldFootnote({
   hint,
   error,
+  errorId,
   className,
 }: {
   hint?: ReactNode
   /** Shown in place of `hint` when set. */
   error?: ReactNode
+  /** Names the ERROR line so a control can point `aria-describedby` at it.
+   *
+   *  Only the error, never the hint: a hint that belongs to a control belongs in the
+   *  control's own accessible name, which `Field` already gets by rendering both inside
+   *  one `Label`. The error is the half that appears and disappears while the control is
+   *  focused, and a screen reader announces a change it is described by — this line
+   *  carries no `role="alert"` (see above), so `aria-describedby` is how it is heard at
+   *  all. Absent means nothing points at it and the id would be dead weight. */
+  errorId?: string
   className?: string
 }): ReactElement | null {
   if (error) {
-    return <span className={cn("font-mono text-[0.7rem] text-apt-red", className)}>{error}</span>
+    return (
+      <span id={errorId} className={cn("font-mono text-[0.7rem] text-apt-red", className)}>
+        {error}
+      </span>
+    )
   }
   return hint ? (
     <span className={cn("font-mono text-[0.7rem] text-apt-text-dim", className)}>{hint}</span>

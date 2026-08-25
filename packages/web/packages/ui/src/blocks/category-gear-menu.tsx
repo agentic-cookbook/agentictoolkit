@@ -1,16 +1,14 @@
 "use client"
 
 import * as React from "react"
-import { Settings } from "lucide-react"
 
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "../components/dropdown-menu"
-import { cn } from "../lib/utils"
+import { GearMenuTrigger } from "./gear-menu-trigger"
 
 /** The five verbs. `add` acts on the LIST; the other four act on its selected row. */
 export type CategoryGearAction = "add" | "rename" | "move" | "file" | "delete"
@@ -76,16 +74,7 @@ export function CategoryGearMenu({
   const Noun = noun.charAt(0).toUpperCase() + noun.slice(1)
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        aria-label={`${Noun} actions`}
-        disabled={disabled}
-        className={cn(
-          "flex size-6 items-center justify-center rounded text-apt-text-dim outline-none hover:text-apt-text focus-visible:ring-2 focus-visible:ring-apt-gold/40 disabled:opacity-40",
-          className,
-        )}
-      >
-        <Settings size={14} aria-hidden />
-      </DropdownMenuTrigger>
+      <GearMenuTrigger label={`${Noun} actions`} disabled={disabled} className={className} />
       <DropdownMenuContent align="end">
         <DropdownMenuItem onClick={() => onAction("add")}>Add {noun}…</DropdownMenuItem>
         <DropdownMenuSeparator />

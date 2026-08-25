@@ -3,6 +3,7 @@ export { EditorSection, type EditorSectionItem } from "./editor-section";
 export { MarkdownEditor, type MarkdownEditorProps } from "./markdown-editor";
 export { Field } from "./field";
 export { FieldGroup } from "./field-group";
+export { GearMenuTrigger, type GearMenuTriggerProps } from "./gear-menu-trigger";
 // What a document is called and where it lives — the title/slug pair, with a live
 // "available / unavailable" verdict for the slug. The slug rule is injected, so a host's
 // route alphabet stays the host's.

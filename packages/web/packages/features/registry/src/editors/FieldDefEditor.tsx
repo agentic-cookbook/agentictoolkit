@@ -1,25 +1,24 @@
 'use client';
 
-import { FIELD_TYPES, SHOW_IF_OPS } from '@agenticdevelopertoolkit/registry-types';
-import type { FieldType, ShowIfRule } from '@agenticdevelopertoolkit/registry-types';
-import { FIELD_VISIBILITIES } from '../client';
+import type { FieldType } from '@agenticdevelopertoolkit/registry-types';
 import type { FieldVisibility } from '../client';
 import { noAutofillProps } from '../autofill';
+// The tables and the rule algebra live beside this file, not in it: adh's hub renders the
+// same builder from its own design system, and a forked `coerceRuleValue` or a forked
+// audience label would drift in one skin only. See `fieldDefModel.ts`.
+import {
+  FIELD_TYPES,
+  FIELD_VISIBILITIES,
+  OP_LABEL,
+  TYPE_LABEL,
+  VALUELESS,
+  VISIBILITY_LABEL,
+  coerceRuleValue,
+  opsFor,
+} from './fieldDefModel';
+import type { FieldDefDraft, ShowIfOp } from './fieldDefModel';
 
-export interface FieldDefDraft {
-  id?: string;
-  key: string;
-  type: FieldType;
-  label: string;
-  help: string;
-  required: boolean;
-  visibility: FieldVisibility;
-  config: Record<string, unknown>;
-  /** Position within its section. Written by the builder's reorder control. */
-  sortOrder: number;
-  /** The declarative rule from §5 of the schema. `null` means "always applies". */
-  showIf: ShowIfRule | null;
-}
+export type { FieldDefDraft };
 
 export interface FieldDefEditorProps {
   def: FieldDefDraft;
@@ -32,76 +31,6 @@ export interface FieldDefEditorProps {
   onMoveDown?: () => void;
   canMoveUp?: boolean;
   canMoveDown?: boolean;
-}
-
-const TYPE_LABEL: Record<FieldType, string> = {
-  text: 'Short text', textarea: 'Long text', markdown: 'Rich text',
-  select: 'Choose one', multi_select: 'Choose several', url: 'Link',
-  email: 'Email address', phone: 'Phone number', boolean: 'Yes or no',
-  date: 'Date', image: 'Image', address: 'Address',
-};
-
-// `Record`'s exhaustiveness means a member FIELD_VISIBILITIES gains later and this map does
-// not is a compile error, not a silently missing <option> — same convention as TYPE_LABEL
-// above.
-//
-// These read as a CEILING, because that is what a def's setting is: the registrant may
-// narrow it further on their own entry but can never widen it. "Anyone" therefore means
-// "anyone, if the registrant agrees", and the labels say "at most" so the owner is not
-// told they are publishing something the registrant may have kept back.
-const VISIBILITY_LABEL: Record<FieldVisibility, string> = {
-  public: 'At most: anyone, including search engines',
-  authenticated: 'At most: signed-in members',
-  private: 'Only you and the registrant',
-};
-
-type ShowIfOp = (typeof SHOW_IF_OPS)[number];
-
-const OP_LABEL: Record<ShowIfOp, string> = {
-  eq: 'is', ne: 'is not', truthy: 'has any answer', falsy: 'has no answer',
-  in: 'is one of', contains: 'includes',
-};
-
-/** The two ops that read the answer's presence, not its content. */
-const VALUELESS = new Set(['truthy', 'falsy']);
-
-/**
- * Ops whose value column a subject type can actually populate. `eq`/`ne` against a
- * `multi_select` answer can never match (the stored value is an array, an `eq` rule's value
- * is not), and `in`/`contains` against most scalar types are equally meaningless — so rather
- * than list every exclusion, only the two types with a narrower story than "the full set" are
- * named here; anything else (including a dangling rule with no resolvable subject) keeps every
- * op, per `opsFor` below.
- */
-const OPS_BY_TYPE: Partial<Record<string, readonly ShowIfOp[]>> = {
-  boolean: ['eq', 'ne', 'truthy', 'falsy'],
-  multi_select: ['contains', 'truthy', 'falsy'],
-};
-
-function opsFor(subjectType: string | undefined): readonly ShowIfOp[] {
-  const narrowed = subjectType ? OPS_BY_TYPE[subjectType] : undefined;
-  return narrowed ?? SHOW_IF_OPS;
-}
-
-/**
- * The value a freshly chosen (subject, op) pair should start from. Reuses the previous value
- * only when its shape still fits the new op/subject, so switching `in` -> `eq` never leaves an
- * array behind in a text box, and switching the subject away from `boolean` never leaves a
- * stray `true`/`false` selected for an op that now expects text.
- */
-function coerceRuleValue(op: string, subjectType: string | undefined, previous: unknown): unknown {
-  if (VALUELESS.has(op)) return null;
-  if (op === 'in') return Array.isArray(previous) ? previous : [];
-  if (subjectType === 'boolean' && (op === 'eq' || op === 'ne')) {
-    // A boolean subject's `eq`/`ne` can only ever be tested against `true` or `false` — an
-    // empty string is not a value either state can equal, so `{op:'eq', value:''}` was a
-    // rule that read false for every registrant forever, with nothing on screen saying why
-    // (R6-I2). Defaulting to a real boolean instead of an empty string makes that state
-    // unrepresentable: "Add a condition" on a boolean sibling now starts on an answer,
-    // not an unchosen one.
-    return typeof previous === 'boolean' ? previous : true;
-  }
-  return typeof previous === 'string' ? previous : '';
 }
 
 /**

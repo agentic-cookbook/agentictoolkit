@@ -58,6 +58,7 @@ function renderExplorer({
   newLabel,
   promoteTopics = false,
   homeBarRight,
+  renderNewControl,
 }: {
   items: Row[] | null;
   newLabel?: string;
@@ -65,6 +66,8 @@ function renderExplorer({
   promoteTopics?: boolean;
   /** A host's own right-side control — see the `homeBarRight` describe block below. */
   homeBarRight?: ReactNode;
+  /** The host's own SHAPE for the create trigger — see the `renderNewControl` block below. */
+  renderNewControl?: (onNew: () => void) => ReactNode;
 }) {
   // A HomeBarHost above the explorer, exactly like SiteHomeShell/WorkspaceShellInner mount in
   // the real fleet: without one HomeBarPortal takes its no-host inline fallback and every
@@ -82,6 +85,7 @@ function renderExplorer({
         topics={NO_TOPICS}
         newLabel={newLabel}
         homeBarRight={homeBarRight}
+        renderNewControl={renderNewControl}
         rail={{ title: "All", help: "help", emptyLabel: "None yet." }}
       />
     </HomeBarHost>,
@@ -260,5 +264,75 @@ describe("ResourceExplorer's homeBarRight — a host's own right-side control", 
   it("does not publish an empty bar for a falsy homeBarRight", () => {
     renderExplorer({ items: [], homeBarRight: false });
     expect(screen.queryByTestId("home-bar")).toBeNull();
+  });
+});
+
+// `renderNewControl` is the OTHER half of the same seam: `homeBarRight` is for a host that owns
+// the create MECHANISM, this is for a host that owns only its SHAPE. The registries feature is
+// the first — its create verb lives behind a gear menu rather than as a standalone `+` button —
+// and the distinction is worth pinning because the tempting way to build that gear is
+// `homeBarRight`, which would have made the host re-implement the dialog, the reload and the
+// route-to-the-new-row this component already does.
+describe("ResourceExplorer's renderNewControl — a host's own SHAPE for the create trigger", () => {
+  it("renders the host's control instead of the default + button, and still opens the dialog", async () => {
+    let opened = 0;
+    renderExplorer({
+      items: [{ id: "a", label: "Alpha" }],
+      newLabel: "New Project…",
+      renderNewControl: (onNew) => (
+        <button
+          type="button"
+          onClick={() => {
+            opened += 1;
+            onNew();
+          }}
+        >
+          Registry actions
+        </button>
+      ),
+    });
+    const strip = await screen.findByTestId("home-bar");
+    const gear = screen.getByRole("button", { name: "Registry actions" });
+    expect(strip).toContainElement(gear);
+    // The default button is REPLACED, not joined — one create affordance in the slot, the same
+    // rule `homeBarRight` follows.
+    expect(screen.queryByRole("button", { name: "New Project" })).toBeNull();
+    fireEvent.click(gear);
+    expect(opened).toBe(1);
+  });
+
+  // Gated by `canCreate` exactly like the default button, so a host cannot publish a create
+  // control where the explorer would refuse to render its own. Without the `canCreate &&` term
+  // this render would put the control in a promoteTopics bar, beside the promoted resource-list
+  // topic's own create — the duplicate `canCreate`'s `!promoteTopics` exists to prevent.
+  it("is gated by canCreate: no control in promoteTopics mode, and none without a newLabel", () => {
+    renderExplorer({
+      promoteTopics: true,
+      newLabel: "New Ecosystem…",
+      items: [{ id: "a", label: "Alpha" }],
+      renderNewControl: () => <button type="button">Registry actions</button>,
+    });
+    expect(screen.queryByRole("button", { name: "Registry actions" })).toBeNull();
+    cleanup();
+
+    renderExplorer({
+      items: [{ id: "a", label: "Alpha" }],
+      renderNewControl: () => <button type="button">Registry actions</button>,
+    });
+    expect(screen.queryByRole("button", { name: "Registry actions" })).toBeNull();
+  });
+
+  // `homeBarRight` takes the whole slot, so a host that somehow passes both gets the mechanism
+  // half — the same precedence the component applies to `newLabel`'s own button.
+  it("loses the slot to homeBarRight when a host passes both", async () => {
+    renderExplorer({
+      items: [{ id: "a", label: "Alpha" }],
+      newLabel: "New Project…",
+      homeBarRight: <button type="button">Host Action</button>,
+      renderNewControl: () => <button type="button">Registry actions</button>,
+    });
+    const strip = await screen.findByTestId("home-bar");
+    expect(strip).toContainElement(screen.getByRole("button", { name: "Host Action" }));
+    expect(screen.queryByRole("button", { name: "Registry actions" })).toBeNull();
   });
 });

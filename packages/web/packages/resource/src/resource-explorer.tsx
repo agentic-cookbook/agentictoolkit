@@ -120,6 +120,7 @@ export function ResourceExplorer<T>({
   prefetchItem,
   topicAliases,
   homeBarRight,
+  renderNewControl,
 }: {
   all?: boolean;
   /** Promote the TOPICS to the first (and only) rail: no resource list, no "All" state. The
@@ -198,6 +199,16 @@ export function ResourceExplorer<T>({
    *  `undefined`) counts as "not given" everywhere below, the same as omitting the prop, so a
    *  host writing `homeBarRight={condition && <X/>}` does not publish an empty bar. */
   homeBarRight?: ReactNode;
+  /** The host's own SHAPE for the create affordance, where `homeBarRight` above is the host's
+   *  own create MECHANISM. The explorer still owns `newLabel`, `renderDialog`, `newOpen` and
+   *  the reload-then-route it does on success — it hands the host only the trigger, so a host
+   *  that wants the create verb inside a gear menu (rather than as a standalone `+` button)
+   *  gets it without re-implementing the create flow the way a `homeBarRight` host must.
+   *
+   *  Gated by `canCreate` exactly like the default button, so a host cannot accidentally
+   *  publish a create control in promoteTopics mode, where the promoted resource-list topic
+   *  owns its own. Ignored when `homeBarRight` is given: that prop takes the whole slot. */
+  renderNewControl?: (onNew: () => void) => ReactNode;
 }): ReactElement {
   const router = useRouter();
   // Every SELECT in this explorer routes through here, so `{ replace: true }` — which the stack
@@ -596,7 +607,9 @@ export function ResourceExplorer<T>({
               // `false`, from a host's own `condition && <X/>`) falls through to `newLabel`'s
               // button instead of suppressing it, which `??` would do for `false`.
               homeBarRight ||
-              (canCreate ? (
+              (canCreate && renderNewControl ? (
+                renderNewControl(() => setNewOpen(true))
+              ) : canCreate ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
                   {/* `data-icon="inline-start"`, and no `size`: `Button` sizes its own icons
                       (`[&_svg:not([class*='size-'])]:size-3.5`) and tightens the padding on the

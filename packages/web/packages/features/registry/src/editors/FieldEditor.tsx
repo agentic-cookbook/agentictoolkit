@@ -1,10 +1,22 @@
 'use client';
 
 import { useId } from 'react';
-import { tightestVisibility, visibilitiesWithin } from '@agenticdevelopertoolkit/registry-types';
 import type { FieldDefLike } from '@agenticdevelopertoolkit/registry-types';
 import type { FieldVisibility } from '../client';
 import { noAutofillProps } from '../autofill';
+// The labels, the type mapping and the clamping rules — see `fieldEntryModel`. What is left
+// in this file is the zero-dependency MARKUP, which is the only part a design-system host
+// replaces.
+import {
+  ADDRESS_PARTS,
+  AUDIENCE_NOTE,
+  CHOICE_LABEL,
+  INPUT_TYPE,
+  asText,
+  optionsOf,
+  tightestVisibility,
+  visibilitiesWithin,
+} from './fieldEntryModel';
 
 export interface FieldEditorProps {
   /**
@@ -42,37 +54,6 @@ export interface FieldEditorProps {
    */
   onVisibilityChange?: (visibility: FieldVisibility) => void;
 }
-
-/**
- * What each audience is CALLED to the registrant, whose question is "who sees this?" —
- * absolute, where the owner's own labels in `FieldDefEditor` are ceilings ("at most …").
- *
- * Exhaustive `Record`s so an audience added to `FIELD_VISIBILITIES` is a compile error here
- * rather than an unlabelled `<option>` or a field that silently stops explaining itself.
- */
-const CHOICE_LABEL: Record<FieldVisibility, string> = {
-  public: 'Anyone, including search engines',
-  authenticated: 'Signed-in members only',
-  private: 'Nobody but you and the registry owner',
-};
-
-/** The same audiences as a sentence, for the fields this host does not let them change. */
-const AUDIENCE_NOTE: Record<FieldVisibility, string | null> = {
-  public: null,
-  authenticated: 'Only signed-in members see this.',
-  private: 'Only the registry owner sees this.',
-};
-
-function asText(value: unknown): string {
-  return typeof value === 'string' ? value : value == null ? '' : String(value);
-}
-
-function options(def: FieldDefLike): string[] {
-  const raw = def.config.options;
-  return Array.isArray(raw) ? raw.filter((o): o is string => typeof o === 'string') : [];
-}
-
-const INPUT_TYPE: Partial<Record<string, string>> = { url: 'url', email: 'email', phone: 'tel' };
 
 /**
  * One control per catalog type.
@@ -141,7 +122,7 @@ export function FieldEditor({
         return (
           <select id={id} value={asText(value)} onChange={(e) => onChange(e.target.value)} {...invalid}>
             <option value="">—</option>
-            {options(def).map((o) => <option key={o} value={o}>{o}</option>)}
+            {optionsOf(def).map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         );
 
@@ -149,7 +130,7 @@ export function FieldEditor({
         const selected = Array.isArray(value) ? value.map(String) : [];
         return (
           <div role="group" aria-labelledby={`${id}-label`} {...invalid}>
-            {options(def).map((o) => (
+            {optionsOf(def).map((o) => (
               <label key={o}>
                 <input type="checkbox" checked={selected.includes(o)}
                   onChange={(e) =>
@@ -175,11 +156,7 @@ export function FieldEditor({
         );
         return (
           <div role="group" aria-labelledby={`${id}-label`} {...invalid}>
-            {part('line1', 'Street')}
-            {part('city', 'City')}
-            {part('region', 'Region')}
-            {part('postalCode', 'Postal code')}
-            {part('country', 'Country (2 letters)')}
+            {ADDRESS_PARTS.map(([key, label]) => part(key, label))}
           </div>
         );
       }

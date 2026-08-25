@@ -31,6 +31,7 @@ export function Field({
   label,
   hint,
   error,
+  errorId,
   layout = "stacked",
   className,
   children,
@@ -39,6 +40,10 @@ export function Field({
   hint?: ReactNode
   /** Inline error message; shown in place of `hint` when set. */
   error?: ReactNode
+  /** Names the error line, for a control that points `aria-describedby` at it — see
+   *  {@link FieldFootnote}. The control is the caller's child here, so the caller owns
+   *  both ends of the wiring; `Field` only makes the target nameable. */
+  errorId?: string
   /** Caption above the control (default) or beside it in the shared label column. */
   layout?: "stacked" | "inline"
   className?: string
@@ -64,6 +69,7 @@ export function Field({
       <FieldFootnote
         hint={hint}
         error={error}
+        errorId={errorId}
         className={inline ? "col-start-2" : undefined}
       />
     </Label>
