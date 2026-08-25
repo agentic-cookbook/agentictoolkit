@@ -26,6 +26,19 @@ fi
 
 # Web platform: pnpm workspace
 if command -v pnpm >/dev/null && command -v node >/dev/null; then
+  # The vendored agenticdevelopertoolkit submodule FIRST — packages/adh-ui's `link:` reaches
+  # its `ui` package by source, but building/typechecking against it (rather than just
+  # running it under the `development` export condition) needs that submodule's OWN dist/
+  # and generated theme-data.ts. Neither ships: ADT gitignores dist/, and `themes`'s
+  # `build:data` generates theme-data.ts from src/styles/*.css. A fresh clone has neither,
+  # so tsc cannot find ADT's .d.ts until this runs once. `pnpm install` + `pnpm run build`
+  # are both idempotent (build-tokens/build-theme-data report "unchanged" on a rerun), so
+  # this is safe to run on every ./install.sh, not just the first.
+  if [ -d external/agenticdevelopertoolkit/packages/web ]; then
+    echo "==> Installing + building the vendored agenticdevelopertoolkit web workspace"
+    ( cd external/agenticdevelopertoolkit/packages/web && pnpm install && pnpm run build )
+  fi
+
   echo "==> Installing web workspace deps in packages/web/"
   ( cd packages/web && pnpm install )
 else

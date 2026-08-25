@@ -6,8 +6,12 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "sideEffects": ["**/*.css"],
-  "files": ["dist"],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -54,10 +58,18 @@
     "lint": "tsc --noEmit",
     "test": "vitest run"
   },
-  "comment:dependencies": "`link:`, not `workspace:*`: agenticdevelopertoolkit is a SEPARATE pnpm workspace reached through this repo's own submodule, and pnpm cannot nest workspaces. Same shape as persona, adh, features/bitbag and features/registry already use — note the depth is four levels here and five under packages/features/.",
+  "comment:dependencies": "`link:`, not `workspace:*`: agenticdevelopertoolkit is a SEPARATE pnpm workspace reached through this repo's own submodule, and pnpm cannot nest workspaces. Same shape as persona, adh, features/bitbag and features/registry already use \u2014 note the depth is four levels here and five under packages/features/.",
   "dependencies": {
     "@agenticdevelopertoolkit/ui": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/ui",
-    "lucide-react": "^1.16.0"
+    "@base-ui/react": "1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "harper.js": "^2.4.0",
+    "lucide-react": "^1.16.0",
+    "tailwind-merge": "^2.6.0"
   },
   "peerDependencies": {
     "react": "^19.0.0",
@@ -67,6 +79,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
+    "@types/node": "^24.0.0",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
     "esbuild-plugin-preserve-directives": "^0.0.11",
