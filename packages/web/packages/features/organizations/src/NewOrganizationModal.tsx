@@ -13,8 +13,8 @@ import {
 import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
-import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
+import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { organizationsApi } from "@agentic-toolkit/data/organizations";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
 

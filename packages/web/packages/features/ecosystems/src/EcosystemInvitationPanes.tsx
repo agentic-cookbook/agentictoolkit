@@ -5,7 +5,7 @@ import {
   InvitationRequestsPane,
   InvitationPendingUsersPane,
   InvitationInvitesPane,
-} from "@agentic-toolkit/ui/blocks/invitation-panes";
+} from "@agentic-toolkit/adh-ui/blocks";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import { useAuth } from "@agentic-toolkit/auth";
 import { useRecordAffordance } from "@agentic-toolkit/resource";

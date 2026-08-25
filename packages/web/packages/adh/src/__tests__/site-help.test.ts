@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { defineSite } from '../site/SiteConfig'
-import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
+import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/adh-ui/help-ids'
 
 // SiteSeo requires exactly `title` and `description` (seo/metadata.ts:39-50); every
 // other field is optional, so this is a complete value.

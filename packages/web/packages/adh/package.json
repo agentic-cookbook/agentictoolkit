@@ -326,6 +326,7 @@
     "@agentic-toolkit/account": "workspace:*",
     "@agentic-toolkit/adh-registry": "workspace:*",
     "@agentic-toolkit/adh-site-config": "workspace:*",
+    "@agentic-toolkit/adh-ui": "workspace:*",
     "@agentic-toolkit/api-explorer": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",

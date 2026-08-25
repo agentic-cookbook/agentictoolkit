@@ -132,6 +132,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@agentic-toolkit/adh-ui": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0"

@@ -6,7 +6,7 @@ import type { SiteRoute, SiteSeo } from '@agentic-toolkit/adh-registry/seo'
 // below), `help-content` is `"use client"`, and a server module cannot read a plain value
 // out of a client one — React hands it a client reference and the read throws. `lib/help-ids`
 // carries no directive, so both graphs may import it. The TYPE is erased either way.
-import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
+import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/adh-ui/help-ids'
 import type { SiteHelp } from '@agentic-toolkit/ui/components/help-content'
 // Type-only, so nothing crosses at runtime and no `external` pairing is owed — the
 // whole-statement `import type … from` form is erased before the bundler sees it, and

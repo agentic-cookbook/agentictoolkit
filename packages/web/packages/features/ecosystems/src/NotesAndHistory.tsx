@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { NotesAndHistory as SharedNotesAndHistory } from "@agentic-toolkit/ui/blocks/notes-and-history";
+import { NotesAndHistory as SharedNotesAndHistory } from "@agentic-toolkit/adh-ui/blocks";
 import { useEcoRowNotes, useEcoRowHistory } from "@agentic-toolkit/data/ecosystems";
 
 /**

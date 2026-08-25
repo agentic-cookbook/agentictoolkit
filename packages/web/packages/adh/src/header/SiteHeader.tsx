@@ -31,7 +31,7 @@ import { useSettingsOverlay } from '@agentic-toolkit/adh/settings'
 import { hasProfileRoute } from '../profile/profileRoute'
 import { SiteMenuSwitcher } from './SiteMenuSwitcher'
 import { DevToolsMenu } from './DevToolsMenu'
-import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/ui/lib/help-ids'
+import { SITE_TITLE_HELP_ID } from '@agentic-toolkit/adh-ui/help-ids'
 
 import type { ReactNode } from 'react'
 

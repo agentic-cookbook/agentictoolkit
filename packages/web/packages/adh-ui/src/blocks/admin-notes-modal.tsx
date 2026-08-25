@@ -2,11 +2,11 @@
 
 import * as React from "react"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/dialog"
-import { Textarea } from "../components/textarea"
-import { Button } from "../components/button"
-import { ListWithDetailsPane } from "./list-with-details-pane"
-import type { DataTableColumn } from "../components/data-table"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@agenticdevelopertoolkit/ui/components/dialog"
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea"
+import { Button } from "@agenticdevelopertoolkit/ui/components/button"
+import { ListWithDetailsPane } from "@agenticdevelopertoolkit/ui/blocks/list-with-details-pane"
+import type { DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table"
 import type { AdminNote } from "../lib/invitations-types"
 
 const COLS: DataTableColumn<AdminNote>[] = [

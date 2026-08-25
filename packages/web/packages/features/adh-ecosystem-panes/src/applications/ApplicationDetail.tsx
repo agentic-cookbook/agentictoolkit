@@ -5,8 +5,8 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Select } from "@agentic-toolkit/ui/components/select";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
-import { isRdid } from "@agentic-toolkit/ui/lib/rdid";
+import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
+import { isRdid } from "@agentic-toolkit/adh-ui/rdid";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
 import {
   APPLICATION_KINDS,

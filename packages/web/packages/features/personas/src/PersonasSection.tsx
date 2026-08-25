@@ -13,7 +13,7 @@ import { Label } from "@agentic-toolkit/ui/components/label";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
 import { slugify } from "@agentic-toolkit/ui/lib/slug";
-import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import {
   StackLevels,
   useRailHost,

@@ -8,11 +8,11 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { DeleteEntitySection } from "@agentic-toolkit/ui/blocks/delete-entity-section";
+import { DeleteEntitySection } from "@agentic-toolkit/adh-ui/blocks";
 import { Field } from "@agentic-toolkit/ui/blocks/field";
 import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
-import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
-import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
+import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { approveNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
 import {
   checkWorkspaceSlugAvailable,

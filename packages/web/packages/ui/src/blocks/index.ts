@@ -200,16 +200,6 @@ export {
   type StatListRowProps,
 } from "./stat-list";
 export {
-  DeleteEntitySection,
-  type DeleteEntitySectionProps,
-} from "./delete-entity-section";
-export {
-  TransferOwnershipSection,
-  type TransferOwnershipSectionProps,
-  type TransferTarget,
-  type TransferPreviewResult,
-} from "./transfer-ownership-section";
-export {
   ListHeader,
   type ListHeaderProps,
   type ListHeaderSearch,
@@ -231,11 +221,6 @@ export {
   type BatchSelect,
   type BatchSelectButtonProps,
 } from "./batch-select";
-export {
-  SendInvitationModal,
-  type SendInvitationModalProps,
-  type SendInvitationPayload,
-} from "./send-invitation-modal";
 export {
   AddUsersModal,
   type AddUsersModalProps,
@@ -264,13 +249,6 @@ export {
   type CommandGroup,
   type CommandItem,
 } from "./command-palette";
-// Pick an rdid: the palette, pointed at the identifier registry. Scoping is the CALLER's — it
-// closes over its own entityType when it builds `search`, so this never owns a list of scopes.
-export {
-  RdidPicker,
-  type RdidPickerProps,
-  type RdidOption,
-} from "./rdid-picker";
 export {
   UserCard,
   UserCardSkeleton,
@@ -280,16 +258,6 @@ export {
   type UserCardAddress,
   type UserCardPersona,
 } from "./user-card";
-export { NotesAndHistory } from "./notes-and-history";
-export { AdminNotesModal } from "./admin-notes-modal";
-export {
-  InvitationRequestsPane,
-  InvitationPendingUsersPane,
-  InvitationInvitesPane,
-  type NotesSlots,
-  type InvitationSendPayload,
-} from "./invitation-panes"
-
 // The one shape every editable list takes: a button bar carrying the search, the facets and every
 // action, over a resizable sortable table that scrolls rather than pages. Lived on the admin site
 // until the ecosystem panes needed the same list of the same rows; the reasoning for each of its

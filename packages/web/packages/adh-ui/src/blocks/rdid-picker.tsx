@@ -2,7 +2,7 @@
 
 import * as React from "react"
 
-import { CommandPalette, type CommandGroup } from "./command-palette"
+import { CommandPalette, type CommandGroup } from "@agenticdevelopertoolkit/ui/blocks/command-palette"
 
 /**
  * PICK AN RDID: search the identifier registry in a modal and hand one address back.

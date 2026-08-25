@@ -31,11 +31,6 @@
       "development": "./src/lib/utils.ts",
       "import": "./dist/lib/utils.js"
     },
-    "./lib/help-ids": {
-      "types": "./dist/lib/help-ids.d.ts",
-      "development": "./src/lib/help-ids.ts",
-      "import": "./dist/lib/help-ids.js"
-    },
     "./lib/step-index": {
       "types": "./dist/lib/step-index.d.ts",
       "development": "./src/lib/step-index.ts",
@@ -80,16 +75,6 @@
       "types": "./dist/lib/detail-pane.d.ts",
       "development": "./src/lib/detail-pane.ts",
       "import": "./dist/lib/detail-pane.js"
-    },
-    "./lib/invitations-types": {
-      "types": "./dist/lib/invitations-types.d.ts",
-      "development": "./src/lib/invitations-types.ts",
-      "import": "./dist/lib/invitations-types.js"
-    },
-    "./lib/invitations-endpoints": {
-      "types": "./dist/lib/invitations-endpoints.d.ts",
-      "development": "./src/lib/invitations-endpoints.ts",
-      "import": "./dist/lib/invitations-endpoints.js"
     },
     "./lib/navigation-guard": {
       "types": "./dist/lib/navigation-guard.d.ts",
@@ -182,11 +167,6 @@
       "types": "./dist/lib/slug.d.ts",
       "development": "./src/lib/slug.ts",
       "import": "./dist/lib/slug.js"
-    },
-    "./lib/rdid": {
-      "types": "./dist/lib/rdid.d.ts",
-      "development": "./src/lib/rdid.ts",
-      "import": "./dist/lib/rdid.js"
     }
   },
   "scripts": {

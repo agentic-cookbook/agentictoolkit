@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true
+  },
+  // Tests are source, not surface. `src/__tests__` was already out; the colocated
+  // `src/blocks/*.test.tsx` were not, so each one emitted a `dist/blocks/<name>.test.d.ts`
+  // that the `./blocks/*` export wildcard then advertised as a public subpath — with no
+  // `.js` behind it, since tsup (rightly) never built one.
+  "exclude": ["src/__tests__", "src/**/*.test.ts", "src/**/*.test.tsx"]
+}

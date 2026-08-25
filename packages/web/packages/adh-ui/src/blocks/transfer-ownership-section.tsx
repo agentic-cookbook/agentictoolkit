@@ -2,11 +2,11 @@
 
 import * as React from "react";
 import { ArrowRightLeft, TriangleAlert } from "lucide-react";
-import { Button } from "../components/button";
-import { Disclosure } from "../components/disclosure";
-import { ErrorText } from "../components/error-text";
-import { Input } from "../components/input";
-import { Label } from "../components/label";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,7 +15,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from "../components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -23,7 +23,7 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from "../components/dialog";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
 
 /**
  * Which NAMESPACE a workspace slug is drawn from.

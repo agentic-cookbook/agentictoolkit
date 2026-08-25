@@ -8,7 +8,7 @@ import {
   RecordSettingsPane,
   useRecordAffordance,
 } from "@agentic-toolkit/resource";
-import { DeleteEntitySection } from "@agentic-toolkit/ui/blocks/delete-entity-section";
+import { DeleteEntitySection } from "@agentic-toolkit/adh-ui/blocks";
 import { TeamDetail, teamBlank, teamToInput, teamValidate } from "./TeamDetail";
 
 function differs(a: TeamInput, b: TeamInput): boolean {

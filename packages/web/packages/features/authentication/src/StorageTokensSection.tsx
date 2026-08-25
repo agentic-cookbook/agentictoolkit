@@ -14,8 +14,8 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
-import { validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
+import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
 import { CreateResourceDialog, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 

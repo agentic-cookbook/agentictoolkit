@@ -8,7 +8,7 @@ import { Input } from "@agentic-toolkit/ui/components/input";
 import { Label } from "@agentic-toolkit/ui/components/label";
 import { Textarea } from "@agentic-toolkit/ui/components/textarea";
 import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { SEGMENT_RE, prefixFor, validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { SEGMENT_RE, prefixFor, validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { identifiersApi, type EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 
 /**

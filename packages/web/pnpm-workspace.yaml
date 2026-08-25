@@ -17,6 +17,7 @@ packages:
   - './packages/adh-site-config'
   - './packages/adh-site-homes'
   - './packages/adh-api-types'
+  - './packages/adh-ui'
   - './packages/deploy-platform'
   - './packages/next-preflight'
   - './packages/next-headers'

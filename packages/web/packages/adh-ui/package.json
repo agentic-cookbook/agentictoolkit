@@ -1,0 +1,78 @@
+{
+  "name": "@agentic-toolkit/adh-ui",
+  "version": "0.1.0",
+  "description": "adh's UI vocabulary: the rdid grammar, the invitation surfaces, admin notes and ownership transfer. Carved out of @agentic-toolkit/ui in 2026-08 so the generic remainder could go to the public toolkit.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": ["**/*.css"],
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./rdid": {
+      "types": "./dist/lib/rdid.d.ts",
+      "development": "./src/lib/rdid.ts",
+      "import": "./dist/lib/rdid.js"
+    },
+    "./invitations-endpoints": {
+      "types": "./dist/lib/invitations-endpoints.d.ts",
+      "development": "./src/lib/invitations-endpoints.ts",
+      "import": "./dist/lib/invitations-endpoints.js"
+    },
+    "./invitations-types": {
+      "types": "./dist/lib/invitations-types.d.ts",
+      "development": "./src/lib/invitations-types.ts",
+      "import": "./dist/lib/invitations-types.js"
+    },
+    "./help-ids": {
+      "types": "./dist/lib/help-ids.d.ts",
+      "development": "./src/lib/help-ids.ts",
+      "import": "./dist/lib/help-ids.js"
+    },
+    "./blocks": {
+      "types": "./dist/blocks/index.d.ts",
+      "development": "./src/blocks/index.ts",
+      "import": "./dist/blocks/index.js"
+    },
+    "./components/rdid-editor": {
+      "types": "./dist/components/rdid-editor.d.ts",
+      "development": "./src/components/rdid-editor.tsx",
+      "import": "./dist/components/rdid-editor.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types && pnpm run build:css",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "build:css": "node ../../copy-css.mjs",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist .turbo",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "comment:dependencies": "`link:`, not `workspace:*`: agenticdevelopertoolkit is a SEPARATE pnpm workspace reached through this repo's own submodule, and pnpm cannot nest workspaces. Same shape as persona, adh, features/bitbag and features/registry already use — note the depth is four levels here and five under packages/features/.",
+  "dependencies": {
+    "@agenticdevelopertoolkit/ui": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/ui",
+    "lucide-react": "^1.16.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

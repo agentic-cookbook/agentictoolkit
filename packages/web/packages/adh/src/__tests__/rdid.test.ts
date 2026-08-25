@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   isRdid, buildRdid, parseRdid, tryParseRdid, prefixFor, validateLeaf, RDID_TYPES,
-} from '@agentic-toolkit/ui/lib/rdid';
+} from '@agentic-toolkit/adh-ui/rdid';
 
 describe('rdid grammar', () => {
   it('accepts type-prefixed rdids and rejects legacy/invalid', () => {

@@ -4,8 +4,8 @@ import { useEffect, useState, type ReactElement, type ReactNode } from "react";
 
 import { ecosystemsApi, type Ecosystem, type EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 import { useMasterDetailForm, RecordSettingsPane, useRecordAffordance } from "@agentic-toolkit/resource";
-import { DeleteEntitySection } from "@agentic-toolkit/ui/blocks/delete-entity-section";
-import { isRdid, parseRdid, prefixFor } from "@agentic-toolkit/ui/lib/rdid";
+import { DeleteEntitySection } from "@agentic-toolkit/adh-ui/blocks";
+import { isRdid, parseRdid, prefixFor } from "@agentic-toolkit/adh-ui/rdid";
 import { ecoBlank, ecoToInput, ecoDiffers, ecoNormalize } from "./EcosystemDetail";
 import {
   EcosystemFields,

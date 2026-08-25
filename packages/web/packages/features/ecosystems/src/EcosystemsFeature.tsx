@@ -11,7 +11,7 @@ import { Button } from "@agentic-toolkit/ui/components/button";
 import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
 import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
 import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { isRdid } from "@agentic-toolkit/ui/lib/rdid";
+import { isRdid } from "@agentic-toolkit/adh-ui/rdid";
 import {
   ResourceExplorer,
   ResourceLanding,

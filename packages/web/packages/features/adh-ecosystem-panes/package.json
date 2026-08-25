@@ -45,6 +45,7 @@
   "dependencies": {
     "@agentic-toolkit/adh": "workspace:*",
     "@agentic-toolkit/adh-api-types": "workspace:*",
+    "@agentic-toolkit/adh-ui": "workspace:*",
     "@agentic-toolkit/api-explorer": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",

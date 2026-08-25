@@ -4,13 +4,13 @@ import * as React from "react"
 
 import { Loader2 } from "lucide-react"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../components/dialog"
-import { RecipientInput } from "../components/recipient-input"
-import { Textarea } from "../components/textarea"
-import { UnsavedChangesAlert } from "../components/unsaved-changes-alert"
-import { Button } from "../components/button"
-import { FieldGroup } from "../blocks/field-group"
-import { Field } from "../blocks/field"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@agenticdevelopertoolkit/ui/components/dialog"
+import { RecipientInput } from "@agenticdevelopertoolkit/ui/components/recipient-input"
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea"
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert"
+import { Button } from "@agenticdevelopertoolkit/ui/components/button"
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group"
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field"
 
 export interface SendInvitationPayload {
   email?: { recipients: string[]; note: string }

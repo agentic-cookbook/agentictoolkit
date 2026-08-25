@@ -36,6 +36,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@agentic-toolkit/adh-ui": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/crud": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",

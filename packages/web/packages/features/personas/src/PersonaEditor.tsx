@@ -37,8 +37,8 @@ import {
   PRIVACY_WIRE_VALUE,
   PRIVACY_LEVEL_FROM_WIRE,
 } from "@agentic-toolkit/ui/components/privacy-level-select";
-import { RdidEditor } from "@agentic-toolkit/ui/components/rdid-editor";
-import { rdidPrefix, validateLeaf } from "@agentic-toolkit/ui/lib/rdid";
+import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
+import { rdidPrefix, validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { PersonaAvatarField } from "./PersonaAvatarField";
 import { AbilitiesPanel } from "./AbilitiesPanel";
 import { PermissionsPanel } from "./PermissionsPanel";

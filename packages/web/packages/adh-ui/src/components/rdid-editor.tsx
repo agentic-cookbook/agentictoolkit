@@ -2,9 +2,9 @@
 
 import * as React from "react"
 
-import { Input } from "./input"
-import { FieldFootnote } from "./field-footnote"
-import { fieldCaptionClass } from "../lib/typography"
+import { Input } from "@agenticdevelopertoolkit/ui/components/input"
+import { FieldFootnote } from "@agenticdevelopertoolkit/ui/components/field-footnote"
+import { fieldCaptionClass } from "@agenticdevelopertoolkit/ui/lib/typography"
 
 export interface RdidEditorProps {
   /** Uppercase-mono caption above the control. */
