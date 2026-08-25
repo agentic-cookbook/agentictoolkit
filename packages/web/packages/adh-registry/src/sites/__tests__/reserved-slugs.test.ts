@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { readdirSync, existsSync, readFileSync } from 'node:fs'
+import { readdirSync, existsSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { RESERVED_SLUGS, isReservedSlug, isReservedSlugAnywhere } from '../reserved-slugs'
-import type { SiteId } from '../registry'
+import { siteIdForDir, type SiteId } from '../registry'
 
 // Walking up to the marker, and skipping when it is absent, is the same shape
 // registry.test.ts uses in this package (MAIN_SITE_IDS / MARKETING_SITE_IDS) — deliberately
@@ -11,24 +11,25 @@ import type { SiteId } from '../registry'
 // either file's public surface to reach across the boundary between them.
 //
 // Absent means one thing only: the toolkit checked out standalone, which is what its own
-// web-tests.yml does. adh's ci.yml runs this suite from inside the adh checkout, where
-// frontend/src is present and the filesystem cases run — so the guard still fires in the
-// repository whose folders it is about.
+// web-tests.yml does. adh's ci.yml and adhmarketing's both run this suite from inside a
+// checkout that HAS site folders, so the filesystem cases run in the repositories whose
+// folders they are about.
 //
-// The marker is frontend/src's OWN manifest, identified by name. It was
-// `next-config-base.mjs` until that file was split into `@agentic-toolkit/adh-next-config`
-// and deleted — at which point this walk returned null in an adh checkout too, and every
-// filesystem case below self-skipped GREEN in the one repository it is about. A sentinel
-// that can be deleted takes the test with it silently; `frontend/src/package.json` is the
-// pnpm workspace root every site installs from, and the `name` check is what stops the
-// walk at it rather than at the toolkit's own `packages/web/package.json` on the way up.
-const adhFrontendSrc = (): string | null => {
+// The marker is the sites' pnpm workspace manifest, identified by the `-websites` SUFFIX of
+// its name — adh's `adh-websites`, adhmarketing's `adhmarketing-websites` — so a third
+// checkout holding site folders needs no edit here. It was `next-config-base.mjs` until that
+// file was split into `@agentic-toolkit/adh-next-config` and deleted, at which point this walk
+// returned null in an adh checkout too and every filesystem case below self-skipped GREEN in
+// the one repository it was about. A sentinel that can be deleted takes the test with it
+// silently; the workspace root every site installs from cannot be, and the name check is what
+// stops the walk there rather than at the toolkit's own `packages/web/package.json`.
+const websitesRoot = (): string | null => {
   let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
     const manifest = resolve(dir, 'package.json')
     if (existsSync(manifest)) {
       try {
-        if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+        if (/-websites$/.test(JSON.parse(readFileSync(manifest, 'utf8')).name ?? '')) return dir
       } catch {
         // Unreadable or not JSON — not the marker; keep walking rather than throw.
       }
@@ -38,12 +39,52 @@ const adhFrontendSrc = (): string | null => {
     dir = up
   }
 }
-const frontendSrcDir = adhFrontendSrc()
-const STANDALONE = frontendSrcDir === null
+const websitesDir = websitesRoot()
+const STANDALONE = websitesDir === null
 
-function staticSegments(siteId: string): string[] {
-  const appDir = resolve(frontendSrcDir as string, 'sites', siteId, 'app')
-  if (!existsSync(appDir)) return []
+// Build/tooling directories that can sit beside the real site apps. `external` holds the
+// submodule checkouts (including this toolkit's own demo Next app, which is not a fleet site)
+// and `tools` is the shared build/lint package; both would otherwise be walked into.
+const NON_SITE_DIRS = new Set([
+  'node_modules', 'dist', 'build', '.next', '.turbo', 'external', 'tools',
+])
+
+/** Every site folder in THIS checkout, by the registry id that owns it.
+ *
+ *  Two things about the layout, both of which broke the `sites/<id>/app` this used to
+ *  hard-code. A folder is named for the DOMAIN its site serves rather than for the id
+ *  (`agenticdeveloperbilling/` builds `billing`) — `siteIdForDir` owns that join, and is the
+ *  only place the convention is spelled. And sites sit at TWO depths: adh groups most of its
+ *  under `adh/` and `placeholder/` with eight directly under the workspace, while adhmarketing
+ *  has no group tier at all. A group directory is recognised by having no `app/` of its own,
+ *  so it is descended into rather than listed.
+ */
+const siteAppDirs = (): Map<SiteId, string> => {
+  const found = new Map<SiteId, string>()
+  const walk = (root: string): void => {
+    for (const name of readdirSync(root)) {
+      if (name.startsWith('.') || NON_SITE_DIRS.has(name)) continue
+      const dir = resolve(root, name)
+      if (!statSync(dir).isDirectory()) continue
+      if (!existsSync(resolve(dir, 'app'))) {
+        walk(dir)
+        continue
+      }
+      const id = siteIdForDir(name)
+      // A Next app answering to no registry id is registry.test.ts's guard, not this one:
+      // this file is about the slugs a KNOWN site reserves, and a second complaint about
+      // the same folder in two suites is noise.
+      if (id) found.set(id, resolve(dir, 'app'))
+    }
+  }
+  walk(websitesDir as string)
+  return found
+}
+const APP_DIRS = STANDALONE ? new Map<SiteId, string>() : siteAppDirs()
+
+function staticSegments(siteId: SiteId): string[] {
+  const appDir = APP_DIRS.get(siteId)
+  if (appDir === undefined) return []
   return readdirSync(appDir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     // A dynamic segment is not a reservation, and a route group is not a URL segment.
@@ -55,10 +96,25 @@ describe('reserved slugs', () => {
   // `Object.keys` erases to `string[]` regardless of `RESERVED_SLUGS`'s more specific key
   // type, so the loop variable needs an explicit cast to satisfy `isReservedSlug`'s now-`SiteId`
   // parameter (R6-M7) — every actual key here (`registries`, `consultants`) already is one.
+  // Not every reserving site is in every checkout, and that is the split rather than a defect:
+  // `registries` builds in adhmarketing, `consultants` and `research` in adh. So a missing
+  // folder skips its own case — and the case below refuses to let ALL of them skip, because a
+  // suite that checked nothing must not read the same as one that checked everything.
+  const PRESENT = (Object.keys(RESERVED_SLUGS) as SiteId[]).filter((id) => APP_DIRS.has(id))
+
+  it.skipIf(STANDALONE)('finds at least one reserving site checked out here', () => {
+    expect(
+      PRESENT.length,
+      `none of ${Object.keys(RESERVED_SLUGS).join(', ')} has an app/ dir under ${websitesDir} — ` +
+        'either the layout moved again or siteIdForDir no longer answers for these folders, ' +
+        'and every filesystem case below is passing without reading anything',
+    ).toBeGreaterThan(0)
+  })
+
   for (const siteId of Object.keys(RESERVED_SLUGS) as SiteId[]) {
-    it.skipIf(STANDALONE)(`${siteId} reserves every static segment its app/ dir actually has`, () => {
+    it.skipIf(STANDALONE || !APP_DIRS.has(siteId))(`${siteId} reserves every static segment its app/ dir actually has`, () => {
       const onDisk = staticSegments(siteId)
-      expect(onDisk.length, `no app/ dir found for ${siteId}`).toBeGreaterThan(0)
+      expect(onDisk.length, `${siteId}'s app/ dir has no static segments at all`).toBeGreaterThan(0)
       for (const segment of onDisk) {
         expect(
           isReservedSlug(siteId, segment),

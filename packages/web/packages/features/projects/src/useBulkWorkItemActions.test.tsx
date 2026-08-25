@@ -74,10 +74,23 @@ function renderList(): { onChanged: ReturnType<typeof vi.fn> } {
   return { onChanged };
 }
 
+/** The row a title editor sits in. Selection is the ROW's business, not the cell's: `data-table`
+ *  routes a click whose target is a control inside a cell (this list's titles are inline editors)
+ *  through `fromCellControl`, which deliberately ignores the modifier keys — a control click may
+ *  move a single selection so the details pane follows, but must never rewrite a multiple one, or
+ *  opening a row's inline menu with thirty rows ticked would silently reduce the next Delete to
+ *  one row. So alt-clicking the INPUT can only ever select that one row, which is what these three
+ *  tests were quietly asserting against before: the dialog opened over a selection of one. */
+function row(title: string): HTMLElement {
+  const el = screen.getByDisplayValue(title).closest('[role="row"]');
+  if (!el) throw new Error(`no [role="row"] around the "${title}" editor`);
+  return el as HTMLElement;
+}
+
 /** Select both rows: a plain click sets the anchor, an alt-click adds the second. */
 function selectBoth(): void {
-  fireEvent.click(screen.getByDisplayValue("First item"));
-  fireEvent.click(screen.getByDisplayValue("Second item"), { altKey: true });
+  fireEvent.click(row("First item"));
+  fireEvent.click(row("Second item"), { altKey: true });
 }
 
 /** The confirm button INSIDE the open dialog, as distinct from the toolbar button that opened it. */
