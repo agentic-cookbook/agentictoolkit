@@ -25,7 +25,7 @@ export function assertAuthApiUrl(url: string | undefined, siteId: string): strin
       "without it the bundle has no authorization-server host, so this site cannot " +
       "restore a visitor's existing central session and its header renders logged out " +
       "while Login still works. Set it on the Vercel project for this tier: " +
-      "`python3 frontend/tools/set-backend-env.py --only <project>` (it is the single " +
+      "`fleet --repo . vercel backend-env --only <project>` (it is the single " +
       "source of truth for the value, and `--dry-run` shows every project missing it).",
   );
 }

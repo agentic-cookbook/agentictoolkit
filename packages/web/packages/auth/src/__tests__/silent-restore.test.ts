@@ -63,7 +63,7 @@ function preflightCall(fetchImpl: typeof fetch): [string, RequestInit] {
 }
 
 /** The AS host every hosted deploy and the dev suite both set. Configured is the
- *  NORMAL state — `frontend/tools/set-backend-env.py` puts it on every Vercel project
+ *  NORMAL state — `fleet vercel backend-env` puts it on every Vercel project
  *  and `suite.toml` sets it locally — so it is the fixture default, and the two tests
  *  about its ABSENCE delete it and say why. It reads as cross-apex from `cookbook.com`
  *  and same-apex from `*.example.com`, which is what `isCrossApex` turns on. */

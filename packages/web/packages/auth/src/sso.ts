@@ -64,7 +64,7 @@ let warnedNoAsBase = false
  *
  * That is the ONLY way this returns false in practice, which is why it says so out
  * loud instead of degrading quietly: every hosted project gets the var from
- * `frontend/tools/set-backend-env.py`, and the local dev suite sets it too
+ * `fleet vercel backend-env` (adh-tools), and the local dev suite sets it too
  * (`suite.toml` — `NEXT_PUBLIC_AUTH_API_URL = "https://{ADH_BACKEND_HOST}"`). An
  * unset var means a MISCONFIGURED DEPLOY, and it had gone unnoticed on all three
  * tiers of one site — a build guard now fails such a build
@@ -81,7 +81,7 @@ function asBaseConfigured(explicit?: string): boolean {
         'cannot restore an existing central session: the silent check is a top-level ' +
         "navigation to the authorization server, and without its host it would go to this " +
         "origin's own /api proxy, which never sees the host-only central cookie. Clicking " +
-        'Login still works. Set the variable on the deploy (frontend/tools/set-backend-env.py) ' +
+        'Login still works. Set the variable on the deploy (`fleet vercel backend-env`) ' +
         'and rebuild.',
     )
   }
@@ -685,7 +685,7 @@ async function centralLoginStep(
     throw new Error(
       'Sign-in is misconfigured on this site: NEXT_PUBLIC_AUTH_API_URL was not set when ' +
         'it was built, so there is no authorization server to sign in against. Set the ' +
-        'variable on the deploy (frontend/tools/set-backend-env.py) and rebuild.',
+        'variable on the deploy (`fleet vercel backend-env`) and rebuild.',
     )
   }
   const res = await fetch(asEndpoint(path, target.authApiBase), {
