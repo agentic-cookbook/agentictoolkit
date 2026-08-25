@@ -1,5 +1,5 @@
 import { basename } from "node:path";
-import { isSiteId, type SiteId } from "@agentic-toolkit/adh-registry";
+import { siteIdForDir, type SiteId } from "@agentic-toolkit/adh-registry";
 
 /**
  * Which site is being built?
@@ -12,7 +12,10 @@ import { isSiteId, type SiteId } from "@agentic-toolkit/adh-registry";
  */
 export function currentSiteId(cwd: string = process.cwd()): SiteId {
   const name = basename(cwd.replace(/[/\\]+$/, ""));
-  if (!isSiteId(name)) {
+  // The folder is named for the domain, not for the id (`billing` builds in
+  // `agenticdeveloperbilling/`), so the registry does the join — see siteIdForDir.
+  const id = siteIdForDir(name);
+  if (id === undefined) {
     throw new Error(
       [
         "",
@@ -27,5 +30,5 @@ export function currentSiteId(cwd: string = process.cwd()): SiteId {
       ].join("\n"),
     );
   }
-  return name;
+  return id;
 }

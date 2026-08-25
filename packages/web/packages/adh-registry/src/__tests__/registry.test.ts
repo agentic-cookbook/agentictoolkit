@@ -5,7 +5,7 @@ import { dirname, resolve } from 'node:path'
 // isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
 // @agentic-toolkit/adh/site, whose reserved-slug list is what now answers them, and their cases
 // went with them (`adh/src/site/__tests__/hubWorkspacePath.test.ts`).
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, SITE_FOR_HUB_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, SITE_FOR_HUB_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS, siteIdForDir, type SiteId } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -16,6 +16,42 @@ const cookbook = getSite('cookbook')!
 const admin = getSite('admin')!
 const hubHelp = getSite('hub-help')! // help.adh.com; hasHome: false
 const mcp = getSite('mcp')! // a still-staging-only site (hasTesting: false)
+
+describe('siteIdForDir', () => {
+  // The folder is named for the domain the site serves, minus the TLD. Three shapes,
+  // because the obvious shortcut (strip a leading `agenticdeveloper`) gets two of them
+  // wrong and they are the ones nobody checks.
+  it('maps a domain-shaped folder to its id', () => {
+    expect(siteIdForDir('agenticdeveloperbilling')).toBe('billing')
+    expect(siteIdForDir('agenticpersonaregistry')).toBe('personaregistry')
+    expect(siteIdForDir('help.agenticdeveloperhub')).toBe('hub-help')
+  })
+  it('still answers for a bare id', () => {
+    // A checkout can predate the rename; answering for both costs one comparison.
+    expect(siteIdForDir('hub')).toBe('hub')
+    expect(siteIdForDir('billing')).toBe('billing')
+  })
+  it('is undefined for anything that is not a site', () => {
+    expect(siteIdForDir('node_modules')).toBeUndefined()
+    expect(siteIdForDir('agenticdeveloperhub-lint')).toBeUndefined()
+    expect(siteIdForDir('')).toBeUndefined()
+  })
+  it('cannot tell the shared toolchain folder from the site that shares its name', () => {
+    // `<websites>/tools/` is the shared ESLint toolchain package, and `tools` is ALSO a
+    // registry site (agenticdevelopertools.com). A name is not enough to separate them,
+    // and this function has only the name — so it answers with the site, and every
+    // directory walk excludes that folder by PATH before asking. Pinned here so the
+    // collision is a stated fact rather than a surprise the next walk rediscovers.
+    expect(siteIdForDir('tools')).toBe('tools')
+  })
+  it('answers for every site in the registry', () => {
+    // Non-vacuity, and the property that makes it usable as a build-time lookup: no
+    // registry row may be unreachable from its own folder name.
+    for (const site of SITES) {
+      expect(siteIdForDir(site.prodHost.replace(/\.[a-z]+$/, '')), site.id).toBe(site.id)
+    }
+  })
+})
 
 describe('detectEnv', () => {
   it('classifies production hosts', () => {
@@ -413,7 +449,10 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
       const manifest = resolve(dir, 'package.json')
       if (existsSync(manifest)) {
         try {
-          if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+          // Two repos hold site folders now — adh's `adh-websites` and adhmarketing's
+          // `adhmarketing-websites` — and this suite runs from inside both. The suffix
+          // is the marker, not a repo name, so a third checkout needs no edit here.
+          if (/-websites$/.test(JSON.parse(readFileSync(manifest, 'utf8')).name ?? '')) return dir
         } catch {
           // Unreadable or not JSON — not the marker; keep walking rather than throw.
         }
@@ -423,24 +462,45 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
       dir = up
     }
   }
-  const frontendSrcDir = adhFrontendSrc()
-  const STANDALONE = frontendSrcDir === null
+  const websitesDir = adhFrontendSrc()
+  const STANDALONE = websitesDir === null
   // Build/tooling directories that can sit beside the real site apps — excluded so
   // the guard tracks site folders, not filesystem noise (a stray `.next` or
   // `node_modules` must not false-fail a test about the site registry).
-  const NON_SITE_DIRS = new Set(['node_modules', 'dist', 'build', '.next', '.turbo'])
-  const siteFolders = (): string[] => {
-    const root = resolve(frontendSrcDir as string, 'sites')
-    return (
-      readdirSync(root)
-        .filter((name) => !name.startsWith('.') && !NON_SITE_DIRS.has(name))
-        .filter((name) => statSync(resolve(root, name)).isDirectory())
-        // A real site folder is a Next app (has app/). Excludes data-only dirs like
-        // sites/api (the committed openapi.json the api-types codegen + hub-help read),
-        // which gen-site-routes.py skips for the same reason.
-        .filter((name) => existsSync(resolve(root, name, 'app')))
-        .sort()
-    )
+  // `external` holds the submodule checkouts — including this toolkit's own demo app
+  // (`websites/site/`), which is a Next app and is not a fleet site; `tools` is the
+  // shared ESLint toolchain package. Both would otherwise be walked into.
+  const NON_SITE_DIRS = new Set([
+    'node_modules', 'dist', 'build', '.next', '.turbo', 'external', 'tools',
+  ])
+  //
+  // Two things about the layout this walks, both new since the folders were renamed:
+  // sites sit at TWO depths (adh groups most of its under `marketing/`, `adh/`,
+  // `placeholder/`, with eight directly under the workspace; adhmarketing has no group
+  // tier at all), and a folder is named for the DOMAIN its site serves, not for the id
+  // — `agenticdeveloperbilling/` builds `billing`. `siteIdForDir` owns that join.
+  const siteDirs = (root: string): string[] =>
+    readdirSync(root)
+      .filter((name) => !name.startsWith('.') && !NON_SITE_DIRS.has(name))
+      .filter((name) => statSync(resolve(root, name)).isDirectory())
+      // A real site folder is a Next app (has app/). Excludes data-only dirs and the
+      // shared `tools/` toolchain package, and makes a GROUP directory recognisable:
+      // it has no app/ of its own, so it is descended into instead.
+      .flatMap((name) =>
+        existsSync(resolve(root, name, 'app'))
+          ? [name]
+          : siteDirs(resolve(root, name)),
+      )
+
+  const siteFolders = (): SiteId[] => {
+    const found = siteDirs(websitesDir as string)
+    // A folder that resolves to no registry id is the defect this guard exists for:
+    // a scaffolded site that never joined the fleet. Named individually, because
+    // dropping it silently is how the whole scan goes vacuous.
+    for (const name of found) {
+      expect(siteIdForDir(name), `${name}/ is a Next app with no registry entry`).toBeTruthy()
+    }
+    return found.map((name) => siteIdForDir(name)!).sort()
   }
 
   // Family sites whose Next app is in ITS OWN REPO rather than under adh's
@@ -455,23 +515,30 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // claim that is false in two of the three repos that consume it. This constant exists
   // only to keep the guard below honest, and it goes away with the guard on the day
   // adh's last site folder leaves.
-  const SOURCE_IN_ITS_OWN_REPO = ['bitbag', 'myagenticteams']
-
+  //
+  // ONE DIRECTION, and the loss is worth stating. This used to be an equality: the two
+  // family arrays had to equal the folders on disk plus a two-name list of sites built
+  // in their own repos. That held while one checkout could see every folder. It cannot
+  // now — the marketing sites moved to adhmarketing, so from adh 31 ids have no folder
+  // and from adhmarketing the other 27 don't, and the "built elsewhere" list would have
+  // to be a different 30-odd names per repo. A list like that is exactly `union minus
+  // what I can see`, which asserts nothing.
+  //
+  // So the half that survives is the half a single checkout can prove: every folder it
+  // CAN see is a registered site (in `siteFolders`, per folder). The half that left —
+  // a registry entry whose app is built nowhere at all — needs both trees at once, and
+  // belongs to CI, which is the only place that has them.
   it.skipIf(STANDALONE)(
-    'MAIN_SITE_IDS + MARKETING_SITE_IDS cover the frontend/src/sites/ folders, plus the sites built elsewhere',
+    'every site folder in this checkout is a registered family site',
     () => {
+      const found = siteFolders()
       // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly
       // how the sibling test passed while checking nothing.
-      expect(siteFolders().length).toBeGreaterThan(0)
-      // Still both directions, which is the whole value of the guard: a folder with no
-      // registry entry fails (a scaffolded site that never joined the menu), and a
-      // registry entry with neither a folder nor a line above fails (a site that
-      // silently stopped being built anywhere). A stale line fails too, and for free —
-      // a name whose folder came back is CONCATENATED, so the right-hand side carries it
-      // twice and no deduped registry array can equal that.
-      expect([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS].sort()).toEqual(
-        [...siteFolders(), ...SOURCE_IN_ITS_OWN_REPO].sort(),
-      )
+      expect(found.length).toBeGreaterThan(0)
+      const family = new Set<string>([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS])
+      for (const id of found) {
+        expect(family.has(id), `${id} has a folder here but is in neither family array`).toBe(true)
+      }
     },
   )
   it('every family id is a real registry site, with no dupes or cross-family overlap', () => {
@@ -491,25 +558,40 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // who can read a slug back out of a path (see the field's own doc). It is asserted
   // literally below.
   it.skipIf(STANDALONE)('workspaceRoute matches the route tree for every site folder', () => {
-    const root = resolve(frontendSrcDir as string, 'sites')
-    const hasWorkspaceOnDisk = (name: string): boolean =>
-      existsSync(resolve(root, name, 'app', '[workspace]'))
+    const root = websitesDir as string
+    // Keyed by id, since that is what `siteFolders` returns — the folder it came from
+    // is recovered here rather than re-derived, because the walk already knows it.
+    const dirOf = new Map(siteDirs(root).map((d) => [siteIdForDir(d), d] as const))
+    const hasWorkspaceOnDisk = (id: string): boolean => {
+      const dir = dirOf.get(id as SiteId)
+      if (dir === undefined) return false
+      const inGroup = readdirSync(root).find((g) =>
+        existsSync(resolve(root, g, dir, 'app')),
+      )
+      const base = inGroup ? resolve(root, inGroup, dir) : resolve(root, dir)
+      return existsSync(resolve(base, 'app', '[workspace]'))
+    }
     const folders = siteFolders()
     expect(folders.length).toBeGreaterThan(0) // non-vacuity, as above
     // Non-vacuity for the assertion itself: if NO folder had a workspace route the
     // loop below would pass while proving nothing.
     expect(folders.filter(hasWorkspaceOnDisk).length).toBeGreaterThan(0)
     // …and the other way: a run where EVERY folder had one would equally pass while
-    // proving the absent case nothing. `status` and `admin` are the sites without.
-    expect(folders.filter((n) => !hasWorkspaceOnDisk(n)).length).toBeGreaterThan(0)
+    // proving the absent case nothing. `status` and `admin` are the sites without —
+    // both in adh, and adhmarketing's 31 all carry a workspace, so this half is only
+    // exercisable in a checkout that holds one. Asserted where it exists rather than
+    // demanding every repo contain a counterexample it has no reason to have.
+    if (folders.some((id) => getSite(id)!.workspaceRoute === undefined)) {
+      expect(folders.filter((n) => !hasWorkspaceOnDisk(n)).length).toBeGreaterThan(0)
+    }
 
-    for (const name of folders) {
-      const site = getSite(name as never)
+    for (const id of folders) {
+      const site = getSite(id)
       if (!site) continue // covered by the family-folder guard above
       expect(
         site.workspaceRoute !== undefined,
-        `${name}: registry vs route tree`,
-      ).toBe(hasWorkspaceOnDisk(name))
+        `${id}: registry vs route tree`,
+      ).toBe(hasWorkspaceOnDisk(id))
     }
 
     // The hub is the one site whose value is not 'root', and the reason is not its route
@@ -533,16 +615,17 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     expect(getSite('personaregistry')!.workspaceRoute).toBeUndefined()
     expect(getSite('personaregistry')!.hasHome).toBe(false)
 
-    // The two sites the walk above cannot reach. It enumerates FOLDERS, so when bitbag
-    // and myagenticteams moved to their own repos they stopped being subjects of this
-    // test — silently, with no failure and no note, which is the same shrink the
-    // constant 35 lines up was added to prevent. Their `workspaceRoute` values are still
+    // Two sites the walk above cannot reach in ANY checkout. It enumerates FOLDERS, so
+    // when bitbag and myagenticteams moved to their own repos they stopped being
+    // subjects of this test — silently, with no failure and no note. That shrink is now
+    // the normal case rather than the exception: since the marketing split, no single
+    // checkout holds every folder, and these two are simply the pair that predates it. Their `workspaceRoute` values are still
     // shipped by this registry and still consumed by hub and fleet routing, so a wrong
     // one would ship green from here and surface as a broken route on the other repo's
     // deploy. Asserted LITERALLY, like `hub` above and for the same reason: the tree
     // that would otherwise decide is not in this checkout.
-    for (const id of SOURCE_IN_ITS_OWN_REPO) {
-      expect(getSite(id as never), `${id} must still be a registry site`).toBeTruthy()
+    for (const id of ['bitbag', 'myagenticteams'] as const) {
+      expect(getSite(id), `${id} must still be a registry site`).toBeTruthy()
     }
     expect(getSite('myagenticteams')!.workspaceRoute).toBe('root')
     expect(getSite('myagenticteams')!.hasHome).toBe(true)

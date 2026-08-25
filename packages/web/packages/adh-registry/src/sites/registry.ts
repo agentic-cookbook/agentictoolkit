@@ -445,6 +445,30 @@ export function isSiteId(value: string): value is SiteId {
   return SITES.some((s) => s.id === value)
 }
 
+/** The apex domain minus its TLD — which is exactly what a site's Next app folder
+ *  is named. `help.agenticdeveloperhub.com` → `help.agenticdeveloperhub`. */
+function dirNameOf(site: SiteDef): string {
+  return site.prodHost.replace(/\.[a-z]+$/, '')
+}
+
+/** Which site owns the directory called `name`?
+ *
+ *  A site's id and its folder name are two different strings, and have been since
+ *  the folders were renamed to match the domains they serve (`billing` builds in
+ *  `agenticdeveloperbilling/`). The join is the `prodHost` already declared here,
+ *  so this needs no second list to keep in step — and it is the ONLY place the
+ *  convention is spelled, because a caller that re-derives it (strip a leading
+ *  `agenticdeveloper`, say) gets `agenticpersonabuilder` and the four hub
+ *  subdomain sites wrong.
+ *
+ *  A bare id still resolves to itself: a checkout may predate the rename, and
+ *  answering for both costs one comparison. Returns undefined for anything that
+ *  is neither — the caller decides whether not-a-site is an error. */
+export function siteIdForDir(name: string): SiteId | undefined {
+  if (isSiteId(name)) return name
+  return SITES.find((s) => dirNameOf(s) === name)?.id
+}
+
 /** The two physical site families — the ids whose Next app folders live under
  *  `websites/main/` and `websites/marketing/`. The dev-only site-menu submenus
  *  ("Main sites" / "Marketing sites", shown only in staging/testing/local — see
