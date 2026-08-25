@@ -6,14 +6,15 @@ import { existsSync, readFileSync } from 'node:fs'
 // @agenticdevelopertoolkit/* source.
 //
 // That toolkit is a SEPARATE pnpm workspace, reached by `link:` into this repo's
-// own submodule, and it is deliberately NOT installed: it has no node_modules of
-// its own. Vite resolves a symlinked file by its REAL path, so a bare `react` or
-// `clsx` inside its source is looked up from a directory with nothing under it —
-// the import fails, naming the specifier rather than the workspace boundary that
-// caused it. Installing that workspace is the obvious-looking fix and is worse:
-// it resolves, out of a SECOND store, and the test process ends up with two
-// Reacts. The failure then reads `Cannot read properties of null (reading
-// 'useId')` from inside React, which points nowhere near the cause.
+// own submodule. `install.sh` installs that workspace too (so its own build can
+// run), which means it now HAS a node_modules of its own — and that is exactly
+// the trap. Vite resolves a symlinked file by its REAL path, so a bare `react` or
+// `clsx` inside its source is looked up from THAT directory, not this package's.
+// If the two stores hold different copies, the import still resolves — silently,
+// out of the second store — and the test process ends up with two Reacts. The
+// failure then reads `Cannot read properties of null (reading 'useId')` from
+// inside React, which points nowhere near the cause. Nothing about a bare
+// specifier failing to resolve can be relied on to catch this anymore.
 //
 // So the consumer supplies the tree, exactly as it does in production: Next.js
 // pins react for every module it compiles, which is why the app works and only
@@ -23,10 +24,13 @@ import { existsSync, readFileSync } from 'node:fs'
 // inlined (see `adtInline`) and therefore travel through vite's resolver.
 //
 // The list is DERIVED from the linked packages' own manifests rather than
-// written out, so it cannot drift when that toolkit adds a dependency. A
-// dependency the consumer has not declared is left unaliased on purpose: the
-// resulting "Failed to resolve import" names the missing package, which is the
-// honest fix (declare it) rather than a silent second copy.
+// written out, so it cannot drift when that toolkit adds a dependency. And
+// because a second, real store now exists to resolve from, `adtAlias` THROWS at
+// config load when it cannot resolve a wanted dependency from the consumer,
+// instead of leaving it unaliased — an omitted key used to surface as an honest
+// "Failed to resolve import" naming the missing package, but now it would just
+// as quietly resolve out of the toolkit's own node_modules and reintroduce the
+// two-copies failure this file exists to prevent.
 
 /** Inline the linked toolkit so its modules go through vite's resolver at all. */
 export const adtInline = [/[\\/]agenticdevelopertoolkit[\\/]/]
@@ -69,7 +73,7 @@ export function adtAlias(packageDir: string): Record<string, string> {
   const alias: Record<string, string> = {}
   for (const name of wanted) {
     // Resolve through the consumer, so the alias points at the copy this package
-    // would have got anyway. Skip what the consumer has not declared — see above.
+    // would have got anyway.
     const local = join(packageDir, 'node_modules', name)
     if (existsSync(local)) {
       alias[name] = local
@@ -77,9 +81,23 @@ export function adtAlias(packageDir: string): Record<string, string> {
     }
     try {
       alias[name] = dirname(require.resolve(`${name}/package.json`))
+      continue
     } catch {
-      // Undeclared. Leave it out; the resolve error names it.
+      // falls through to the throw below
     }
+    // Not resolvable from the consumer. Leaving this unaliased used to be safe —
+    // the linked toolkit had no node_modules of its own, so the bare specifier
+    // simply failed to resolve, naming the package. It now does have one (see
+    // the header comment), so an omitted alias resolves silently out of THAT
+    // store instead: a second copy, not an error. Fail loud, here, before any
+    // test runs.
+    throw new Error(
+      `adtAlias: "${name}" is required by a linked @agenticdevelopertoolkit/* ` +
+        `package but is not resolvable from ${packageDir}. Add it to that ` +
+        `package's own package.json (dependencies/devDependencies) and run ` +
+        `pnpm install, so this alias can pin it to the consumer's copy instead ` +
+        `of letting it resolve out of the toolkit's own node_modules.`,
+    )
   }
   return alias
 }

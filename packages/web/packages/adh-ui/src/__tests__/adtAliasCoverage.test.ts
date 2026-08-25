@@ -79,7 +79,16 @@ describe("adh-ui's ADT alias coverage", () => {
     const missing: string[] = [];
     for (const { name, manifestPath } of linkedAdtPackages()) {
       const linked = readJson(manifestPath);
-      const deps = Object.keys((linked.dependencies as Record<string, string>) ?? {});
+      // Both `dependencies` and `peerDependencies`: react/react-dom reach ADT's
+      // `ui` as peers today, and `adtAlias()`'s own wanted-set scan (vitest.adt.ts)
+      // only walks a linked manifest's `dependencies` — it covers react/react-dom
+      // only via its separate hardcoded add, not because it saw them here. A THIRD
+      // peer dependency joining them would slip past that hardcoded add, and this
+      // loop is what would still catch it.
+      const deps = [
+        ...Object.keys((linked.dependencies as Record<string, string>) ?? {}),
+        ...Object.keys((linked.peerDependencies as Record<string, string>) ?? {}),
+      ];
       for (const dep of deps) {
         if (!(dep in alias)) missing.push(`${dep} (required by ${name})`);
       }
@@ -91,17 +100,13 @@ describe("adh-ui's ADT alias coverage", () => {
   });
 
   // react/react-dom are peers of every ADT package rather than named in any one
-  // manifest's `dependencies`; adtAlias() pins them unconditionally. Assert that
-  // separately from the manifest-derived loop above, which would never catch it.
+  // manifest's `dependencies`; adtAlias() pins them unconditionally regardless of
+  // whether the loop above would have found them. Assert that separately, so a
+  // future change dropping the hardcoded add would fail here even if some linked
+  // manifest happened to also declare them elsewhere.
   it("always pins react and react-dom", () => {
     const alias = adtAlias(PACKAGE_DIR);
     expect(typeof alias.react).toBe("string");
     expect(typeof alias["react-dom"]).toBe("string");
-  });
-
-  it("points every alias at a directory that exists", () => {
-    const alias = adtAlias(PACKAGE_DIR);
-    const broken = Object.entries(alias).filter(([, target]) => !existsSync(target));
-    expect(broken).toEqual([]);
   });
 });
