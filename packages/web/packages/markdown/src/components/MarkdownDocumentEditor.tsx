@@ -1,30 +1,40 @@
 'use client'
 
-import { useEffect, useId, useState, type ReactNode } from 'react'
-import { Columns2, Eye, Pencil, Square } from 'lucide-react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 import {
   MarkdownEditor,
   type MarkdownEditorProps,
 } from '@agentic-toolkit/ui/blocks/markdown-editor'
-import { ToggleGroup, ToggleGroupItem } from '@agentic-toolkit/ui/components/toggle-group'
-import { useMediaQuery } from '@agentic-toolkit/ui/hooks/useMediaQuery'
+import {
+  SplitViewControl,
+  useSplitView,
+  SPLIT_VIEW_MIN_WIDTH,
+  type SplitViewLayout,
+  type SplitViewPane,
+} from '@agentic-toolkit/ui/blocks/split-view-control'
 import { cn } from '@agentic-toolkit/ui/lib/utils'
 
 import { MarkdownRenderer } from './MarkdownRenderer'
 import { MarkdownReadingPalette } from './MarkdownReadingPalette'
 
+// The layout/pane vocabulary and the control that drives it now live in
+// `@agentic-toolkit/ui/blocks/split-view-control`, because a second surface — the registry
+// signup-form builder — needed the same control and had written its own copy. These three
+// names stay exported under their old spellings: they are this package's public API, and
+// nothing about a consumer changes just because the definition moved.
+
 /** Editor and preview stacked behind tabs, or set beside each other. */
-export type MarkdownEditorLayout = 'tabbed' | 'split'
+export type MarkdownEditorLayout = SplitViewLayout
 /** Which pane the tabbed layout is showing. */
-export type MarkdownEditorTab = 'edit' | 'preview'
+export type MarkdownEditorTab = SplitViewPane
 
 /**
  * Below this the split is not offered. Two half-width columns of prose on a phone are
  * unreadable, so the control is absent rather than present-and-disabled — an affordance you
  * can see but never use is worse than none.
  */
-export const SPLIT_MIN_WIDTH = '(min-width: 64rem)'
+export const SPLIT_MIN_WIDTH = SPLIT_VIEW_MIN_WIDTH
 
 /** Quiet time before the preview re-renders. `MarkdownRenderer` re-runs the whole unified +
  *  shiki pipeline per content change; per-keystroke would be a pipeline per character. */
@@ -85,21 +95,7 @@ export function MarkdownDocumentEditor({
   themeId,
   ...editor
 }: MarkdownDocumentEditorProps): React.JSX.Element {
-  const wide = useMediaQuery(SPLIT_MIN_WIDTH)
-  const [layout, setLayout] = useState<MarkdownEditorLayout>(defaultLayout)
-  const [tab, setTab] = useState<MarkdownEditorTab>('edit')
-  // Points the pane chooser at the pane container below, not at either pane: in tabbed mode
-  // exactly one of the two panes is mounted, so an id on the unmounted one would be a dangling
-  // `aria-controls` reference (ignored by AT) the instant the author switched tabs. The
-  // container exists in both layouts and always resolves.
-  const panesId = useId()
-
-  // The PREFERENCE survives a narrow viewport even though the layout cannot be shown there:
-  // only the EFFECTIVE layout collapses, so rotating back to landscape restores the split
-  // instead of silently demoting the author's choice.
-  const effective: MarkdownEditorLayout = wide ? layout : 'tabbed'
-  const showEditor = effective === 'split' || tab === 'edit'
-  const showPreview = effective === 'split' || tab === 'preview'
+  const view = useSplitView({ defaultLayout })
 
   const source = useDebounced(editor.value, PREVIEW_DEBOUNCE_MS)
 
@@ -119,52 +115,7 @@ export function MarkdownDocumentEditor({
     >
       {header}
 
-      <div data-slot="markdown-editor-views" className="flex items-center gap-3">
-        {wide && (
-          <>
-            <ToggleGroup
-              aria-label="Editor layout"
-              value={[layout]}
-              onValueChange={(next: string[]) => {
-                // Base UI hands back an array and an empty one means "the pressed item was
-                // clicked again". A segmented control always keeps a selection, so ignore it.
-                const picked = next[0]
-                if (picked) setLayout(picked as MarkdownEditorLayout)
-              }}
-            >
-              <ToggleGroupItem value="tabbed" aria-label="Single tabbed view" title="Single tabbed view">
-                <Square />
-              </ToggleGroupItem>
-              <ToggleGroupItem value="split" aria-label="Side by side view" title="Side by side view">
-                <Columns2 />
-              </ToggleGroupItem>
-            </ToggleGroup>
-            {effective === 'tabbed' && <div aria-hidden className="h-5 w-px bg-apt-border" />}
-          </>
-        )}
-
-        {/* In the split both panes are already visible, so a pane chooser would be a control
-            with nothing to choose. */}
-        {effective === 'tabbed' && (
-          <ToggleGroup
-            aria-label="Editor pane"
-            value={[tab]}
-            onValueChange={(next: string[]) => {
-              const picked = next[0]
-              if (picked) setTab(picked as MarkdownEditorTab)
-            }}
-          >
-            <ToggleGroupItem value="edit" aria-controls={panesId}>
-              <Pencil />
-              Edit
-            </ToggleGroupItem>
-            <ToggleGroupItem value="preview" aria-controls={panesId}>
-              <Eye />
-              Preview
-            </ToggleGroupItem>
-          </ToggleGroup>
-        )}
-      </div>
+      <SplitViewControl view={view} subject="Editor" />
 
       {/* The body's FLOOR. `fill` hands this row the pane's leftover height, and leftover height
           can be nothing at all — so a floor is what keeps a filling editor from filling with
@@ -173,8 +124,8 @@ export function MarkdownDocumentEditor({
           floor nothing changes: `flex-1` still takes every spare pixel of a tall pane. Only the
           `fill` layout needs it — a `fill={false}` host sizes the textarea by `rows` and has no
           leftover height to run out of (notebook's NoteFields). */}
-      <div id={panesId} className={cn('flex min-h-0 min-w-0 flex-1 gap-3', fill && 'min-h-56')}>
-        {showEditor && (
+      <div id={view.panesId} className={cn('flex min-h-0 min-w-0 flex-1 gap-3', fill && 'min-h-56')}>
+        {view.showEditor && (
           // The wrapper is unconditional: `relative` with no overlay costs nothing, and a
           // wrapper that appears only when an overlay does would change the pane's box the
           // moment a mention listbox opened.
@@ -187,7 +138,7 @@ export function MarkdownDocumentEditor({
             {overlay}
           </div>
         )}
-        {showPreview && (
+        {view.showPreview && (
           <MarkdownReadingPalette
             themeId={themeId}
             data-slot="markdown-preview"

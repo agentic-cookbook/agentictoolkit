@@ -311,3 +311,19 @@ export type {
   EditableListTextFilter,
   ListSort,
 } from "./editable-list-types"
+
+// The tab / split-view control — one pane at a time or both side by side. The state is the
+// host's (`useSplitView`) because the host renders the panes; the control is just the two
+// toggle groups, left-aligned, meant to sit BELOW a surface's header rather than inside it.
+// Shared out of the markdown document editor once the registry signup-form builder had
+// written the same thing a second time.
+export {
+  SplitViewControl,
+  useSplitView,
+  SPLIT_VIEW_MIN_WIDTH,
+  type SplitView,
+  type SplitViewControlProps,
+  type SplitViewLayout,
+  type SplitViewPane,
+  type UseSplitViewOptions,
+} from "./split-view-control"
