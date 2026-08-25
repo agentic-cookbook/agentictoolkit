@@ -2,6 +2,7 @@
 
 import type { ReactElement, ReactNode } from "react";
 import { DataTable, type DataTableColumn } from "../components/data-table";
+import { ResizableSplit } from "../components/resizable-split";
 import { Input } from "../components/input";
 import { Button } from "../components/button";
 import { Alert, AlertDescription, AlertTitle } from "../components/alert";
@@ -11,6 +12,51 @@ import { ButtonBar } from "./button-bar";
 import { cn } from "../lib/utils";
 import { FacetMenu } from "./facet-menu";
 import { isSortable, type EditableListController } from "./use-editable-list";
+
+/**
+ * A details pane under the table, for the row the operator has selected.
+ *
+ * The list keeps its shape — the bar still holds every verb, the rows still carry no buttons —
+ * and gains a second half: a `ResizableSplit` whose bottom pane shows ONE row in full, with the
+ * divider doubling as that pane's header bar (the row's name on the left, {@link
+ * EditableListDetails.actions} on the right, the disclosure at the far end). It is the same
+ * composition `ListWithDetailsPane` has always used, offered to the list shape the platform
+ * actually standardised on, rather than a second detail layout invented per feature.
+ *
+ * ONE row, because a pane is a view of a record and there is no such thing as the details of
+ * three: with an empty selection it says so, and with several it asks for one. A plain row click
+ * selects exactly that row (`DataTable`'s `selectOne`), so "click a row to see it" costs the
+ * operator nothing, while the checkboxes keep meaning what they mean for the bar's verbs.
+ */
+export interface EditableListDetails<T> {
+  /** The pane's body for the selected row — fields, not controls. */
+  render: (row: T) => ReactNode;
+  /** What the pane is called, on its header bar and to assistive tech. */
+  label?: string;
+  /**
+   * Right-aligned controls on that header bar — Edit, Open, whatever acts on the ONE row the
+   * pane is showing. Given `null` when the selection is empty or larger than one, so the caller
+   * decides between hiding the control and disabling it.
+   *
+   * These belong to the pane, not to the row: they are the exception the no-buttons-on-rows rule
+   * already names — a verb that means something for one record and nothing across a selection —
+   * and putting them here keeps them at one per list instead of one per row.
+   */
+  actions?: (row: T | null) => ReactNode;
+  /** Persist the divider position under this key, so the pane opens at the height it was left. */
+  storageKey?: string;
+  /** Shown in the pane while nothing is selected. */
+  emptyLabel?: string;
+  /** Shown in the pane while more than one row is selected. */
+  manyLabel?: string;
+  /**
+   * How tall the table-plus-pane column stands, as a Tailwind class — a CLASS for the same
+   * reason {@link EditableListProps.maxHeightClass} is one, and a DEFINITE height rather than a
+   * cap because the split sizes its panes as percentages of it: against a content-sized parent
+   * that percentage is circular, and the divider then drags nothing.
+   */
+  heightClass?: string;
+}
 
 export interface EditableListProps<T> {
   list: EditableListController<T>;
@@ -49,8 +95,14 @@ export interface EditableListProps<T> {
    * How tall the scroller may grow, as a Tailwind class. A CLASS rather than a px/vh value
    * because the table's own root is the scroller, so the cap has to reach it through `className`
    * — and an arbitrary value assembled at runtime is a class Tailwind never generates.
+   *
+   * Ignored when {@link EditableListProps.details} is present: the table is then a pane of a
+   * split that owns the height, and a cap inside it would be a second scroller nested in the
+   * first — which is also how a sticky header stops sticking.
    */
   maxHeightClass?: string;
+  /** Show ONE selected row in full, under the table. See {@link EditableListDetails}. */
+  details?: EditableListDetails<T>;
   /**
    * A strip under the table, for what the list itself has to say about its own extent — a
    * {@link WindowFooter} on an append-only log, a caption, a count.
@@ -126,6 +178,7 @@ export function EditableList<T>({
   loading = false,
   columnWidthsKey,
   maxHeightClass = "max-h-[60vh]",
+  details,
   footer,
   describeRow,
   error,
@@ -180,6 +233,40 @@ export function EditableList<T>({
   // prevent. Said out loud rather than fixed by resetting, because resetting is the other bug.
   const visibleIds = new Set(list.rows.map(list.getRowId));
   const hiddenSelected = [...list.selectedIds].filter((id) => !visibleIds.has(id)).length;
+
+  // The one row the details pane is about. `selectedRows` is drawn from `allRows`, so a row the
+  // filter is hiding still has a pane — which is right: the operator ticked it, the bar's verbs
+  // still reach it, and a pane that emptied itself when the search changed would be the only part
+  // of the list that disagrees about what is selected.
+  const detailRow = list.selectedRows.length === 1 ? list.selectedRows[0]! : null;
+  const detailsLabel = details?.label ?? "Details";
+
+  // Inside a split the table is a PANE, not a capped block: it fills the pane and keeps its own
+  // scroller (sticky header intact), and gives up the borders the split's root now draws — the
+  // divider already supplies the line under it.
+  const table = (
+    <DataTable<T>
+      columns={columns}
+      rows={list.rows}
+      getRowId={list.getRowId}
+      loading={loading}
+      emptyLabel={list.filtered ? emptyFilteredLabel : emptyLabel}
+      ariaLabel={ariaLabel}
+      sort={list.sort ?? undefined}
+      onSortChange={list.setSort}
+      autoSizeColumns
+      columnWidthsKey={columnWidthsKey}
+      selectedIds={selectable ? list.selectedIds : undefined}
+      onSelectionChange={selectable ? list.setSelectedIds : undefined}
+      onRowActivate={onRowActivate}
+      showSelectionCheckboxes={selectable}
+      describeRow={describeRow}
+      className={cn(
+        "rounded-t-none border-t-0",
+        details ? "h-full rounded-none border-0" : maxHeightClass,
+      )}
+    />
+  );
 
   return (
     <div className={cn("flex flex-col", className)}>
@@ -258,24 +345,38 @@ export function EditableList<T>({
         </Alert>
       )}
 
-      <DataTable<T>
-        columns={columns}
-        rows={list.rows}
-        getRowId={list.getRowId}
-        loading={loading}
-        emptyLabel={list.filtered ? emptyFilteredLabel : emptyLabel}
-        ariaLabel={ariaLabel}
-        sort={list.sort ?? undefined}
-        onSortChange={list.setSort}
-        autoSizeColumns
-        columnWidthsKey={columnWidthsKey}
-        selectedIds={selectable ? list.selectedIds : undefined}
-        onSelectionChange={selectable ? list.setSelectedIds : undefined}
-        onRowActivate={onRowActivate}
-        showSelectionCheckboxes={selectable}
-        describeRow={describeRow}
-        className={cn("rounded-t-none border-t-0", maxHeightClass)}
-      />
+      {details ? (
+        <ResizableSplit
+          // The border and the bottom rounding move here from the table, so the bar, the rows,
+          // the divider and the pane read as ONE card rather than two stacked ones.
+          className={cn(
+            "rounded-b-lg border-x border-b border-apt-border",
+            details.heightClass ?? "h-[60vh]",
+          )}
+          storageKey={details.storageKey}
+          bottomLabel={detailsLabel}
+          // The bar names the row it is showing — the same thing the checkbox calls it — and
+          // falls back to the pane's own name when there is no single row to name.
+          header={(detailRow && describeRow?.(detailRow)) || detailsLabel}
+          headerActions={details.actions?.(detailRow)}
+          top={table}
+          bottom={
+            <div className="p-4 text-sm text-apt-text">
+              {detailRow ? (
+                details.render(detailRow)
+              ) : (
+                <span className="text-apt-text-muted">
+                  {list.selectedIds.size > 1
+                    ? (details.manyLabel ?? "Select a single row to see its details.")
+                    : (details.emptyLabel ?? "Select a row to see its details.")}
+                </span>
+              )}
+            </div>
+          }
+        />
+      ) : (
+        table
+      )}
       {footer}
     </div>
   );

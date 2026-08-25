@@ -296,7 +296,11 @@ export {
 // choices — no pager, no per-row buttons, error replaces the table only when there is nothing to
 // replace — is on the component. `./editable-list-types` and `./use-editable-list` are `.ts`, so
 // they reach a consumer through THIS barrel rather than the `./blocks/*` wildcard, which is `.tsx`.
-export { EditableList, type EditableListProps } from "./editable-list"
+export {
+  EditableList,
+  type EditableListProps,
+  type EditableListDetails,
+} from "./editable-list"
 export { FacetMenu, type FacetMenuProps } from "./facet-menu"
 export {
   useEditableList,
