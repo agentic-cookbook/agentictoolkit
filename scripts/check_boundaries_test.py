@@ -180,6 +180,44 @@ with tempfile.TemporaryDirectory() as tmp:
           "@agentic-toolkit/adh-fake" in guard.vocabulary_packages(root), False)
     check("node_modules contributes no sources", guard.find_violations(root), [])
 
+def test_a_stale_exemption_fails_the_guard():
+    """An exemption matching no real violation is a lie the guard must not keep telling."""
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "packages"
+        (root / "adh-thing" / "src").mkdir(parents=True)
+        (root / "adh-thing" / "package.json").write_text(
+            '{"name": "@agentic-toolkit/adh-thing"}', encoding="utf-8"
+        )
+        (root / "adh-thing" / "src" / "index.ts").write_text("export const a = 1\n", encoding="utf-8")
+        (root / "clean" / "src").mkdir(parents=True)
+        (root / "clean" / "package.json").write_text(
+            '{"name": "@agentic-toolkit/clean"}', encoding="utf-8"
+        )
+        (root / "clean" / "src" / "index.ts").write_text("export const b = 2\n", encoding="utf-8")
+
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(Path(__file__).resolve().parent / "check_boundaries.py"),
+                "--root",
+                str(root),
+                "--exempt",
+                "packages/clean/src/index.ts",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        assert result.returncode == 1, "guard accepted an exemption that matched no violation"
+        assert "stale exemption" in (result.stdout + result.stderr)
+
+
+test_a_stale_exemption_fails_the_guard()
+
 fails = [(n, g, w) for n, g, w in cases if g != w]
 for n, g, w in fails:
     print(f"FAIL {n}: got {g!r} want {w!r}")

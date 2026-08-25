@@ -57,6 +57,8 @@ import re
 import sys
 from pathlib import Path
 
+from boundary_exemptions import EXEMPT_FILES
+
 DEFAULT_ROOT = Path(__file__).resolve().parent.parent / "packages"
 
 #  The vocabulary tier's name prefix. `_is_vocabulary` compares on a name
@@ -197,7 +199,12 @@ def main(argv: "list[str] | None" = None) -> int:
                     help="packages/ directory to scan (default: this toolkit's)")
     ap.add_argument("--include-dist", action="store_true",
                     help="also scan committed dist/ output (adh CI passes this)")
+    ap.add_argument("--exempt", action="append", default=None,
+                    help="repo-relative path exempted from the adh-vocabulary ban "
+                         "(may repeat); defaults to boundary_exemptions.EXEMPT_FILES "
+                         "when omitted, so a test can inject its own list")
     args = ap.parse_args(argv)
+    exemptions = frozenset(args.exempt) if args.exempt is not None else EXEMPT_FILES
 
     if not args.root.is_dir():
         print(f"packages root not found: {args.root}", file=sys.stderr)
@@ -218,16 +225,47 @@ def main(argv: "list[str] | None" = None) -> int:
         return 2
 
     violations = find_violations(args.root, args.include_dist)
-    for path, lineno, spec, why in violations:
+
+    def repo_rel(path: Path) -> str:
+        """Path relative to the repo root (the parent of the scanned packages/
+        directory), matching the form EXEMPT_FILES is written in."""
+        try:
+            return path.relative_to(args.root.parent).as_posix()
+        except ValueError:
+            return path.as_posix()
+
+    matched_paths = {repo_rel(path) for path, _, _, _ in violations}
+    suppressed = [v for v in violations if repo_rel(v[0]) in exemptions]
+    reported = [v for v in violations if repo_rel(v[0]) not in exemptions]
+
+    #  An exemption that matches nothing is a stale entry — either the
+    #  underlying violation was fixed (great: shrink the list) or the entry
+    #  was typo'd/never real. Either way it is a lie the guard must not keep
+    #  telling, so it fails loudly rather than silently forgiving a path that
+    #  poses no risk.
+    stale = sorted(exemptions - matched_paths)
+    if stale:
+        for path in stale:
+            print(f"stale exemption: {path}", file=sys.stderr)
+        return 1
+
+    for path, lineno, spec, why in reported:
         print(f"{path}:{lineno}: imports {spec!r} — {why}", file=sys.stderr)
-    if violations:
+    if reported:
         print(
-            f"\n{len(violations)} boundary violation(s). A portable "
+            f"\n{len(reported)} boundary violation(s). A portable "
             "@agentic-toolkit package must not import the adh vocabulary tier "
             f"({', '.join(sorted(vocab))}); inject the value through a seam instead.",
             file=sys.stderr,
         )
         return 1
+
+    if suppressed:
+        exempt_file_count = len({repo_rel(v[0]) for v in suppressed})
+        print(
+            f"check_boundaries: {len(suppressed)} violation(s) suppressed across "
+            f"{exempt_file_count} exempt file(s)"
+        )
     print(f"boundary check OK ({len(source_files(args.root, args.include_dist))} files, "
           f"{len(vocab)} vocabulary packages banned to mechanism tier)")
     return 0
