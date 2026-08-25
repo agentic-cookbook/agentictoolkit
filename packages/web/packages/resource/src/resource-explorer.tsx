@@ -205,9 +205,17 @@ export function ResourceExplorer<T>({
    *  that wants the create verb inside a gear menu (rather than as a standalone `+` button)
    *  gets it without re-implementing the create flow the way a `homeBarRight` host must.
    *
+   *  IT RENDERS IN THE RESOURCE RAIL'S OWN TITLE ROW (`TopicLevel.titleActions`), not in the
+   *  home bar — which is the whole reason a host reaches for it. The default `newLabel` button
+   *  is page chrome: it sits in the strip above every rail, so it reads as belonging to the
+   *  page rather than to the list it creates into, and a second one appears the moment a
+   *  nested feature publishes its own. A gear beside the rail's heading is attached to the
+   *  list it acts on, and stays attached when the page grows another bar.
+   *
    *  Gated by `canCreate` exactly like the default button, so a host cannot accidentally
-   *  publish a create control in promoteTopics mode, where the promoted resource-list topic
-   *  owns its own. Ignored when `homeBarRight` is given: that prop takes the whole slot. */
+   *  publish a create control in promoteTopics mode — which has no resource rail to hang it
+   *  on at all. Unlike the default button it is NOT displaced by `homeBarRight`: the two now
+   *  render in different places, so a host may pass both without them colliding. */
   renderNewControl?: (onNew: () => void) => ReactNode;
 }): ReactElement {
   const router = useRouter();
@@ -343,6 +351,20 @@ export function ResourceExplorer<T>({
     leadsTo: t.leadsTo,
   }));
 
+  // The create affordance's own condition, and deliberately NOT `hasEntities`: this is the exact
+  // condition the pre-bar code used — `resourceLevel.onNew` was set whenever `newLabel != null`,
+  // and `resourceLevel` was spliced into `levels` only when `!promoteTopics` (see `levels`
+  // below). An empty list is precisely when a first create matters most, and a still-loading one
+  // resolves to a button that works; tying this to `hasEntities` left a brand-new tenant with no
+  // way to create anything at all. `!promoteTopics` stays for a second reason: in that mode the
+  // "New …" affordance lives on the promoted resource-list topic, which owns its own dialog (see
+  // the `renderDialog` prop doc above), so a second one here would be a duplicate — and there is
+  // no resource rail in that mode for `titleActions` to render into either.
+  //
+  // Declared HERE, above `resourceLevel`, because both readers need it: the rail's own title row
+  // (`titleActions`, just below) and the home bar's fallback button (in the return).
+  const canCreate = !promoteTopics && newLabel != null;
+
   const resourceLevel: TopicLevel = {
     id: "resource",
     title: rail?.title ?? "",
@@ -376,6 +398,13 @@ export function ResourceExplorer<T>({
       prefetchItem?.(id);
     },
     onClear: () => router.push(basePath, { scroll: false }),
+    // The host's own create control, beside this rail's heading — see `renderNewControl`'s doc.
+    // The trigger is all the host supplies; the dialog, the reload and the route-to-the-new-row
+    // stay here, which is what separates this seam from `homeBarRight`. A host that passes
+    // neither gets no control here at all: the DEFAULT create affordance is still the home bar's
+    // button, because it is page chrome and every other feature's sits there.
+    titleActions:
+      canCreate && renderNewControl ? renderNewControl(() => setNewOpen(true)) : undefined,
     // FOUR different reasons for an empty rail, and they must not be spoken as one. An un-loaded
     // list is `items === null`, which maps to zero rows exactly like a genuinely empty one — so
     // without this the rail asserts "No teams yet." at a host that has teams, for as long as the
@@ -515,15 +544,11 @@ export function ResourceExplorer<T>({
   // never rendered in promoteTopics mode regardless of this condition. A filter field
   // wired to `filter`/`setFilter` narrows a `resourceLevel` no promoteTopics host ever renders.
   const hasEntities = !promoteTopics && loaded && allEntityItems.length > 0;
-  // The create affordance's own condition, and deliberately NOT `hasEntities`: this is the exact
-  // condition the pre-bar code used — `resourceLevel.onNew` was set whenever `newLabel != null`,
-  // and `resourceLevel` was spliced into `levels` only when `!promoteTopics` (see `levels` above).
-  // An empty list is precisely when a first create matters most, and a still-loading one resolves
-  // to a button that works; tying this to `hasEntities` left a brand-new tenant with no way to
-  // create anything at all. `!promoteTopics` stays for the reason above it: in that mode the
-  // "New …" affordance lives on the promoted resource-list topic, which owns its own dialog (see
-  // the `renderDialog` prop doc above), so a second one here would be a duplicate.
-  const canCreate = !promoteTopics && newLabel != null;
+  // Whether the create affordance lands in the BAR. A host that supplied `renderNewControl` has
+  // already had it rendered into the rail's title row (see `resourceLevel.titleActions` above),
+  // so the bar must not draw a second one — and must not be published at all on its account,
+  // which is what would otherwise put an empty strip above a rail whose only tenant had moved.
+  const createInBar = canCreate && !renderNewControl;
   const published = (
     <>
       {/* Three INDEPENDENT reasons to publish the bar, each gating its own slot: there is
@@ -543,7 +568,7 @@ export function ResourceExplorer<T>({
           falsy, so the empty-SLOT half of this hazard is handled there now, once for every
           caller; what these operators still buy is not publishing an empty BAR at all.)
           Truthiness treats a falsy `homeBarRight` exactly like the prop being omitted. */}
-      {(hasEntities || canCreate || Boolean(homeBarRight)) && (
+      {(hasEntities || createInBar || Boolean(homeBarRight)) && (
         <HomeBarPortal>
           <HomeBar
             left={
@@ -607,9 +632,7 @@ export function ResourceExplorer<T>({
               // `false`, from a host's own `condition && <X/>`) falls through to `newLabel`'s
               // button instead of suppressing it, which `??` would do for `false`.
               homeBarRight ||
-              (canCreate && renderNewControl ? (
-                renderNewControl(() => setNewOpen(true))
-              ) : canCreate ? (
+              (createInBar ? (
                 <Button variant="outline" size="sm" onClick={() => setNewOpen(true)}>
                   {/* `data-icon="inline-start"`, and no `size`: `Button` sizes its own icons
                       (`[&_svg:not([class*='size-'])]:size-3.5`) and tightens the padding on the
@@ -637,7 +660,7 @@ export function ResourceExplorer<T>({
 
           `taken` mirrors the publish gate exactly, so an explorer that publishes NOTHING (no items,
           no create, no host control) leaves the bar for whatever it hosts rather than blocking it. */}
-      <HomeBarTaken taken={hasEntities || canCreate || Boolean(homeBarRight)}>
+      <HomeBarTaken taken={hasEntities || createInBar || Boolean(homeBarRight)}>
         <StackLevels levels={levels}>{content}</StackLevels>
         {dialog}
       </HomeBarTaken>

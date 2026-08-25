@@ -33223,6 +33223,8 @@ export interface paths {
                         description?: string;
                         categoryRoot?: string;
                         entryTerm?: string;
+                        /** @description Discovery labels; trimmed and de-duplicated server-side. */
+                        tags?: string[];
                         /** @enum {string} */
                         visibility?: "public" | "hub" | "private";
                         /** @enum {string} */
@@ -33414,6 +33416,8 @@ export interface paths {
                         description?: string;
                         categoryRoot?: string;
                         entryTerm?: string;
+                        /** @description Discovery labels; trimmed and de-duplicated server-side. */
+                        tags?: string[];
                         /** @enum {string} */
                         visibility?: "public" | "hub" | "private";
                         /** @enum {string} */
@@ -70161,6 +70165,8 @@ export interface components {
             purpose: string;
             /** @description The industry half of <industry>.<service-type>, e.g. 'software'. */
             categoryRoot: string;
+            /** @description The owner's discovery labels. */
+            tags: string[];
         };
         PublicRegistryDirectory: {
             items: components["schemas"]["PublicRegistrySummary"][];
@@ -70191,6 +70197,8 @@ export interface components {
             categoryRoot: string;
             /** @description What this registry calls an entry — "consultant", "coach", "shop". */
             entryTerm: string;
+            /** @description The owner's discovery labels. */
+            tags: string[];
             servicesEnabled: boolean;
             /** @description A fleet SITE SLUG from the frontend sites registry, when this registry is bound to a dedicated site; null otherwise. */
             boundSiteId: string | null;
@@ -70525,6 +70533,8 @@ export interface components {
             categoryRoot: string;
             /** @description what this registry calls an entry, e.g. "coach" */
             entryTerm: string;
+            /** @description Discovery labels the owner puts on the registry. A SET: the server trims each label and drops duplicates, so what comes back is not necessarily what was sent. */
+            tags: string[];
             /** @enum {string} */
             visibility: "public" | "hub" | "private";
             /** @enum {string} */

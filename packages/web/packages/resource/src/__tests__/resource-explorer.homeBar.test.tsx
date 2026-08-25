@@ -273,8 +273,14 @@ describe("ResourceExplorer's homeBarRight — a host's own right-side control", 
 // and the distinction is worth pinning because the tempting way to build that gear is
 // `homeBarRight`, which would have made the host re-implement the dialog, the reload and the
 // route-to-the-new-row this component already does.
+//
+// It also renders somewhere else: the resource RAIL's own title row, not the home bar. That is
+// the point of reaching for it — the bar is page chrome, shared with whatever the page nests
+// inside this explorer, while a gear beside the rail's heading is attached to the list it creates
+// into. So every assertion below is about the control being present and the bar NOT growing a
+// second one.
 describe("ResourceExplorer's renderNewControl — a host's own SHAPE for the create trigger", () => {
-  it("renders the host's control instead of the default + button, and still opens the dialog", async () => {
+  it("renders the host's control outside the bar, and still opens the dialog", async () => {
     let opened = 0;
     renderExplorer({
       items: [{ id: "a", label: "Alpha" }],
@@ -293,18 +299,33 @@ describe("ResourceExplorer's renderNewControl — a host's own SHAPE for the cre
     });
     const strip = await screen.findByTestId("home-bar");
     const gear = screen.getByRole("button", { name: "Registry actions" });
-    expect(strip).toContainElement(gear);
-    // The default button is REPLACED, not joined — one create affordance in the slot, the same
-    // rule `homeBarRight` follows.
+    // Rendered, but NOT in the strip — it went to the rail's title row.
+    expect(strip).not.toContainElement(gear);
+    // The default button is REPLACED, not joined: one create affordance for the list, wherever
+    // it sits. Without the `!renderNewControl` term the bar would still draw its own.
     expect(screen.queryByRole("button", { name: "New Project" })).toBeNull();
     fireEvent.click(gear);
     expect(opened).toBe(1);
   });
 
+  // The bar's publish gate reads `createInBar`, not `canCreate` — otherwise a host whose only
+  // bar-worthy content was the create button would publish an EMPTY strip above the rail once
+  // that button moved out of it. With no entities there is nothing to filter either, so there is
+  // nothing left for the bar to hold.
+  it("does not publish a bar at all when the control is the only thing that would have been in it", () => {
+    renderExplorer({
+      items: [],
+      newLabel: "New Project…",
+      renderNewControl: () => <button type="button">Registry actions</button>,
+    });
+    expect(screen.getByRole("button", { name: "Registry actions" })).toBeInTheDocument();
+    expect(screen.queryByTestId("home-bar")).toBeNull();
+  });
+
   // Gated by `canCreate` exactly like the default button, so a host cannot publish a create
-  // control where the explorer would refuse to render its own. Without the `canCreate &&` term
-  // this render would put the control in a promoteTopics bar, beside the promoted resource-list
-  // topic's own create — the duplicate `canCreate`'s `!promoteTopics` exists to prevent.
+  // control where the explorer would refuse to render its own. promoteTopics is the sharper half:
+  // that mode has no resource rail at all, so there is no title row to render into and the
+  // promoted resource-list topic owns its own create.
   it("is gated by canCreate: no control in promoteTopics mode, and none without a newLabel", () => {
     renderExplorer({
       promoteTopics: true,
@@ -322,9 +343,9 @@ describe("ResourceExplorer's renderNewControl — a host's own SHAPE for the cre
     expect(screen.queryByRole("button", { name: "Registry actions" })).toBeNull();
   });
 
-  // `homeBarRight` takes the whole slot, so a host that somehow passes both gets the mechanism
-  // half — the same precedence the component applies to `newLabel`'s own button.
-  it("loses the slot to homeBarRight when a host passes both", async () => {
+  // The two no longer compete for one slot, so the old precedence rule between them is gone: a
+  // host may own a bar action AND the create shape, and gets both, in their two places.
+  it("coexists with homeBarRight — they render in different places", async () => {
     renderExplorer({
       items: [{ id: "a", label: "Alpha" }],
       newLabel: "New Project…",
@@ -333,6 +354,7 @@ describe("ResourceExplorer's renderNewControl — a host's own SHAPE for the cre
     });
     const strip = await screen.findByTestId("home-bar");
     expect(strip).toContainElement(screen.getByRole("button", { name: "Host Action" }));
-    expect(screen.queryByRole("button", { name: "Registry actions" })).toBeNull();
+    const gear = screen.getByRole("button", { name: "Registry actions" });
+    expect(strip).not.toContainElement(gear);
   });
 });

@@ -74,6 +74,10 @@ export interface RegistryRow {
   id: string; slug: string; name: string; purpose: string; description: string;
   categoryRoot: string; entryTerm: string; visibility: RegistryVisibility;
   submissionPolicy: SubmissionPolicy;
+  /** The owner's discovery labels — the registry-level twin of `EntryRow.keywords`, and a
+   *  SET: the server trims, de-duplicates and caps it, so a client may send what the user
+   *  typed and read back what was stored. */
+  tags: string[];
   servicesEnabled: boolean; boundSiteId: string | null;
 }
 
@@ -242,6 +246,10 @@ export function createRegistryClient(fetcher: Fetcher) {
     createRegistry: (body: Partial<RegistryRow>) => send<RegistryRow>(BASE, 'POST', body),
     updateRegistry: (id: string, body: Partial<RegistryRow>) =>
       send<RegistryRow>(`${BASE}/${seg(id)}`, 'PATCH', body),
+    // SOFT delete server-side: the row is tombstoned, which is also what frees its slug for
+    // reuse. Irreversible from any client surface all the same — nothing here un-deletes —
+    // so a host wiring this up owns the confirmation.
+    deleteRegistry: (id: string) => del(`${BASE}/${seg(id)}`),
 
     listSections: (registryId: string) =>
       send<{ items: SectionRow[] }>(`${BASE}/${seg(registryId)}/sections`, 'GET'),
