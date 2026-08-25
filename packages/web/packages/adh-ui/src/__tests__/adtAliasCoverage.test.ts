@@ -2,8 +2,7 @@
 // ^ Required, not a preference — see nextAliasCoverage.test.ts's identical header for
 // why a real environment matters for this shape of test: jsdom's globals interfere with
 // module tooling that assumes a plain Node process.
-import { existsSync, readFileSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
 
@@ -32,37 +31,23 @@ function readJson(path: string): Record<string, unknown> {
   return JSON.parse(readFileSync(path, "utf8")) as Record<string, unknown>;
 }
 
-/** The @agenticdevelopertoolkit/* packages this package links via link:/file:. */
-function linkedAdtPackages(): { name: string; manifestPath: string }[] {
-  const manifest = readJson(join(PACKAGE_DIR, "package.json"));
-  const declared = {
-    ...((manifest.dependencies as Record<string, string>) ?? {}),
-    ...((manifest.devDependencies as Record<string, string>) ?? {}),
-    ...((manifest.peerDependencies as Record<string, string>) ?? {}),
-  };
-  const found: { name: string; manifestPath: string }[] = [];
-  for (const [name, spec] of Object.entries(declared)) {
-    if (!name.startsWith("@agenticdevelopertoolkit/")) continue;
-    if (!spec.startsWith("link:") && !spec.startsWith("file:")) continue;
-    const manifestPath = join(PACKAGE_DIR, spec.replace(/^(link|file):/, ""), "package.json");
-    if (existsSync(manifestPath)) found.push({ name, manifestPath });
-  }
-  return found;
-}
-
 /**
- * Loaded at runtime rather than by a static `import { adtAlias } from '../../../../vitest.adt'`
- * because that static edge drags a file outside `rootDir: './src'` into tsc's program and
+ * Both loaded at runtime rather than by a static
+ * `import { adtAlias, linkedAdtPackages } from '../../../../vitest.adt'` because that
+ * static edge drags a file outside `rootDir: './src'` into tsc's program and
  * `pnpm run lint` fails with TS6059 — the same reason nextAliasCoverage.test.ts loads
  * vitest.config.ts this way rather than importing it directly.
  */
 let adtAlias: (packageDir: string) => Record<string, string> = () => ({});
+let linkedAdtPackages: (packageDir: string) => { name: string; manifestPath: string }[] = () => [];
 
 beforeAll(async () => {
   const loaded = (await import(new URL("../../../../vitest.adt.ts", import.meta.url).href)) as {
     adtAlias: (packageDir: string) => Record<string, string>;
+    linkedAdtPackages: (packageDir: string) => { name: string; manifestPath: string }[];
   };
   adtAlias = loaded.adtAlias;
+  linkedAdtPackages = loaded.linkedAdtPackages;
 });
 
 describe("adh-ui's ADT alias coverage", () => {
@@ -70,14 +55,14 @@ describe("adh-ui's ADT alias coverage", () => {
   // finding the linked package — a broken scan and a clean workspace look
   // identical from the outside.
   it("finds the linked ADT package this scan is about", () => {
-    const names = linkedAdtPackages().map((p) => p.name);
+    const names = linkedAdtPackages(PACKAGE_DIR).map((p) => p.name);
     expect(names).toContain("@agenticdevelopertoolkit/ui");
   });
 
   it("aliases every runtime dependency the linked ADT package declares", () => {
     const alias = adtAlias(PACKAGE_DIR);
     const missing: string[] = [];
-    for (const { name, manifestPath } of linkedAdtPackages()) {
+    for (const { name, manifestPath } of linkedAdtPackages(PACKAGE_DIR)) {
       const linked = readJson(manifestPath);
       // Both `dependencies` and `peerDependencies`: react/react-dom reach ADT's
       // `ui` as peers today, and `adtAlias()`'s own wanted-set scan (vitest.adt.ts)

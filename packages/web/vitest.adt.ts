@@ -40,6 +40,29 @@ function readJson(path: string): Record<string, unknown> {
 }
 
 /**
+ * The `@agenticdevelopertoolkit/*` packages `packageDir` links via `link:`/`file:`,
+ * each with the path to its own `package.json`. Shared by `adtAlias` below and by
+ * every coverage test that needs to walk the same linked set — one place that
+ * knows how a link is discovered, so it can't drift between callers.
+ */
+export function linkedAdtPackages(packageDir: string): { name: string; manifestPath: string }[] {
+  const manifest = readJson(join(packageDir, 'package.json'))
+  const declared = {
+    ...((manifest.dependencies as Record<string, string>) ?? {}),
+    ...((manifest.devDependencies as Record<string, string>) ?? {}),
+    ...((manifest.peerDependencies as Record<string, string>) ?? {}),
+  }
+  const found: { name: string; manifestPath: string }[] = []
+  for (const [name, spec] of Object.entries(declared)) {
+    if (!name.startsWith('@agenticdevelopertoolkit/')) continue
+    if (!spec.startsWith('link:') && !spec.startsWith('file:')) continue
+    const manifestPath = join(packageDir, spec.replace(/^(link|file):/, ''), 'package.json')
+    if (existsSync(manifestPath)) found.push({ name, manifestPath })
+  }
+  return found
+}
+
+/**
  * Alias every dependency of the `@agenticdevelopertoolkit/*` packages this
  * package links, plus react/react-dom, to THIS package's own copy.
  *
@@ -47,24 +70,13 @@ function readJson(path: string): Record<string, unknown> {
  *   `fileURLToPath(new URL('.', import.meta.url))` from its vitest.config.ts).
  */
 export function adtAlias(packageDir: string): Record<string, string> {
-  const manifest = readJson(join(packageDir, 'package.json'))
-  const declared = {
-    ...((manifest.dependencies as Record<string, string>) ?? {}),
-    ...((manifest.devDependencies as Record<string, string>) ?? {}),
-    ...((manifest.peerDependencies as Record<string, string>) ?? {}),
-  }
-
   // react/react-dom are peers of every toolkit package; pin them whether or not
   // a linked manifest happens to name them.
   const wanted = new Set(['react', 'react-dom'])
 
   const require = createRequire(join(packageDir, 'package.json'))
-  for (const [name, spec] of Object.entries(declared)) {
-    if (!name.startsWith('@agenticdevelopertoolkit/')) continue
-    if (!spec.startsWith('link:') && !spec.startsWith('file:')) continue
-    const target = join(packageDir, spec.replace(/^(link|file):/, ''), 'package.json')
-    if (!existsSync(target)) continue
-    const linked = readJson(target)
+  for (const { manifestPath } of linkedAdtPackages(packageDir)) {
+    const linked = readJson(manifestPath)
     for (const dep of Object.keys((linked.dependencies as Record<string, string>) ?? {})) {
       wanted.add(dep)
     }
