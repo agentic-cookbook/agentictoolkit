@@ -32,28 +32,10 @@ export default defineConfig({
   outExtension: () => ({ js: '.js' }),
   // Peer UI libs stay external so the dist imports them (single version,
   // resolved from the consumer) rather than bundling copies into each entry.
-  external: [
-    'react',
-    'react-dom',
-    'react/jsx-runtime',
-    '@base-ui/react',
-    '@base-ui/react/*',
-    'lucide-react',
-    // dnd-kit keeps module-scope state (the sensor/collision registries live in
-    // React context created at import time), so two bundled copies would put a
-    // DndContext and its useSortable in different registries and every drag
-    // would silently find no droppables. External = one copy, resolved by the
-    // consumer, same as @base-ui/react.
-    '@dnd-kit/core',
-    '@dnd-kit/sortable',
-    '@dnd-kit/utilities',
-    // harper.js (markdown-spellcheck) is dynamically imported and ships a multi-MB
-    // WASM worker. Keep it external so dist re-emits the `import('harper.js')`
-    // verbatim and the CONSUMER's bundler (Next) code-splits + lazy-loads it,
-    // instead of tsup trying to inline the WASM into this package's chunks.
-    'harper.js',
-    'harper.js/binaryInlined',
-  ],
+  // adh-ui has no dnd-kit- or harper.js-based UI, and does not import @base-ui/react
+  // directly (see the entry-list comment above) — those hazard-specific `external`
+  // entries belong to `ui`, this package's own dependency, not to this package.
+  external: ['react', 'react-dom', 'react/jsx-runtime', 'lucide-react'],
   esbuildPlugins: [
     preserveDirectivesPlugin({
       directives: ['use client', 'use server'],
