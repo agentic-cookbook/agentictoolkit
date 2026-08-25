@@ -38,7 +38,7 @@ def resolve_spec(argv: list[str] | None = None) -> Path:
             "no OpenAPI spec given. This generator reads adh's committed spec, "
             "which does not live in this repo. Pass it as the first argument or "
             "set ADH_OPENAPI_SPEC:\n"
-            "  ADH_OPENAPI_SPEC=<adh>/frontend/src/sites/api/openapi.json "
+            "  ADH_OPENAPI_SPEC=<adh>/frontend/websites/adh/api/openapi.json "
             "python3 tools/<this-script>.py"
         )
     spec = Path(raw).expanduser().resolve()

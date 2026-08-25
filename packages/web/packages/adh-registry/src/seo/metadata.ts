@@ -60,7 +60,7 @@ export interface SiteSeo {
    *  like everything else here, so the emitted URL is the production one.
    *
    *  Leave unset for the family mark, which every site has at
-   *  `app/opengraph-image.png` (synced by assets/logo/sync-site-icons.py) and
+   *  `app/opengraph-image.png` (synced by deployment/sync-site-icons.py) and
    *  which is what `DEFAULT_CARD` below points at. */
   card?: string
 }

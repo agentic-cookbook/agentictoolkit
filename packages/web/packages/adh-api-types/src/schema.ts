@@ -16228,6 +16228,237 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/customer/memberships": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which ecosystems these people are customers of (admin)
+         * @description `customer.customers` is per-ecosystem, so one person is several rows and this answers a question about a SET of them, joined by EMAIL — the only column that identifies the same human in two tenancies. A customer with no email has exactly one membership here, correctly: nothing about them can be matched to a row elsewhere. Batched because the admin Users page needs the answer for every row it shows.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description comma-separated customer uuids, at most 200 per call */
+                    userIds: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description One entry per membership, per asked-about user */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            /** @description the customer id the caller asked about */
+                            userId?: string;
+                            /** @description the customer row that carries this membership — what a removal deletes */
+                            customerId?: string;
+                            ecosystemId?: string;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Make this person a customer of another ecosystem too (admin)
+         * @description IDEMPOTENT: adding someone who is already a member reports the row they already had, with `created: false`. The new row takes its own slug — carrying the source slug over would collide with whoever holds it in the target, and a membership is not a claim on a handle. Refused with 400 for a customer who has no email, since nothing could ever tie the new row back to this person.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description the customer's uuid */
+                        userId: string;
+                        /** @description destination ecosystem (uuid or rdid) */
+                        ecosystemId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The membership, whether it was just made or already existed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            userId?: string;
+                            customerId?: string;
+                            ecosystemId?: string;
+                            /** @description false when they were already a member */
+                            created?: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/customer/memberships/{customerId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Take this person out of ONE ecosystem (admin)
+         * @description Addressed by the customer row that carries the membership, not by the person. Refuses the hub row with 400: that row is the person's ACCOUNT — their capabilities, their credentials and their address — so removing it is "delete this user", a different operation with a different confirmation.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description the customer row to remove, as reported by GET /customer/memberships */
+                    customerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description What was removed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            customerId?: string;
+                            ecosystemId?: string;
+                            removed?: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/discussion/topics": {
         parameters: {
             query?: never;
@@ -18504,6 +18735,8 @@ export interface paths {
                     source?: string;
                     /** @description Send true to restrict to NOTES — the documents filed in the owner's `notes` storage bucket (a live content.notes marker). A false value is the unfiltered list; there is no "not a note" filter. A value that is neither is a 400, not a silently unfiltered list. */
                     noted?: boolean;
+                    /** @description Send true to restrict to DOCS — the documents filed in the owner's `docs` storage bucket (a live content.docs marker). The informal corpus: anything written down that is neither a note nor a composed paper. Same rules as `noted`: false is the unfiltered list, and an unparseable value is a 400. */
+                    doc?: boolean;
                 };
                 header?: never;
                 path?: never;
@@ -18568,6 +18801,8 @@ export interface paths {
                         };
                         /** @description Send `true` to file the new document in the owner's `notes` storage bucket (mints its content.notes marker). It stays an ordinary markdown document in every other respect — same versions, same category/tags — and `?noted=true` is how you list them back. */
                         note?: boolean;
+                        /** @description Send `true` to file the new document in the owner's `docs` storage bucket (mints its content.docs marker). Independent of `note` — the markers are separate rows — and `?doc=true` is how you list them back. */
+                        doc?: boolean;
                     };
                 };
             };
@@ -18656,7 +18891,7 @@ export interface paths {
         put?: never;
         /**
          * Create a category, optionally nested under one or more others
-         * @description Mints a category for the workspace owner. Omit `parentIds` (or send an empty array) for an unfiled category. A category NAME is unique per owner across the whole hierarchy — every other op addresses a category by name — so re-posting an existing name is idempotent ONLY when every parent it asks for is already one of that category's parents; asking for a new one is a 409. This never RE-FILES a category: adding a parent to an existing one is an edge write on /content/category_edges. Any id in `parentIds` that isn't one of this owner's live categories is a 404.
+         * @description Mints a category for the workspace owner. Omit `parentIds` (or send an empty array) for an unfiled category. A category NAME is unique per owner across the whole hierarchy — every other op addresses a category by name — so re-posting an existing name is idempotent ONLY when every parent it asks for is already one of that category's parents; asking for a new one is a 409. This never RE-FILES a category: adding a parent to an existing one is an edge write on /content/category-edges. Any id in `parentIds` that isn't one of this owner's live categories is a 404.
          */
         post: {
             parameters: {
@@ -18673,7 +18908,7 @@ export interface paths {
                     "application/json": {
                         /** @description The category name (unique per owner). */
                         name: string;
-                        /** @description Ids of the categories this one sits under — any number, or none. Omit or send [] for an unfiled category. */
+                        /** @description Ids of the categories this one sits under at creation — up to 8, or none. Omit or send [] for an unfiled category. This cap bounds validation cost on the create call only; a category can end up under any number of parents in total by adding further edges afterwards, via POST /content/category-edges. */
                         parentIds?: string[];
                     };
                 };
@@ -34740,12 +34975,69 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the organizations a workspace owns (personal workspaces also include the ones you belong to)
+         * @description Scoped by `workspace`, which is REQUIRED — an unscoped organizations list is the same answer in every workspace, which is the bug this replaced. A PERSONAL workspace answers with the orgs you own UNION the orgs you belong to; an ORGANIZATION workspace answers with the orgs that org owns, never including itself. A workspace slug the caller neither owns nor reaches is a 404, the same answer as one that does not exist. Ordered by name (case-insensitively, ties broken by id) and capped at 500 rows.
+         */
+        get: {
+            parameters: {
+                query: {
+                    workspace: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description organizations visible from that workspace */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrganizationListRow"][];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         put?: never;
-        /** Create + provision an organization and its ownership chain */
+        /**
+         * Create + provision an organization and its ownership chain
+         * @description Creates the organization owned by `workspace` (default: the caller personal workspace). Creating into an ORGANIZATION workspace requires admin of that org or of one above it in its ownership chain (or the site-admin grant) — 403 otherwise: the new org lands on that workspace's rail and is governed through its chain.
+         */
         post: {
             parameters: {
-                query?: never;
+                query?: {
+                    workspace?: string;
+                };
                 header?: never;
                 path?: never;
                 cookie?: never;
@@ -34779,6 +35071,15 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -70373,6 +70674,12 @@ export interface components {
             /** @description the hub DM chat the opening message was sent into */
             chatId: string;
         };
+        OrganizationListRow: {
+            id: string;
+            slug: string;
+            name: string;
+            description?: string | null;
+        };
         /** @description An ecosystem's sign-up and sign-in policy. Defaults are returned when nothing has been set. */
         EcosystemAuthSettings: {
             /**
@@ -70639,6 +70946,8 @@ export interface components {
             pageSize: number;
             /** @description Saturates at a 2,000-row cap: the list merges heterogeneous sources and cannot be paged by a single SQL OFFSET */
             total: number;
+            /** @description A held name is missing from this response — a source scan came back at its cap, or the merge overflowed the overall one. Clients that filter client-side MUST surface this: past the cap an empty result is not evidence that a name is free. */
+            truncated: boolean;
         };
         ReleaseResult: {
             rdid: string;
