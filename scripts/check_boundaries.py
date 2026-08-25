@@ -203,8 +203,25 @@ def main(argv: "list[str] | None" = None) -> int:
                     help="repo-relative path exempted from the adh-vocabulary ban "
                          "(may repeat); defaults to boundary_exemptions.EXEMPT_FILES "
                          "when omitted, so a test can inject its own list")
+    ap.add_argument("--no-exempt", action="store_true",
+                    help="suppress nothing: report every violation, including the "
+                         "ones EXEMPT_FILES covers. This is how you re-derive the "
+                         "exemption list instead of trusting it -- run it, and the "
+                         "output should name exactly the paths that file lists")
     args = ap.parse_args(argv)
-    exemptions = frozenset(args.exempt) if args.exempt is not None else EXEMPT_FILES
+    if args.no_exempt:
+        #  `--exempt` appends, so it cannot express the empty set: passing no
+        #  flag means "use the defaults", and there is no value that means
+        #  "use none". Without this flag the only way to see the unsuppressed
+        #  list is to import find_violations() and call it by hand, which is
+        #  what a reviewer had to do. An exemption list nobody can re-derive
+        #  from the command line is a list you have to take on faith, and this
+        #  guard exists precisely so that nothing here rests on faith.
+        exemptions: "frozenset[str]" = frozenset()
+    elif args.exempt is not None:
+        exemptions = frozenset(args.exempt)
+    else:
+        exemptions = EXEMPT_FILES
 
     if not args.root.is_dir():
         print(f"packages root not found: {args.root}", file=sys.stderr)

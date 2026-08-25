@@ -216,7 +216,68 @@ def test_a_stale_exemption_fails_the_guard():
         assert "stale exemption" in (result.stdout + result.stderr)
 
 
+def test_no_exempt_reports_what_the_exemption_list_hides():
+    """The exemption list has to be re-derivable, or it is only a claim.
+
+    `--exempt` appends, so no value of it means "none" -- which left the
+    unsuppressed list reachable only by importing find_violations() and
+    calling it by hand. `--no-exempt` is how a reviewer checks that
+    boundary_exemptions.EXEMPT_FILES names the violations that actually
+    exist, rather than trusting that it once did.
+    """
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp) / "packages"
+        (root / "adh-thing" / "src").mkdir(parents=True)
+        (root / "adh-thing" / "package.json").write_text(
+            '{"name": "@agentic-toolkit/adh-thing"}', encoding="utf-8"
+        )
+        (root / "adh-thing" / "src" / "index.ts").write_text(
+            "export const a = 1\n", encoding="utf-8"
+        )
+        #  A mechanism package reaching for adh vocabulary: a real violation,
+        #  of exactly the shape the fifteen exempted files have.
+        (root / "mech" / "src").mkdir(parents=True)
+        (root / "mech" / "package.json").write_text(
+            '{"name": "@agentic-toolkit/mech"}', encoding="utf-8"
+        )
+        (root / "mech" / "src" / "index.ts").write_text(
+            "import { a } from '@agentic-toolkit/adh-thing'\nexport const b = a\n",
+            encoding="utf-8",
+        )
+
+        guard = str(Path(__file__).resolve().parent / "check_boundaries.py")
+        offender = "packages/mech/src/index.ts"
+
+        def run(*extra):
+            return subprocess.run(
+                [sys.executable, guard, "--root", str(root), *extra],
+                capture_output=True,
+                text=True,
+            )
+
+        exempted = run("--exempt", offender)
+        assert exempted.returncode == 0, (
+            "the fixture's exemption did not suppress its violation, so this "
+            f"test proves nothing about --no-exempt: {exempted.stdout}{exempted.stderr}"
+        )
+
+        bare = run("--no-exempt")
+        assert bare.returncode == 1, "--no-exempt hid a violation it was asked to show"
+        assert offender in (bare.stdout + bare.stderr), (
+            "--no-exempt exited 1 without naming the suppressed file"
+        )
+        assert "stale exemption" not in (bare.stdout + bare.stderr), (
+            "--no-exempt must report violations, not accuse an empty list of being stale"
+        )
+
+
 test_a_stale_exemption_fails_the_guard()
+test_no_exempt_reports_what_the_exemption_list_hides()
 
 fails = [(n, g, w) for n, g, w in cases if g != w]
 for n, g, w in fails:
