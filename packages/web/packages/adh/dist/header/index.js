@@ -2254,7 +2254,7 @@ function DevToolsMenuPopover({
 }
 
 // src/header/SiteHeader.tsx
-import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
+import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/adh-ui/help-ids";
 import { jsx as jsx19 } from "react/jsx-runtime";
 var NotificationBell = dynamic2(
   () => import("@agentic-toolkit/messaging/components/notification-bell").then((m) => m.NotificationBell)

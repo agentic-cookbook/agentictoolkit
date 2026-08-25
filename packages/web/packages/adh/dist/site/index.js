@@ -1,5 +1,5 @@
 // src/site/SiteConfig.ts
-import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/ui/lib/help-ids";
+import { SITE_TITLE_HELP_ID } from "@agentic-toolkit/adh-ui/help-ids";
 var FAMILY_ROBOTS_DISALLOW = [
   "/login",
   "/signup",
