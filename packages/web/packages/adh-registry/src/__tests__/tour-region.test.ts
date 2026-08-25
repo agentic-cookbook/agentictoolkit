@@ -4,10 +4,18 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 import { describe, expect, it } from 'vitest'
 import { SITES } from '../sites/registry'
-import { SITE_TOUR_NEXT } from '../sites/story'
+import { SITE_TOUR_NEXT, TOUR_MAIN, TOUR_MARKETING } from '../sites/story'
 
 /**
- * `story.ts` carries a generated region. The generator lives in another repo
+ * `story.ts` carries TWO generated regions — one per repo that owns a ring of
+ * the tour (`<gen:tour-main>` from adh, `<gen:tour-marketing>` from
+ * adhmarketing), merged into `SITE_TOUR_NEXT`. The splice assertions below
+ * exercise the main one; they are about the emitter, which is the same emitter
+ * for both. What is specific to there being two is the disjointness assertion,
+ * which exists because the compiler's duplicate-key error stops at the edge of
+ * a single object literal and a spread silently resolves a collision instead.
+ *
+ * The generator lives in another repo
  * (`adh-tools/landing`) and cannot run TypeScript; this package can, and owns
  * the file, so the question "does a spliced region still compile?" is answered
  * here — against the real file, with the real compiler, not a fixture.
@@ -28,16 +36,16 @@ import { SITE_TOUR_NEXT } from '../sites/story'
  */
 const HERE = dirname(fileURLToPath(import.meta.url))
 const STORY = resolve(join(HERE, '..', 'sites', 'story.ts'))
-const OPEN = '// <gen:tour> managed by landing — do not edit by hand'
-const CLOSE = '// </gen:tour>'
+const OPEN = '// <gen:tour-main> managed by landing — do not edit by hand'
+const CLOSE = '// </gen:tour-main>'
 
-/** The committed file with its `<gen:tour>` region replaced by `body`. */
+/** The committed file with its `<gen:tour-main>` region replaced by `body`. */
 function withRegion(body: string): string {
   const text = readFileSync(STORY, 'utf8')
   const open = text.indexOf(OPEN)
   const close = text.indexOf(CLOSE, open)
-  expect(open, 'no <gen:tour> open marker in story.ts').toBeGreaterThan(-1)
-  expect(close, 'no <gen:tour> close marker in story.ts').toBeGreaterThan(open)
+  expect(open, 'no <gen:tour-main> open marker in story.ts').toBeGreaterThan(-1)
+  expect(close, 'no <gen:tour-main> close marker in story.ts').toBeGreaterThan(open)
   // Cut back to the start of the close marker's LINE so its indentation
   // survives the splice — the marker is indented inside an object literal.
   const closeLine = text.lastIndexOf('\n', close) + 1
@@ -72,17 +80,42 @@ function diagnose(text: string): string[] {
   ].map((d) => `TS${d.code}: ${ts.flattenDiagnosticMessageText(d.messageText, ' ')}`)
 }
 
-describe('the generated <gen:tour> region', () => {
+describe('the generated <gen:tour-*> regions', () => {
   it('leaves the committed story.ts type-checking clean', () => {
     expect(diagnose(readFileSync(STORY, 'utf8'))).toEqual([])
   })
 
-  it('is a walk that is actually turned on', () => {
+  it('is a walk that is actually turned on, in BOTH rings', () => {
     // Vacuity guard for everything above and below: an empty region compiles
     // perfectly, and so would a `check` that regenerated nothing. At least
     // one real edge has to be in the committed file for "it compiles" to be
     // a statement about the emitter rather than about an empty object.
-    expect(Object.keys(SITE_TOUR_NEXT).length).toBeGreaterThan(0)
+    //
+    // Per region, not on the merge, and that is the point. The two generators
+    // address their regions by a marker string configured in each repo's
+    // manifest, and nothing on either side can see the other's value — so the
+    // way this breaks is BOTH repos naming the same marker, which does not
+    // collide, does not fail, and does not even shorten the merged map: the
+    // second run overwrites the first's entries and the region nobody claimed
+    // is left exactly as committed, forever. Empty is what that looks like
+    // from here, and it is the only symptom, so it has to be the assertion.
+    expect(Object.keys(TOUR_MAIN).length, '<gen:tour-main> is empty').toBeGreaterThan(0)
+    expect(Object.keys(TOUR_MARKETING).length, '<gen:tour-marketing> is empty').toBeGreaterThan(0)
+  })
+
+  it('gives every site to at most one ring', () => {
+    // The one thing the compiler cannot check here. TS1117 refuses a key named
+    // twice inside ONE object literal, which is why each ring is its own const
+    // — but `{ ...TOUR_MAIN, ...TOUR_MARKETING }` resolves a collision instead
+    // of reporting it, and the loser's edge disappears with no diagnostic. Two
+    // generators in two repos, neither able to read the other's manifest, is
+    // exactly the arrangement where that happens by accident.
+    const both = Object.keys(TOUR_MAIN).filter((id) => id in TOUR_MARKETING)
+    expect(both, 'claimed by both rings').toEqual([])
+    // And the merge loses nothing: the sum of the parts is the whole.
+    expect(Object.keys(SITE_TOUR_NEXT).length).toBe(
+      Object.keys(TOUR_MAIN).length + Object.keys(TOUR_MARKETING).length,
+    )
   })
 
   it('names only registered sites, on both ends of every edge', () => {

@@ -149,42 +149,74 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
  *  off to. Read `SITE_STORIES[id].nextStep` for the brand story instead — the
  *  note on that field says why the two are not the same edge set.
  *
- *  GENERATED. The entries between the sentinels below come from the `next:`
- *  frontmatter in `frontend/content/landing/sites/`, spliced by
- *  `landing sites generate`; `landing sites check` fails if they drift. To
- *  change the walk, edit the markdown — not this file. The declaration and
- *  this comment are hand-written and outside the region, so the generator
- *  owns the graph and nothing else.
+ *  GENERATED, from TWO sources that cannot see each other. The walk was one
+ *  ring through every site until the marketing sites moved to their own repo.
+ *  It is now two rings, and each repo's `content/landing/` owns exactly its
+ *  own — so there are two managed regions here rather than one, each spliced
+ *  by `buildr update` from that repo's manifest and diffed by `buildr check`.
+ *  To change a walk, edit that repo's markdown, not this file. The
+ *  declarations, this comment, and the merge below are hand-written and sit
+ *  outside both regions.
  *
- *  `Partial` is load-bearing twice over, and is why this is a second const
- *  rather than a field spliced into `SITE_STORIES`: the walk is being ported
- *  a few sites at a time, so the region covers a SUBSET of `SiteId` and will
- *  until every site has a markdown file; and the terminal site — where the
- *  walk ends — never has a next step, so even a finished walk leaves one id
+ *  One region per owner is the whole point, and the split is not cosmetic.
+ *  With a single region, whichever repo generated last would write the map
+ *  and DELETE the other repo's entries — and nothing would say so, because a
+ *  shorter map still compiles, still satisfies every assertion about the
+ *  entries it kept, and simply drops the other fleet off the tour. Two
+ *  regions make that impossible rather than unlikely.
+ *
+ *  What two regions cost is the compiler's duplicate-key check: TS1117 catches
+ *  a site named twice inside ONE object literal, but a site claimed by both
+ *  rings is just a spread that quietly wins. `tour-region.test.ts` asserts the
+ *  two key sets are disjoint, which is the half the type system cannot see.
+ *
+ *  `Partial` is load-bearing twice over, and is why this is a separate const
+ *  rather than a field spliced into `SITE_STORIES`: the walk is being ported a
+ *  few sites at a time, so the regions cover a SUBSET of `SiteId` and will
+ *  until every site has a markdown file; and each ring's terminal site — where
+ *  that walk ends — never has a next step, so even a finished walk leaves an id
  *  absent by construction. A site with no entry here is not on the tour yet;
  *  that is a state to render, not an error. */
-export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
-  // <gen:tour> managed by landing — do not edit by hand
-  hub: 'narratives',
-  narratives: 'news',
+export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
+  // <gen:tour-main> managed by landing — do not edit by hand
+  hub: 'news',
   news: 'store',
   store: 'academy',
-  academy: 'education',
+  academy: 'research',
+  research: 'docs',
+  docs: 'toolkit',
+  toolkit: 'tools',
+  tools: 'community',
+  community: 'consultants',
+  consultants: 'registry',
+  registry: 'consulting',
+  consulting: 'devteam',
+  devteam: 'cookbook',
+  cookbook: 'personaregistry',
+  personaregistry: 'support',
+  support: 'help',
+  help: 'teamregistry',
+  // </gen:tour-main>
+}
+
+/** The marketing fleet's ring, owned by the adhmarketing repo's manifest. This
+ *  package is a submodule of BOTH repos, so a checkout whose sibling generator
+ *  has not run yet reads an empty region here — a real state to render, not a
+ *  broken one. */
+export const TOUR_MARKETING: Partial<Record<SiteId, SiteId>> = {
+  // <gen:tour-marketing> managed by landing — do not edit by hand
+  narratives: 'education',
   education: 'recipes',
-  recipes: 'research',
-  research: 'authentication',
+  recipes: 'authentication',
   authentication: 'knowledgebases',
   knowledgebases: 'notebook',
-  notebook: 'docs',
-  docs: 'personabuilder',
+  notebook: 'personabuilder',
   personabuilder: 'personas',
   personas: 'projects',
   projects: 'sites',
   sites: 'storage',
   storage: 'teambuilder',
-  teambuilder: 'toolkit',
-  toolkit: 'tools',
-  tools: 'billing',
+  teambuilder: 'billing',
   billing: 'codereviews',
   codereviews: 'testing',
   testing: 'communities',
@@ -203,17 +235,14 @@ export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
   games: 'products',
   products: 'stores',
   stores: 'registries',
-  registries: 'community',
-  community: 'consultants',
-  consultants: 'registry',
-  registry: 'consulting',
-  consulting: 'devteam',
-  devteam: 'cookbook',
-  cookbook: 'personaregistry',
-  personaregistry: 'support',
-  support: 'help',
-  help: 'teamregistry',
-  // </gen:tour>
+  // </gen:tour-marketing>
+}
+
+/** The whole walk, both rings. Consumers index this; only the generators touch
+ *  the two consts above. */
+export const SITE_TOUR_NEXT: Partial<Record<SiteId, SiteId>> = {
+  ...TOUR_MAIN,
+  ...TOUR_MARKETING,
 }
 
 export function getSiteStory(id: SiteId): SiteStory {
