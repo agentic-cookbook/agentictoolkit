@@ -61,6 +61,16 @@ export interface ChatMessage {
   timestamp: Date
   isPersona: boolean
   isStreaming?: boolean
+  /**
+   * Why this message did not make it, when it did not. Present means failed.
+   *
+   * The contract reports a rejected send as `deliveryStatus: { kind: 'failed' }`
+   * on the sender's own message, which is the honest place for it — the turn
+   * produced no reply to attach an apology to. Without a field here the
+   * failure reaches the transcript and renders as nothing at all: an outgoing
+   * bubble sitting there with no answer and no explanation.
+   */
+  failure?: string
 }
 
 export type ChatResponse =
