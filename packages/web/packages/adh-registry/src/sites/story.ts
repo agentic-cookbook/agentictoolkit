@@ -236,6 +236,14 @@ export const TOUR_MARKETING: Partial<Record<SiteId, SiteId>> = {
  *  state to render rather than a broken one. */
 export const TOUR_PLACEHOLDER: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour-placeholder> managed by landing — do not edit by hand
+  news: 'store',
+  store: 'academy',
+  academy: 'tools',
+  tools: 'consultants',
+  consultants: 'consulting',
+  consulting: 'support',
+  support: 'help',
+  help: 'teamregistry',
   // </gen:tour-placeholder>
 }
 
