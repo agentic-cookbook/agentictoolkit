@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { integrationsApi } from "@agentic-toolkit/data/integrations";
 import { errMsg } from "@agentic-toolkit/data";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";

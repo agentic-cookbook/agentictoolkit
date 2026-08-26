@@ -18,7 +18,7 @@ import '@agentic-toolkit/chat/css/modes/mobile.css'
 import '@agentic-toolkit/chat/css/components/content-overlay.css'
 
 import backgroundImage from './shih_tzu.webp'
-import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
+import { noAutofillProps } from '@agenticdevelopertoolkit/ui/lib/autofill'
 
 export const meta = { id: 'chat', label: 'Chat' }
 

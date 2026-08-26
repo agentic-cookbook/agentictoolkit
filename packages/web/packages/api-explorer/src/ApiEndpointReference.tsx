@@ -4,7 +4,7 @@
 // (which keeps its disclosures + "Try it" panel for authenticated surfaces); here every section is
 // expanded and static so the whole endpoint is in the initial HTML.
 
-import { cn } from '@agentic-toolkit/ui'
+import { cn } from '@agenticdevelopertoolkit/ui'
 import { describeFields, schemaToExample, typeLabel } from './lib/schema'
 import { snippetFor, SNIPPET_LANGS, PUBLIC_API_ORIGIN } from './lib/snippets'
 import { methodBadgeClass, statusTone } from './lib/tone'

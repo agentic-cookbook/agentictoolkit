@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import { Inbox } from "lucide-react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 import { useResourceItemQuery, useResourceList } from "@agentic-toolkit/data";
 import {
   projectIterationsApi,

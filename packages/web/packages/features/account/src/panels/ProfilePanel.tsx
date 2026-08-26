@@ -20,19 +20,19 @@ import {
   PRIVACY_KEY,
   type PrivacyGrant,
 } from "@agentic-toolkit/data/profile";
-import { slugify, validateSlug } from "@agentic-toolkit/ui/lib/slug";
+import { slugify, validateSlug } from "@agenticdevelopertoolkit/ui/lib/slug";
 import {
   PrivacyLevelSelect,
   PRIVACY_WIRE_VALUE,
   PRIVACY_LEVEL_FROM_WIRE,
   type PrivacyLevel,
-} from "@agentic-toolkit/ui/components/privacy-level-select";
+} from "@agenticdevelopertoolkit/ui/components/privacy-level-select";
 import { useSettingsDirty } from "@agentic-toolkit/resource";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { UserCard, UserCardSkeleton, type UserCardDto } from "@agentic-toolkit/ui/blocks";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { UserCard, UserCardSkeleton, type UserCardDto } from "@agenticdevelopertoolkit/ui/blocks";
 import { EditActionBar } from "@agentic-toolkit/resource";
 import { DetailSection } from "@agentic-toolkit/resource";
 import { AvatarSection } from "./profile/AvatarSection";
@@ -53,7 +53,7 @@ export interface ProfilePanelProps {
    *  Injected rather than imported: this package is MECHANISM tier and must never import
    *  an `adh*`-scoped VOCABULARY package (the reserved list is `reservedWorkspaceSlugs()`
    *  in adh's `packages/adh/src/site/reservedSlugs.ts`), so the host binds its own set here
-   *  — the same seam `@agentic-toolkit/ui/lib/slug`'s `validateSlug` already documents via
+   *  — the same seam `@agenticdevelopertoolkit/ui/lib/slug`'s `validateSlug` already documents via
    *  its own `reserved` parameter.
    *
    *  REQUIRED, and deliberately not optional. Every host has a URL namespace to protect,

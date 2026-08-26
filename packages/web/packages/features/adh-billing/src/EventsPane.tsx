@@ -2,8 +2,8 @@
 
 import { useCallback, useState } from "react";
 import type { ReactElement } from "react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useResourceList } from "@agentic-toolkit/data";
 import { listEvents, redriveEvents, type EventRow, type RedriveResult } from "./api/billing";
 

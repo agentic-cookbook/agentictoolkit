@@ -7,7 +7,7 @@ import {
   persistTheme,
   readStoredTheme,
 } from "@agentic-toolkit/adh/themes/theme-preview";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 
 import { SettingRow } from "@agentic-toolkit/account";
 

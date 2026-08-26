@@ -21,17 +21,17 @@ import {
   useMasterDetailLevel,
   type TopicLeaf,
 } from "@agentic-toolkit/resource";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { PermissionToggles } from "@agentic-toolkit/ui/components/permission-toggles";
-import type { Crud } from "@agentic-toolkit/ui/components/crud";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Field, FieldGroup, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { PermissionToggles } from "@agenticdevelopertoolkit/ui/components/permission-toggles";
+import type { Crud } from "@agenticdevelopertoolkit/ui/components/crud";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Field, FieldGroup, TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 
 // A role slug is lowercase and dash-joined (matches the server's own key). Validated
 // only on create — slugs are immutable afterwards (the PATCH surface omits `slug`).

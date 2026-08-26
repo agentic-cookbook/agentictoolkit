@@ -4,9 +4,9 @@ import { useCallback, useState } from "react";
 import { Plus } from "lucide-react";
 
 import { useResourceList } from "@agentic-toolkit/data";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
 import { bucketsCacheKey } from "../schemas/schema-model";
 import type { SchemaDefinition } from "../schemas/schema-model";

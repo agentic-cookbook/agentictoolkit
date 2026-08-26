@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { PaneExitGuard } from '@agentic-toolkit/ui/blocks'
+import type { PaneExitGuard } from '@agenticdevelopertoolkit/ui/blocks'
 
 /**
  * Bridges a {@link CrudDataView}-style imperative `onGuardChange(guard)` callback into a STABLE

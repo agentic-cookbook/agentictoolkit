@@ -2,7 +2,7 @@
 
 import type { ReactElement } from 'react'
 
-import { Button } from '@agentic-toolkit/ui/components/button'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
 
 /**
  * Themed "something went wrong" fallback region — shared by the client

@@ -13,9 +13,9 @@ import {
   useReportSettingsDirty,
   useSettingsDraft,
 } from "@agentic-toolkit/resource";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   GAME_FOR_ECOSYSTEM_CACHE_KEY,
   REALM_CONFIG_CACHE_KEY,

@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@agentic-toolkit/chat": "file:../../packages/web/packages/features/chat",
-    "@agentic-toolkit/controls": "file:../../packages/web/packages/controls",
-    "@agentic-toolkit/model": "file:../../packages/web/packages/model",
-    "@agentic-toolkit/themes": "file:../../packages/web/packages/themes",
-    "@agentic-toolkit/ui": "file:../../packages/web/packages/ui",
     "next": "^15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@agenticdevelopertoolkit/controls": "file:../../external/agenticdevelopertoolkit/packages/web/packages/controls",
+    "@agenticdevelopertoolkit/model": "file:../../external/agenticdevelopertoolkit/packages/web/packages/model",
+    "@agenticdevelopertoolkit/themes": "file:../../external/agenticdevelopertoolkit/packages/web/packages/themes",
+    "@agenticdevelopertoolkit/ui": "file:../../external/agenticdevelopertoolkit/packages/web/packages/ui"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.0.0",

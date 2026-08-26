@@ -11,8 +11,8 @@ import {
   type PrototypeApplication,
 } from "../api/applications-prototype";
 import { useResourceList } from "@agentic-toolkit/data";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { ButtonBar } from "@agentic-toolkit/resource";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";

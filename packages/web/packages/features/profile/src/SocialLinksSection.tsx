@@ -10,16 +10,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@agentic-toolkit/ui/components/dialog";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { DialogErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
-import { PLATFORM_LABELS } from "@agentic-toolkit/ui/blocks";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { DialogErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
+import { PLATFORM_LABELS } from "@agenticdevelopertoolkit/ui/blocks";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import {
   createSocialLink,
   updateSocialLink,

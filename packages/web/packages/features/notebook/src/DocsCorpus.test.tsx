@@ -28,7 +28,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 
 vi.mock("@agentic-toolkit/auth", () => ({
   useAuth: () => ({ user: { name: "Ada Lovelace" } }),

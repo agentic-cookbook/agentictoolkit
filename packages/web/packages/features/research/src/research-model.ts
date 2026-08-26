@@ -32,7 +32,7 @@ const MAX_ROUTE = 128;
  * The slug a title suggests: lowercased, non-alphanumerics collapsed to single dashes,
  * trimmed of leading/trailing dashes, capped at the route length.
  *
- * Deliberately NOT `@agentic-toolkit/ui/lib/slug`'s `slugify`: that one enforces the USER
+ * Deliberately NOT `@agenticdevelopertoolkit/ui/lib/slug`'s `slugify`: that one enforces the USER
  * HANDLE alphabet (≤40 chars, no `_`). A paper route is a different rule with a different
  * limit, and sharing the function would silently truncate long titles at 40.
  *

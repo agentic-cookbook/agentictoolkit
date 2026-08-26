@@ -23,7 +23,7 @@ import type { FooterLink } from '@agentic-toolkit/adh/footer'
 import {
   HelpContentProvider,
   type SiteHelp,
-} from '@agentic-toolkit/ui/components/help-content'
+} from '@agenticdevelopertoolkit/ui/components/help-content'
 
 /** The serializable half of a link: what a server layout can hand across the
  *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot

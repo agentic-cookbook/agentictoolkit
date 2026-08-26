@@ -10,19 +10,19 @@ import {
   type ReactNode,
 } from "react";
 import { Activity, FileStack, HeartPulse, ListTodo, Trash2, Users } from "lucide-react";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
-import { InfoPanel } from "@agentic-toolkit/ui/blocks/info-panel";
-import { StatCard } from "@agentic-toolkit/ui/blocks/stat-card";
-import { StatList, StatListRow } from "@agentic-toolkit/ui/blocks/stat-list";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { InfoPanel } from "@agenticdevelopertoolkit/ui/blocks/info-panel";
+import { StatCard } from "@agenticdevelopertoolkit/ui/blocks/stat-card";
+import { StatList, StatListRow } from "@agenticdevelopertoolkit/ui/blocks/stat-list";
 import {
   isConflict,
   useResourceItemQuery,

@@ -74,23 +74,29 @@ function renderList(): { onChanged: ReturnType<typeof vi.fn> } {
   return { onChanged };
 }
 
-/** The row a title editor sits in. Selection is the ROW's business, not the cell's: `data-table`
- *  routes a click whose target is a control inside a cell (this list's titles are inline editors)
- *  through `fromCellControl`, which deliberately ignores the modifier keys — a control click may
- *  move a single selection so the details pane follows, but must never rewrite a multiple one, or
- *  opening a row's inline menu with thirty rows ticked would silently reduce the next Delete to
- *  one row. So alt-clicking the INPUT can only ever select that one row, which is what these three
- *  tests were quietly asserting against before: the dialog opened over a selection of one. */
-function row(title: string): HTMLElement {
-  const el = screen.getByDisplayValue(title).closest('[role="row"]');
-  if (!el) throw new Error(`no [role="row"] around the "${title}" editor`);
-  return el as HTMLElement;
+/** The `role="row"` element a row's title input sits in — the element DataTable listens on.
+ *  A role lookup and not `closest("tr")`: the grid is divs carrying ARIA roles, not a table. */
+function rowOf(title: string): HTMLElement {
+  const row = screen.getByDisplayValue(title).closest("[role='row']");
+  if (row == null) throw new Error(`the "${title}" row is not inside a role="row" element`);
+  return row as HTMLElement;
 }
 
-/** Select both rows: a plain click sets the anchor, an alt-click adds the second. */
+/**
+ * Select both rows: a plain click sets the anchor, an alt-click adds the second.
+ *
+ * The clicks land on the ROW, not on the row's title input, and that is load-bearing rather
+ * than incidental. `DataTable.onRowClick` treats a click whose target is an in-cell control
+ * (`input, textarea, select, button, a, [role='button']`) as "the pane follows the row you are
+ * editing" and short-circuits to a single-row selection BEFORE it looks at any modifier — a
+ * deliberate guard so that opening one row's inline menu cannot silently shrink a thirty-row
+ * selection down to one. An alt-click on the title input therefore replaces the selection
+ * instead of extending it, which is the behaviour the component promises. Multi-selection is
+ * expressed by clicking the row itself.
+ */
 function selectBoth(): void {
-  fireEvent.click(row("First item"));
-  fireEvent.click(row("Second item"), { altKey: true });
+  fireEvent.click(rowOf("First item"));
+  fireEvent.click(rowOf("Second item"), { altKey: true });
 }
 
 /** The confirm button INSIDE the open dialog, as distinct from the toolbar button that opened it. */

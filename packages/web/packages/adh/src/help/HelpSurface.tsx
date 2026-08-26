@@ -4,7 +4,7 @@
 // The content is therefore in the SSR HTML (crawlable, no client fetch); only the rail hydrates.
 
 import type { ReactNode } from 'react'
-import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
+import { EmptyState } from '@agenticdevelopertoolkit/ui/components/empty-state'
 import { MarkdownHtml } from '../docs/MarkdownHtml'
 import { getDocHtmlByKey } from '../docs/content'
 import {

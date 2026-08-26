@@ -5,10 +5,10 @@ import type { ReactNode } from "react";
 import { LogIn } from "lucide-react";
 
 import { useResourceList } from "@agentic-toolkit/data";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   ButtonBar,
   CreateResourceDialog,

@@ -7,10 +7,10 @@ import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { isForbidden } from "@agentic-toolkit/data";
 import { gamificationApi, type LevelRung } from "@agentic-toolkit/data/gamification";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 import { useRealmCatalog } from "./realm-catalog";
 import { forbiddenAware } from "./err-text";

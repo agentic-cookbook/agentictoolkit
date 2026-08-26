@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { ChevronDown, Home, LogOut, Settings, User as UserIcon } from 'lucide-react'
-import { Avatar, AvatarFallback, AvatarImage } from '@agentic-toolkit/ui/components/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@agenticdevelopertoolkit/ui/components/avatar'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLinkItem,
   DropdownMenuSeparator,
-} from '@agentic-toolkit/ui/components/dropdown-menu'
+} from '@agenticdevelopertoolkit/ui/components/dropdown-menu'
 
 export type AvatarMenuUser = {
   /** What this account is CALLED — the personal name when one is known, else the

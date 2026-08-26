@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { PrivacyLevelSelect } from "@agentic-toolkit/ui/components/privacy-level-select";
+import { PrivacyLevelSelect } from "@agenticdevelopertoolkit/ui/components/privacy-level-select";
 import { ContactsCard } from "../notifications/ContactsCard";
 import {
   getPrivacyGrants,

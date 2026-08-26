@@ -5,11 +5,11 @@ import type { ReactNode } from "react";
 
 import { Table2 } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { schemasApi } from "@agentic-toolkit/data/markdown";
 import { bucketsCacheKey } from "./schema-model";

@@ -10,14 +10,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@agentic-toolkit/ui/components/card";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Spinner } from "@agentic-toolkit/ui/components/spinner";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+} from "@agenticdevelopertoolkit/ui/components/card";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Spinner } from "@agenticdevelopertoolkit/ui/components/spinner";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   addContact,
   confirmContactVerification,

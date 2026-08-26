@@ -213,7 +213,7 @@ import { AuthProvider } from "@agentic-toolkit/adh/auth";
 import { MarketingSiteHeader } from "@agentic-toolkit/adh/marketing/MarketingSiteHeader";
 import {
   HelpContentProvider
-} from "@agentic-toolkit/ui/components/help-content";
+} from "@agenticdevelopertoolkit/ui/components/help-content";
 import { jsx as jsx4, jsxs as jsxs4 } from "react/jsx-runtime";
 function MarketingRootHtml({
   siteId,

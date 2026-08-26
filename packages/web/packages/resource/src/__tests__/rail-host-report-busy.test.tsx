@@ -12,7 +12,7 @@
 // the user actually asked for.
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
 import { StandaloneRailHost } from '../standalone-rail-host'
 import { StackLevels, useReportBusy } from '../rail-host'
 

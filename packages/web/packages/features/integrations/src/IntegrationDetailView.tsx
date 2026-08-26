@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
+import { Card, CardHeader, CardTitle, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { CopyButton } from "@agenticdevelopertoolkit/ui/components/copy-button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import {
   integrationsApi,
   type DeliverabilityWebhook,

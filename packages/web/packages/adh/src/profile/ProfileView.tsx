@@ -3,7 +3,7 @@
 import type { ReactElement, ReactNode } from 'react'
 import type { SiteId } from '@agentic-toolkit/adh-registry'
 import { siteUrl, siteProdUrl } from '@agentic-toolkit/adh-registry'
-import { UserCard } from '@agentic-toolkit/ui/blocks/user-card'
+import { UserCard } from '@agenticdevelopertoolkit/ui/blocks/user-card'
 import { useClientHost } from '../header/useClientHost'
 import type { ProfilePrincipal } from './types'
 import { useViewerPrincipal } from './useViewerPrincipal'

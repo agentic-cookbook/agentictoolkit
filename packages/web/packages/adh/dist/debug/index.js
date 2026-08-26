@@ -38,7 +38,7 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 
 // src/themes/ThemeSwitcher.tsx
 import { Palette } from "lucide-react";
@@ -49,7 +49,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 
 // src/themes/adh-themes.ts
 var ADH_THEME_COOKIE = "adh-theme";
@@ -113,7 +113,7 @@ import {
   DropdownMenuSubContent as DropdownMenuSubContent2,
   DropdownMenuRadioGroup as DropdownMenuRadioGroup2,
   DropdownMenuRadioItem as DropdownMenuRadioItem2
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import { jsx as jsx3, jsxs as jsxs2 } from "react/jsx-runtime";
 var DEFAULT_VALUE = "__default";
 function ChatThemeSwitcher({

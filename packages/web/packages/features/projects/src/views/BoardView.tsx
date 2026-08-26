@@ -1,17 +1,17 @@
 "use client";
 
 import { useCallback, useMemo, type ReactElement } from "react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
 import {
   SortableItem,
   SortableSurface,
   SortableZone,
   type SortableDrop,
-} from "@agentic-toolkit/ui/components/dnd";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+} from "@agenticdevelopertoolkit/ui/components/dnd";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 import { compareRank, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type EstimateScale,

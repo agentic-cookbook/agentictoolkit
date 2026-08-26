@@ -2,10 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { DataTable, type DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import { ErrorText } from "@agentic-toolkit/crud";
 
 import {

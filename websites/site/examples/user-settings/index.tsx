@@ -23,8 +23,8 @@ import {
   Divider,
   VStack,
   HStack,
-} from '@agentic-toolkit/controls/user-settings'
-import '@agentic-toolkit/controls/user-settings/styles.css'
+} from '@agenticdevelopertoolkit/controls/user-settings'
+import '@agenticdevelopertoolkit/controls/user-settings/styles.css'
 
 export const meta = { id: 'user-settings', label: 'User Settings' }
 

@@ -1,9 +1,9 @@
 import dynamic from 'next/dynamic'
 import { preload } from 'react-dom'
-import { themes } from '@agentic-toolkit/themes/manifest'
-import { splitImports, parseRootProps } from '@agentic-toolkit/themes/tokens'
-import { APPEARANCE_PREPAINT_SCRIPT } from '@agentic-toolkit/themes/appearance'
-import { THEME_FONT_PRELOADS } from '@agentic-toolkit/themes/fonts'
+import { themes } from '@agenticdevelopertoolkit/themes/manifest'
+import { splitImports, parseRootProps } from '@agenticdevelopertoolkit/themes/tokens'
+import { APPEARANCE_PREPAINT_SCRIPT } from '@agenticdevelopertoolkit/themes/appearance'
+import { THEME_FONT_PRELOADS } from '@agenticdevelopertoolkit/themes/fonts'
 import {
   DEFAULT_ADH_THEME,
   DEFAULT_SITE_THEME,

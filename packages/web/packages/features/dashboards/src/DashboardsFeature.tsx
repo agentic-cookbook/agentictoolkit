@@ -6,7 +6,7 @@ import { Layers, Globe } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
 import type { SiteGroupView, SiteView } from "@agentic-toolkit/data/monitored-sites";
 import { listGroups, listSites } from "@agentic-toolkit/data/monitored-sites";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   RailHostBoundary,
   StackGroupDetail,

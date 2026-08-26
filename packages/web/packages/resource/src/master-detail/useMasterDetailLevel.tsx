@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 
 import { useStackLevel, useRailExitGuard } from "../rail-host";
 import type { TopicLeaf } from "../resource-explorer";

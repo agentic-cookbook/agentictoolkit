@@ -2,14 +2,14 @@
 
 import { Suspense, lazy, useState } from 'react'
 import { Code2, Loader2 } from 'lucide-react'
-import { Button } from '@agentic-toolkit/ui/components/button'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog'
+} from '@agenticdevelopertoolkit/ui/components/dialog'
 import type { ApiBrowserProps } from './ApiBrowser'
 
 // Lazy: the browser pulls in the generated metadata + shiki. Splitting it here

@@ -1,7 +1,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 import { render, screen, cleanup } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
 import { StandaloneRailHost } from '../standalone-rail-host'
 import { StackLevels } from '../rail-host'
 

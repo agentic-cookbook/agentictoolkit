@@ -15,8 +15,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, within, cleanup, act } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import {
   RailHostContext,
   type RailHostRegistry,

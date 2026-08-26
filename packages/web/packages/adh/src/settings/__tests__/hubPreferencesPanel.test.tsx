@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { registerShortcut } from '@agentic-toolkit/ui/hooks/useShortcut'
+import { registerShortcut } from '@agenticdevelopertoolkit/ui/hooks/useShortcut'
 
 import { HubPreferencesPanel } from '../HubPreferencesPanel'
 // The PACKAGE PATH, exactly as the panel imports it — a relative import here would be the

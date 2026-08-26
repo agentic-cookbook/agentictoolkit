@@ -5,12 +5,12 @@ import type { ReactElement } from "react";
 import { Users } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
 import { useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field, FieldGroup, TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { FieldFootnote } from "@agentic-toolkit/ui/blocks/field";
-import { fieldCaptionClass } from "@agentic-toolkit/ui/lib/typography";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Field, FieldGroup, TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { FieldFootnote } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { fieldCaptionClass } from "@agenticdevelopertoolkit/ui/lib/typography";
 import {
   listAccounts,
   listOffers,

@@ -2,10 +2,10 @@
 
 import { Check } from "lucide-react";
 
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
 
 interface Plan {
   level: string;

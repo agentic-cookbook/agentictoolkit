@@ -44,7 +44,7 @@ function mockDeps(
     assertAuthApiUrl: overrides.assertAuthApiUrl ?? ((u: string | undefined) => u),
     assertLinkedDepsInstalled: overrides.assertLinkedDepsInstalled ?? (() => {}),
   }));
-  vi.doMock("@agentic-toolkit/themes/materialize-fonts", () => ({
+  vi.doMock("@agenticdevelopertoolkit/themes/materialize-fonts", () => ({
     materializeThemeFonts: overrides.materializeThemeFonts ?? (() => {}),
   }));
 }

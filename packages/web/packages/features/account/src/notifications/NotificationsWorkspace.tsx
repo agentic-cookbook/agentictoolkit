@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { SectionHeader } from "@agentic-toolkit/ui/blocks/section-header";
+import { SectionHeader } from "@agenticdevelopertoolkit/ui/blocks/section-header";
 import { PreferencesCard } from "./PreferencesCard";
 import { ContactsCard } from "./ContactsCard";
 

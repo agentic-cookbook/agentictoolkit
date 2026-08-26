@@ -1,12 +1,12 @@
 "use client";
 
 import { useId } from "react";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { DetailSection } from "@agentic-toolkit/resource";
 import type {
   Game,

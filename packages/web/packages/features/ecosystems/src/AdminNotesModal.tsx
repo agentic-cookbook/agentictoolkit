@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@agentic-toolkit/ui/components/dialog";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@agenticdevelopertoolkit/ui/components/dialog";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import { AdminNotesModal as SharedAdminNotesModal } from "@agentic-toolkit/adh-ui/blocks";
 import { useEcoRowNotes, useEcoSaveNotes } from "@agentic-toolkit/data/ecosystems";
 

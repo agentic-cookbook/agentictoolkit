@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { render, screen, cleanup, act } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
 import { StandaloneRailHost } from '../standalone-rail-host'
 import { StackLevels, useReportMissing, useRailExitGuard } from '../rail-host'
 

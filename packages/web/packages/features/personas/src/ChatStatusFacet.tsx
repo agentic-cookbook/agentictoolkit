@@ -20,10 +20,10 @@ import { TypingIndicator } from "@agentic-toolkit/persona/chat";
 // `@agentic-toolkit/persona`, the one package that owns that crossing (see this repo's
 // `.claude/CLAUDE.md`) — `features/personas` must never name that scope directly.
 import "@agentic-toolkit/persona/css/chat/base.css";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import { useEffect, useMemo, useState } from "react";
 import { CommaListInput } from "./CommaListInput";
 import { RowsField } from "./RowsField";

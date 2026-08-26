@@ -3,9 +3,9 @@
 import { useCallback, useState, type ReactNode } from "react";
 import { Trash2 } from "lucide-react";
 import { clientRefusal, useResourceList } from "@agentic-toolkit/data";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { TopicSelectHint, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { TopicSelectHint, type TopicDetailItem, type TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import {
   useStackLevel,
   useRailExitGuard,

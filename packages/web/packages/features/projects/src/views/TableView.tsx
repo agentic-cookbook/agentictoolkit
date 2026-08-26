@@ -1,12 +1,12 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
-import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { ListHeader } from "@agentic-toolkit/ui/blocks/list-header";
-import { SelectionActions } from "@agentic-toolkit/ui/blocks/selection-actions";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { DataTable, type DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { ListHeader } from "@agenticdevelopertoolkit/ui/blocks/list-header";
+import { SelectionActions } from "@agenticdevelopertoolkit/ui/blocks/selection-actions";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type EstimateScale,

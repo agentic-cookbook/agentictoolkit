@@ -16,10 +16,10 @@ import {
   GanttChartSquare,
   CalendarDays,
 } from "lucide-react";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { useSearchParam } from "@agentic-toolkit/ui/hooks/useSearchParam";
-import { writeSearchParams } from "@agentic-toolkit/ui/lib/search-params";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { useSearchParam } from "@agenticdevelopertoolkit/ui/hooks/useSearchParam";
+import { writeSearchParams } from "@agenticdevelopertoolkit/ui/lib/search-params";
 import {
   projectWorkItemsApi,
   type WorkItem,

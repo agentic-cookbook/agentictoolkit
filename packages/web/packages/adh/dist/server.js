@@ -79,13 +79,13 @@ async function getAdhTheme() {
 // src/themes/AdhThemeStyle.tsx
 import dynamic from "next/dynamic";
 import { preload } from "react-dom";
-import { themes as themes2 } from "@agentic-toolkit/themes/manifest";
-import { splitImports, parseRootProps } from "@agentic-toolkit/themes/tokens";
-import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
-import { THEME_FONT_PRELOADS } from "@agentic-toolkit/themes/fonts";
+import { themes as themes2 } from "@agenticdevelopertoolkit/themes/manifest";
+import { splitImports, parseRootProps } from "@agenticdevelopertoolkit/themes/tokens";
+import { APPEARANCE_PREPAINT_SCRIPT } from "@agenticdevelopertoolkit/themes/appearance";
+import { THEME_FONT_PRELOADS } from "@agenticdevelopertoolkit/themes/fonts";
 
 // src/themes/theme-keys.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
+import { themes } from "@agenticdevelopertoolkit/themes/manifest";
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
 );

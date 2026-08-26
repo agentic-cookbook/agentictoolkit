@@ -8,10 +8,10 @@ import {
   filterCommandItems,
   type CommandGroup,
   type CommandItem,
-} from "@agentic-toolkit/ui/blocks";
-import { useShortcut, formatChord } from "@agentic-toolkit/ui/hooks/useShortcut";
-import { writeSearchParams } from "@agentic-toolkit/ui/lib/search-params";
-import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
+} from "@agenticdevelopertoolkit/ui/blocks";
+import { useShortcut, formatChord } from "@agenticdevelopertoolkit/ui/hooks/useShortcut";
+import { writeSearchParams } from "@agenticdevelopertoolkit/ui/lib/search-params";
+import { errorMessage } from "@agenticdevelopertoolkit/ui/lib/errors";
 import { projectSearchApi, type Project, type WorkItemSearchHit } from "@agentic-toolkit/data/projects";
 import { projectTopics } from "./projectTopics";
 import { DEFAULT_WORK_ITEM_VIEW, WORK_ITEM_PARAM, workItemHref } from "./work-item-link";

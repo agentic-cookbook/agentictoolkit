@@ -22,7 +22,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 
 // DashboardsFeature uses next/navigation's useRouter internally (via useBasePathRoute); a stub is
 // enough (selection is prop-driven, not click-driven, in these assertions).

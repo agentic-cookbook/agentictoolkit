@@ -15,9 +15,9 @@ import {
 } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { type NavLinkIcon } from './NavLink'
-import { cn, noAutofillProps } from '@agentic-toolkit/ui'
-import { confirmNavigation, GUARDED_NAV_ATTR } from '@agentic-toolkit/ui/lib/navigation-guard'
-import { useShortcut, chordFromEvent, sameChord } from '@agentic-toolkit/ui/hooks/useShortcut'
+import { cn, noAutofillProps } from '@agenticdevelopertoolkit/ui'
+import { confirmNavigation, GUARDED_NAV_ATTR } from '@agenticdevelopertoolkit/ui/lib/navigation-guard'
+import { useShortcut, chordFromEvent, sameChord } from '@agenticdevelopertoolkit/ui/hooks/useShortcut'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -26,7 +26,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-} from '@agentic-toolkit/ui/components/dropdown-menu'
+} from '@agenticdevelopertoolkit/ui/components/dropdown-menu'
 
 // The menu rows are real <a href> links but navigate PROGRAMMATICALLY through
 // chooseItem (to match the keyboard path / SSO rewriting), which consults the
@@ -141,7 +141,7 @@ export type NavigationPopoverProps = {
    *  destination. It sits outside the scrolling list too, so it stays visible on a
    *  menu long enough to scroll. */
   footer?: ReactNode
-  /** A chord that TOGGLES the menu, in `@agentic-toolkit/ui/hooks/useShortcut`
+  /** A chord that TOGGLES the menu, in `@agenticdevelopertoolkit/ui/hooks/useShortcut`
    *  spelling — `'mod+shift+k'`, say. Omit (or pass `''`) for no shortcut, which is
    *  what every popover that isn't the site menu wants: two popovers registering the
    *  same chord would race, and the registry's most-recent-wins tie-break would hand

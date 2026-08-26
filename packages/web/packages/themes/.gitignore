@@ -1,9 +1,0 @@
-dist/
-.turbo/
-*.tsbuildinfo
-src/theme-data.ts
-
-# scripts/subset-fonts.py scratch: its self-provisioned fonttools venv and the
-# pinned upstream woff2 it subsets FROM. The subset OUTPUT (src/fonts/) is committed.
-.venv-fonts/
-.fonts-src/

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 //
 // Component test for ProjectsCommandPalette — the ⌘K surface. The shared palette's own keyboard,
-// grouping and empty/error rendering are covered in @agentic-toolkit/ui; what is Projects-specific,
+// grouping and empty/error rendering are covered in @agenticdevelopertoolkit/ui; what is Projects-specific,
 // and what this file is for, is: which three groups exist, when the cross-board search is actually
 // asked, and — the part with real consequences — how a chosen hit is OPENED. That last one has two
 // answers (write the param when the board is already on screen, navigate otherwise) and getting it

@@ -173,7 +173,7 @@ Presentational and static; emits no log events.
   one consumer's site list. (Two namespaces ago it sat in `@adh-shared/adh` for a
   Tailwind reason — marketing apps `@source`d the `adh` package but not `ui`, so a
   ui-package wordmark rendered unstyled. That reason has since expired: those apps
-  `@source` `@agentic-toolkit/adh` too, and `@agentic-toolkit/ui` self-registers its
+  `@source` `@agentic-toolkit/adh` too, and `@agenticdevelopertoolkit/ui` self-registers its
   own sources. The vocabulary rule is what governs now.)
 - **Decision**: Ship on its own subpath, importing only the pure registry.
   **Rationale**: separation-of-concerns — keeps `MarketingLanding`'s heavy

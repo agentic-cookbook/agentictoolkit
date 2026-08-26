@@ -13,7 +13,7 @@
 // views.
 
 import { useCallback, useMemo } from 'react'
-import { useDualModeSelection } from '@agentic-toolkit/ui/hooks/useDualModeSelection'
+import { useDualModeSelection } from '@agenticdevelopertoolkit/ui/hooks/useDualModeSelection'
 
 import { useDmConversations } from '../hooks/use-dms'
 import { DmList } from './dm-list'

@@ -4,19 +4,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Globe, Plus } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
-import { deriveDocumentTitle, setFrontmatterTitle } from "@agentic-toolkit/markdown";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { Field } from "@agentic-toolkit/ui/blocks";
+import { deriveDocumentTitle, setFrontmatterTitle } from "@agenticdevelopertoolkit/markdown";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
 import {
   DocumentIdentityField,
   useSlugAvailability,
-} from "@agentic-toolkit/ui/blocks/document-identity-field";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
-import { slugify } from "@agentic-toolkit/ui/lib/slug";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+} from "@agenticdevelopertoolkit/ui/blocks/document-identity-field";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
+import { slugify } from "@agenticdevelopertoolkit/ui/lib/slug";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   StackLevels,
   useRailExitGuard as useWorkspaceExitGuard,

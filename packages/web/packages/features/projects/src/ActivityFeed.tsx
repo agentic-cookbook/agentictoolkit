@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import type { ActivityPage, ProjectActivity } from "@agentic-toolkit/data/projects";
 import { actorText, actionPhrase, commentBody, relativeTime } from "./helpers";
 import { DEFAULT_ITEM_WORDS, type ItemWords } from "./vocabulary";

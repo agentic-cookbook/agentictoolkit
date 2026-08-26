@@ -2,15 +2,15 @@
 
 import { type ReactElement } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { TagSetField } from "@agentic-toolkit/ui/blocks/tag-set-field";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { TagSetField } from "@agenticdevelopertoolkit/ui/blocks/tag-set-field";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { DetailSection } from "@agentic-toolkit/resource";
 import {
   projectBodyOf,

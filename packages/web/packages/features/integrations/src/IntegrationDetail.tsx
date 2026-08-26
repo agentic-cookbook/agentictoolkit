@@ -1,10 +1,10 @@
 "use client";
 
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { noAutofillProps } from "@agentic-toolkit/ui/lib/autofill";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { noAutofillProps } from "@agenticdevelopertoolkit/ui/lib/autofill";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
 import type {
   CreateProviderConfig,
   MaskedProviderConfig,

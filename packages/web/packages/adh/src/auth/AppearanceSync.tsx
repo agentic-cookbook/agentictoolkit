@@ -8,7 +8,7 @@ import {
   normalizeAppearance,
   resetAppearance,
   type AppearancePrefs,
-} from '@agentic-toolkit/themes'
+} from '@agenticdevelopertoolkit/themes'
 // Package path, not relative: see wired-provider.tsx's telemetry import comment — this
 // package bundles with tsup `bundle: true, splitting: false`, and `src/auth/index.ts` is
 // its own tsup entry, so a relative '../telemetry/report-error' would inline a private,

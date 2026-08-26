@@ -169,8 +169,8 @@ orchestration). The metadata→payload logic (`writableColumns`, `toDraft`,
 
 - **React / Web (TypeScript):** `websites/shared/crud/src/CrudRecordForm.tsx`,
   exported from `@agentic-toolkit/crud`. Composes the shared `Field`, `Button`,
-  `useAction` (from `@agentic-toolkit/ui`) and the package-local `CrudFieldInput` +
-  `ErrorText`. Note it lives in `@agentic-toolkit/crud`, not `@agentic-toolkit/ui`.
+  `useAction` (from `@agenticdevelopertoolkit/ui`) and the package-local `CrudFieldInput` +
+  `ErrorText`. Note it lives in `@agentic-toolkit/crud`, not `@agenticdevelopertoolkit/ui`.
 - The pure metadata→payload helpers are exported for reuse/testing: `writableColumns`,
   `toDraft`, `buildPayload`, plus the `CrudDraft` / `CrudFormMode` types.
 - Metadata comes from `src/generated/table-metadata.ts` (backend OpenAPI →

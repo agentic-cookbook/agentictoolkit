@@ -59,9 +59,9 @@ import {
   Waypoints,
   Wrench
 } from "lucide-react";
-import { InfoPanel } from "@agentic-toolkit/ui/blocks/info-panel";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { TextBubble } from "@agentic-toolkit/ui/components/text-bubble";
+import { InfoPanel } from "@agenticdevelopertoolkit/ui/blocks/info-panel";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { TextBubble } from "@agenticdevelopertoolkit/ui/components/text-bubble";
 import { detectEnv, getSite, siteHeaderTitle } from "@agentic-toolkit/adh-registry";
 import { useClientHost } from "@agentic-toolkit/adh/header";
 

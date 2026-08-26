@@ -4,14 +4,14 @@
 
 // src/debug-env/SiteThemeConsole.tsx
 import { useEffect, useState as useState3 } from "react";
-import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView } from "@agenticdevelopertoolkit/ui/blocks";
 import { useThemeEditor } from "@agentic-toolkit/adh/themes";
 
 // src/debug-env/SiteThemeBranch.tsx
 import { useRef, useState as useState2 } from "react";
 import { Braces, Brush, Globe, Layers, Megaphone, Paintbrush, SwatchBook, Type } from "lucide-react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
 import {
   Dialog,
   DialogContent,
@@ -19,9 +19,9 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription
-} from "@agentic-toolkit/ui/components/dialog";
-import { useClipboard } from "@agentic-toolkit/ui/hooks/useClipboard";
-import { useIsomorphicLayoutEffect } from "@agentic-toolkit/ui/hooks/useIsomorphicLayoutEffect";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { useClipboard } from "@agenticdevelopertoolkit/ui/hooks/useClipboard";
+import { useIsomorphicLayoutEffect } from "@agenticdevelopertoolkit/ui/hooks/useIsomorphicLayoutEffect";
 
 // src/debug-env/selection-store.ts
 import { useCallback, useState } from "react";

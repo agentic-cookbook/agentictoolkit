@@ -12,7 +12,7 @@
 // So the URL grammar's values get their own entry (`./chain`, its own directive-free chunk),
 // which the server-safe `parse-path.ts` of research and notebook import instead of the barrel.
 //
-// THE ONE RULE FOR THIS FILE: it must import NOTHING. Not `@agentic-toolkit/ui`, not React,
+// THE ONE RULE FOR THIS FILE: it must import NOTHING. Not `@agenticdevelopertoolkit/ui`, not React,
 // not a sibling module — a single import of anything that is (or ever becomes) a client module
 // re-poisons this chunk transitively and restores the bug in a shape that is even harder to
 // see. Values only, no types from elsewhere, no helpers. `packages/features/categories/

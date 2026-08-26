@@ -8,12 +8,12 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   integrationsApi,
   oauthCallbackUrl,

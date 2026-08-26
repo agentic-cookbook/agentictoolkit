@@ -18,25 +18,25 @@ import {
 } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { CRUD_TABLES, CrudDataView, useExitGuardChannel } from "@agentic-toolkit/crud";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
-import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
-import { useExitGate, type PaneExitGuard } from "@agentic-toolkit/ui/hooks/useExitGate";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Field, FieldGroup, ButtonBar } from "@agenticdevelopertoolkit/ui/blocks";
+import { useDirtyDraft } from "@agenticdevelopertoolkit/ui/hooks/useDirtyDraft";
+import { useExitGate, type PaneExitGuard } from "@agenticdevelopertoolkit/ui/hooks/useExitGate";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
 import {
   StackGroupDetail,
   useRailExitGuard,
   useRecordAffordance,
   type GroupTopicItem,
 } from "@agentic-toolkit/resource";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import {
   PrivacyLevelSelect,
   PRIVACY_WIRE_VALUE,
   PRIVACY_LEVEL_FROM_WIRE,
-} from "@agentic-toolkit/ui/components/privacy-level-select";
+} from "@agenticdevelopertoolkit/ui/components/privacy-level-select";
 import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
 import { rdidPrefix, validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { PersonaAvatarField } from "./PersonaAvatarField";

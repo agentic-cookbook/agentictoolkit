@@ -19,7 +19,7 @@ export { DEFAULT_THEME, TERMINAL_THEME } from './voice'
 // lives in a DIFFERENT submodule, which packages here (e.g. @agentic-toolkit/adh)
 // deliberately don't reach into. bitbag already declares it as a peerDependency
 // because it renders that vocabulary, so it is the honest place to publish it.
-// Do NOT substitute `@agentic-toolkit/themes`: the two id sets are disjoint
+// Do NOT substitute `@agenticdevelopertoolkit/themes`: the two id sets are disjoint
 // (`old-school-terminal` — TERMINAL_THEME above — exists only here), so swapping
 // them would break the prop's type contract.
 export { themeIds, type ThemeKey } from '@agenticdevelopertoolkit/themes'

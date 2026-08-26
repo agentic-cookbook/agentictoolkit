@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import { adtAlias, adtInline } from '../../vitest.adt'
 
 // Self-contained config so `pnpm --filter @agentic-toolkit/adh run test`
 // (cwd = this package) discovers src/__tests__/*. The workspace-root config's
@@ -20,9 +21,15 @@ export default defineConfig({
     //
     // An alias, not `resolve.dedupe`: dedupe doesn't reach files rooted outside the project,
     // and the persona toolkit lives several directories up and across.
-    alias: {
-      react: fileURLToPath(new URL('./node_modules/react', import.meta.url)),
-      'react-dom': fileURLToPath(new URL('./node_modules/react-dom', import.meta.url)),
+    // Array form, because adtAlias returns entries that re-resolve rather than
+    // rewrite (see ../../vitest.adt.ts) and an object cannot carry those.
+    alias: [
+      // react/react-dom AND every dependency of the linked @agenticdevelopertoolkit/*
+      // packages, derived from their own manifests so this cannot drift when that
+      // toolkit adds one. Pinning react by hand was enough while `@base-ui/react`
+      // still came from a shared store; it does not survive the toolkit moving to a
+      // repo with a store of its own.
+      ...adtAlias(fileURLToPath(new URL('.', import.meta.url))),
       // ONE `next` in the test process, same reasoning as react/react-dom above, forced by
       // Task 7 (the User Settings overlay): its render tree now crosses into
       // @agentic-toolkit/account and @agentic-toolkit/resource, both pinned to next ^15.1.0,
@@ -45,9 +52,15 @@ export default defineConfig({
       // `src/__tests__/nextAliasCoverage.test.ts` derives the required set from their source
       // and fails by name when a panel reaches for a subpath that is missing here; adding the
       // alias is the fix, and that test is what tells you to.
-      'next/navigation': fileURLToPath(new URL('./node_modules/next/navigation.js', import.meta.url)),
-      'next/link': fileURLToPath(new URL('./node_modules/next/link.js', import.meta.url)),
-    },
+      {
+        find: 'next/navigation',
+        replacement: fileURLToPath(new URL('./node_modules/next/navigation.js', import.meta.url)),
+      },
+      {
+        find: 'next/link',
+        replacement: fileURLToPath(new URL('./node_modules/next/link.js', import.meta.url)),
+      },
+    ],
   },
   test: {
     environment: 'jsdom',
@@ -78,7 +91,7 @@ export default defineConfig({
         // react, so the alias never sees them. Inline the persona toolkit to close that
         // path. Scoped to it alone — inlining the sibling `@agentic-toolkit/*` packages
         // would buy nothing and cost transform time on every run.
-        inline: [/[\\/]agenticdevelopertoolkit[\\/]/],
+        inline: adtInline,
       },
     },
   },

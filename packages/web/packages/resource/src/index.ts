@@ -11,10 +11,10 @@
 // The resource orchestrator + its config types.
 export { ResourceExplorer } from "./resource-explorer";
 export type { ResourceTopic, TopicLeaf, ResourceRailConfig } from "./resource-explorer";
-// Re-exported (it is declared with the stack, in @agentic-toolkit/ui) because it is part of
+// Re-exported (it is declared with the stack, in @agenticdevelopertoolkit/ui) because it is part of
 // TopicLeaf's OWN signature: a consumer implementing a leaf here shouldn't have to reach into
 // another package to name the argument the stack hands it.
-export type { TopicSelectOptions } from "@agentic-toolkit/ui/blocks";
+export type { TopicSelectOptions } from "@agenticdevelopertoolkit/ui/blocks";
 
 // The host-or-standalone boundary every feature ENTRY wraps its published content in:
 // pass-through under an existing rail host (the hub shell), a self-hosted rail + exit

@@ -4,7 +4,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 
 const replace = vi.fn();
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace }) }));
-vi.mock('@agentic-toolkit/ui/components/alert-modal', () => ({
+vi.mock('@agenticdevelopertoolkit/ui/components/alert-modal', () => ({
   AlertModal: ({ title, confirmLabel, onConfirm }: { title: string; confirmLabel?: string; onConfirm?: () => void }) => (
     <div role="dialog" aria-label={title}>
       {title}

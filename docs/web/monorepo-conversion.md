@@ -25,7 +25,7 @@ This doc is the *historical* and *architectural* record.
 > `site-templates/reference-web-site` — have since been **deleted**. They
 > had no importers left: the cookbook site that descended from
 > `reference-web-site` had long since forked away from it, and its
-> document-reading UI was re-extracted into `@agentic-toolkit/ui`'s
+> document-reading UI was re-extracted into `@agenticdevelopertoolkit/ui`'s
 > `blocks/` as the HDV (Hierarchical Document View) family instead. The
 > workspace root also moved from `packaging/` to `packages/web/`, and the
 > examples site from `site/` to `websites/site/`.
@@ -44,12 +44,12 @@ its own `dist/` and published-or-federated via pnpm workspaces:
 
 | Package                                  | Depends on                | Notes                                            |
 | ---------------------------------------- | ------------------------- | ------------------------------------------------ |
-| `@agentic-toolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
-| `@agentic-toolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
-| `@agentic-toolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
+| `@agenticdevelopertoolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
+| `@agenticdevelopertoolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
+| `@agenticdevelopertoolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
 | `@agentic-toolkit/layout`            | —                         | Layout CSS bundles                               |
 | `@agentic-toolkit/content`           | `model`                   | Markdown view, cards, home, section index        |
-| `@agentic-toolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
+| `@agenticdevelopertoolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
 | `@agentic-toolkit/chat`              | —                         | InlineChat / ThreePaneChat / MobileChat / PersonaChat |
 | `@agentic-toolkit/reference-web-site`| `controls`, `model`, `themes` | Vite-only template + plugin                  |
 
@@ -90,7 +90,7 @@ so it's safe.
 Splitting controls per-package would have added ceremony without
 buying anything. Cross-control sharing (the appearance-mode-toggle ↔
 theme bus) is non-trivial. Each control gets a barrel sub-export
-(`@agentic-toolkit/controls/filtered-list`) so consumers still
+(`@agenticdevelopertoolkit/controls/filtered-list`) so consumers still
 only pay for what they import.
 
 ### `"use client"` directive preservation

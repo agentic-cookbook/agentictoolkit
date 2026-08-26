@@ -1,7 +1,7 @@
 'use client'
 
 import { Check, Copy } from 'lucide-react'
-import { useClipboard } from '@agentic-toolkit/ui/hooks/useClipboard'
+import { useClipboard } from '@agenticdevelopertoolkit/ui/hooks/useClipboard'
 
 /**
  * The copy-to-clipboard button for a code block — the single interactive island shared by the

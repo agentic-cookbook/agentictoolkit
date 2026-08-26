@@ -1,14 +1,14 @@
 'use client'
 
 import { type SubmitEvent } from 'react'
-import { Button } from '@agentic-toolkit/ui/components/button'
-import { Field } from '@agentic-toolkit/ui/blocks/field'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
+import { Field } from '@agenticdevelopertoolkit/ui/blocks/field'
 import { CrudFieldInput, isJsonColumn } from './CrudFieldInput'
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
-import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
-import { useDirtyDraft } from '@agentic-toolkit/ui/hooks/useDirtyDraft'
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text'
+import { useAction } from '@agenticdevelopertoolkit/ui/hooks/useAction'
+import { useDirtyDraft } from '@agenticdevelopertoolkit/ui/hooks/useDirtyDraft'
 import type { CrudColumn, CrudRow, CrudTableMeta } from './types'
-import { fieldCaptionClass } from '@agentic-toolkit/ui/lib/typography'
+import { fieldCaptionClass } from '@agenticdevelopertoolkit/ui/lib/typography'
 
 /** The columns a client may set — everything the create body accepts. */
 export function writableColumns(meta: CrudTableMeta): CrudColumn[] {

@@ -11,25 +11,25 @@ import {
   type RealmBadgeInput,
 } from "@agentic-toolkit/data/gamification";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { DialogErrorText, ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 import { useRealmCatalog } from "./realm-catalog";
 import { forbiddenAware } from "./err-text";

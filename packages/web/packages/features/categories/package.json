@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist. `./sources.css` is the Tailwind @source self-registration a host @imports once. `./chain` is the rail's reserved URL tokens as a directive-free, server-safe chunk \u2014 the `.` barrel is a whole-file 'use client' module, so an RSC that CALLS one of its exports gets a client reference, not a string; see src/chain.ts.",
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once. `./chain` is the rail's reserved URL tokens as a directive-free, server-safe chunk — the `.` barrel is a whole-file 'use client' module, so an RSC that CALLS one of its exports gets a client reference, not a string; see src/chain.ts.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -38,8 +38,8 @@
   },
   "dependencies": {
     "@agentic-toolkit/data": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*",
-    "lucide-react": "^1.16.0"
+    "lucide-react": "^1.16.0",
+    "@agenticdevelopertoolkit/ui": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/ui"
   },
   "peerDependencies": {
     "next": ">=15",
@@ -47,20 +47,28 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@base-ui/react": "1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "harper.js": "^2.4.0",
     "jsdom": "^29.0.2",
     "next": "^15.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwind-merge": "^2.6.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"
   },
-  "comment:directives": "`./chain` is the rail's reserved URL TOKENS as a directive-free, server-safe entry. The `.` barrel is a whole-file 'use client' module, so a constant imported from it into an RSC is an opaque client reference, not a string \u2014 see src/chain.ts. `chain` imports NOTHING, which is what keeps it unpoisonable; the empty allowlist is that rule, enforced.",
+  "comment:directives": "`./chain` is the rail's reserved URL TOKENS as a directive-free, server-safe entry. The `.` barrel is a whole-file 'use client' module, so a constant imported from it into an RSC is an opaque client reference, not a string — see src/chain.ts. `chain` imports NOTHING, which is what keeps it unpoisonable; the empty allowlist is that rule, enforced.",
   "directives": {
     "index": "client",
     "chain": []

@@ -23,7 +23,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 
 // ResourceExplorer uses next/navigation's useRouter internally. `push` is a shared spy, not a
 // throwaway: with the "All" card landing gone (docs/ui/fleet-ui-audit.md §1.5) the rail row IS

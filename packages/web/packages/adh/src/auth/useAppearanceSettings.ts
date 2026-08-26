@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 import { useAuth } from '@agentic-toolkit/auth'
 import { authedRequest } from '@agentic-toolkit/auth/client'
-import { useAppearancePreferences, type AppearancePrefs } from '@agentic-toolkit/themes'
+import { useAppearancePreferences, type AppearancePrefs } from '@agenticdevelopertoolkit/themes'
 // Package path, not relative: see wired-provider.tsx's telemetry import comment — this
 // package bundles with tsup `bundle: true, splitting: false`, and `src/auth/index.ts` is
 // its own tsup entry, so a relative '../telemetry/report-error' would inline a private,

@@ -15,10 +15,10 @@ import {
   type TopicDetailItem,
   type TopicLevel,
   type TopicSelectOptions,
-} from "@agentic-toolkit/ui/blocks";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
+} from "@agenticdevelopertoolkit/ui/blocks";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
 import { Plus, Search } from "lucide-react";
 import { StackLevels } from "./rail-host";
 import { RailHostBoundary } from "./standalone-rail-host";

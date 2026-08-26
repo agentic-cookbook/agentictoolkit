@@ -8,7 +8,7 @@ import type {
   StatEntry,
   TourPillar,
   VersusSide,
-} from '@agentic-toolkit/landing'
+} from '@agenticdevelopertoolkit/landing'
 
 /**
  * A family site's landing deck, as DATA.
@@ -82,7 +82,7 @@ export interface LandingSection {
 }
 
 /**
- * One block on a screen. `kind` is the exact `@agentic-toolkit/landing` export name, and
+ * One block on a screen. `kind` is the exact `@agenticdevelopertoolkit/landing` export name, and
  * the rest of each member is that component's props — with one deliberate difference,
  * spelled out in `LandingCard`, `LandingFaqEntry` and `Closer` below: a body arrives as a
  * LIST of paragraphs rather than a single node, because the kit styles a body through its

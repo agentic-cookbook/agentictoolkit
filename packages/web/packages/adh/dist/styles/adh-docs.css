@@ -2,7 +2,7 @@
  *
  * The CHROME (sidebar, links, layout) styles with the ADH theme tokens (--color-*), so it matches
  * the header/footer and the rest of ADH. The CONTENT prose inside the article is styled separately
- * by @agentic-toolkit/markdown's `adh-mv-*` palette (import '@agentic-toolkit/adh/help.css' or the
+ * by @agenticdevelopertoolkit/markdown's `adh-mv-*` palette (import '@agentic-toolkit/adh/help.css' or the
  * markdown styles). Import this once per app: `@import "@agentic-toolkit/adh/docs.css"`. */
 
 /* Tailwind @source registration for this package. docs/ itself styles semantically (the

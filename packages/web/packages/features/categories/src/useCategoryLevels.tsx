@@ -15,16 +15,16 @@ import {
   type CategoryTreeNode,
   type TopicDetailItem,
   type TopicLevel,
-} from "@agentic-toolkit/ui/blocks"
+} from "@agenticdevelopertoolkit/ui/blocks"
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog"
-import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions"
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text"
-import { Input } from "@agentic-toolkit/ui/components/input"
+} from "@agenticdevelopertoolkit/ui/components/dialog"
+import { DialogActions } from "@agenticdevelopertoolkit/ui/components/dialog-actions"
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text"
+import { Input } from "@agenticdevelopertoolkit/ui/components/input"
 import { taxonomyApi, markdownApi } from "@agentic-toolkit/data/markdown"
 
 import {

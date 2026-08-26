@@ -33,8 +33,8 @@ export default defineConfig({
     '@agentic-toolkit/auth',
     '@agentic-toolkit/auth/client',
     '@agentic-toolkit/api-explorer',
-    '@agentic-toolkit/ui',
-    '@agentic-toolkit/ui/*',
+    '@agenticdevelopertoolkit/ui',
+    '@agenticdevelopertoolkit/ui/*',
   ],
   esbuildPlugins: [
     preserveDirectivesPlugin({

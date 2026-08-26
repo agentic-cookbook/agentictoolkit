@@ -4,8 +4,8 @@
 import { useCallback as useCallback3, useEffect as useEffect4, useRef as useRef2 } from "react";
 import dynamic from "next/dynamic";
 import { MessagesSquare, Palette, SlidersHorizontal, SquareTerminal } from "lucide-react";
-import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { HierarchicalDetailView } from "@agenticdevelopertoolkit/ui/blocks";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 
 // src/debug-env/FloatingWindow.tsx
@@ -19,7 +19,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 
 // src/hooks/useIsMounted.ts
 import { useEffect, useState } from "react";
@@ -266,7 +266,7 @@ function EnvironmentPanel() {
 }
 
 // src/debug-env/SettingsPanel.tsx
-import { Switch } from "@agentic-toolkit/ui/components/switch";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
 import {
   useShowDebugFrames,
   setShowDebugFrames,
@@ -274,7 +274,7 @@ import {
   setSlowAnimations,
   useCascadeLog,
   setCascadeLog
-} from "@agentic-toolkit/ui/blocks";
+} from "@agenticdevelopertoolkit/ui/blocks";
 import { Fragment, jsx as jsx5, jsxs as jsxs4 } from "react/jsx-runtime";
 function DebugSwitch({
   id,

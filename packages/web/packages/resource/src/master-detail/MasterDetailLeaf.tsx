@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { ButtonBar, type MasterDetailActions } from "./MasterDetailLayout";
 
 /**

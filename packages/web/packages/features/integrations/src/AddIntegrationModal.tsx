@@ -7,11 +7,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Alert } from "@agentic-toolkit/ui/components/alert";
-import { Button } from "@agentic-toolkit/ui/components/button";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Alert } from "@agenticdevelopertoolkit/ui/components/alert";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import type { MaskedProviderConfig, ProviderCatalogEntry } from "@agentic-toolkit/data/integrations";
 import { intBlank, type IntegrationInput } from "./IntegrationDetail";
 import { IntegrationDetailView } from "./IntegrationDetailView";

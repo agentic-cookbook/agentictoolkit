@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 import { mergeHeaders } from "@agentic-toolkit/next-headers";
 import { commitSha, readSiteVersion, resolveBackendUrl } from "@agentic-toolkit/next-env";
 // Same import-by-name rationale as index.ts's — see the long comment there.
-import { materializeThemeFonts } from "@agentic-toolkit/themes/materialize-fonts";
+import { materializeThemeFonts } from "@agenticdevelopertoolkit/themes/materialize-fonts";
 
 /** What a workbench must supply, and the little it may. */
 export type WorkbenchNextConfigOptions = {

@@ -16,7 +16,7 @@ export default defineConfig({
   // a site resolving `@agentic-toolkit/adh-next-config` alone would 500 on the un-hoisted
   // siblings. `noExternal` overrides that default for these four so they land inside
   // `dist/index.js` as code rather than bare specifiers.
-  // `@agentic-toolkit/themes` is a DECLARED dependency (see package.json) but is
+  // `@agenticdevelopertoolkit/themes` is a DECLARED dependency (see package.json) but is
   // DELIBERATELY ABSENT from this list — it must stay external, the opposite of the
   // other four siblings. `materialize-fonts.mjs` locates its font files relative to
   // `import.meta.url` (its OWN module URL), and its export map ships it as raw

@@ -2,12 +2,12 @@
 
 import { Trash2 } from "lucide-react";
 
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
-import { Label } from "@agentic-toolkit/ui/components/label";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import type { SchemaDefinition } from "../schemas/schema-model";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { PermissionToggles } from "@agentic-toolkit/ui/components/permission-toggles";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { PermissionToggles } from "@agenticdevelopertoolkit/ui/components/permission-toggles";
 import { TablePermissionNode } from "./TablePermissionNode";
 import {
   type Crud,

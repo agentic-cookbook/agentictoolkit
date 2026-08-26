@@ -2,7 +2,7 @@ import { type ComponentType, type ReactElement, type ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { NavLink } from '@agentic-toolkit/adh/header';
 import type { FooterLink } from '@agentic-toolkit/adh/footer';
-import { type SiteHelp } from '@agentic-toolkit/ui/components/help-content';
+import { type SiteHelp } from '@agenticdevelopertoolkit/ui/components/help-content';
 /** The serializable half of a link: what a server layout can hand across the
  *  boundary. NavLink's `icon`/function form and FooterLink's `onSelect` cannot
  *  cross it, and a site that needs either is not describing chrome any more.

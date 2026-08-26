@@ -10,9 +10,9 @@ import {
 } from "../api/customers";
 import { Users } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import { ButtonBar } from "@agentic-toolkit/resource";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";

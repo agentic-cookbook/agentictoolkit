@@ -1,5 +1,5 @@
 import { type ComponentProps } from "react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
 import type { ProjectActivity, ProjectComment, WorkItem } from "@agentic-toolkit/data/projects";
 import type {
   EstimateScale,

@@ -12,17 +12,17 @@ import {
   type DemoPreviewDiagnostic,
   type DemoPreviewTurn,
 } from "@agentic-toolkit/data/personas";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { EditorToolbar } from "@agentic-toolkit/ui/components/editor-toolbar";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { SyntaxQuickReference } from "@agentic-toolkit/ui/components/quick-reference";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
-import { fieldCaptionClass } from "@agentic-toolkit/ui/lib/typography";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { EditorToolbar } from "@agenticdevelopertoolkit/ui/components/editor-toolbar";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { SyntaxQuickReference } from "@agenticdevelopertoolkit/ui/components/quick-reference";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
+import { fieldCaptionClass } from "@agenticdevelopertoolkit/ui/lib/typography";
 
 /** How long the author has to stop typing before the script is sent to be compiled. */
 const LINT_DEBOUNCE_MS = 600;

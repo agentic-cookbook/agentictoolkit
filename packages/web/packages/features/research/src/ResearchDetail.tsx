@@ -2,11 +2,11 @@
 
 import type { ReactNode } from "react";
 
-import { MarkdownDocumentEditor } from "@agentic-toolkit/markdown";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { CategoriesAndTags } from "@agentic-toolkit/ui/blocks/categories-and-tags";
-import { MarkdownSpellCheck } from "@agentic-toolkit/ui/components/markdown-spellcheck";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { MarkdownDocumentEditor } from "@agenticdevelopertoolkit/markdown";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { CategoriesAndTags } from "@agenticdevelopertoolkit/ui/blocks/categories-and-tags";
+import { MarkdownSpellCheck } from "@agenticdevelopertoolkit/ui/components/markdown-spellcheck";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import type { ResearchInput } from "./research-model";
 
 /**
@@ -22,7 +22,7 @@ import type { ResearchInput } from "./research-model";
  * ResearchPane: a slug has nowhere to be persisted until the paper is published).
  *
  * This is the shared {@link MarkdownDocumentEditor} — the same editing view any document
- * surface gets. Nothing here imports its stylesheet: `@agentic-toolkit/markdown/styles` (and
+ * surface gets. Nothing here imports its stylesheet: `@agenticdevelopertoolkit/markdown/styles` (and
  * the Tailwind @source registration it carries for the package's own components) already
  * reaches every family site through adh-family.css -> adh-help.css. A second import from
  * inside a tsup-built feature package would be a duplicate, not a safeguard.

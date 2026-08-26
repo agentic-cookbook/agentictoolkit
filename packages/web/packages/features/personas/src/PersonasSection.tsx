@@ -5,14 +5,14 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Plus, UserCircle } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { readTokenSubject, revalidateResources } from "@agentic-toolkit/data";
-import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
-import { slugify } from "@agentic-toolkit/ui/lib/slug";
+import { HierarchicalDetailView, type TopicDetailItem, type TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
+import { slugify } from "@agenticdevelopertoolkit/ui/lib/slug";
 import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import {
   StackLevels,
@@ -21,7 +21,7 @@ import {
   HomeBar,
   HomeBarPortal,
 } from "@agentic-toolkit/resource";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { api, type Persona } from "@agentic-toolkit/data/personas";
 import { PersonaEditor } from "./PersonaEditor";
 import { PERSONA_SERVICES_CACHE_KEY, useUserServices } from "./useUserServices";

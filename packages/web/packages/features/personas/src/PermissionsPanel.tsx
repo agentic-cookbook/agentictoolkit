@@ -1,12 +1,12 @@
 "use client";
 
 import { useAction } from "@agentic-toolkit/crud";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group";
 import {
   personaApprovalsApi,
   personaMayActApi,

@@ -33,7 +33,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 
 // useBasePathRoute (ResearchFeature's URL wiring) reads next/navigation's useRouter; a stub is
 // enough for most tests, which assert on the API calls rather than the resulting route. The
@@ -217,7 +217,7 @@ function Rail({ levels }: { levels: TopicLevel[] }) {
  *  `detailTitle` prop receives — rather than a hand-rolled stand-in, so what this test exercises
  *  is the actual merge logic, not a re-implementation of it. The rendered `detail-title` node
  *  stands in for HTDV's own title strip (`hierarchical-topic-detail.tsx`'s `detailTitle` slot),
- *  which lives in `@agentic-toolkit/ui` and is not something this harness renders — this package
+ *  which lives in `@agenticdevelopertoolkit/ui` and is not something this harness renders — this package
  *  has no test coverage of HTDV itself, only of what reaches its host-side boundary. */
 function Harness({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<Map<string, RegisteredLevels>>(new Map());
@@ -557,20 +557,20 @@ describe("ResearchFeature", () => {
   // nothing anywhere in this file observed either call's RESOLVED VALUE, only that the calls
   // happened. That is a coverage hole over `markdownApi.categories()` / `markdownApi.tags()` →
   // `ResearchPane`'s `accountCategories`/`accountTags` → `ResearchDetail`'s `categoryOptions`/
-  // `tagOptions` → `CategoriesAndTags` (`packages/ui/src/blocks/categories-and-tags.tsx`) — the
-  // seam `packages/ui/src/__tests__/categoriesAndTags.test.tsx` cannot cover, because it renders
+  // `tagOptions` → `CategoriesAndTags` (`external/agenticdevelopertoolkit/packages/web/packages/ui/src/blocks/categories-and-tags.tsx`) — the
+  // seam `external/agenticdevelopertoolkit/packages/web/packages/ui/src/__tests__/categoriesAndTags.test.tsx` cannot cover, because it renders
   // the control directly and never touches `markdownApi`.
   //
   // What's queryable: `CategoryField`/`TagSetField` (read via `ResearchDetail.tsx` and
   // `categories-and-tags.tsx`) each pair a `Combobox` autocomplete with an `EntityChooser`
   // "Choose…" browser. The browser is the one that renders its full option list as real DOM —
   // `role="option"` rows inside a `role="listbox"` — once its trigger is clicked (see
-  // `packages/ui/src/components/list-chooser.tsx`, exercised the same way by
-  // `packages/ui/src/__tests__/listChooser.test.tsx`'s `open()` helper). The category trigger's
+  // `external/agenticdevelopertoolkit/packages/web/packages/ui/src/components/list-chooser.tsx`, exercised the same way by
+  // `external/agenticdevelopertoolkit/packages/web/packages/ui/src/__tests__/listChooser.test.tsx`'s `open()` helper). The category trigger's
   // accessible name is "Browse categories" (`Browse ${label.toLowerCase()}` off
   // `CategoriesAndTags`'s `label: "Categories"`); the tags trigger's is "Tags" (`EntityChooser`'s
   // multi-mode `ariaLabel` is the row's own `label`) — both per
-  // `packages/ui/src/__tests__/categoriesAndTags.test.tsx`.
+  // `external/agenticdevelopertoolkit/packages/web/packages/ui/src/__tests__/categoriesAndTags.test.tsx`.
   it("wires markdownApi's categories and tags into the classification control's Choose… pickers", async () => {
     categories.mockResolvedValue(["Physics", "Chemistry"]);
     tags.mockResolvedValue(["alpha", "beta"]);

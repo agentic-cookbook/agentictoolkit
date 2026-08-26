@@ -7,7 +7,7 @@ import { adtAlias, adtInline } from '../../vitest.adt'
 // `dir: '../packages'` resolves outside the web workspace, so it finds nothing.
 // We reuse the root setup file for its deterministic jest-dom/localStorage/
 // ResizeObserver/matchMedia shims (see packages/web/vitest.setup.ts, and the
-// @agentic-toolkit/ui package for the same pattern), plus a package-local
+// @agenticdevelopertoolkit/ui package for the same pattern), plus a package-local
 // setup for the @base-ui/react Dialog getComputedStyle patch this package's
 // dialog-based blocks (SendInvitationModal, AdminNotesModal,
 // TransferOwnershipSection, ...) need.

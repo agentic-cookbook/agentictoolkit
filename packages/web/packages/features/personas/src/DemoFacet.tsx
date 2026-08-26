@@ -7,10 +7,10 @@ import {
   DEMO_MAX_TOKEN_MS,
   type CannedChatConfig,
 } from "@agentic-toolkit/data/personas";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
 import { useState } from "react";
 import { CommaListInput } from "./CommaListInput";
 import { InkScriptEditor } from "./InkScriptEditor";

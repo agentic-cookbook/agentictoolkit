@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { ExamplePanel } from '../../ExamplePanel'
-import { OrbRow } from '@agentic-toolkit/controls/orb-row'
-import type { OrbSite } from '@agentic-toolkit/controls/orb-row'
-import '@agentic-toolkit/controls/orb-row/styles.css'
-import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
-import '@agentic-toolkit/controls/source-code-panel/styles.css'
+import { OrbRow } from '@agenticdevelopertoolkit/controls/orb-row'
+import type { OrbSite } from '@agenticdevelopertoolkit/controls/orb-row'
+import '@agenticdevelopertoolkit/controls/orb-row/styles.css'
+import { SourceCodePanel } from '@agenticdevelopertoolkit/controls/source-code-panel'
+import '@agenticdevelopertoolkit/controls/source-code-panel/styles.css'
 
 export const meta = { id: 'orb-row', label: 'Orb Row' }
 
@@ -173,9 +173,9 @@ const selectStyle: React.CSSProperties = {
   minWidth: 220,
 }
 
-const CONSUMER_SOURCE = `import { OrbRow } from '@agentic-toolkit/controls/orb-row'
-import type { OrbSite } from '@agentic-toolkit/controls/orb-row'
-import '@agentic-toolkit/controls/orb-row/styles.css'
+const CONSUMER_SOURCE = `import { OrbRow } from '@agenticdevelopertoolkit/controls/orb-row'
+import type { OrbSite } from '@agenticdevelopertoolkit/controls/orb-row'
+import '@agenticdevelopertoolkit/controls/orb-row/styles.css'
 
 const sites: OrbSite[] = [
   { id: 'cookbook', name: 'The Agentic Cookbook', emoji: '📖',

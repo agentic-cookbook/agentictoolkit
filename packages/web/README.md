@@ -6,23 +6,32 @@ sites. Ships as a pnpm monorepo of pre-built ESM packages under the
 
 ## Packages
 
-Foundation — everything else builds on these:
+Foundation — everything else builds on these. **These are not in this
+workspace.** They moved to the public
+[agenticdevelopertoolkit](https://github.com/agentic-cookbook/agenticdevelopertoolkit)
+in 2026-08 and are named `@agenticdevelopertoolkit/*`. This repo reaches them
+through its `external/agenticdevelopertoolkit` submodule — a separate repo and
+a separate pnpm workspace, so manifests here depend on them by `link:` rather
+than `workspace:*` (pnpm cannot nest workspaces). Sources are on disk after a
+`git clone --recursive`, under
+`external/agenticdevelopertoolkit/packages/web/packages/<name>/`, and that
+repo's [`README.md`](../../external/agenticdevelopertoolkit/README.md) is the
+authority on what each contains.
 
 | Package | Description | Depends on |
 |---|---|---|
-| `@agentic-toolkit/ui` | shadcn slot; `cn` helper, `useIsomorphicLayoutEffect`, blocks, `styles/globals.css` | — |
-| `@agentic-toolkit/themes` | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS | `ui` |
-| `@agentic-toolkit/model` | Providers, hooks, lib (search, breadcrumbs, nav, lookup) | — |
-| `@agentic-toolkit/markdown` | Markdown rendering | `ui` |
-| `@agentic-toolkit/search` | Search index + dialog | `markdown`, `ui` |
-| `@agentic-toolkit/controls` | filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner | `model` |
+| `@agenticdevelopertoolkit/ui` | shadcn slot; `cn` helper, `useIsomorphicLayoutEffect`, blocks, `styles/globals.css` | — |
+| `@agenticdevelopertoolkit/themes` | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS | `ui` |
+| `@agenticdevelopertoolkit/model` | Providers, hooks, lib (search, breadcrumbs, nav, lookup) | — |
+| `@agenticdevelopertoolkit/markdown` | Markdown rendering | `ui` |
+| `@agenticdevelopertoolkit/search` | Search index + dialog | `markdown`, `ui` |
+| `@agenticdevelopertoolkit/controls` | filtered-list, source-code-panel, logging-panel, user-settings, search-dialog, appearance-mode-toggle, orb-row, dev-banner | `model` |
+| `@agenticdevelopertoolkit/editing` | The editing container — one owner of the draft, the Save button and the unsaved-changes guard for every editable surface | `ui` |
+| `@agenticdevelopertoolkit/landing` | Scroll-snapping landing deck (`Deck`, `Screen`, `NavChrome`) plus ~20 presentational blocks. Names no colour, font or copy — every visual value reads a `--lp-*` custom property, every block takes its content as props | — |
 
-Marketing pages — standalone; nothing here builds on it and it builds on
-nothing, which is why it is its own group rather than a Foundation row:
-
-| Package | Description | Depends on |
-|---|---|---|
-| `@agentic-toolkit/landing` | Scroll-snapping landing deck (`Deck`, `Screen`, `NavChrome`) plus ~20 presentational blocks. Names no colour, font or copy — every visual value reads a `--lp-*` custom property, every block takes its content as props | — |
+Everything below **is** in this workspace. Where a `Depends on` cell names a
+bare `ui`, `themes`, `model`, `markdown`, `search`, `controls`, `editing` or
+`landing`, it means the `@agenticdevelopertoolkit/*` package of that name.
 
 Application platform — auth, data access, and the generated-CRUD stack:
 
@@ -34,6 +43,9 @@ Application platform — auth, data access, and the generated-CRUD stack:
 | `@agentic-toolkit/crud` | Generated CRUD surfaces | `api-explorer`, `auth`, `ui` |
 | `@agentic-toolkit/api-explorer` | Interactive API explorer | `auth`, `ui` |
 | `@agentic-toolkit/adh` | Family site chrome — header, footer, legal, themes, debug | `themes`, `ui` |
+| `@agentic-toolkit/adh-ui` | The adh vocabulary the shared UI must not know about — rdid pickers and editors, invitation panes, the delete-entity danger zone | `ui` |
+| `@agentic-toolkit/messaging` | DMs, notifications, presence | `auth`, `data`, `ui` |
+| `@agentic-toolkit/persona` | The crossing consumers use to reach the persona vocabulary (`chat`, `themes`, `viewport`) without pulling a persona in | — |
 | `@agentic-toolkit/deploy-platform` | Deployment/tier helpers | — |
 
 Features (`packages/features/*`) — one package per product area:
@@ -85,17 +97,17 @@ packages/web/            # workspace root — pnpm/build config lives here
   vitest.config.ts
   vitest.setup.ts
   copy-css.mjs           # only build helper, called from each package's build:css
+  vitest.adt.ts          # cross-workspace aliases for tests that reach into the submodule
   packages/              # libraries — zero loose files
-    ui/                  # shadcn slot + blocks (components.json lives here too)
-    themes/              # ColorModeProvider, ThemeStyle, theme CSS
-    model/               # providers + hooks + lib
-    markdown/            # markdown rendering
-    search/              # search index + dialog
-    controls/            # filtered-list, dev-banner, orb-row, ... (one package, many sub-exports)
     auth/ data/ resource/ crud/ api-explorer/     # application platform
     adh/                 # family site chrome (header, footer, legal, themes, debug)
+    adh-ui/              # the adh vocabulary the shared UI must not know about
+    messaging/ persona/  # DMs + presence; the persona crossing
     deploy-platform/     # deployment/tier helpers
     features/            # one package per product area — chat, bitbag, personas, teams, ...
+external/agenticdevelopertoolkit/   # submodule — the shared UI vocabulary
+  packages/web/packages/            # ui, themes, model, markdown, search,
+                                    # controls, editing, landing, and more
 websites/site/           # Next.js 15 App Router examples site
   app/                   # layout, page, [exampleId]/page
   examples/              # one self-contained example dir per control/feature
@@ -110,8 +122,10 @@ live in any directory. Putting them in `packages/web/` keeps the repo root
 clean and leaves room for the other platforms alongside.
 
 `websites/site/` is **outside** the workspace and depends on the packages
-through `file:` refs, so its wiring mirrors what an external consumer does
-rather than what a workspace member gets for free.
+through `file:` refs — into `packages/web/packages/<name>` and into
+`external/agenticdevelopertoolkit/packages/web/packages/<name>` alike — so its
+wiring mirrors what an external consumer does rather than what a workspace
+member gets for free.
 
 ## Local development
 

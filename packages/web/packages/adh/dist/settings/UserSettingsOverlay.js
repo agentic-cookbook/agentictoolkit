@@ -8,8 +8,8 @@ import {
   Dialog,
   DialogContent,
   DialogTitle
-} from "@agentic-toolkit/ui/components/dialog";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
 import { SettingsLayout as SettingsLayout2 } from "@agentic-toolkit/account";
 import { SettingsDirtyProvider as SettingsDirtyProvider2, useSettingsDirty } from "@agentic-toolkit/resource";
 import { ToolkitQueryProvider } from "@agentic-toolkit/data/query";
@@ -267,14 +267,14 @@ import { siteUrl } from "@agentic-toolkit/adh-registry";
 // src/settings/AppearancePanel.tsx
 import dynamic from "next/dynamic";
 import "react";
-import "@agentic-toolkit/themes";
+import "@agenticdevelopertoolkit/themes";
 import { useAppearanceSettings } from "@agentic-toolkit/adh/auth";
 import {
   ToggleGroup,
   ToggleGroupItem
-} from "@agentic-toolkit/ui/components/toggle-group";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Label } from "@agentic-toolkit/ui/components/label";
+} from "@agenticdevelopertoolkit/ui/components/toggle-group";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import { SettingRow } from "@agentic-toolkit/account";
 import { jsx, jsxs } from "react/jsx-runtime";
 var REDUCE_MOTION_OPTIONS = [
@@ -417,13 +417,13 @@ function AppearancePanel() {
 
 // src/settings/HubPreferencesPanel.tsx
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import {
   chordFromEvent,
   formatChord,
   sameChord,
   useRegisteredShortcuts
-} from "@agentic-toolkit/ui/hooks/useShortcut";
+} from "@agenticdevelopertoolkit/ui/hooks/useShortcut";
 import { SettingRow as SettingRow2 } from "@agentic-toolkit/account";
 import {
   DEFAULT_SITE_MENU_SHORTCUT,

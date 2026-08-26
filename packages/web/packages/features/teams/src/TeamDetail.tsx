@@ -1,13 +1,13 @@
 "use client";
 
 import { useId } from "react";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import type { Team, TeamInput } from "@agentic-toolkit/data/teams";
 import { validateTeamIdentifier } from "@agentic-toolkit/data/teams";
 import { DetailSection } from "@agentic-toolkit/resource";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 export function teamBlank(): TeamInput {
   return { displayName: "", identifier: "" };

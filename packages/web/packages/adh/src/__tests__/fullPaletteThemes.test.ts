@@ -51,7 +51,7 @@
  *     than naming the theme is what makes the next swap of that constant fail loudly.
  */
 import { describe, it, expect } from 'vitest'
-import { themes } from '@agentic-toolkit/themes/manifest'
+import { themes } from '@agenticdevelopertoolkit/themes/manifest'
 import { DEFAULT_SITE_THEME, FULL_PALETTE_THEMES } from '../themes/adh-themes'
 
 const DARK = 'html:root'

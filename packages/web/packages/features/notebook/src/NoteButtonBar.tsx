@@ -2,10 +2,10 @@
 
 import { FolderCog, Plus, Search, Tags } from "lucide-react";
 
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Separator } from "@agentic-toolkit/ui/components/separator";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Separator } from "@agenticdevelopertoolkit/ui/components/separator";
 import { HomeBar } from "@agentic-toolkit/resource";
 import { NOTES_CORPUS, type CorpusNoun } from "./corpus";
 

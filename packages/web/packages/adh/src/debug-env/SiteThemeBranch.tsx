@@ -3,9 +3,9 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { Braces, Brush, Globe, Layers, Megaphone, Paintbrush, SwatchBook, Type } from 'lucide-react'
 
-import type { TopicLevel, TopicDetailItem } from '@agentic-toolkit/ui/blocks'
-import { Button } from '@agentic-toolkit/ui/components/button'
-import { Input } from '@agentic-toolkit/ui/components/input'
+import type { TopicLevel, TopicDetailItem } from '@agenticdevelopertoolkit/ui/blocks'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
+import { Input } from '@agenticdevelopertoolkit/ui/components/input'
 import {
   Dialog,
   DialogContent,
@@ -13,9 +13,9 @@ import {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from '@agentic-toolkit/ui/components/dialog'
-import { useClipboard } from '@agentic-toolkit/ui/hooks/useClipboard'
-import { useIsomorphicLayoutEffect } from '@agentic-toolkit/ui/hooks/useIsomorphicLayoutEffect'
+} from '@agenticdevelopertoolkit/ui/components/dialog'
+import { useClipboard } from '@agenticdevelopertoolkit/ui/hooks/useClipboard'
+import { useIsomorphicLayoutEffect } from '@agenticdevelopertoolkit/ui/hooks/useIsomorphicLayoutEffect'
 
 import type { ThemeEditorApi } from '@agentic-toolkit/adh/themes'
 import type { DebugThemeArea, DebugThemeItem, ThemeAreasSurface } from './seams'

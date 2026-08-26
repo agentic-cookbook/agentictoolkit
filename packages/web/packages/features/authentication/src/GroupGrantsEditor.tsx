@@ -4,16 +4,16 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { PermissionToggles } from "@agentic-toolkit/ui/components/permission-toggles";
-import type { Crud } from "@agentic-toolkit/ui/components/crud";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { PermissionToggles } from "@agenticdevelopertoolkit/ui/components/permission-toggles";
+import type { Crud } from "@agenticdevelopertoolkit/ui/components/crud";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import {
   formatCrud,
   GRANT_TARGET_LABEL,

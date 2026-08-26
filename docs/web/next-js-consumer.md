@@ -46,10 +46,10 @@ In `app/package.json`:
 {
   "dependencies": {
     "@agentic-toolkit/chat": "workspace:*",
-    "@agentic-toolkit/controls": "workspace:*",
-    "@agentic-toolkit/model": "workspace:*",
-    "@agentic-toolkit/themes": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*"
+    "@agenticdevelopertoolkit/controls": "workspace:*",
+    "@agenticdevelopertoolkit/model": "workspace:*",
+    "@agenticdevelopertoolkit/themes": "workspace:*",
+    "@agenticdevelopertoolkit/ui": "workspace:*"
   }
 }
 ```
@@ -99,7 +99,7 @@ Commit the submodule SHA bump and `pnpm-lock.yaml` together.
 Once Phase 6 publishing is live:
 
 ```bash
-npm install @agentic-toolkit/chat @agentic-toolkit/themes ...
+npm install @agentic-toolkit/chat @agenticdevelopertoolkit/themes ...
 ```
 
 Configure `.npmrc` to point the `@agentic-toolkit` scope at GitHub
@@ -118,8 +118,8 @@ identical to Pattern A from `app/layout.tsx` down.
 ```tsx
 import type { Metadata } from 'next'
 import type { ReactNode } from 'react'
-import { ColorModeProvider } from '@agentic-toolkit/themes'
-import { ThemeStyle } from '@agentic-toolkit/themes'
+import { ColorModeProvider } from '@agenticdevelopertoolkit/themes'
+import { ThemeStyle } from '@agenticdevelopertoolkit/themes'
 import './globals.css'
 
 export const metadata: Metadata = {
@@ -149,8 +149,8 @@ mismatch.
 
 ```css
 @import 'tailwindcss';
-@import '@agentic-toolkit/ui/styles/globals.css';
-@import '@agentic-toolkit/themes/styles/agentic-cookbook.css';
+@import '@agenticdevelopertoolkit/ui/styles/globals.css';
+@import '@agenticdevelopertoolkit/themes/styles/agentic-cookbook.css';
 
 /* Pattern A (submodule) — scan toolkit's built dist for utility classes */
 @source "../../external/agentic-web-toolkit/packages/*/dist/**/*.{js,d.ts}";
@@ -200,9 +200,9 @@ entries:
 ```tsx
 'use client'
 import { InlineChat, FetchBackend } from '@agentic-toolkit/chat'
-import { FilteredList } from '@agentic-toolkit/controls/filtered-list'
-import { useColorMode } from '@agentic-toolkit/themes'
-import { ContentProvider } from '@agentic-toolkit/model'
+import { FilteredList } from '@agenticdevelopertoolkit/controls/filtered-list'
+import { useColorMode } from '@agenticdevelopertoolkit/themes'
+import { ContentProvider } from '@agenticdevelopertoolkit/model'
 ```
 
 Most toolkit components carry their own `"use client"` directive — you don't

@@ -9,7 +9,7 @@
  *
  * Every stylesheet this package exports imports it already, so importing any one of
  * them (styles.css, help.css, docs.css, legal.css, debug.css) is enough. Mirrors
- * @agentic-toolkit/api-explorer/sources.css and @agentic-toolkit/ui's components.css.
+ * @agentic-toolkit/api-explorer/sources.css and @agenticdevelopertoolkit/ui's components.css.
  *
  * PACKAGE-WIDE, not per subtree, and deliberately so. Registering subtree by subtree is
  * how this package came to have a gap: `help` and `debug-env` were registered when they

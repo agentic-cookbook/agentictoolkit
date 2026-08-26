@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import {
   chordFromEvent,
   formatChord,
   sameChord,
   useRegisteredShortcuts,
-} from "@agentic-toolkit/ui/hooks/useShortcut";
+} from "@agenticdevelopertoolkit/ui/hooks/useShortcut";
 import { SettingRow } from "@agentic-toolkit/account";
 
 // The PACKAGE PATH, not "../header/hub-preferences" — the store holds module-level mutable

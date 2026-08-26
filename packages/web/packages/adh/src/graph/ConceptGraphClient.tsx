@@ -60,9 +60,9 @@ import {
   Waypoints,
   Wrench,
 } from 'lucide-react'
-import { InfoPanel } from '@agentic-toolkit/ui/blocks/info-panel'
-import { Checkbox } from '@agentic-toolkit/ui/components/checkbox'
-import { TextBubble } from '@agentic-toolkit/ui/components/text-bubble'
+import { InfoPanel } from '@agenticdevelopertoolkit/ui/blocks/info-panel'
+import { Checkbox } from '@agenticdevelopertoolkit/ui/components/checkbox'
+import { TextBubble } from '@agenticdevelopertoolkit/ui/components/text-bubble'
 import type { GraphNode } from '@agentic-toolkit/adh/concepts'
 import { detectEnv, getSite, siteHeaderTitle, type SiteEnv, type SiteId } from '@agentic-toolkit/adh-registry'
 // The generic mounted-hostname hook (same story as marketing/SiteWordmark): this once

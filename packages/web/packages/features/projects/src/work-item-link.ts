@@ -13,7 +13,7 @@
 // dead, and a reload showing a different pane than the address bar claims.
 
 /** The query param naming the open work item. Read with `useSearchParam`, written with
- *  `writeSearchParams` — both from `@agentic-toolkit/ui`. */
+ *  `writeSearchParams` — both from `@agenticdevelopertoolkit/ui`. */
 export const WORK_ITEM_PARAM = "item";
 
 /** Where an item opens when the caller has no view in mind. Matches the Work Items level's own

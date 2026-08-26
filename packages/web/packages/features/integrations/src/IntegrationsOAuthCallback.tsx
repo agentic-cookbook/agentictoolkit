@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Loader2, Plug } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import { integrationsApi } from "@agentic-toolkit/data/integrations";
 import {
   clearPendingConnect,

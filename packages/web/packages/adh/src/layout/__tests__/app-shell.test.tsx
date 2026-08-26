@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
-import { setHtdvLayoutLog, setSlowAnimations, slowAnimationVars } from '@agentic-toolkit/ui/blocks'
+import { setHtdvLayoutLog, setSlowAnimations, slowAnimationVars } from '@agenticdevelopertoolkit/ui/blocks'
 import { AdhAppShell } from '../AdhAppShell'
 
 /**

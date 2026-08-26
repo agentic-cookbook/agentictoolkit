@@ -1,24 +1,24 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
-import { ListWithDetailsPane } from "@agentic-toolkit/ui/blocks/list-with-details-pane";
-import type { DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { TreeRowLabel, flattenTree, type TreeRow } from "@agentic-toolkit/ui/components/tree-rows";
+import { ListWithDetailsPane } from "@agenticdevelopertoolkit/ui/blocks/list-with-details-pane";
+import type { DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { TreeRowLabel, flattenTree, type TreeRow } from "@agenticdevelopertoolkit/ui/components/tree-rows";
 import {
   InlineCommitControl,
   InlineEditableText,
   inlineCommitDeletingClass,
-} from "@agentic-toolkit/ui/components/inline-commit-control";
-import { ReorderControl } from "@agentic-toolkit/ui/components/reorder-control";
-import { DragGrip, type SortableDrop } from "@agentic-toolkit/ui/components/dnd";
-import { UnsavedChangesGuard } from "@agentic-toolkit/ui/components/unsaved-changes-guard";
-import { useInlineDrafts } from "@agentic-toolkit/ui/hooks/useInlineDrafts";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+} from "@agenticdevelopertoolkit/ui/components/inline-commit-control";
+import { ReorderControl } from "@agenticdevelopertoolkit/ui/components/reorder-control";
+import { DragGrip, type SortableDrop } from "@agenticdevelopertoolkit/ui/components/dnd";
+import { UnsavedChangesGuard } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-guard";
+import { useInlineDrafts } from "@agenticdevelopertoolkit/ui/hooks/useInlineDrafts";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { errorMessage } from "@agenticdevelopertoolkit/ui/lib/errors";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 import { compareRank, projectWorkItemsApi, type WorkItem } from "@agentic-toolkit/data/projects";
 import {
   type EstimateScale,

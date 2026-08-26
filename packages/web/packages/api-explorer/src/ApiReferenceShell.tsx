@@ -5,7 +5,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { cn } from '@agentic-toolkit/ui'
+import { cn } from '@agenticdevelopertoolkit/ui'
 // Package path (not relative): see the matching comment in ApiBrowser.tsx / tsup.config.ts.
 import { allTags, endpointsForTag } from '@agentic-toolkit/api-explorer/lib/getEndpoint'
 import { endpointSlug } from './lib/slug'

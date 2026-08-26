@@ -20,7 +20,7 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import type { TopicLevel, PaneExitGuard } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel, PaneExitGuard } from "@agenticdevelopertoolkit/ui/blocks";
 
 // The package owns the unsaved-work guard contract by re-exporting the single
 // authoritative type; feature editors import it from the rail-host module they

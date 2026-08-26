@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 
 /**
  * The empty state Content/Connections/Effects show whenever `useGameForEcosystem` gates

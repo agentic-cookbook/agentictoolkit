@@ -33,7 +33,7 @@ vi.mock('../context', () => ({ useAuth: () => ({ isAuthenticated: authed }) }))
 // Render the modal as plain text plus its actionable buttons, so this unit test
 // asserts the handler's LOGIC and result copy — and can drive the forward leg's
 // Continue / Not now — without standing up base-ui's portal/focus machinery in jsdom.
-vi.mock('@agentic-toolkit/ui/components/alert-modal', () => ({
+vi.mock('@agenticdevelopertoolkit/ui/components/alert-modal', () => ({
   AlertModal: ({
     title,
     description,

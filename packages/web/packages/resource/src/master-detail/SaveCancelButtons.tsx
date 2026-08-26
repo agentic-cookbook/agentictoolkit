@@ -2,7 +2,7 @@
 
 import { X, Check } from "lucide-react";
 
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 
 /**
  * The Cancel + Save pair shared by the master/detail button bar and the

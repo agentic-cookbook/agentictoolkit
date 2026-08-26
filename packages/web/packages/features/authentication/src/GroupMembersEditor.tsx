@@ -4,14 +4,14 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
 import { bucketAccessApi } from "@agentic-toolkit/data/security";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import {
   MEMBER_TYPES,
   MEMBER_TYPE_LABEL,

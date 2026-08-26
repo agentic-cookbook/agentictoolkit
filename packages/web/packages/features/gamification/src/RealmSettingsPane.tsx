@@ -17,12 +17,12 @@ import {
   useReportSettingsDirty,
   useSettingsDraft,
 } from "@agentic-toolkit/resource";
-import { Field } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 /**
  * The product's GAMIFICATION REALM config (each product IS an ecosystem = a "realm"). A

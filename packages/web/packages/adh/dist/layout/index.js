@@ -33,7 +33,7 @@ function recoverFromChunkError(error) {
 }
 
 // src/layout/ErrorFallback.tsx
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import { jsx, jsxs } from "react/jsx-runtime";
 function ErrorFallback({
   onRetry,
@@ -72,7 +72,7 @@ function AppErrorBoundary({ children }) {
 
 // src/layout/DevAnimScale.tsx
 import { useEffect as useEffect2 } from "react";
-import { useSlowAnimations, slowAnimationVars } from "@agentic-toolkit/ui/blocks";
+import { useSlowAnimations, slowAnimationVars } from "@agenticdevelopertoolkit/ui/blocks";
 function DevAnimScale() {
   const slow = useSlowAnimations();
   useEffect2(() => {
@@ -88,7 +88,7 @@ function DevAnimScale() {
 }
 
 // src/layout/HierarchicalDetailViewFlag.tsx
-import { HierarchicalDetailViewProvider } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailViewProvider } from "@agenticdevelopertoolkit/ui/blocks";
 import { jsx as jsx3 } from "react/jsx-runtime";
 function HierarchicalDetailViewFlag({ children }) {
   return /* @__PURE__ */ jsx3(HierarchicalDetailViewProvider, { menuDetail: false, children });
@@ -96,7 +96,7 @@ function HierarchicalDetailViewFlag({ children }) {
 
 // src/layout/HtdvLayoutLogSwitch.tsx
 import { useEffect as useEffect3 } from "react";
-import { setHtdvLayoutLog } from "@agentic-toolkit/ui/blocks";
+import { setHtdvLayoutLog } from "@agenticdevelopertoolkit/ui/blocks";
 function HtdvLayoutLogSwitch() {
   useEffect3(() => {
     setHtdvLayoutLog(true);

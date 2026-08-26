@@ -6,7 +6,7 @@ export default defineConfig({
   // entry without anyone editing this file — the tsup-entry gap (a src file that
   // the `exports` map's prod `import` condition points at, missing from dist
   // because dev resolves the `development` condition → src) becomes structurally
-  // impossible. Mirror @agentic-toolkit/ui. esbuild's outbase is the common ancestor
+  // impossible. Mirror @agenticdevelopertoolkit/ui. esbuild's outbase is the common ancestor
   // `src/` (guaranteed by `src/index.ts`), so each file emits at the same dist
   // path a hand-list would produce. Keep in sync with package.json `exports`;
   // verify-shared-dist-exports.py gates the link. The extensions here are exactly the

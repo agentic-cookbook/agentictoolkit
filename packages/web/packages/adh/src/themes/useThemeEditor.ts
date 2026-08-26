@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { themes } from '@agentic-toolkit/themes/manifest'
+import { themes } from '@agenticdevelopertoolkit/themes/manifest'
 
 import { DEFAULT_ADH_THEME, DEFAULT_SITE_THEME } from './adh-themes'
 import { switcherThemeKeys } from './theme-keys'

@@ -9,15 +9,15 @@ import {
 } from '@agentic-toolkit/chat'
 import '@agentic-toolkit/chat/css/base.css'
 import '@agentic-toolkit/chat/css/modes/inline.css'
-import { SourceCodePanel } from '@agentic-toolkit/controls/source-code-panel'
-import '@agentic-toolkit/controls/source-code-panel/styles.css'
+import { SourceCodePanel } from '@agenticdevelopertoolkit/controls/source-code-panel'
+import '@agenticdevelopertoolkit/controls/source-code-panel/styles.css'
 import {
   themes,
   themeIds,
   type ThemeKey,
-} from '@agentic-toolkit/themes'
+} from '@agenticdevelopertoolkit/themes'
 import './index.css'
-import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
+import { noAutofillProps } from '@agenticdevelopertoolkit/ui/lib/autofill'
 
 export const meta = { id: 'theme', label: 'Theme' }
 

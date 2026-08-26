@@ -6,8 +6,8 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
 import { SettingsLayout } from "@agentic-toolkit/account";
 import { SettingsDirtyProvider, useSettingsDirty } from "@agentic-toolkit/resource";
 // The react-query runtime every panel below fetches through, mounted HERE rather than in

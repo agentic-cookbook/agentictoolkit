@@ -63,19 +63,32 @@ Plus one non-platform directory:
 ### The `agenticdevelopertoolkit` submodule
 
 `external/agenticdevelopertoolkit` is this repo's only submodule. It is a
-**separate product**, not a vendored copy of ours: it ships four web packages
-(`avatar`, `chat`, `themes`, `viewport`) and has its own consumers that use
-none of `@agentic-toolkit/*`. The dependency is strictly one-way — it imports
-nothing from this repo.
+**separate, public product**, not a vendored copy of ours, and the dependency is
+strictly one-way — it imports nothing from this repo. As of the 2026-08
+extraction it holds **the majority of this repo's former web surface**: sixteen
+packages, eight of which were ours until that move.
+
+- **Ours until 2026-08, now theirs:** `ui`, `themes`, `model`, `controls`,
+  `landing`, `markdown`, `search`, `editing`. Almost every package left in
+  `packages/web/packages/` consumes at least one of them.
+- **Theirs all along:** `avatar`, `chat`, `chrome`, `popover`,
+  `registry-profile`, `registry-types`, `textlens`, `viewport`.
+
+A reader who came looking for `packages/web/packages/ui` should look in
+`external/agenticdevelopertoolkit/packages/web/packages/ui` instead. The names
+changed with the address: `@agentic-toolkit/ui` is now
+`@agenticdevelopertoolkit/ui`, and so on for all eight.
 
 **Run `./install.sh` (or `git clone --recursive`) before `pnpm install`.**
-`packages/web/packages/features/bitbag` and `packages/web/packages/adh` carry
-`link:` deps that resolve into this submodule; a `link:` to a missing directory
-fails at install time with an error that names a path, not a cause.
+Nearly every package under `packages/web/packages/` now carries `link:` deps
+that resolve into this submodule; a `link:` to a missing directory fails at
+install time with an error that names a path, not a cause.
 
-Two rules govern the crossing:
+Two rules govern the crossing. The first is about *persona vocabulary* only —
+it never governed the eight, and since the extraction the eight are exactly
+what most of this repo names directly.
 
-1. **Two packages own it, and nothing else may.** `packages/persona`
+1. **Two packages own the persona vocabulary, and nothing else may.** `packages/persona`
    (`@agentic-toolkit/persona`) is the crossing for *consumers*: it re-publishes
    `chat`, `themes` and `viewport` under its own name, keeps every
    `@agenticdevelopertoolkit/*` specifier bare in its `dist` (tsup `external`), and
@@ -101,12 +114,18 @@ deps to adh's copy, while `bitbag`'s `dist` emits those specifiers bare (tsup
 repo's `node_modules`, hence this submodule. Nothing dedupes across two different
 directories.
 
-Rule 1 above is what makes this finite: a site that reaches persona vocabulary
-through `@agentic-toolkit/persona` or bitbag never names the scope, so there is one
-copy by construction. **adh is there** — all 45 of its sites declared the scope; 38 never
-imported it and were pruned outright, and the other 7 now import `@agentic-toolkit/persona`.
-No adh site manifest names `@agenticdevelopertoolkit/*`
-(`frontend/tools/verify_persona_deps.py` asserts it).
+Rule 1 above is what makes this finite **for the persona vocabulary**: a site that
+reaches it through `@agentic-toolkit/persona` or bitbag never names the scope, so
+there is one copy by construction. **adh is there** — all 45 of its sites declared the
+scope; 38 never imported it and were pruned outright, and the other 7 now import
+`@agentic-toolkit/persona`. No adh site manifest names `@agenticdevelopertoolkit/*`
+for persona vocabulary (`frontend/tools/verify_persona_deps.py` asserts it).
+
+Rule 1 does **not** bound the eight that moved in 2026-08. A site may legitimately
+name `@agenticdevelopertoolkit/ui` or `/themes` at top level while a package from this
+repo emits the same specifier bare from its `dist`, and the two resolve to different
+directories. What keeps that from shipping two different `themes` is the pin-equality
+guard below: the copies are two module instances, but of identical code.
 
 **Do not bump this submodule without bumping adh's alongside it.** The site bundles
 no longer depend on the pins being equal — but adh's `tools/shared_vendor.py` still
@@ -148,6 +167,13 @@ packages. Each package's `build` produces `dist/` with `"use client"`
 directives preserved and mirrored CSS so Next.js consumers do not need
 `transpilePackages`.
 
+The shared UI vocabulary those packages build on is **not** in this workspace.
+`ui`, `themes`, `model`, `controls`, `landing`, `markdown`, `search` and
+`editing` are `@agenticdevelopertoolkit/*` packages, reached through the
+submodule by `link:` — see "The `agenticdevelopertoolkit` submodule" above.
+They are a separate pnpm workspace, so `pnpm install` here does not install
+them and `pnpm build` here does not build them.
+
 Common commands (from `packages/web/`):
 - `pnpm install` — bootstrap the workspace.
 - `pnpm test` — run vitest across all packages.
@@ -156,68 +182,33 @@ Common commands (from `packages/web/`):
 - `pnpm dev` — parallel watchers for packages that define a `dev` script.
 
 `websites/site/` is the in-repo demo and lives **outside** the pnpm
-workspace. It depends on the packages via
-`file:../../packages/web/packages/<name>` refs so its wiring mirrors
-what external consumers will use.
+workspace. It depends on the packages via `file:` refs so its wiring mirrors
+what external consumers will use — `file:../../packages/web/packages/<name>`
+for what is still here, and
+`file:../../external/agenticdevelopertoolkit/packages/web/packages/<name>` for
+the four `@agenticdevelopertoolkit/*` packages it shows off.
 
-#### `@agentic-toolkit/landing` is a sibling of `viewport`, not a layer on it
+#### The `landing`/`viewport` scroll contract, and the four rules the extraction broke
 
-`@agenticdevelopertoolkit/viewport` — in the sibling agenticdevelopertoolkit
-repo, which the same consumer sites tend to load — locks the page with
-`html, body { overflow: hidden }` so an inner shell can scroll. `landing`
-needs the document itself to be the scroller, because Safari only collapses
-its toolbar in response to the document scroller moving. The two stylesheets
-can never be loaded on the same element. A site may use both packages;
-composing them on one element is not a missing feature to add, it is a
-conflict to resolve first.
+Both live in ADT now, with `landing` itself. The contract (a page may load
+`landing` and `viewport` but never on the same element) and the four
+invisible-to-tooling rules the port taught are in
+`external/agenticdevelopertoolkit/packages/web/packages/landing/README.md`.
+That is the only copy: a second one here would drift, and this is the repo
+that no longer contains either package to notice.
 
-#### Four rules the landing extraction actually broke
-
-Each shipped at least once during the port, and each is invisible to vitest,
-`tsc`, ESLint and a screenshot. That is what makes them worth writing down
-rather than leaving to review.
-
-- **A client barrel needs its own entry, not just its own file.**
-  `esbuild-plugin-preserve-directives` propagates a chunk's `'use client'` to
-  every entry that imports it, so re-exporting one client component from a
-  package's main barrel puts the directive on the whole bundle and turns every
-  other export into a Client Component. Nothing complains: a Client Component
-  is legal, so the types, the tests and `next build` all pass. The fix is a
-  second entry built from a **separate `defineConfig` block** — `splitting:
-  false` does not help, because with a single entry the client code is inlined
-  into `index.js` either way. `landing` puts the client modules behind
-  `src/client.ts` (`@agentic-toolkit/landing/client`) and keeps the main barrel
-  server-safe; `api-explorer` had the same collision the other way up — its main
-  barrel *is* the client one, so its second entry is `src/server.ts`, and its
-  config comment records the symptom (a server call throwing "called from the
-  server but is on the client"). Which barrel is the odd one out is a per-package
-  fact, not a convention. `landing/tools/check-directives.py` asserts the built
-  output, since the only visible difference is the first line of a `dist` file.
-
-- **Package CSS may name only the neutral scale.** Every visual value is a
-  `--lp-*` token whose inline fallback is greyscale, so an unconfigured host
-  renders something legible and obviously unthemed. Put a host's own colour in
-  a fallback and it looks right on that host forever, because that host
-  overrides it — the defect only appears on the *second* site. The same holds
-  for prose: a doc line saying a button "is gold-filled" is a colour claim
-  about the package's behaviour, and it is false for every other host. Name
-  the token or the role instead.
-- **A renamed selector keeps its source specificity.** Flattening `.shot .bar`
-  to `.lp-shot__bar` drops (0,2,0) to (0,1,0) and can hand the cascade to a
-  different rule. jsdom does not resolve the cascade, so no test can see it.
-  When a rename changes a selector's shape, the replacement has to carry the
-  original's weight.
-- **The package owns the UI; the host owns the words.** No component renders a
-  literal string — every visible character arrives as a prop, a child, or a
-  token. This one is easier to break in CSS than in JSX: `content: "✓"` in a
-  `::before` is copy the host cannot reach, which is why such glyphs are
-  tokens (`--lp-checklist-mark`, `--lp-versus-bullet`) for the same reason the
-  colours are. The one deliberate exception is a component's default
-  *accessible* names (`NavChrome`'s "Open menu" and friends) — overridable
-  props, where a default saves every host from restating four labels.
+One half of one of those rules is still ours. `api-explorer` hit the
+`'use client'`-barrel collision the other way up — its main barrel *is* the
+client one, so its second `tsup` entry is `src/server.ts`. Its config comment
+records the symptom (a server call throwing "called from the server but is on
+the client"). Which barrel is the odd one out is a per-package fact, not a
+convention.
 
 ## Conventions
 
 - AppKit only for macOS UI
 - Web packages use the `@agentic-toolkit/*` scope — published consumers
-  depend on it; do not rename without a deprecation plan.
+  depend on it; do not rename without a deprecation plan. The eight shared UI
+  packages that left in 2026-08 are the exception that proves it: they were
+  renamed to `@agenticdevelopertoolkit/*` because they changed repository and
+  owner, not because a scope was tidied.

@@ -4,16 +4,16 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from "re
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookUser, Building2, Gauge, MapPin, Share2 } from "lucide-react";
 import { ErrorText, useAction } from "@agentic-toolkit/crud";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import { DeleteEntitySection } from "@agentic-toolkit/adh-ui/blocks";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group";
 import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
-import { approveNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
+import { approveNavigation } from "@agenticdevelopertoolkit/ui/lib/navigation-guard";
 import {
   checkWorkspaceSlugAvailable,
   useResourceItemWriter,

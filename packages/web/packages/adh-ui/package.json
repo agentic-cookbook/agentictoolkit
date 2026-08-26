@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/adh-ui",
   "version": "0.1.0",
-  "description": "adh's UI vocabulary: the rdid grammar, the invitation surfaces, admin notes and ownership transfer. Carved out of @agentic-toolkit/ui in 2026-08 so the generic remainder could go to the public toolkit.",
+  "description": "adh's UI vocabulary: the rdid grammar, the invitation surfaces, admin notes and ownership transfer. Carved out of @agenticdevelopertoolkit/ui in 2026-08 so the generic remainder could go to the public toolkit.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",

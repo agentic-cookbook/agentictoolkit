@@ -6,12 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
 import { useResourceItemQuery, useResourceItemWriter } from "@agentic-toolkit/data";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { confirmNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { confirmNavigation } from "@agenticdevelopertoolkit/ui/lib/navigation-guard";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { ecosystemsApi, type AuthSettings, type SignupMode } from "@agentic-toolkit/data/ecosystems";
 import { EditActionBar, useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 

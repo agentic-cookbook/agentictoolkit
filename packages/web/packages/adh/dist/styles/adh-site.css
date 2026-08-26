@@ -620,7 +620,7 @@
    `.adh-dropdown-menu__item` is on every top-level row because the SubTrigger
    wrapper applies it to a topic just as the leaf branch does to a link.
    `margin-left: auto` pushes the tagline to the row's right edge: the switcher
-   loads @agentic-toolkit/ui's components.css, which carries the flex
+   loads @agenticdevelopertoolkit/ui's components.css, which carries the flex
    .adh-dropdown-menu__item base but NOT a .adh-dropdown-menu__shortcut rule (that
    right-align lives only in @agentic-toolkit/adh, which this chain doesn't import),
    so the switcher owns its own right-align here rather than inheriting one. */

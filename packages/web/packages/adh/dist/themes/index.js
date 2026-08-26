@@ -3,10 +3,10 @@
 // src/themes/AdhThemeStyle.tsx
 import dynamic from "next/dynamic";
 import { preload } from "react-dom";
-import { themes as themes2 } from "@agentic-toolkit/themes/manifest";
-import { splitImports, parseRootProps } from "@agentic-toolkit/themes/tokens";
-import { APPEARANCE_PREPAINT_SCRIPT } from "@agentic-toolkit/themes/appearance";
-import { THEME_FONT_PRELOADS } from "@agentic-toolkit/themes/fonts";
+import { themes as themes2 } from "@agenticdevelopertoolkit/themes/manifest";
+import { splitImports, parseRootProps } from "@agenticdevelopertoolkit/themes/tokens";
+import { APPEARANCE_PREPAINT_SCRIPT } from "@agenticdevelopertoolkit/themes/appearance";
+import { THEME_FONT_PRELOADS } from "@agenticdevelopertoolkit/themes/fonts";
 
 // src/themes/adh-themes.ts
 var ADH_THEME_COOKIE = "adh-theme";
@@ -75,7 +75,7 @@ var usesBaseThemeFonts = (key) => BASE_FACE_THEMES.includes(key);
 var isFullPaletteTheme = (key) => FULL_PALETTE_THEMES.includes(key);
 
 // src/themes/theme-keys.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
+import { themes } from "@agenticdevelopertoolkit/themes/manifest";
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
 );
@@ -269,7 +269,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import { jsx as jsx2, jsxs as jsxs2 } from "react/jsx-runtime";
 function ThemeSwitcher({
   current,
@@ -304,7 +304,7 @@ function ThemeSwitcher({
 
 // src/themes/useThemeEditor.ts
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { themes as themes3 } from "@agentic-toolkit/themes/manifest";
+import { themes as themes3 } from "@agenticdevelopertoolkit/themes/manifest";
 
 // src/themes/resolve.ts
 function isSwitcherSeed(key) {

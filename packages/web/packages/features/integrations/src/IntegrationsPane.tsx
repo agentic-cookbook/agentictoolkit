@@ -18,12 +18,12 @@ import {
   StickyNote,
   UserRound,
 } from "lucide-react";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   integrationsApi,
   type MaskedProviderConfig,

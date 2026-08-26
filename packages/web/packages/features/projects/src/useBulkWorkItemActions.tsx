@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import type { ListAction } from "@agentic-toolkit/ui/blocks/selection-actions";
+import type { ListAction } from "@agenticdevelopertoolkit/ui/blocks/selection-actions";
 import { projectWorkItemsApi } from "@agentic-toolkit/data/projects";
 import type {
   PriorityScale,

@@ -17,7 +17,7 @@ import {
   within,
 } from "@testing-library/react";
 import { useMemo, useState, type ReactNode } from "react";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import {
   RailHostContext,
   type RailHostRegistry,
@@ -26,7 +26,7 @@ import {
 } from "@agentic-toolkit/resource";
 
 // Only `reportUnexpectedAuthError` is stubbed — the pane's telemetry seam, which two tests below
-// assert on. Spread the real module rather than replacing it: `@agentic-toolkit/ui`'s
+// assert on. Spread the real module rather than replacing it: `@agenticdevelopertoolkit/ui`'s
 // create-resource-dialog (the pane's "New role" modal) imports from here too, and a bare factory
 // would silently strip whatever it needs.
 vi.mock("@agentic-toolkit/auth", async (importOriginal) => ({

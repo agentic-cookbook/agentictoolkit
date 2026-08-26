@@ -2,7 +2,7 @@
 
 import { useCallback, useState, type ReactElement } from "react";
 import { FileStack } from "lucide-react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
 import { useResourceList } from "@agentic-toolkit/data";
 import {
   cardCountOf,

@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent, type ReactElement, type ReactNode } from "react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Alert, AlertDescription } from "@agentic-toolkit/ui/components/alert";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { Pagination } from "@agentic-toolkit/ui/components/pagination";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Alert, AlertDescription } from "@agenticdevelopertoolkit/ui/components/alert";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { DataTable, type DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { Pagination } from "@agenticdevelopertoolkit/ui/components/pagination";
 
 /**
  * The Messaging compose form + log, once, for both scopes that have one.

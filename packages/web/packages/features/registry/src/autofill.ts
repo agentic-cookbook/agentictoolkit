@@ -1,11 +1,11 @@
 /**
  * Password-manager opt-out for this package's own fields.
  *
- * A deliberate copy of `@agentic-toolkit/ui/lib/autofill`, which is the fleet's list of
+ * A deliberate copy of `@agenticdevelopertoolkit/ui/lib/autofill`, which is the fleet's list of
  * record and carries the full rationale (which vendor reads which attribute, and
  * why `autocomplete="off"` alone moves none of them). It is copied rather than
  * imported because this package ships zero runtime dependencies on purpose — a
- * site can render a registry with nothing but React, and `@agentic-toolkit/ui` is in
+ * site can render a registry with nothing but React, and `@agenticdevelopertoolkit/ui` is in
  * neither its peers nor its deps (see the note in editors/FieldDefEditor.tsx).
  * Six string literals are the cheaper of the two prices.
  *

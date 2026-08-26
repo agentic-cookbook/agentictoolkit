@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { ExamplePanel } from '../../src/ExamplePanel'
-import { noAutofillProps } from '@agentic-toolkit/ui/lib/autofill'
+import { noAutofillProps } from '@agenticdevelopertoolkit/ui/lib/autofill'
 import {
   SiteConfigProvider,
   ContentProvider,
@@ -10,7 +10,7 @@ import {
   useSiteConfig,
   type SiteConfig,
   type SiteEntry,
-} from '@agentic-toolkit/model'
+} from '@agenticdevelopertoolkit/model'
 
 export const meta = { id: 'site-model', label: 'Site Model' }
 

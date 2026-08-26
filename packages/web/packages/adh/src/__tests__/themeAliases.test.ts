@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { themes } from '@agentic-toolkit/themes/manifest'
+import { themes } from '@agenticdevelopertoolkit/themes/manifest'
 import { ADH_THEMES, DEFAULT_ADH_THEME } from '../themes/adh-themes'
 import { adhThemeKeys, switcherThemeKeys } from '../themes/theme-keys'
 

@@ -3,14 +3,14 @@
  * `@import "@agentic-toolkit/adh/help.css"` in their globals.
  *
  * Deliberately SEPARATE from adh-components.css (the always-loaded bundle): the vendored
- * status/builder boards ship adh-components.css but do NOT vendor @agentic-toolkit/markdown or
+ * status/builder boards ship adh-components.css but do NOT vendor @agenticdevelopertoolkit/markdown or
  * api-explorer, so those packages' @imports must not ride the universal stylesheet. Only sites
  * that mount the Help modal (AppShell consumers, all resolving packages via workspace/link) pull
  * this in. Bare specifiers resolve from THIS file's package (@agentic-toolkit/adh), which depends on
  * both packages, so a consuming app needn't depend on them directly. */
 
 /* Runtime markdown prose (.adh-mv-prose) + render states. Plain, family-owned CSS. */
-@import "@agentic-toolkit/markdown/styles";
+@import "@agenticdevelopertoolkit/markdown/styles";
 /* The API browser's shiki code-block theming + its Tailwind @source registration, so the
  * browser's utility classes compile in every app that mounts Help (not just the api-explorer
  * consumers that already import these). */

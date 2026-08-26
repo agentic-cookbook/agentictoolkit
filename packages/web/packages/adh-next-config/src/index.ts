@@ -13,11 +13,11 @@ import { siteBuildConfig, type SiteRedirect } from "@agentic-toolkit/adh-registr
 // (`./external/agentictoolkit/packages/web/packages/themes/src/materialize-fonts.mjs`)
 // because it sat at the pnpm-workspace root, which declared no dependencies and so
 // could not resolve the bare specifier. This package CAN declare
-// `@agentic-toolkit/themes` (see package.json), which is what makes the relative path
+// `@agenticdevelopertoolkit/themes` (see package.json), which is what makes the relative path
 // obsolete. Kept EXTERNAL in tsup.config.ts, unlike the other four siblings — see the
 // comment there — because the module locates its own font files relative to its own
 // `import.meta.url` and must not move.
-import { materializeThemeFonts } from "@agentic-toolkit/themes/materialize-fonts";
+import { materializeThemeFonts } from "@agenticdevelopertoolkit/themes/materialize-fonts";
 import { currentSiteId } from "./site-id.js";
 
 export { currentSiteId };

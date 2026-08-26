@@ -2,13 +2,13 @@
 
 import { useId, useState } from "react";
 import type { ReactElement } from "react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { FieldFootnote } from "@agentic-toolkit/ui/blocks/field";
-import { fieldCaptionClass } from "@agentic-toolkit/ui/lib/typography";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { CopyButton } from "@agenticdevelopertoolkit/ui/components/copy-button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { FieldFootnote } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { fieldCaptionClass } from "@agenticdevelopertoolkit/ui/lib/typography";
 import { setEcosystemFlag } from "./api/feature-flags";
 import type { BillingContextResolution } from "./useBillingContext";
 

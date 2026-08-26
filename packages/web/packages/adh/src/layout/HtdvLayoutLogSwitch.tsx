@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { setHtdvLayoutLog } from '@agentic-toolkit/ui/blocks'
+import { setHtdvLayoutLog } from '@agenticdevelopertoolkit/ui/blocks'
 
 /**
  * Turns the toolkit's HTDV layout log on (see `htdv-log.ts` in the ui blocks): one console line per

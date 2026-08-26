@@ -11,16 +11,16 @@ import {
   listEndpoints,
   updateEndpoint,
 } from "@agentic-toolkit/data/monitored-sites";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 import { DetailFooter, MasterDetailLayout, useRecordAffordance } from "@agentic-toolkit/resource";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 /**
  * Topic/details list of a single site's endpoints: pick an endpoint on the

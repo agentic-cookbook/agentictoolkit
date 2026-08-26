@@ -1,11 +1,11 @@
 "use client";
 
 import { type ReactElement } from "react";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { DetailSection } from "@agentic-toolkit/resource";
 import type { Program } from "@agentic-toolkit/data/projects";
 

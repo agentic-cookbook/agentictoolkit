@@ -1,8 +1,8 @@
 "use client";
 
 import { type ReactElement } from "react";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import type { Milestone } from "@agentic-toolkit/data/projects";
 import { dateLabel } from "./helpers";
 

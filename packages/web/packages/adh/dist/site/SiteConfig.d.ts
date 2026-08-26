@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
 import type { SiteRoute, SiteSeo } from '@agentic-toolkit/adh-registry/seo';
-import type { SiteHelp } from '@agentic-toolkit/ui/components/help-content';
+import type { SiteHelp } from '@agenticdevelopertoolkit/ui/components/help-content';
 import type { MarketingRootHtmlProps } from '@agentic-toolkit/adh/marketing';
 /** The paths every site in the family keeps out of its production index.
  *

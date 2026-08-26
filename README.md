@@ -23,16 +23,28 @@ and `AIPlugins` (`AIPluginsShared.framework` plus five `.aiplugin` bundles).
 The Web platform is a pnpm monorepo. Libraries live under
 `packages/web/packages/`, a few of the load-bearing ones being:
 
-- `@agentic-toolkit/ui` — shadcn slot, `cn` helper, blocks, globals.
-- `@agentic-toolkit/themes` — `ColorModeProvider`, `ThemeStyle`, themes.
-- `@agentic-toolkit/model` — providers, hooks, lib helpers.
-- `@agentic-toolkit/controls` — settings, search, dev banner, etc.
 - `@agentic-toolkit/adh` — family site chrome: header, footer, legal.
+- `@agentic-toolkit/adh-ui` — the adh vocabulary the shared UI must not know
+  about: rdid pickers and editors, invitation panes, the delete-entity
+  danger zone.
 - `@agentic-toolkit/auth` / `data` / `resource` / `crud` — the app platform.
+- `@agentic-toolkit/api-explorer` — the API reference surface.
+- `@agentic-toolkit/messaging` — DMs, notifications, presence.
+- `@agentic-toolkit/persona` — the crossing consumers use to reach the
+  persona vocabulary (`chat`, `themes`, `viewport`) without pulling a persona in.
 - `@agentic-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
-- `@agentic-toolkit/landing` — a scroll-snapping landing deck and the section
-  vocabulary that fills it. The host supplies the colours, through `--lp-*`
-  tokens, and every word.
+- the packages under `packages/web/packages/features/` — one per product area
+  (projects, teams, research, notebook, ecosystems, …), plus `bitbag`, the
+  persona himself.
+
+**The shared UI packages are not here any more.** `ui`, `themes`, `model`,
+`controls`, `landing`, `markdown`, `search` and `editing` now live in the
+public [agenticdevelopertoolkit](https://github.com/agentic-cookbook/agenticdevelopertoolkit)
+toolkit and are named `@agenticdevelopertoolkit/*`. This repo reaches them
+through its `external/agenticdevelopertoolkit` submodule, so a
+`git clone --recursive` still has every one of them on disk — look under
+`external/agenticdevelopertoolkit/packages/web/packages/<name>/`, and read
+that repo's `README.md` for what each one contains.
 
 The full table, with each package's dependencies, is in
 [`packages/web/README.md`](packages/web/README.md).

@@ -5,7 +5,7 @@
 // (see help/content.generated.ts, produced by tools/gen-help-content.py). Injecting it directly —
 // instead of processing markdown at render time — is what makes the modal flash-free and keeps the
 // sites from re-running the pipeline every build. The `adh-mv-prose` wrapper is the same class the
-// runtime renderers (@agentic-toolkit/markdown's MarkdownContent / MarkdownRenderer) put on their
+// runtime renderers (@agenticdevelopertoolkit/markdown's MarkdownContent / MarkdownRenderer) put on their
 // output, so the prose styles apply identically whichever path produced the HTML.
 
 export interface MarkdownHtmlProps {

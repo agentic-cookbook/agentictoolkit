@@ -41,7 +41,7 @@ Shared internals:
 import { InlineChat, MockBackend } from '@agentic-toolkit/chat'
 import '@agentic-toolkit/chat/css/base.css'
 import '@agentic-toolkit/chat/css/modes/inline.css'
-import '@agentic-toolkit/themes/styles/professional.css'
+import '@agenticdevelopertoolkit/themes/styles/professional.css'
 
 const backend = new MockBackend()
 
@@ -62,7 +62,7 @@ Three CSS layers, imported in order:
 
 1. `@agentic-toolkit/chat/css/base.css` — structural layout, required.
 2. `@agentic-toolkit/chat/css/modes/<mode>.css` — positioning per mode.
-3. `@agentic-toolkit/themes/styles/<theme>.css` — visual theme (defines
+3. `@agenticdevelopertoolkit/themes/styles/<theme>.css` — visual theme (defines
    both site-wide `--color-*` and chat-specific `--pc-*` tokens).
 
 In a Next.js consumer with `ColorModeProvider` + `ThemeStyle` wired
@@ -322,7 +322,7 @@ User message (right-aligned):
 
 Chat components have no knowledge of themes — all visual styling comes
 from CSS. The chat package ships `base.css` (structural) and per-mode CSS;
-themes live in [`@agentic-toolkit/themes`](next-js-consumer.md) and
+themes live in [`@agenticdevelopertoolkit/themes`](next-js-consumer.md) and
 define both site-wide and chat tokens in a single file.
 
 ### CSS variables (chat tokens)
@@ -365,7 +365,7 @@ after the theme import:
 
 ### Built-in themes
 
-Ten themes ship in `@agentic-toolkit/themes/styles/`:
+Ten themes ship in `@agenticdevelopertoolkit/themes/styles/`:
 
 | Theme | Style |
 |-------|-------|
@@ -385,7 +385,7 @@ separate font links in your `<head>`.
 
 ### Creating a custom theme
 
-Copy any file under `packages/themes/src/styles/` and modify it. All
+Copy any file under `external/agenticdevelopertoolkit/packages/web/packages/themes/src/styles/` and modify it. All
 theme selectors are scoped to `.persona-chat` (for chat tokens) or `:root`
 (for site tokens), so they won't leak.
 

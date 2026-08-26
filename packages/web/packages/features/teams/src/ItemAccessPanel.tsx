@@ -11,11 +11,11 @@ import {
   type AccessRoleRow,
   type EffectiveAccessRow,
 } from "@agentic-toolkit/data/access";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import { FeatureTitle } from "@agentic-toolkit/resource";
 
 /** A share target the host resolves from its member registry — a customer, a

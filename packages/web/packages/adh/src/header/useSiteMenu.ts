@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { confirmNavigation } from '@agentic-toolkit/ui/lib/navigation-guard'
+import { confirmNavigation } from '@agenticdevelopertoolkit/ui/lib/navigation-guard'
 import {
   buildSiteHref,
   detectEnv,

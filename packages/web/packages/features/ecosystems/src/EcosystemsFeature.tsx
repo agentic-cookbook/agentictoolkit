@@ -7,10 +7,10 @@ import {
   Settings, Table2, Users, KeyRound, Network, Boxes, Plus, Inbox, Send, Database,
   ShieldCheck, LogIn, MailPlus,
 } from "lucide-react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 import { isRdid } from "@agentic-toolkit/adh-ui/rdid";
 import {
   ResourceExplorer,

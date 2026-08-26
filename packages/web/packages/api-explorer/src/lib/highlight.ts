@@ -13,7 +13,7 @@ export type HighlightLang = 'json' | 'bash' | 'javascript'
 
 // Module-cached so shiki's payload loads once, on first use. Type-only import of
 // `Highlighter` is erased at build, so `shiki` stays a lazily-imported external.
-// NOTE: this deliberately mirrors @agentic-toolkit/markdown's shiki singleton + the
+// NOTE: this deliberately mirrors @agenticdevelopertoolkit/markdown's shiki singleton + the
 // dual-theme CSS-var scheme in api-explorer.css. It is NOT factored into a shared
 // helper on purpose: markdown's highlighter lives inside a unified/rehype pipeline
 // (heavy deps we don't want to pull in), and a shared package for ~15 lines isn't

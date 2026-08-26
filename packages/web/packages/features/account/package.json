@@ -6,8 +6,13 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "sources.css"],
-  "sideEffects": ["**/*.css"],
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "comment:tier": "MECHANISM, deliberately: this package must never import @agentic-toolkit/adh* (scripts/check_boundaries.py). The two settings panels that DO need adh vocabulary — AppearancePanel and ThemePickerRow, which use useAppearanceSettings and theme-preview — live in @agentic-toolkit/adh instead. That is not a compromise: adh depends on THIS package to build the topic registry, so an adh import here would be a dependency cycle as well as a tier violation.",
   "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. One entry only: every module here renders.",
   "comment:styles": "This package ships NO stylesheet: `settings.css` and the `./styles.css` export went with the hand-rolled settings grid SettingsLayout.tsx used to render (it renders HierarchicalDetailView now, whose styling is Tailwind utilities the `./sources.css` registration below already covers). If a `.css` is ever added back here, it needs BOTH a `./styles.css` export and a `build:css` step running copy-css.mjs, and adh's adh-site.css has to @import it — a side-effect `import \"./x.css\"` from a component is not enough: tsup extracts it into a sibling dist/index.css and DELETES the import from the emitted JS, so the sheet loads in `next dev`/vitest (the `development` condition resolves to src) and is silently absent from every production build, on all ~45 sites. @agentic-toolkit/auth still does it the right way if a worked example is wanted.",
@@ -36,9 +41,9 @@
     "@agentic-toolkit/profile": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
-    "lucide-react": "^1.16.0"
+    "lucide-react": "^1.16.0",
+    "@agenticdevelopertoolkit/ui": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/ui"
   },
   "peerDependencies": {
     "next": ">=15",
@@ -46,16 +51,24 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@base-ui/react": "1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "harper.js": "^2.4.0",
     "jsdom": "^29.0.2",
     "next": "^15.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwind-merge": "^2.6.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"

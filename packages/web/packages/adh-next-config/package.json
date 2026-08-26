@@ -4,8 +4,15 @@
   "private": true,
   "type": "module",
   "description": "The composition root every ADH site's next.config.ts calls. Derives the site from cwd, asserts its dependency declarations, and assembles the shared config.",
-  "files": ["dist"],
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "build": "tsup && pnpm run build:types",
     "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
@@ -16,9 +23,11 @@
     "@agentic-toolkit/next-env": "workspace:*",
     "@agentic-toolkit/next-headers": "workspace:*",
     "@agentic-toolkit/next-preflight": "workspace:*",
-    "@agentic-toolkit/themes": "workspace:*"
+    "@agenticdevelopertoolkit/themes": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/themes"
   },
-  "peerDependencies": { "next": "^16.0.0" },
+  "peerDependencies": {
+    "next": "^16.0.0"
+  },
   "devDependencies": {
     "@types/node": "^24.0.0",
     "next": "^16.2.9",

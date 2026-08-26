@@ -3,7 +3,7 @@
  * --auth-* variable (e.g. --auth-heading-font) in their globals.
  *
  * DELIBERATELY self-enclosed (standing exception, incl. the raw-hex palette):
- * the card's buttons/inputs are skinned HERE, not built on @agentic-toolkit/ui
+ * the card's buttons/inputs are skinned HERE, not built on @agenticdevelopertoolkit/ui
  * primitives, because the --auth-* variables are a per-site theming contract —
  * sites override them in their globals — and utility-styled primitives would
  * fight these rules on specificity and answer to a different token system.

@@ -14,7 +14,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import type { CrudTableMeta } from "@agentic-toolkit/crud";
 
 // The viewer behind the exposure gate. Hoisted so each test can set who is looking without

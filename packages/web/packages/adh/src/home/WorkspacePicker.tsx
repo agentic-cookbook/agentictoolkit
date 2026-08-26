@@ -2,7 +2,7 @@
 
 import { type ReactElement } from 'react'
 import { ChevronDown } from 'lucide-react'
-import { PopupMenu } from '@agentic-toolkit/ui/blocks'
+import { PopupMenu } from '@agenticdevelopertoolkit/ui/blocks'
 import type { WorkspaceOption } from './WorkspaceOption'
 
 /**

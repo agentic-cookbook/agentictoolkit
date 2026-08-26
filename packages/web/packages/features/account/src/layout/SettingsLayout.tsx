@@ -6,8 +6,8 @@ import {
   HierarchicalDetailView,
   type TopicDetailItem,
   type TopicLevel,
-} from "@agentic-toolkit/ui/blocks";
-import { confirmNavigation } from "@agentic-toolkit/ui/lib/navigation-guard";
+} from "@agenticdevelopertoolkit/ui/blocks";
+import { confirmNavigation } from "@agenticdevelopertoolkit/ui/lib/navigation-guard";
 import { SettingsPanel } from "./SettingsPanel";
 import { SettingsNavProvider, type SettingsNav } from "./settings-nav";
 

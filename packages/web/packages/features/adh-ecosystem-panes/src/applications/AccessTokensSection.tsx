@@ -4,12 +4,12 @@ import { useCallback, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
 import { useResourceList } from "@agentic-toolkit/data";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { applicationsPrototypeApi, type AccessToken } from "../api/applications-prototype";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";

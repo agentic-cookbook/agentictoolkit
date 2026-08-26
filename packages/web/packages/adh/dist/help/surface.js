@@ -1,5 +1,5 @@
 // src/help/HelpSurface.tsx
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 
 // src/docs/MarkdownHtml.tsx
 import { jsx } from "react/jsx-runtime";

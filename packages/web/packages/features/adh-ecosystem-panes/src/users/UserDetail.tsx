@@ -1,9 +1,9 @@
 "use client";
 
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import type { EcosystemUser, EcosystemUserInput } from "../api/customers";
 import { DetailSection } from "@agentic-toolkit/resource";
 

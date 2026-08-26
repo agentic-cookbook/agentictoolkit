@@ -2,11 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { Trash2 } from "lucide-react";
-import { Field, FieldGroup, ButtonBar } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Field, FieldGroup, ButtonBar } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { errMsg, httpStatus, useResourceList } from "@agentic-toolkit/data";
 import { specialInterestsCacheKey } from "./interests-cache";
 import {

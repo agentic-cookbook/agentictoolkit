@@ -1,7 +1,7 @@
 // .../features/personas/src/CommaListInput.tsx
 "use client";
 
-import { Input } from "@agentic-toolkit/ui/components/input";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
 import { useState } from "react";
 
 /** A string array edited as a raw comma-separated line.

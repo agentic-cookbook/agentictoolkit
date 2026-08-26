@@ -1,8 +1,8 @@
 "use client";
 
 import { useMemo, type ReactElement } from "react";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { ListChooser } from "@agentic-toolkit/ui/components/list-chooser";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { ListChooser } from "@agenticdevelopertoolkit/ui/components/list-chooser";
 import type { ProjectParticipant } from "@agentic-toolkit/data/projects";
 
 /**

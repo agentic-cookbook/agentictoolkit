@@ -26,8 +26,8 @@ import {
   Trust,
   Versus,
   Wrap
-} from "@agentic-toolkit/landing";
-import { NavChrome } from "@agentic-toolkit/landing/client";
+} from "@agenticdevelopertoolkit/landing";
+import { NavChrome } from "@agenticdevelopertoolkit/landing/client";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 var TOUR_SCREEN_ID = "tour";
 function prose(paragraphs) {

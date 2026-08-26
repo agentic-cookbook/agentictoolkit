@@ -10,13 +10,13 @@ import {
   useMasterDetailLevel,
   type TopicLeaf,
 } from "@agentic-toolkit/resource";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field, FieldGroup } from "@agentic-toolkit/ui/blocks";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Field, FieldGroup } from "@agenticdevelopertoolkit/ui/blocks";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
 import {
   createOffer,
   deleteOffer,

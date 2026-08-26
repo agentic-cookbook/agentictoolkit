@@ -13,7 +13,7 @@
  * and a materialized prod copy. `src` covers `next dev` (the whole package is
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
- * Mirrors @agentic-toolkit/ui's components.css self-registration. */
+ * Mirrors @agenticdevelopertoolkit/ui's components.css self-registration. */
 
 /* This package registers what IT mounts: `dist/index.js` reaches api-explorer's
  * endpoint components, so a host that registers `crud` alone still loses their

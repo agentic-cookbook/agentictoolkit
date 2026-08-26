@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 const CSS = readFileSync(join(__dirname, '../styles/adh-landing-bridge.css'), 'utf8')
 
 /**
- * Every `--lp-*` token `@agentic-toolkit/landing`'s stylesheets READ, derived
+ * Every `--lp-*` token `@agenticdevelopertoolkit/landing`'s stylesheets READ, derived
  * from those stylesheets on every run.
  *
  * This list used to be kept by hand here, "measured from those files", and it
@@ -16,12 +16,21 @@ const CSS = readFileSync(join(__dirname, '../styles/adh-landing-bridge.css'), 'u
  * every assertion here passed. A hand-kept vocabulary drifts silently by
  * construction; the only fix is not to keep one.
  *
- * Read from the sibling package's `src/` rather than through `require.resolve`
+ * Read from the linked package's `src/` rather than through `require.resolve`
  * because `src/` is what a person edits — `dist/css` is a verbatim copy made
  * by `build:css`, so resolving the dependency would only add a build step
  * between the edit and the failing test.
+ *
+ * Reached through this package's own `node_modules` link rather than by counting
+ * `..` hops: landing is no longer a sibling in this workspace — it lives in the
+ * `external/agenticdevelopertoolkit` submodule, which is a different depth and a
+ * different repo. The link is the same one the import statements use, so it cannot
+ * point somewhere the code does not.
  */
-const LANDING_CSS = join(__dirname, '../../../landing/src/css')
+const LANDING_CSS = join(
+  __dirname,
+  '../../node_modules/@agenticdevelopertoolkit/landing/src/css',
+)
 
 /**
  * One `selector { body }` rule at a time, with comments already gone.

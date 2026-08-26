@@ -250,7 +250,7 @@ export default defineConfig({
     // be emitted into each site as markup. Its own entry rather than a member of
     // marketing/index: that barrel is what a site's layout imports on every route, and the
     // deck plus its twenty-odd blocks belongs to two of them. It reaches NavChrome by
-    // package path (`@agentic-toolkit/landing/client`) for the directive reason the
+    // package path (`@agenticdevelopertoolkit/landing/client`) for the directive reason the
     // `external` list below spells out.
     'landing/index': 'src/landing/index.ts',
     'marketing/index': 'src/marketing/index.ts',
@@ -286,15 +286,15 @@ export default defineConfig({
     // sidebar. Inlined, esbuild would try to bundle Next itself into this dist.
     'next/dynamic',
     'next/link',
-    '@agentic-toolkit/themes',
-    '@agentic-toolkit/themes/manifest',
+    '@agenticdevelopertoolkit/themes',
+    '@agenticdevelopertoolkit/themes/manifest',
     // The auth package's token store, refresh timer, and AuthContext all live at module
     // scope. Nothing under src/ imported it before Task 6.1's auth/index entry; inlined,
     // that entry would get its own private auth instance — a user logged in through the
     // site's own toolkit-auth import would read as signed out from AppearanceSync /
     // wired-provider, in production only (dev/vitest/tsc all resolve the `development`/src
     // condition and stay green). Preserved import ⇒ one copy, resolved by the consumer.
-    // Subpath listed separately, same as `@agentic-toolkit/ui/*` below: tsup's `external`
+    // Subpath listed separately, same as `@agenticdevelopertoolkit/ui/*` below: tsup's `external`
     // matches specifiers, not packages, so the bare entry does nothing for
     // '@agentic-toolkit/auth/client'.
     '@agentic-toolkit/auth',
@@ -304,11 +304,11 @@ export default defineConfig({
     // imports one of them it's already covered and doesn't silently get its own inlined copy.
     '@agentic-toolkit/auth/ui',
     '@agentic-toolkit/auth/server',
-    '@agentic-toolkit/ui',
+    '@agenticdevelopertoolkit/ui',
     // Subpath form: tsup's `external` matches SPECIFIERS, not packages, so the bare
-    // entry above does nothing for '@agentic-toolkit/ui/components/badge' and friends
+    // entry above does nothing for '@agenticdevelopertoolkit/ui/components/badge' and friends
     // (introduced by the header modules in Task 5.6).
-    '@agentic-toolkit/ui/*',
+    '@agenticdevelopertoolkit/ui/*',
     // recents.ts holds module-level mutable state (`snapshot`, and the `listeners`
     // Set). With bundle:true/splitting:false, every entry that reaches it by a
     // RELATIVE specifier inlines its own private copy of that state — a visit
@@ -413,16 +413,16 @@ export default defineConfig({
     // that package's stylesheet + `sources.css`. A real dependency, resolved by the consuming
     // site so there is one copy of the shiki highlighter singleton and one endpoint-metadata
     // module. tsup auto-externalizes bare `dependencies`, but not reliably their subpaths, so
-    // list both forms as `@agentic-toolkit/ui` does.
+    // list both forms as `@agenticdevelopertoolkit/ui` does.
     '@agentic-toolkit/api-explorer',
     '@agentic-toolkit/api-explorer/*',
-    // Declared as a dependency for adh-help.css's `@import "@agentic-toolkit/markdown/styles"`
+    // Declared as a dependency for adh-help.css's `@import "@agenticdevelopertoolkit/markdown/styles"`
     // (bare specifiers in that stylesheet resolve from THIS package) and for
     // tools/gen-help-content.py's `processMarkdown` render step. No `src/` module imports it —
     // the help corpus is PRE-rendered — but list it so a future runtime import can never be
     // inlined by accident.
-    '@agentic-toolkit/markdown',
-    '@agentic-toolkit/markdown/*',
+    '@agenticdevelopertoolkit/markdown',
+    '@agenticdevelopertoolkit/markdown/*',
     // ── Task 6: the shared /home shell's data dependency + self-reference ───────────
     // The data layer holds module state: `dataConfig` (the API base URL every authed call
     // resolves against, set once by the host's configureData) and useResourceList's `caches`
@@ -560,16 +560,16 @@ export default defineConfig({
     '@agentic-toolkit/bitbag',
     '@agentic-toolkit/bitbag/css/bitbag-dock.css',
     // The framework-agnostic landing KIT the deck is built from. The subpath form is the
-    // load-bearing half: `@agentic-toolkit/landing/client` is that package's `'use client'`
+    // load-bearing half: `@agenticdevelopertoolkit/landing/client` is that package's `'use client'`
     // entry, and tsup's `external` matches specifiers rather than packages, so the bare
     // name above does nothing for it. Inlined, preserve-directives would hoist NavChrome's
     // banner over the whole `landing` entry and every screen of every site's landing copy
     // would ship as a Client Component — legal, silent, and three copies of the words.
-    '@agentic-toolkit/landing',
-    '@agentic-toolkit/landing/*',
+    '@agenticdevelopertoolkit/landing',
+    '@agenticdevelopertoolkit/landing/*',
     // Only `react-slot` is left of Radix: it backs components/ui/button's `asChild`.
     // The avatar and dropdown-menu primitives went with the components that used
-    // them (both now come from @agentic-toolkit/ui, on Base UI).
+    // them (both now come from @agenticdevelopertoolkit/ui, on Base UI).
     '@radix-ui/react-slot',
     'class-variance-authority',
     'clsx',

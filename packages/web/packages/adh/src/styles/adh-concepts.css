@@ -551,7 +551,7 @@
   pointer-events: none;
 }
 
-/* selected-node info — uses the shared @agentic-toolkit/ui InfoPanel (which supplies
+/* selected-node info — uses the shared @agenticdevelopertoolkit/ui InfoPanel (which supplies
    the bordered/rounded card + header); these rules only size/centre it and lay
    out the body: the focused node's description, a clearly visible link to its
    marketing site, and a subtle "More details" link. (Back-out is the empty-space
@@ -579,7 +579,7 @@
   margin-top: 1.75rem;
 }
 /* subtle gray "reduce animation" toggle, centred just under the info card. Uses
-   the shared @agentic-toolkit/ui Checkbox re-themed GRAY (it ships gold). */
+   the shared @agenticdevelopertoolkit/ui Checkbox re-themed GRAY (it ships gold). */
 .adh-graph__reduce-motion {
   display: inline-flex;
   align-items: center;
@@ -1056,7 +1056,7 @@
 }
 .adh-details__rail-nav { display: flex; flex-direction: column; gap: 0.1rem; }
 /* The rail LINK grammar now lives in the shared nav-rail recipe
-   (@agentic-toolkit/ui/lib/nav-rail — railLinkVariants), so the details rail and the
+   (@agenticdevelopertoolkit/ui/lib/nav-rail — railLinkVariants), so the details rail and the
    CRUD feature rail share one home. The links keep the real <a> structure here;
    only the styling moved. --cg-accent resolves to the same brand gold the recipe
    uses, so the look is unchanged. */

@@ -4,17 +4,17 @@ import { useId } from "react";
 import { Check, Copy, ExternalLink, Globe } from "lucide-react";
 
 import { useAction } from "@agentic-toolkit/crud";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button, buttonVariants } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
-import { useClipboard } from "@agentic-toolkit/ui/hooks/useClipboard";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button, buttonVariants } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group";
+import { useClipboard } from "@agenticdevelopertoolkit/ui/hooks/useClipboard";
 import type { ResearchDocument } from "@agentic-toolkit/data/markdown";
 import { markdownApi } from "@agentic-toolkit/data/markdown";
-import type { SlugVerdict } from "@agentic-toolkit/ui/blocks/document-identity-field";
-import { toneTextClass } from "@agentic-toolkit/ui/lib/tone";
+import type { SlugVerdict } from "@agenticdevelopertoolkit/ui/blocks/document-identity-field";
+import { toneTextClass } from "@agenticdevelopertoolkit/ui/lib/tone";
 import { PUBLIC_ROUTE_RE } from "./research-model";
 
 // Deliberately hard-coded, not per-environment, and not a defect: `features/research` is a

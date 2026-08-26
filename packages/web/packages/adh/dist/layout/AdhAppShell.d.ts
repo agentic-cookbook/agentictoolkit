@@ -18,7 +18,7 @@ export type AdhAppShellProps = {
      *  imports them unconditionally, and the value the host folds to `false` at build time is a
      *  runtime prop by the time it crosses the package boundary — no bundler can propagate it
      *  back through the import. So `DevAnimScale` and `HtdvLayoutLogSwitch` (and the
-     *  `@agentic-toolkit/ui/blocks` code they pull in) now SHIP IN EVERY PRODUCTION CLIENT
+     *  `@agenticdevelopertoolkit/ui/blocks` code they pull in) now SHIP IN EVERY PRODUCTION CLIENT
      *  BUNDLE and are gated at RUNTIME instead. That is the accepted price of the
      *  mechanism/vocabulary seam; re-reading a host env var here to win the bytes back would
      *  put one host's deployment vocabulary inside a generic package, which is the exact thing

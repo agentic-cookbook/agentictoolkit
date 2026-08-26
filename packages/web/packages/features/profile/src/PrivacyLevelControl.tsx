@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { PrivacyLevelSelect } from "@agentic-toolkit/ui/components/privacy-level-select";
+import { PrivacyLevelSelect } from "@agenticdevelopertoolkit/ui/components/privacy-level-select";
 
 import {
   setPrivacyGrant,

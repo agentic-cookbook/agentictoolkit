@@ -12,9 +12,9 @@
  * and a materialized prod copy. `src` covers `next dev` (the whole package is
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
- * Mirrors @agentic-toolkit/ui's components.css self-registration.
+ * Mirrors @agenticdevelopertoolkit/ui's components.css self-registration.
  *
- * This package's only className-bearing dependency is @agentic-toolkit/ui, which
+ * This package's only className-bearing dependency is @agenticdevelopertoolkit/ui, which
  * self-registers through its own components.css and ships no sources.css of its
  * own — so nothing is chained here. */
 @source "./src/**/*.{ts,tsx}";

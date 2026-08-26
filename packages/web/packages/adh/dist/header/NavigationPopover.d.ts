@@ -109,7 +109,7 @@ export type NavigationPopoverProps = {
      *  destination. It sits outside the scrolling list too, so it stays visible on a
      *  menu long enough to scroll. */
     footer?: ReactNode;
-    /** A chord that TOGGLES the menu, in `@agentic-toolkit/ui/hooks/useShortcut`
+    /** A chord that TOGGLES the menu, in `@agenticdevelopertoolkit/ui/hooks/useShortcut`
      *  spelling — `'mod+shift+k'`, say. Omit (or pass `''`) for no shortcut, which is
      *  what every popover that isn't the site menu wants: two popovers registering the
      *  same chord would race, and the registry's most-recent-wins tie-break would hand

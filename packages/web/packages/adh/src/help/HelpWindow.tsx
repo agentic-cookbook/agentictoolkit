@@ -1,9 +1,9 @@
 'use client'
 
 import { useMemo, type ReactNode } from 'react'
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
-import { HierarchicalDetailView } from '@agentic-toolkit/ui/blocks'
-import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
+import { HierarchicalDetailView } from '@agenticdevelopertoolkit/ui/blocks'
+import { EmptyState } from '@agenticdevelopertoolkit/ui/components/empty-state'
 import { FloatingWindow } from '@agentic-toolkit/adh/debug-env'
 import { buildTopicLevels, type HelpTopic } from './topics'
 import { topicIcon } from './topic-icons'

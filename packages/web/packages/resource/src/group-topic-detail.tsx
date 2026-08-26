@@ -1,8 +1,8 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
-import { TopicSelectHint, type TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
+import { TopicSelectHint, type TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
 import type { TopicLeaf } from "./resource-explorer";
 import { StackLevels } from "./rail-host";
 

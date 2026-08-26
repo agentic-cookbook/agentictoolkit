@@ -19,7 +19,7 @@ import {
 import {
   buildCategoryTree,
   type CategoryTreeNode,
-} from "@agentic-toolkit/ui/blocks";
+} from "@agenticdevelopertoolkit/ui/blocks";
 
 vi.mock("@agentic-toolkit/data/markdown", () => ({
   taxonomyApi: {

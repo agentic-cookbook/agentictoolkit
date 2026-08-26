@@ -1,11 +1,11 @@
 "use client";
 
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
-import { Label } from "@agentic-toolkit/ui/components/label";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import { findAvailableType } from "../schemas/available-types";
 import type { SchemaTable } from "../schemas/schema-model";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { PermissionToggles } from "@agentic-toolkit/ui/components/permission-toggles";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { PermissionToggles } from "@agenticdevelopertoolkit/ui/components/permission-toggles";
 import {
   type Crud,
   type PermissionLevel,

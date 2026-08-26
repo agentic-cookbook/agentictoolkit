@@ -6,7 +6,7 @@
  * Asserted through the DOCUMENT (the `dark` class + data-color-mode a person actually
  * sees) and through the one request, with everything between them real. These assertions
  * used to ride on the colour-mode button's test; the button is a generic control in
- * @agentic-toolkit/ui now (`mode` in, `onChange` out) and knows nothing about accounts, so
+ * @agenticdevelopertoolkit/ui now (`mode` in, `onChange` out) and knows nothing about accounts, so
  * they belong to the hook that does.
  *
  * Sibling of AppearanceSync.test.tsx, which covers the other half of the same store
@@ -14,7 +14,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
-import type { ColorModePref } from '@agentic-toolkit/themes'
+import type { ColorModePref } from '@agenticdevelopertoolkit/themes'
 
 // --- fakes ------------------------------------------------------------------------------------
 

@@ -13,7 +13,7 @@ import {
   type RailHostRegistry,
   type RegisteredLevels,
 } from "@agentic-toolkit/resource";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import type { Workspace } from "@agentic-toolkit/data";
 
 const { push } = vi.hoisted(() => ({ push: vi.fn() }));

@@ -10,7 +10,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, waitFor } from '@testing-library/react'
-import { APPEARANCE_STORAGE_KEY } from '@agentic-toolkit/themes'
+import { APPEARANCE_STORAGE_KEY } from '@agenticdevelopertoolkit/themes'
 
 // --- fakes ------------------------------------------------------------------------------------
 

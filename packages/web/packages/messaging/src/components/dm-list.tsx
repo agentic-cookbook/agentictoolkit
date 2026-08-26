@@ -2,7 +2,7 @@
 
 // The DM conversation list (messaging P5). Each row is the other participant, a
 // last-message preview, an unread Badge, and a PresenceDot. Composes the shared
-// @agentic-toolkit/ui primitives (Avatar, Badge, Spinner, EmptyState, Tooltip) so it
+// @agenticdevelopertoolkit/ui primitives (Avatar, Badge, Spinner, EmptyState, Tooltip) so it
 // renders identically to the rest of the platform chrome. Presentational: the
 // conversations + loading/error come in as props (DmPanel owns the single
 // useDmConversations fetch); a row click calls `onSelect(chatId)` and the active
@@ -10,13 +10,13 @@
 
 import { MessageSquare } from 'lucide-react'
 
-import { Avatar, AvatarFallback } from '@agentic-toolkit/ui/components/avatar'
-import { Badge } from '@agentic-toolkit/ui/components/badge'
-import { Button } from '@agentic-toolkit/ui/components/button'
-import { EmptyState } from '@agentic-toolkit/ui/components/empty-state'
-import { Spinner } from '@agentic-toolkit/ui/components/spinner'
-import { TooltipProvider } from '@agentic-toolkit/ui/components/tooltip'
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
+import { Avatar, AvatarFallback } from '@agenticdevelopertoolkit/ui/components/avatar'
+import { Badge } from '@agenticdevelopertoolkit/ui/components/badge'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
+import { EmptyState } from '@agenticdevelopertoolkit/ui/components/empty-state'
+import { Spinner } from '@agenticdevelopertoolkit/ui/components/spinner'
+import { TooltipProvider } from '@agenticdevelopertoolkit/ui/components/tooltip'
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text'
 
 import { type DmConversation } from '../hooks/use-dms'
 import { PresenceDot } from './presence-dot'

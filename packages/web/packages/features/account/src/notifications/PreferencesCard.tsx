@@ -8,11 +8,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@agentic-toolkit/ui/components/card";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { Spinner } from "@agentic-toolkit/ui/components/spinner";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+} from "@agenticdevelopertoolkit/ui/components/card";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { Spinner } from "@agenticdevelopertoolkit/ui/components/spinner";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { RecordApiButton } from "@agentic-toolkit/api-explorer";
 import { useReportSettingsDirty } from "@agentic-toolkit/resource";
 import {

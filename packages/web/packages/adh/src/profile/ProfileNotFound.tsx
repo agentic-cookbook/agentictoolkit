@@ -3,17 +3,17 @@
 import { useState, useCallback, useRef, type FormEvent, type ReactElement } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Avatar, AvatarImage, AvatarFallback } from "@agenticdevelopertoolkit/ui/components/avatar";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 /** One hit from `GET /public/users/search`. Structurally the backend's
  *  `PrincipalSearchHit` (routes/principal-search.ts) — declared here rather than imported so
  *  this package stays free of the generated API types, the same arrangement `UserCardDto`
- *  has in @agentic-toolkit/ui. `kind` is what makes the merged namespace legible; see the
+ *  has in @agenticdevelopertoolkit/ui. `kind` is what makes the merged namespace legible; see the
  *  React key on the result row for why it is not decoration. */
 type SearchHit = {
   slug: string;

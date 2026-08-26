@@ -2,10 +2,10 @@
 
 import type { ReactElement } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { accessApi, type AccessRoleRow } from "@agentic-toolkit/data/access";
 import { workspaceMembersApi, type WorkspaceMember } from "@agentic-toolkit/data/organizations";
 import { useReportBusy } from "@agentic-toolkit/resource";

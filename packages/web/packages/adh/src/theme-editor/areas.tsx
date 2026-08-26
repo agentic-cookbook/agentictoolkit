@@ -17,7 +17,7 @@ import type { ComponentType } from 'react'
 import { SiteHeader, SiteMenuSwitcher } from '@agentic-toolkit/adh/header'
 import type { HeaderAuthSource } from '@agentic-toolkit/adh/header-auth'
 import { SiteFooter } from '@agentic-toolkit/adh/footer'
-import { Button } from '@agentic-toolkit/ui/components/button'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
 import {
   Card,
   CardHeader,
@@ -25,8 +25,8 @@ import {
   CardDescription,
   CardContent,
   CardFooter,
-} from '@agentic-toolkit/ui/components/card'
-import { Input } from '@agentic-toolkit/ui/components/input'
+} from '@agenticdevelopertoolkit/ui/components/card'
+import { Input } from '@agenticdevelopertoolkit/ui/components/input'
 
 // The editor TAXONOMY: areas (level 2) → items (level 3). "Global" is the one
 // comprehensive section for everything site-wide (the chrome, base styles, colors,

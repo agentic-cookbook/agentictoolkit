@@ -1,11 +1,11 @@
 "use client";
 
 import type { ReactElement } from "react";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { CreateResourceDialog } from "@agentic-toolkit/resource";
 import {
   projectTemplatesApi,

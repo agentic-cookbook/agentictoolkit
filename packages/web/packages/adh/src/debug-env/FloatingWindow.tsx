@@ -12,7 +12,7 @@ import {
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
-import { Button } from '@agentic-toolkit/ui/components/button'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
 import { useIsMounted } from '../hooks/useIsMounted'
 
 // A macOS-style floating window: NO backdrop, so the live page stays visible behind

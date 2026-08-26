@@ -4,10 +4,10 @@ import type { ReactNode } from "react";
 import { Boxes, Building2, UserCircle, UserRound } from "lucide-react";
 import type { Workspace } from "@agentic-toolkit/data";
 import { RailHostBoundary, StackLevels, useBasePathRoute } from "@agentic-toolkit/resource";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 
 import { IntegrationsPane } from "./IntegrationsPane";
 import { integrationsSegments, type IntegrationsPathSelection } from "./parse-path";

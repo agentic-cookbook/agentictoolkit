@@ -11,8 +11,8 @@ const external = [
   'next/dynamic',
   '@agentic-toolkit/auth',
   '@agentic-toolkit/auth/client',
-  '@agentic-toolkit/ui',
-  '@agentic-toolkit/ui/*',
+  '@agenticdevelopertoolkit/ui',
+  '@agenticdevelopertoolkit/ui/*',
   'lucide-react',
   // Externalized so the consuming Next app bundles it (and code-splits the
   // dynamic import); keeps a heavy wasm/langs payload out of dist and lazy.

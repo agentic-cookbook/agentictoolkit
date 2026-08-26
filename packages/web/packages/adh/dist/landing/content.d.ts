@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { SiteId } from '@agentic-toolkit/adh-registry';
-import type { ChecklistGroup, ChipEntry, PointEntry, RuleStep, StatEntry, TourPillar, VersusSide } from '@agentic-toolkit/landing';
+import type { ChecklistGroup, ChipEntry, PointEntry, RuleStep, StatEntry, TourPillar, VersusSide } from '@agenticdevelopertoolkit/landing';
 /**
  * A family site's landing deck, as DATA.
  *
@@ -66,7 +66,7 @@ export interface LandingSection {
     blocks: LandingBlock[];
 }
 /**
- * One block on a screen. `kind` is the exact `@agentic-toolkit/landing` export name, and
+ * One block on a screen. `kind` is the exact `@agenticdevelopertoolkit/landing` export name, and
  * the rest of each member is that component's props — with one deliberate difference,
  * spelled out in `LandingCard`, `LandingFaqEntry` and `Closer` below: a body arrives as a
  * LIST of paragraphs rather than a single node, because the kit styles a body through its

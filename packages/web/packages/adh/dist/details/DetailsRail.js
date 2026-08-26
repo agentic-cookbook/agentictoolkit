@@ -4,9 +4,9 @@
 
 // src/details/DetailsRail.tsx
 import { useRef, useState } from "react";
-import { noAutofillProps } from "@agentic-toolkit/ui/lib/autofill";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
-import { railLinkVariants } from "@agentic-toolkit/ui/lib/nav-rail";
+import { noAutofillProps } from "@agenticdevelopertoolkit/ui/lib/autofill";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
+import { railLinkVariants } from "@agenticdevelopertoolkit/ui/lib/nav-rail";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 function DetailsRail({ topics, siteLabel }) {
   const [query, setQuery] = useState("");

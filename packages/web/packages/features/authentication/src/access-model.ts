@@ -10,7 +10,7 @@ import type {
   AccessGroupDetail,
   AccessGroupMember,
 } from "@agentic-toolkit/data/security";
-import { CRUD_KEYS, CRUD_LETTER, type Crud } from "@agentic-toolkit/ui/components/crud";
+import { CRUD_KEYS, CRUD_LETTER, type Crud } from "@agenticdevelopertoolkit/ui/components/crud";
 
 export type { AccessGrant, AccessGroup, AccessGroupDetail, AccessGroupMember };
 

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
+import { AlertModal } from '@agenticdevelopertoolkit/ui/components/alert-modal'
 import { reportAuthError } from './report'
 import { useAuth } from './context'
 import { linkProvider, AuthHttpError } from './client'

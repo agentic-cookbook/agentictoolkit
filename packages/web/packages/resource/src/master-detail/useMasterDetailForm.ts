@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import type { PaneExitGuard } from "@agentic-toolkit/ui/blocks";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
+import type { PaneExitGuard } from "@agenticdevelopertoolkit/ui/blocks";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
 
 import type { MasterDetailActions } from "./MasterDetailLayout";
 

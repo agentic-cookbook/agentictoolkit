@@ -6,13 +6,13 @@ import { Bot, Trash2, UserRound } from "lucide-react";
 
 import { useResourceList } from "@agentic-toolkit/data";
 import { teamMembersApi, type TeamMember } from "@agentic-toolkit/data/teams";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { api as personaApi, type Persona } from "@agentic-toolkit/data/personas";
-import { TopicSelectHint, type TopicDetailItem, type TopicLevel } from "@agentic-toolkit/ui/blocks";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { TopicSelectHint, type TopicDetailItem, type TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import {
   useStackLevel,
   useRecordAffordance,

@@ -2,13 +2,13 @@
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import {
   DragItem,
   DragSurface,
   DropTarget,
   type DragDropEvent,
-} from "@agentic-toolkit/ui/components/dnd";
+} from "@agenticdevelopertoolkit/ui/components/dnd";
 import { type PriorityScale, type WorkItem } from "@agentic-toolkit/data/projects";
 import { priorityMeta } from "../WorkItemEditor";
 import {

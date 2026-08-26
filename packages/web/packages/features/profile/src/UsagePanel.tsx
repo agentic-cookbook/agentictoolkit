@@ -2,11 +2,11 @@
 
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Progress } from "@agentic-toolkit/ui/components/progress";
-import { Stat } from "@agentic-toolkit/ui/components/stat";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { DataTable, type DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Progress } from "@agenticdevelopertoolkit/ui/components/progress";
+import { Stat } from "@agenticdevelopertoolkit/ui/components/stat";
 
 import { getUsageSummary, usageSummaryKey, type UsageRow } from "@agentic-toolkit/data/profile";
 import { isForbidden } from "@agentic-toolkit/data";

@@ -1,6 +1,6 @@
 /* adh/src/styles/adh-landing-bridge.css
  *
- * Assigns @agentic-toolkit/landing's 63-token contract from the M3 role vars
+ * Assigns @agenticdevelopertoolkit/landing's 63-token contract from the M3 role vars
  * <AdhThemeStyle /> injects. It lives HERE and not in `landing` because that
  * package depends on nothing and never assigns a :root — every token is read
  * as var(--lp-x, fallback), so a host override always wins whatever the import

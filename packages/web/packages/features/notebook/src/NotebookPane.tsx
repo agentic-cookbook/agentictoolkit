@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import type { CategoryTreeNode } from "@agentic-toolkit/ui/blocks/category-field";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import type { CategoryTreeNode } from "@agenticdevelopertoolkit/ui/blocks/category-field";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import {
   StackLevels,
   useRailExitGuard,
@@ -29,7 +29,7 @@ import {
   type NoteSummary,
   type NoteTag,
 } from "@agentic-toolkit/data/notes";
-import { categoryNames, type CategoryNode } from "@agentic-toolkit/ui/blocks";
+import { categoryNames, type CategoryNode } from "@agenticdevelopertoolkit/ui/blocks";
 import { useCategoryLevels } from "@agentic-toolkit/categories";
 import {
   noteBlank,

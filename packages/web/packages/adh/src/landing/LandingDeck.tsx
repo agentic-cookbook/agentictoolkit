@@ -27,17 +27,17 @@ import {
   Trust,
   Versus,
   Wrap,
-} from '@agentic-toolkit/landing'
+} from '@agenticdevelopertoolkit/landing'
 // The deck's index — burger, scrim and drawer — and the ONE client component on the page.
 // By PACKAGE PATH rather than a relative import, and from `/client` rather than the main
 // barrel, for the same reason `marketing/index.ts` imports MarketingSiteHeader that way:
 // esbuild-plugin-preserve-directives propagates a chunk's `'use client'` to every entry
 // that inlines it, so a bundled NavChrome would hoist the directive over this whole module
 // and turn the deck — every screen, every block, all of a site's landing copy — into a
-// Client Component. The specifier is external (see the `@agentic-toolkit/landing/*` line
+// Client Component. The specifier is external (see the `@agenticdevelopertoolkit/landing/*` line
 // in tsup.config.ts), so the boundary stays where the landing package put it.
-import { NavChrome } from '@agentic-toolkit/landing/client'
-import type { NavLink, TourStep } from '@agentic-toolkit/landing'
+import { NavChrome } from '@agenticdevelopertoolkit/landing/client'
+import type { NavLink, TourStep } from '@agenticdevelopertoolkit/landing'
 import type { LandingBlock, LandingContent, LandingSection, LandingTourEdge } from './content'
 
 /**

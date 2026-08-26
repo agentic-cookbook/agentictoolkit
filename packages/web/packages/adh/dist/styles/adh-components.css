@@ -1,6 +1,6 @@
 /* Component styles for @agentic-toolkit/adh.
  * Consumes the --adh-* tokens defined by the active theme
- * (see @agentic-toolkit/themes/styles/adh*.css). Import this once
+ * (see @agenticdevelopertoolkit/themes/styles/adh*.css). Import this once
  * globally in the consumer app (e.g. app/globals.css).
  *
  * The rules below are semantic classes, but the premise this header used to state —
@@ -18,12 +18,12 @@
  * the one stylesheet import it already has: a site imports @agentic-toolkit/adh/styles.css,
  * which resolves to adh-site.css, whose first line is this file. (Until Task 5.10
  * that one import was @adh-shared/adh/styles.css; that package no longer exists.) */
-@import "@agentic-toolkit/themes/tailwind.css";
+@import "@agenticdevelopertoolkit/themes/tailwind.css";
 
 /* Skins for the ui primitives that style via semantic classes (a public
- * theming surface — see that file's header). Owned by @agentic-toolkit/ui;
+ * theming surface — see that file's header). Owned by @agenticdevelopertoolkit/ui;
  * re-imported here so every site gets it through this one import. */
-@import "@agentic-toolkit/ui/styles/components.css";
+@import "@agenticdevelopertoolkit/ui/styles/components.css";
 
 /* The debug trigger's positioning AND — the load-bearing half — the Tailwind @source
  * registration for @agentic-toolkit/adh's debug-env sources, which own FloatingWindow:
@@ -350,7 +350,7 @@
 }
 
 /* The colour-mode toggle's own rules are NOT here. It is `ColorModeToggle` in
-   @agentic-toolkit/ui, a control that takes `mode` + `onChange` and nothing else, so its
+   @agenticdevelopertoolkit/ui, a control that takes `mode` + `onChange` and nothing else, so its
    CSS travels with it in ui's components.css — which this file @imports at the top, so
    every site still receives it through the one import it already has. Wearing
    `.adh-header__icon-button` in this row is the HOST's choice, made at the call site;
@@ -802,7 +802,7 @@
 }
 
 /* Avatar primitive (.adh-avatar / __image / __fallback) is owned by
- * @agentic-toolkit/ui/styles/components.css, @import'ed at the top of this file — a
+ * @agenticdevelopertoolkit/ui/styles/components.css, @import'ed at the top of this file — a
  * drifted duplicate used to live here. Because it landed BELOW this file's own
  * .adh-avatar-menu* block, and both @import order plus these two rule families share
  * (0,1,0) specificity with no @layer, the duplicate silently demoted the header avatar
@@ -900,7 +900,7 @@
 }
 
 /* Dropdown menu primitive (.adh-dropdown-menu__content/__item/__label/__separator/etc,
- * plus the 13 other selectors that duplicated @agentic-toolkit/ui/styles/components.css,
+ * plus the 13 other selectors that duplicated @agenticdevelopertoolkit/ui/styles/components.css,
  * @import'ed at the top of this file) is owned by ui — a drifted duplicate used to live
  * here, including a stale Radix-era `[data-state='open']` sub-trigger variant that
  * matched nothing (ui's own base-ui-powered `[data-popup-open]` rule is the live one).

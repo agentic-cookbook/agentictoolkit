@@ -12,7 +12,7 @@
  * and a materialized prod copy. `src` covers `next dev` (the whole package is
  * symlinked, so HMR sees source edits); `dist` covers prod builds, where `files`
  * ships only `dist` + this file and the `src` glob simply matches nothing.
- * Mirrors @agentic-toolkit/ui's components.css self-registration.
+ * Mirrors @agenticdevelopertoolkit/ui's components.css self-registration.
  *
  * This package now mounts @agentic-toolkit/categories' dialogs (the shared category rail's
  * gear menu, rename/move/delete/add), so its sources.css is chained here too — the rule

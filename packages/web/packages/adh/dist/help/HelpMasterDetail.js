@@ -5,7 +5,7 @@
 // src/help/HelpMasterDetail.tsx
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { HierarchicalDetailView } from "@agentic-toolkit/ui/blocks";
+import { HierarchicalDetailView } from "@agenticdevelopertoolkit/ui/blocks";
 
 // src/help/topic-icons.tsx
 import {

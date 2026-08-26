@@ -3,11 +3,11 @@
 import type { ReactElement } from "react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
 import { tokensApi, type ApiToken } from "@agentic-toolkit/data/security";
 import { useReportBusy } from "@agentic-toolkit/resource";
 

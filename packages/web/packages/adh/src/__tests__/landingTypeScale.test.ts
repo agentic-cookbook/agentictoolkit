@@ -44,8 +44,8 @@ import { describe, it, expect } from 'vitest'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, relative, resolve } from 'node:path'
-import { themes } from '@agentic-toolkit/themes/manifest'
-import { THEME_FONT_PRELOADS } from '@agentic-toolkit/themes/fonts'
+import { themes } from '@agenticdevelopertoolkit/themes/manifest'
+import { THEME_FONT_PRELOADS } from '@agenticdevelopertoolkit/themes/fonts'
 import { DEFAULT_ADH_THEME } from '../themes/adh-themes'
 
 /** The six tiers a landing page distinguishes. Adding a seventh means adding it here. */
@@ -190,23 +190,30 @@ function adhFrontendSrc(): string | null {
 const ADH_SRC = adhFrontendSrc()
 
 /**
- * The themes package's `src/fonts`, found by walking up to the workspace `packages/` dir
- * that holds it — same reason frontendSrc() walks. A counted hop is what broke here: the
- * `../../../../external/agentictoolkit/...` written when this file lived in adh's old app
- * tier still RESOLVED after the package moved into the submodule, to a doubled path that
- * exists nowhere, so the assertion below failed on a bookkeeping error rather than on the
- * thing it guards. The manifest is the marker because it is the file materializeThemeFonts
- * itself reads.
+ * The themes package's `src/fonts`, reached through this package's own dependency link.
+ *
+ * Neither a counted hop nor an upward walk survives here. A counted hop is what broke
+ * first: the `../../../../external/agentictoolkit/...` written when this file lived in
+ * adh's old app tier still RESOLVED after the package moved into the submodule, to a
+ * doubled path that exists nowhere, so the assertion below failed on a bookkeeping error
+ * rather than on the thing it guards. The upward walk that replaced it then broke in turn
+ * when themes left this workspace for `external/agenticdevelopertoolkit` — it is no longer
+ * ABOVE this file at all, it is sideways and down. The `node_modules` link is neither: it
+ * is the same edge the import statements at the top of this file travel, so it moves when
+ * the dependency moves and fails loudly when the dependency is gone.
  */
 function themeFontsDir(): string {
-  let dir = dirname(fileURLToPath(import.meta.url))
-  for (;;) {
-    const candidate = resolve(dir, 'themes/src/fonts')
-    if (existsSync(resolve(candidate, 'metrics.json'))) return candidate
-    const up = dirname(dir)
-    if (up === dir) throw new Error('the @agentic-toolkit/themes package was not found above this test')
-    dir = up
+  const dir = resolve(
+    dirname(fileURLToPath(import.meta.url)),
+    '../../node_modules/@agenticdevelopertoolkit/themes/src/fonts',
+  )
+  if (!existsSync(resolve(dir, 'metrics.json'))) {
+    throw new Error(
+      `the @agenticdevelopertoolkit/themes package is not linked into this one: ${dir} ` +
+        `has no metrics.json. Check the dependency in package.json and run pnpm install.`,
+    )
   }
+  return dir
 }
 
 /**

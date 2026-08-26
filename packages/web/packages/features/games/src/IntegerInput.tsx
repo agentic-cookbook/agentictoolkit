@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Input } from "@agentic-toolkit/ui/components/input";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
 import { intFieldOr, intText, optionalIntField, optionalIntText } from "./fields";
 
 /**

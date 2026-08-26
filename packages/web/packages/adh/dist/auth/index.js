@@ -20,7 +20,7 @@ import {
   adoptAppearance,
   normalizeAppearance,
   resetAppearance
-} from "@agentic-toolkit/themes";
+} from "@agenticdevelopertoolkit/themes";
 import { captureException } from "@agentic-toolkit/adh/telemetry/report-error";
 function AppearanceSync() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -72,7 +72,7 @@ function AuthProvider(props) {
 import { useCallback } from "react";
 import { useAuth as useAuth2 } from "@agentic-toolkit/auth";
 import { authedRequest } from "@agentic-toolkit/auth/client";
-import { useAppearancePreferences } from "@agentic-toolkit/themes";
+import { useAppearancePreferences } from "@agenticdevelopertoolkit/themes";
 import { captureException as captureException3 } from "@agentic-toolkit/adh/telemetry/report-error";
 function useAppearanceSettings() {
   const { prefs, set: setLocal } = useAppearancePreferences();

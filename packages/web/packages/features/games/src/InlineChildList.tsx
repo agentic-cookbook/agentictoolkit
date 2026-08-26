@@ -3,11 +3,11 @@
 import { useCallback, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { useResourceList } from "@agentic-toolkit/data";
-import { ButtonBar } from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+import { ButtonBar } from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 import { useMasterDetailForm, type TopicLeaf } from "@agentic-toolkit/resource";
 import { sortByGroup } from "./group";
 import { inlineUrlSelection } from "./inlineSelection";

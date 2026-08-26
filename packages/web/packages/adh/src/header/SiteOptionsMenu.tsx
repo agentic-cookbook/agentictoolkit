@@ -9,7 +9,7 @@ import {
   DropdownMenuLinkItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@agentic-toolkit/ui/components/dropdown-menu'
+} from '@agenticdevelopertoolkit/ui/components/dropdown-menu'
 
 export type SiteLink = {
   /** OPTIONAL stable identity for the target, independent of its URL. `SiteSwitcher`

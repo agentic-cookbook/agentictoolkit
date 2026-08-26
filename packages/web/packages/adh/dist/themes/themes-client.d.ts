@@ -1,4 +1,4 @@
-import type { ThemeDelta } from '@agentic-toolkit/themes/tokens';
+import type { ThemeDelta } from '@agenticdevelopertoolkit/themes/tokens';
 /** A theme as stored/returned by the backend — `data` is the delta from `basedOn`. */
 export interface StoredTheme {
     key: string;

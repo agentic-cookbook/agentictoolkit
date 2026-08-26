@@ -3,11 +3,11 @@
 import { useEffect, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CheckCircle2, Loader2, OctagonX, TriangleAlert } from "lucide-react";
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { SEGMENT_RE, prefixFor, validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { identifiersApi, type EcosystemInput } from "@agentic-toolkit/data/ecosystems";
 

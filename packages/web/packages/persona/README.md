@@ -57,7 +57,7 @@ primitives does not pull chat and themes into its graph.
   idle state, and the `transition` option — and it defines `InlineChatSizing` as
   a *different type* under the same name. Swapping is a compile break plus a
   silent feature regression.
-- **`@agentic-toolkit/themes`** has an id set **disjoint** from the persona
+- **`@agenticdevelopertoolkit/themes`** has an id set **disjoint** from the persona
   toolkit's (`old-school-terminal` exists only there). Swapping silently changes
   which themes exist and breaks every `theme` prop's type contract.
 

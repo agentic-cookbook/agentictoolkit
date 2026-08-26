@@ -2,11 +2,11 @@
 
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { Flag } from "lucide-react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Progress } from "@agentic-toolkit/ui/components/progress";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Progress } from "@agenticdevelopertoolkit/ui/components/progress";
 import { useResourceList } from "@agentic-toolkit/data";
 import {
   projectMilestonesApi,

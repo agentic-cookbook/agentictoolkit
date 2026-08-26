@@ -2,8 +2,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
 
 /**
  * A repeatable add/remove list held in the caller's draft. Unlike GroupGrantsEditor —

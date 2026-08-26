@@ -10,13 +10,13 @@ import {
   type TokenPrincipal,
   type TokenPrincipalCreated,
 } from "@agentic-toolkit/data/ecosystem-config";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import { CreateResourceDialog, useStackLevel, type TopicLeaf } from "@agentic-toolkit/resource";
 
 import {

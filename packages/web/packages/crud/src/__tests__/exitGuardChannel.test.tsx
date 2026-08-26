@@ -1,7 +1,7 @@
 import { render, act } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { useExitGuardChannel } from '../useExitGuardChannel'
-import type { PaneExitGuard } from '@agentic-toolkit/ui/blocks'
+import type { PaneExitGuard } from '@agenticdevelopertoolkit/ui/blocks'
 
 const DIRTY: PaneExitGuard = { isDirty: () => true }
 

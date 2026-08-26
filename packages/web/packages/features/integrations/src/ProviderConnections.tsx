@@ -4,15 +4,15 @@ import { useCallback, useEffect, useRef, useState, type ReactElement } from "rea
 import { Plug, RefreshCw } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Badge, type badgeVariants } from "@agentic-toolkit/ui/components/badge";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Badge, type badgeVariants } from "@agenticdevelopertoolkit/ui/components/badge";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
 import type { VariantProps } from "class-variance-authority";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Disclosure } from "@agentic-toolkit/ui/components/disclosure";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Disclosure } from "@agenticdevelopertoolkit/ui/components/disclosure";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   integrationsApi,
   type MaskedProviderConfig,

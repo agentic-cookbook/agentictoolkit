@@ -1,6 +1,6 @@
 /** TYPE-ONLY, and it has to stay that way. This module is reached by five of the
  *  package's entries, and tsup builds them with `splitting: false` — a value import of
- *  `@agentic-toolkit/themes/manifest` here survives into every one of those entries as a
+ *  `@agenticdevelopertoolkit/themes/manifest` here survives into every one of those entries as a
  *  live `import` statement (esbuild keeps an external package's import for side effects
  *  even when tree-shaking leaves the binding unused), dragging ~39 whole stylesheets as
  *  strings behind a file that only wanted a string constant. The two functions that
@@ -8,11 +8,11 @@
  *
  *  `import type { … }`, NOT `import { type … }`. The inline-modifier form leaves an
  *  import STATEMENT with no specifiers once the types are stripped, and esbuild emits
- *  that as a bare `import "@agentic-toolkit/themes/manifest"` — a side-effect import
+ *  that as a bare `import "@agenticdevelopertoolkit/themes/manifest"` — a side-effect import
  *  that still evaluates the module and still ships all 39 stylesheets. Only the
  *  type-only DECLARATION is erased outright. The two forms look interchangeable, and
  *  the difference is visible nowhere but the emitted dist. */
-import type { ThemeKey } from '@agentic-toolkit/themes/manifest'
+import type { ThemeKey } from '@agenticdevelopertoolkit/themes/manifest'
 
 export type AdhThemeKey = Extract<ThemeKey, `adh${string}`>
 

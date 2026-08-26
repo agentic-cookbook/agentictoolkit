@@ -6,7 +6,7 @@ import {
   InvitationPendingUsersPane,
   InvitationInvitesPane,
 } from "@agentic-toolkit/adh-ui/blocks";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useAuth } from "@agentic-toolkit/auth";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
 import { NotesAndHistory } from "./NotesAndHistory";

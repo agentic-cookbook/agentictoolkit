@@ -2,11 +2,11 @@
 
 import { useId, useMemo } from "react";
 import { useAction } from "@agentic-toolkit/crud";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useRecordAffordance } from "@agentic-toolkit/resource";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Switch } from "@agentic-toolkit/ui/components/switch";
-import { FieldGroup } from "@agentic-toolkit/ui/blocks/field-group";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Switch } from "@agenticdevelopertoolkit/ui/components/switch";
+import { FieldGroup } from "@agenticdevelopertoolkit/ui/blocks/field-group";
 import { personaToolsApi, type ToolCatalogItem } from "@agentic-toolkit/data/personas";
 import { groupBySource } from "./agent-tool-source";
 import { useOptimisticRowActions } from "./useOptimisticRowActions";

@@ -39,9 +39,16 @@ Three XcodeGen-backed Xcode projects wired together by
 with prebuilt `dist/` output (no `transpilePackages` required for
 Next.js consumers).
 
+The shared UI vocabulary they build on lives in the
+`external/agenticdevelopertoolkit` submodule and is named
+`@agenticdevelopertoolkit/*` — `ui`, `themes`, `model`, `controls`, `landing`,
+`markdown`, `search`, `editing`. It is a separate repo and a separate pnpm
+workspace, reached from here by `link:`.
+
 `websites/site/` is the in-repo demo consumer. It sits **outside** the
-pnpm workspace and uses `file:` refs into `packages/web/packages/<name>`
-so its wiring matches what external apps will use.
+pnpm workspace and uses `file:` refs into `packages/web/packages/<name>` and
+`external/agenticdevelopertoolkit/packages/web/packages/<name>` so its wiring
+matches what external apps will use.
 
 ## Where to look first
 
@@ -70,4 +77,7 @@ so its wiring matches what external apps will use.
 - Libraries may only depend on other targets within the same platform —
   never on ad-hoc paths outside their workspace.
 - Web packages keep their `@agentic-toolkit/*` scope (preserved from
-  the prior repo) so published consumers don't break.
+  the prior repo) so published consumers don't break. The eight shared UI
+  packages that moved to `agenticdevelopertoolkit` in 2026-08 are now
+  `@agenticdevelopertoolkit/*`; they changed repository, which is the only
+  reason a rename was on the table.

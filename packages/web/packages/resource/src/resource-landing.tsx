@@ -9,14 +9,14 @@ import {
   CardTitle,
   CardDescription,
   CardContent,
-} from "@agentic-toolkit/ui/components/card";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+} from "@agenticdevelopertoolkit/ui/components/card";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from "@agentic-toolkit/ui/components/toggle-group";
+} from "@agenticdevelopertoolkit/ui/components/toggle-group";
 import { FeatureTitle } from "./master-detail/MasterDetailLayout";
 import { readViewMode, writeViewMode, type ViewMode } from "@agentic-toolkit/data";
 import { HomeBar, HomeBarPortal } from "./home-bar";

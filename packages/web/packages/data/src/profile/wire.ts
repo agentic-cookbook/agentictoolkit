@@ -93,7 +93,7 @@ export interface PrivacyGrant {
 export type PrivacyTargetTable = string;
 
 /** The three audience levels the UI exposes. Mirrors PrivacyLevel from
- *  @agentic-toolkit/ui/components/privacy-level-select without coupling this module to the UI. */
+ *  @agenticdevelopertoolkit/ui/components/privacy-level-select without coupling this module to the UI. */
 export type PrivacyLevel = "only-me" | "hub" | "public";
 
 // ── Metered usage ─────────────────────────────────────────────────────────────────────────

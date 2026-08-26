@@ -8,7 +8,7 @@
 // source of truth; localStorage is a per-browser CACHE of it that exists so the first paint
 // doesn't wait on a round trip — SiteHomeShell seeds its first resolution from
 // `readCachedWorkspace()` synchronously and lets `get()` settle behind it. (Unlike
-// @agentic-toolkit/themes's appearance cache, this one carries no clear-on-sign-out: the shell
+// @agenticdevelopertoolkit/themes's appearance cache, this one carries no clear-on-sign-out: the shell
 // validates any cached slug against the signed-in user's own workspace list before it can
 // affect anything, so a stale entry from a previous user is inert.)
 

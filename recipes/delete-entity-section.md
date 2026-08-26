@@ -232,7 +232,7 @@ Dialog · phase "warn"                    Dialog · phase "confirm"
 
 ## Platform Notes
 
-- **React / Web (TypeScript):** `packages/web/packages/ui/src/blocks/delete-entity-section.tsx`
+- **React / Web (TypeScript):** `packages/web/packages/adh-ui/src/blocks/delete-entity-section.tsx`
   (`"use client"`), exported via `@agentic-toolkit/adh-ui/blocks/delete-entity-section`.
   Composes `Disclosure`, `Button`, `Dialog` (+ `DialogHeader`/`Title`/`Description`/
   `Footer`), `Input`, and `Label`, with the `Trash2`/`TriangleAlert` glyphs.

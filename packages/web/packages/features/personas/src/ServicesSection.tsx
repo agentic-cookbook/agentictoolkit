@@ -3,8 +3,8 @@
 import { useCallback, useState } from "react";
 import { Boxes } from "lucide-react";
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { useDirtyDraft } from "@agentic-toolkit/ui/hooks/useDirtyDraft";
-import { useDualModeSelection } from "@agentic-toolkit/ui/hooks/useDualModeSelection";
+import { useDirtyDraft } from "@agenticdevelopertoolkit/ui/hooks/useDirtyDraft";
+import { useDualModeSelection } from "@agenticdevelopertoolkit/ui/hooks/useDualModeSelection";
 import {
   HierarchicalDetailView,
   type TopicDetailItem,
@@ -13,10 +13,10 @@ import {
   Field,
   ButtonBar,
   SectionHeader,
-} from "@agentic-toolkit/ui/blocks";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Select } from "@agentic-toolkit/ui/components/select";
+} from "@agenticdevelopertoolkit/ui/blocks";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import {
   StackLevels,
   ToolbarPortal,
@@ -25,7 +25,7 @@ import {
   useRecordAffordance,
   CreateResourceDialog,
 } from "@agentic-toolkit/resource";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useResourceList } from "@agentic-toolkit/data";
 import { fmtDate } from "./format";
 import { useUserServices } from "./useUserServices";

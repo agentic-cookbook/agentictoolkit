@@ -8,7 +8,7 @@ import "react";
 // src/header/AvatarMenu.tsx
 import Link from "next/link";
 import { ChevronDown, Home, LogOut, Settings, User as UserIcon } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@agentic-toolkit/ui/components/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@agenticdevelopertoolkit/ui/components/avatar";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,7 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLinkItem,
   DropdownMenuSeparator
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import { Fragment, jsx, jsxs } from "react/jsx-runtime";
 function firstNameOf(name) {
   return name.trim().split(/\s+/)[0] || name;
@@ -105,7 +105,7 @@ function AuthButtons({
   loginLabel = "login"
 }) {
   const loginNode = onLogin ? (
-    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agentic-toolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
+    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agenticdevelopertoolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
     /* @__PURE__ */ jsx2("button", { type: "button", onClick: onLogin, className: "adh-header__nav-link adh-header__nav-link--button", children: loginLabel })
   ) : loginHref ? /* @__PURE__ */ jsx2("a", { href: loginHref, className: "adh-header__nav-link", children: loginLabel }) : null;
   const signupNode = onSignup ? (
@@ -163,9 +163,9 @@ function NavLinkItem({ link }) {
 }
 
 // src/header/NavigationPopover.tsx
-import { cn, noAutofillProps } from "@agentic-toolkit/ui";
-import { confirmNavigation, GUARDED_NAV_ATTR } from "@agentic-toolkit/ui/lib/navigation-guard";
-import { useShortcut, chordFromEvent, sameChord } from "@agentic-toolkit/ui/hooks/useShortcut";
+import { cn, noAutofillProps } from "@agenticdevelopertoolkit/ui";
+import { confirmNavigation, GUARDED_NAV_ATTR } from "@agenticdevelopertoolkit/ui/lib/navigation-guard";
+import { useShortcut, chordFromEvent, sameChord } from "@agenticdevelopertoolkit/ui/hooks/useShortcut";
 import {
   DropdownMenu as DropdownMenu2,
   DropdownMenuTrigger as DropdownMenuTrigger2,
@@ -174,7 +174,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import { Fragment as Fragment4, jsx as jsx4, jsxs as jsxs3 } from "react/jsx-runtime";
 var GUARDED_NAV_PROPS = { [GUARDED_NAV_ATTR]: "" };
 function highlightMatch(text, query) {
@@ -772,7 +772,7 @@ import {
   DropdownMenuLinkItem as DropdownMenuLinkItem2,
   DropdownMenuLabel,
   DropdownMenuSeparator as DropdownMenuSeparator3
-} from "@agentic-toolkit/ui/components/dropdown-menu";
+} from "@agenticdevelopertoolkit/ui/components/dropdown-menu";
 import { jsx as jsx6, jsxs as jsxs4 } from "react/jsx-runtime";
 function SiteOptionsMenu({
   sites,
@@ -898,8 +898,8 @@ function PreviewNotice({
 }
 
 // src/header/AdhHeader.tsx
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { HelpEnabled } from "@agentic-toolkit/ui/components/help-enabled";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { HelpEnabled } from "@agenticdevelopertoolkit/ui/components/help-enabled";
 import { jsx as jsx9, jsxs as jsxs6 } from "react/jsx-runtime";
 function AdhHeader({
   siteName,

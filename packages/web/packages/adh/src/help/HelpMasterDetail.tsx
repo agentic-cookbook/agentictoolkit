@@ -2,8 +2,8 @@
 
 import { useMemo, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks'
-import { HierarchicalDetailView } from '@agentic-toolkit/ui/blocks'
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
+import { HierarchicalDetailView } from '@agenticdevelopertoolkit/ui/blocks'
 import { topicIcon } from './topic-icons'
 
 /** One hierarchical level, already resolved to route hrefs by the server ({@link HelpSurface}). The

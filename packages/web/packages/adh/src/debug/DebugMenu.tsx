@@ -8,7 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from '@agentic-toolkit/ui/components/dropdown-menu'
+} from '@agenticdevelopertoolkit/ui/components/dropdown-menu'
 import { ThemeSwitcher } from '../themes/ThemeSwitcher'
 import type { AdhThemeKey } from '../themes/adh-themes'
 import { ChatThemeSwitcher, type ChatThemeOption } from './ChatThemeSwitcher'

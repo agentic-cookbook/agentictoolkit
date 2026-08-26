@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { Pencil, Trash2 } from "lucide-react";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
 import { readTokenSubject, useResourceList } from "@agentic-toolkit/data";
 import {
   projectStatusUpdatesApi,

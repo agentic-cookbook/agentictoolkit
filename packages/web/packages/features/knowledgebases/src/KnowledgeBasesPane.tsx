@@ -9,7 +9,7 @@ import {
   useViewer,
   type CrudTableMeta,
 } from "@agentic-toolkit/crud";
-import type { TopicDetailItem, TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import { StackLevels, useRailExitGuard } from "@agentic-toolkit/resource";
 
 /**

@@ -6,8 +6,8 @@ import {
   EditableList,
   useEditableList,
   type EditableListColumn,
-} from "@agentic-toolkit/ui/blocks";
-import { formatDate } from "@agentic-toolkit/ui/lib/timestamps";
+} from "@agenticdevelopertoolkit/ui/blocks";
+import { formatDate } from "@agenticdevelopertoolkit/ui/lib/timestamps";
 
 import type { EcosystemUser } from "../api/customers";
 
@@ -16,7 +16,7 @@ import type { EcosystemUser } from "../api/customers";
  * {@link EditableList}, the same resizable sortable columns, the same search over every column that
  * has a value, the same "—" for a cell with nothing in it.
  *
- * The same COMPONENT, not a copy of it: the list moved into `@agentic-toolkit/ui/blocks` when this
+ * The same COMPONENT, not a copy of it: the list moved into `@agenticdevelopertoolkit/ui/blocks` when this
  * pane needed it, so the two cannot drift into different tables of the same rows.
  *
  * What is deliberately NOT here is the half of the admin page that is about the platform rather

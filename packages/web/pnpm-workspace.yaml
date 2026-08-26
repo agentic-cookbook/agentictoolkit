@@ -1,11 +1,4 @@
 packages:
-  - './packages/ui'
-  - './packages/editing'
-  - './packages/themes'
-  - './packages/markdown'
-  - './packages/search'
-  - './packages/model'
-  - './packages/controls'
   - './packages/auth'
   - './packages/api-explorer'
   - './packages/crud'
@@ -23,6 +16,5 @@ packages:
   - './packages/next-headers'
   - './packages/next-env'
   - './packages/adh-next-config'
-  - './packages/landing'
   - './packages/messaging'
   - './packages/features/*'

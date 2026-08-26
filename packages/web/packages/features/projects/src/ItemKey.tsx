@@ -1,7 +1,7 @@
 "use client";
 
 import { type ReactElement } from "react";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
 
 /**
  * A work item's KEY (`ADH-42`) — the short human name a card is quoted by in a branch name, a

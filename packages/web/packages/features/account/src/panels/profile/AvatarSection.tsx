@@ -3,9 +3,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { User as UserIcon, Upload } from "lucide-react";
 
-import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
-import { PrivacyLevelSelect } from "@agentic-toolkit/ui/components/privacy-level-select";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { Avatar, AvatarImage, AvatarFallback } from "@agenticdevelopertoolkit/ui/components/avatar";
+import { PrivacyLevelSelect } from "@agenticdevelopertoolkit/ui/components/privacy-level-select";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import {
   setPrivacyGrant,
   resolvePrivacyLevel,

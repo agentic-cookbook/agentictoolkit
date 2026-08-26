@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { useResourceList } from "@agentic-toolkit/data";
 import { projectsApi, type SavedView } from "@agentic-toolkit/data/projects";
-import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
+import { errorMessage } from "@agenticdevelopertoolkit/ui/lib/errors";
 import { EMPTY_FILTER } from "./filters";
 import {
   decodeViewConfig,

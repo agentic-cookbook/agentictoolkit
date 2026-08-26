@@ -1,6 +1,6 @@
 /** The hub's per-device chrome preferences. */
 export type HubPreferences = {
-    /** The chord that opens the site menu, in `@agentic-toolkit/ui/hooks/useShortcut`
+    /** The chord that opens the site menu, in `@agenticdevelopertoolkit/ui/hooks/useShortcut`
      *  spelling (e.g. `'mod+shift+k'`). Empty string means the user turned it off —
      *  distinct from "unset", which falls back to {@link DEFAULT_SITE_MENU_SHORTCUT}. */
     siteMenuShortcut: string;

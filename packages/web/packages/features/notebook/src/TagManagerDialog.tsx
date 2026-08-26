@@ -4,17 +4,17 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 
 import { reportUnexpectedAuthError } from "@agentic-toolkit/auth";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { Button } from "@agentic-toolkit/ui/components/button";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Input } from "@agentic-toolkit/ui/components/input";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
 import { taxonomyApi, type NoteTag } from "@agentic-toolkit/data/notes";
 
 function errorText(err: unknown, fallback: string): string {

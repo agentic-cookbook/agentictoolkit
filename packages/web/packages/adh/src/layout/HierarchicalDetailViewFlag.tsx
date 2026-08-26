@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { HierarchicalDetailViewProvider } from '@agentic-toolkit/ui/blocks'
+import { HierarchicalDetailViewProvider } from '@agenticdevelopertoolkit/ui/blocks'
 
 /**
  * Binds the toolkit's hierarchical-view switch for the whole app — every topic/detail stack under

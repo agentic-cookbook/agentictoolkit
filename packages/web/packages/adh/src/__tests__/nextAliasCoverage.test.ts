@@ -88,7 +88,7 @@ function importedNextSubpaths(): Map<string, string[]> {
 }
 
 /**
- * The alias map vitest is actually using — the real object, not a text scrape.
+ * The alias list vitest is actually using — the real array, not a text scrape.
  *
  * Loaded at runtime rather than by a static `import '../../vitest.config'` because that
  * static edge drags a file outside `rootDir: './src'` into tsc's program and `pnpm run lint`
@@ -96,23 +96,50 @@ function importedNextSubpaths(): Map<string, string[]> {
  * worse: the comment above the aliases names `next/link` and `next/navigation` in prose, so
  * a scrape would keep "finding" a subpath whose alias line had been deleted — a guard that
  * passes on the exact edit it exists to catch.
+ *
+ * The config uses vitest's ARRAY alias form, not the object form, and it has to: the
+ * `@agenticdevelopertoolkit/*` pins that `adtAlias()` contributes carry a `customResolver`
+ * that RE-RESOLVES the specifier from this package instead of rewriting its prefix (an
+ * object entry matches by prefix and would mangle exports-mapped subpaths like
+ * `@shikijs/rehype/core`). Only an array entry can carry that resolver. So a pin here is
+ * named one of two ways — a literal `find` for the hand-written `next/*` entries, or the
+ * `name` field `adtAlias` stamps on the ones it derives — and `pinnedNames()` reads both.
  */
-let alias: Record<string, string> = {};
+interface AliasEntry {
+  /** Set by adtAlias() on the entries it derives; absent on hand-written ones. */
+  name?: string;
+  find: string | RegExp;
+  replacement: string;
+}
+
+let alias: AliasEntry[] = [];
+
+/** Every specifier the config pins, however the entry spells it. */
+function pinnedNames(): Set<string> {
+  const names = new Set<string>();
+  for (const entry of alias) {
+    if (typeof entry.name === "string") names.add(entry.name);
+    if (typeof entry.find === "string") names.add(entry.find);
+  }
+  return names;
+}
 
 beforeAll(async () => {
   const loaded = (await import(new URL("../../vitest.config.ts", import.meta.url).href)) as {
-    default?: { resolve?: { alias?: Record<string, string> } };
+    default?: { resolve?: { alias?: AliasEntry[] } };
   };
-  alias = loaded.default?.resolve?.alias ?? {};
+  alias = loaded.default?.resolve?.alias ?? [];
 });
 
 describe("vitest.config.ts next/* aliases", () => {
   // `alias` is read through optional chaining off a runtime import, so a config restructure
-  // (aliases moved into an array form, or behind a function) would silently yield {} and make
-  // every assertion below trivially true. The react pin is a different invariant that lives
-  // in the same map: if it is not visible from here, this file is reading the wrong thing.
-  it("can see the alias map at all", () => {
-    expect(typeof alias.react).toBe("string");
+  // (aliases moved back to the object form, or behind a function) would silently yield [] and
+  // make every assertion below trivially true. The react pin is a different invariant that
+  // lives in the same list: if it is not visible from here, this file is reading the wrong
+  // thing.
+  it("can see the alias list at all", () => {
+    expect(alias.length).toBeGreaterThan(0);
+    expect(pinnedNames().has("react")).toBe(true);
   });
 
   // Without this, every assertion below is vacuous the moment the scan stops finding
@@ -126,8 +153,9 @@ describe("vitest.config.ts next/* aliases", () => {
   it("aliases every next/* subpath those siblings import", () => {
     const imported = importedNextSubpaths();
     expect(imported.size).toBeGreaterThan(0);
+    const pinned = pinnedNames();
     const missing = [...imported.entries()]
-      .filter(([sub]) => !(`next/${sub}` in alias))
+      .filter(([sub]) => !pinned.has(`next/${sub}`))
       .map(([sub, pkgs]) => `next/${sub} (imported by ${pkgs.sort().join(", ")})`);
     expect(missing, "add these to resolve.alias in vitest.config.ts").toEqual([]);
   });
@@ -136,9 +164,10 @@ describe("vitest.config.ts next/* aliases", () => {
     // The aliases spell next's flat shim layout (`node_modules/next/<sub>.js`) by hand. A
     // subpath next serves from a directory instead has no such file, and an alias pointing
     // at a missing file fails as an unresolved import rather than as "the pin is wrong".
-    const broken = Object.entries(alias)
-      .filter(([key]) => key.startsWith("next/"))
-      .filter(([, target]) => !existsSync(target));
+    const broken = alias
+      .filter((entry) => typeof entry.find === "string" && entry.find.startsWith("next/"))
+      .filter((entry) => !existsSync(entry.replacement))
+      .map((entry) => [entry.find, entry.replacement]);
     expect(broken).toEqual([]);
   });
 });

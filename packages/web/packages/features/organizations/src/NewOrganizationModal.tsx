@@ -9,10 +9,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@agentic-toolkit/ui/components/dialog";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
 import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
 import { validateLeaf } from "@agentic-toolkit/adh-ui/rdid";
 import { organizationsApi } from "@agentic-toolkit/data/organizations";

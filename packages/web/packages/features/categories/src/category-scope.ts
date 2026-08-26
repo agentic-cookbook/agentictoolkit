@@ -1,4 +1,4 @@
-import { type CategoryNode } from "@agentic-toolkit/ui/blocks";
+import { type CategoryNode } from "@agenticdevelopertoolkit/ui/blocks";
 
 /**
  * The rail's three reserved URL tokens — the separator between a category chain and the id
@@ -7,7 +7,7 @@ import { type CategoryNode } from "@agentic-toolkit/ui/blocks";
  * They are DECLARED one file down, in `./chain`, and re-exported here so that every import
  * site that already names `category-scope` (and the `@agentic-toolkit/categories` barrel above
  * it) keeps working unchanged. The reason for the extra file is not organisational, it is a
- * build fact: this module imports `@agentic-toolkit/ui/blocks` and the barrel that re-exports
+ * build fact: this module imports `@agenticdevelopertoolkit/ui/blocks` and the barrel that re-exports
  * it opens with `"use client"`, so everything reachable from here is a client module. A
  * constant imported from a client module into an RSC is an opaque client reference, not a
  * string — `indexOf(CHAIN_SEPARATOR)` then never matches and every research/notebook deep link
@@ -89,7 +89,7 @@ export function resolveListCategory(
 }
 
 /**
- * The two route-following helpers live one layer DOWN, in `@agentic-toolkit/ui/blocks`
+ * The two route-following helpers live one layer DOWN, in `@agenticdevelopertoolkit/ui/blocks`
  * beside `resolveCategoryChain` and `slugFor` — the functions whose contracts they follow.
  * They are pure functions over a forest and a slug chain with no notion of a notebook, a
  * list query, or a network, so `blocks` is where they belong; keeping them here would have
@@ -100,4 +100,4 @@ export function resolveListCategory(
  * Re-exported rather than relocated silently: `category-scope` is the import site every
  * consumer already names, and the pair reads as part of this module's story.
  */
-export { chainAfterRename, chainAfterMove, chainAfterDelete } from "@agentic-toolkit/ui/blocks";
+export { chainAfterRename, chainAfterMove, chainAfterDelete } from "@agenticdevelopertoolkit/ui/blocks";

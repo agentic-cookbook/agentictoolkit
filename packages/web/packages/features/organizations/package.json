@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` \u2192 src for `next dev` (HMR); prod skips it \u2192 dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -44,9 +44,9 @@
     "@agentic-toolkit/profile": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
     "@agentic-toolkit/teams": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*",
     "@tanstack/react-query": "^5.62.0",
-    "lucide-react": "^1.16.0"
+    "lucide-react": "^1.16.0",
+    "@agenticdevelopertoolkit/ui": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/ui"
   },
   "peerDependencies": {
     "next": ">=15",
@@ -54,15 +54,23 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@base-ui/react": "1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/react": "19.2.16",
     "@types/react-dom": "19.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
     "esbuild-plugin-preserve-directives": "^0.0.11",
+    "harper.js": "^2.4.0",
     "jsdom": "^29.0.2",
     "next": "^15.1.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "tailwind-merge": "^2.6.0",
     "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "^4.1.4"

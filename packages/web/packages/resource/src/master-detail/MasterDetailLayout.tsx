@@ -3,10 +3,10 @@
 import type { ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { cn } from "@agentic-toolkit/ui/lib/utils";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Separator } from "@agentic-toolkit/ui/components/separator";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { cn } from "@agenticdevelopertoolkit/ui/lib/utils";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Separator } from "@agenticdevelopertoolkit/ui/components/separator";
 import { SaveCancelButtons } from "./SaveCancelButtons";
 import { HelpPopover } from "../HelpPopover";
 import { ToolbarPortal } from "../rail-host";

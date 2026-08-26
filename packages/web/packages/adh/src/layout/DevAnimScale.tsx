@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSlowAnimations, slowAnimationVars } from '@agentic-toolkit/ui/blocks'
+import { useSlowAnimations, slowAnimationVars } from '@agenticdevelopertoolkit/ui/blocks'
 
 /**
  * Applies the dev-only 10x-slow animation scale to the DOCUMENT ROOT. Renders nothing.

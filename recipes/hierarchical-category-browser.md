@@ -356,13 +356,13 @@ Narrow-mode drill-down, disclosure, and the breadcrumb are entirely HTDV's — s
 ## Platform Notes
 
 - **React / Web (TypeScript):** `packages/web/packages/features/categories/src/useCategoryLevels.tsx`, exported from `@agentic-toolkit/categories`. `"use client"`.
-- Built on `buildCategoryTree`/`resolveCategoryChain`/`categoryKey`/`chainAfterRename`/`chainAfterMove` (which returns `null` for an unfiling that leaves the category filed elsewhere) (`ui/src/blocks/category-tree.ts`) and `CategoryGearMenu`/`CategoryPickerDialog`/`CategoryRenameDialog`/`CategoryDeleteDialog` (`ui/src/blocks/*`), all re-exported from `@agentic-toolkit/ui/blocks`.
+- Built on `buildCategoryTree`/`resolveCategoryChain`/`categoryKey`/`chainAfterRename`/`chainAfterMove` (which returns `null` for an unfiling that leaves the category filed elsewhere) (`ui/src/blocks/category-tree.ts`) and `CategoryGearMenu`/`CategoryPickerDialog`/`CategoryRenameDialog`/`CategoryDeleteDialog` (`ui/src/blocks/*`), all re-exported from `@agenticdevelopertoolkit/ui/blocks`.
 - The two route-following functions, `chainAfterRename` and `chainAfterMove`, sit in
   `ui/src/blocks/category-tree.ts` beside the forest and slug functions whose contracts they
   follow — pure functions over a forest and a slug chain, with no notion of a notebook, a list
   query, or a network. `features/categories/src/category-scope.ts` re-exports them, so the
   import site every consumer already names still works, and anything that links only
-  `@agentic-toolkit/ui` (the showcase demo among them) calls the SAME function the hub does
+  `@agenticdevelopertoolkit/ui` (the showcase demo among them) calls the SAME function the hub does
   rather than mirroring it.
 - `CategoryScope` and the `-all`/`-none` synthetic-row slugs live in `features/categories/src/category-scope.ts`, imported by both hosts — there is exactly one copy (`note-model.ts`'s former local copy was deleted when notebook adopted the shared hook).
 - Consumers: `features/notebook/src/NotebookPane.tsx` (rail + note list, `itemNoun="notes"`) and `features/research/src/ResearchPane.tsx` (rail + document list, `itemNoun="documents"`), each supplying its own `rows` fetch, `idPrefix`, and `workspaceSlug`.

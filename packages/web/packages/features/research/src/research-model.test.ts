@@ -1,6 +1,6 @@
 // `routeFromTitle` — the title-to-slug rule the identity field follows as you type.
 //
-// It is NOT `@agentic-toolkit/ui/lib/slug`'s `slugify`, and the difference is the point: that
+// It is NOT `@agenticdevelopertoolkit/ui/lib/slug`'s `slugify`, and the difference is the point: that
 // one slugs USER HANDLES (max 40 chars, no underscore, SLUG_REGEX). This one must produce a
 // PUBLIC_ROUTE_RE value — 2–128 chars, underscores allowed — so a long paper title keeps its
 // tail instead of being truncated mid-word at 40.

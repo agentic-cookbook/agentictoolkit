@@ -7,12 +7,12 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from "@agentic-toolkit/ui/components/dialog";
-import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { DialogActions } from "@agenticdevelopertoolkit/ui/components/dialog-actions";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { errorMessage } from "@agenticdevelopertoolkit/ui/lib/errors";
 import { projectWorkItemsApi } from "@agentic-toolkit/data/projects";
 import type {
   PriorityScale,

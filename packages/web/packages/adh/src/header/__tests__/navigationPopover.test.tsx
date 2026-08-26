@@ -8,7 +8,7 @@
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { describe, it, expect, afterEach, vi } from 'vitest'
 import { type ReactElement } from 'react'
-import { useRegisteredShortcuts } from '@agentic-toolkit/ui/hooks/useShortcut'
+import { useRegisteredShortcuts } from '@agenticdevelopertoolkit/ui/hooks/useShortcut'
 
 import { NavigationPopover, type PopoverEntry } from '../NavigationPopover'
 

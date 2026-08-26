@@ -177,9 +177,9 @@ handlers (and `useCrudResource`) own any telemetry or error reporting.
 
 - **React / Web (TypeScript):** `websites/shared/crud/src/CrudTable.tsx`, exported
   from `@agentic-toolkit/crud`. Built from the shared `Button`, `Spinner`, and the
-  package-local `ErrorText`; typography from `@agentic-toolkit/ui/lib/typography`
+  package-local `ErrorText`; typography from `@agenticdevelopertoolkit/ui/lib/typography`
   (`fieldCaptionClass`). Note it lives in `@agentic-toolkit/crud`, not
-  `@agentic-toolkit/ui`.
+  `@agenticdevelopertoolkit/ui`.
 - Metadata comes from `src/generated/table-metadata.ts`, emitted by
   `scripts/gen_table_metadata.py` from the backend OpenAPI spec. `rows`/`loading`/
   `error` are typically supplied by `useCrudResource(meta)`.

@@ -21,7 +21,7 @@ export function AuthButtons({
   // with the primary nav links. Visual identity comes from
   // `.adh-header__nav-link` in the theme.
   const loginNode = onLogin ? (
-    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agentic-toolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
+    // adh-ui-allow: cs-no-bespoke — this is the <a> two lines down in button clothing: same affordance, same .adh-header__nav-link identity, chosen only by whether a handler or an href was passed. A @agenticdevelopertoolkit/ui <Button> brings its own visual identity, which is exactly what must NOT happen to a nav link.
     <button type="button" onClick={onLogin} className="adh-header__nav-link adh-header__nav-link--button">
       {loginLabel}
     </button>

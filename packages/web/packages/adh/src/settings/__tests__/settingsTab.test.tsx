@@ -41,7 +41,7 @@ vi.mock('@agentic-toolkit/account', () => ({
   SecurityWorkspace: () => null,
   SubscriptionPanel: () => null,
 }))
-// AppearancePanel reaches @agentic-toolkit/themes, whose src/theme-data.ts is GENERATED and
+// AppearancePanel reaches @agenticdevelopertoolkit/themes, whose src/theme-data.ts is GENERATED and
 // gitignored — importing it makes this file's outcome depend on whether someone has built the
 // themes package. buildSettingsTopics() only constructs its element (the mocked layout never
 // renders one), so a stub is exact.

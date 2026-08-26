@@ -2,22 +2,22 @@
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@agentic-toolkit/ui/components/button'
+import { Button } from '@agenticdevelopertoolkit/ui/components/button'
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog'
-import { AlertModal } from '@agentic-toolkit/ui/components/alert-modal'
-import { SectionHeader } from '@agentic-toolkit/ui/blocks/section-header'
-import { railLinkVariants } from '@agentic-toolkit/ui/lib/nav-rail'
-import { cn } from '@agentic-toolkit/ui/lib/utils'
-import { Spinner } from '@agentic-toolkit/ui/components/spinner'
+} from '@agenticdevelopertoolkit/ui/components/dialog'
+import { AlertModal } from '@agenticdevelopertoolkit/ui/components/alert-modal'
+import { SectionHeader } from '@agenticdevelopertoolkit/ui/blocks/section-header'
+import { railLinkVariants } from '@agenticdevelopertoolkit/ui/lib/nav-rail'
+import { cn } from '@agenticdevelopertoolkit/ui/lib/utils'
+import { Spinner } from '@agenticdevelopertoolkit/ui/components/spinner'
 import { CrudRecordForm } from './CrudRecordForm'
 import { CrudTable } from './CrudTable'
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text'
-import { useAction } from '@agentic-toolkit/ui/hooks/useAction'
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text'
+import { useAction } from '@agenticdevelopertoolkit/ui/hooks/useAction'
 import { canWriteTable, readableTables } from './exposure'
 import { useViewer } from './viewer'
 import { rowKey, useCrudResource } from './useCrudResource'

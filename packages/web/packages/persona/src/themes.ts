@@ -5,7 +5,7 @@
 // copy and a consumer on the other never meet and `useColorMode` throws — naming
 // React in the stack trace, not the boundary that actually caused it.
 //
-// Do NOT substitute `@agentic-toolkit/themes`. The two id sets are disjoint
+// Do NOT substitute `@agenticdevelopertoolkit/themes`. The two id sets are disjoint
 // (`old-school-terminal` exists only here), so swapping them silently changes
 // which themes exist and breaks the type contract of every `theme` prop —
 // including `@agentic-toolkit/bitbag`'s, which is typed by `ThemeKey` below.

@@ -41,9 +41,9 @@
  * fallbacks. It is written last for readability, not for the cascade: landing's own
  * sheets never assign `:root` (every token is read as `var(--lp-x, fallback)`), so this
  * override wins at any import position. */
-@import "@agentic-toolkit/landing/css/base.css";
-@import "@agentic-toolkit/landing/css/chrome.css";
-@import "@agentic-toolkit/landing/css/blocks.css";
+@import "@agenticdevelopertoolkit/landing/css/base.css";
+@import "@agenticdevelopertoolkit/landing/css/chrome.css";
+@import "@agenticdevelopertoolkit/landing/css/blocks.css";
 @import "./adh-landing-bridge.css";
 
 /* Reserve the scrollbar's width whether or not the page scrolls, so navigating between

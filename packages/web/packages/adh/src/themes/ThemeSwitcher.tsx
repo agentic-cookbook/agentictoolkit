@@ -8,7 +8,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-} from '@agentic-toolkit/ui/components/dropdown-menu'
+} from '@agenticdevelopertoolkit/ui/components/dropdown-menu'
 import {
   ADH_THEME_COOKIE,
   ADH_THEMES,

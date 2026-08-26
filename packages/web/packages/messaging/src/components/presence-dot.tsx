@@ -3,7 +3,7 @@
 // A small online/offline indicator for a user (messaging P5, DM UI). Green dot =
 // online; a hollow, dimmed dot = offline. The state is exposed to assistive tech
 // through an sr-only label, and a Tooltip surfaces "Online" / "Last seen …" on
-// hover/focus. Composes the shared @agentic-toolkit/ui Tooltip so it reads identically
+// hover/focus. Composes the shared @agenticdevelopertoolkit/ui Tooltip so it reads identically
 // to the rest of the chrome. NOTE: a <TooltipProvider> ancestor is required — the
 // DM list / thread / panel supply one.
 
@@ -11,7 +11,7 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@agentic-toolkit/ui/components/tooltip'
+} from '@agenticdevelopertoolkit/ui/components/tooltip'
 import { cx, formatRelativeTime } from './util'
 
 /** The presence label for a user, e.g. "Online" or "Last seen 3 minutes ago". */

@@ -23,25 +23,25 @@ import {
   BAG_KEY_REQUIRED_MESSAGE,
   INVALID_JSON_MESSAGE,
 } from "./dialog-state";
-import { errorMessage } from "@agentic-toolkit/ui/lib/errors";
-import { useAction } from "@agentic-toolkit/ui/hooks/useAction";
-import { DataTable, type DataTableColumn } from "@agentic-toolkit/ui/components/data-table";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Textarea } from "@agentic-toolkit/ui/components/textarea";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Alert, AlertTitle, AlertDescription } from "@agentic-toolkit/ui/components/alert";
+import { errorMessage } from "@agenticdevelopertoolkit/ui/lib/errors";
+import { useAction } from "@agenticdevelopertoolkit/ui/hooks/useAction";
+import { DataTable, type DataTableColumn } from "@agenticdevelopertoolkit/ui/components/data-table";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Alert, AlertTitle, AlertDescription } from "@agenticdevelopertoolkit/ui/components/alert";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@agentic-toolkit/ui/components/dialog";
-import { DialogActions } from "@agentic-toolkit/ui/components/dialog-actions";
-import { AlertModal } from "@agentic-toolkit/ui/components/alert-modal";
-import { UnsavedChangesAlert } from "@agentic-toolkit/ui/components/unsaved-changes-alert";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { DialogErrorText, ErrorText } from "@agentic-toolkit/ui/components/error-text";
+} from "@agenticdevelopertoolkit/ui/components/dialog";
+import { DialogActions } from "@agenticdevelopertoolkit/ui/components/dialog-actions";
+import { AlertModal } from "@agenticdevelopertoolkit/ui/components/alert-modal";
+import { UnsavedChangesAlert } from "@agenticdevelopertoolkit/ui/components/unsaved-changes-alert";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { DialogErrorText, ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { useReportBusy, useReportSettingsDirty } from "@agentic-toolkit/resource";
 
 /**

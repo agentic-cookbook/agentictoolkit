@@ -3,12 +3,12 @@
 import { useCallback, useId, useMemo, useState } from "react";
 import { useAction } from "@agentic-toolkit/crud";
 import { useResourceList } from "@agentic-toolkit/data";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
 import {
   personaUserToolsApi,
   type UserActablePersona,

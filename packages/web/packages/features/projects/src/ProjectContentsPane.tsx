@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactElement } from "react";
 import { ExternalLink, Trash2 } from "lucide-react";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
-import { Field } from "@agentic-toolkit/ui/blocks/field";
-import { List, ListItem } from "@agentic-toolkit/ui/components/list";
-import { ListChooser, type ListChooserItem } from "@agentic-toolkit/ui/components/list-chooser";
-import { Select } from "@agentic-toolkit/ui/components/select";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
+import { Field } from "@agenticdevelopertoolkit/ui/blocks/field";
+import { List, ListItem } from "@agenticdevelopertoolkit/ui/components/list";
+import { ListChooser, type ListChooserItem } from "@agenticdevelopertoolkit/ui/components/list-chooser";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
 import { useResourceList } from "@agentic-toolkit/data";
 import {
   projectArtifactsApi,

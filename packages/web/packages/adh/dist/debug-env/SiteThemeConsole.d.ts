@@ -1,4 +1,4 @@
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks';
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks';
 import type { ThemeAreasLoader } from './seams';
 /**
  * A mutable slot through which the mounted topic lends its unsaved-changes guard to the

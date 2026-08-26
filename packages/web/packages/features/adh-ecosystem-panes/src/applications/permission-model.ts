@@ -1,7 +1,7 @@
 // Permission model for an application's access to a schema.
 //
 // The generic CRUD primitives (Crud, CRUD_KEYS, defaults, clampToParent) live in
-// @agentic-toolkit/ui/components/crud (shared with the bucket-access feature) and are
+// @agenticdevelopertoolkit/ui/components/crud (shared with the bucket-access feature) and are
 // re-exported here so the applications feature keeps a single import site.
 //
 // Permissions are an OVERLAY: an application "grants" itself access to a schema
@@ -18,7 +18,7 @@ import {
   readOnly,
   type Crud,
   type CrudKey,
-} from "@agentic-toolkit/ui/components/crud";
+} from "@agenticdevelopertoolkit/ui/components/crud";
 
 // Re-export so existing applications consumers keep importing the CRUD model from here.
 export { CRUD_KEYS, clampToParent, noAccess, readOnly };

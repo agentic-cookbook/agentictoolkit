@@ -14,7 +14,7 @@ New pattern (this doc):
 
 ```json
 "@agentic-toolkit/chat": "workspace:*",
-"@agentic-toolkit/themes": "workspace:*"
+"@agenticdevelopertoolkit/themes": "workspace:*"
 ```
 
 The submodule itself stays. Only how you reference packages inside it
@@ -63,10 +63,10 @@ subset of:
 {
   "dependencies": {
     "@agentic-toolkit/chat": "workspace:*",
-    "@agentic-toolkit/controls": "workspace:*",
-    "@agentic-toolkit/model": "workspace:*",
-    "@agentic-toolkit/themes": "workspace:*",
-    "@agentic-toolkit/ui": "workspace:*"
+    "@agenticdevelopertoolkit/controls": "workspace:*",
+    "@agenticdevelopertoolkit/model": "workspace:*",
+    "@agenticdevelopertoolkit/themes": "workspace:*",
+    "@agenticdevelopertoolkit/ui": "workspace:*"
   }
 }
 ```
@@ -81,9 +81,9 @@ roots:
 
 | Old import path                                           | New import path                                         |
 | --------------------------------------------------------- | ------------------------------------------------------- |
-| `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agentic-toolkit/themes/...`                       |
-| `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agentic-toolkit/model/...`                        |
-| `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agentic-toolkit/controls/<ctrl>`                  |
+| `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agenticdevelopertoolkit/themes/...`                       |
+| `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agenticdevelopertoolkit/model/...`                        |
+| `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agenticdevelopertoolkit/controls/<ctrl>`                  |
 | `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agentic-toolkit/chat/...`                         |
 
 Three of the old umbrella sub-paths have **no successor** — `layout/…`,
@@ -91,12 +91,12 @@ Three of the old umbrella sub-paths have **no successor** — `layout/…`,
 2026 once nothing imported them. If your repo still imports one of them:
 
 - the document-reading UI they were used for (nav tree, breadcrumbs, ToC,
-  prose, metadata) now lives in `@agentic-toolkit/ui/blocks` as the **HDV**
+  prose, metadata) now lives in `@agenticdevelopertoolkit/ui/blocks` as the **HDV**
   (Hierarchical Document View) family, which is a re-extraction rather than
   a rename — the props differ, so this is a port, not a `sed`;
 - everything else in those packages was `awt-*` BEM CSS that the family
   replaced with Tailwind over `--color-*` tokens. Restyle against the
-  tokens in `@agentic-toolkit/themes` rather than reviving the CSS.
+  tokens in `@agenticdevelopertoolkit/themes` rather than reviving the CSS.
 
 A codemod-grade `sed` per row (one rule per package) handles most repos.
 For a one-shot transform, the row mapping above is enough to drive a

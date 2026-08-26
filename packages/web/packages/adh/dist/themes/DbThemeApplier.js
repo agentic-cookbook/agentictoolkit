@@ -87,7 +87,7 @@ function readStoredTheme() {
 }
 
 // src/themes/theme-keys.ts
-import { themes } from "@agentic-toolkit/themes/manifest";
+import { themes } from "@agenticdevelopertoolkit/themes/manifest";
 var adhThemeKeys = () => Object.keys(themes).filter(
   (k) => k.startsWith("adh") && !isBaseCutAlias(k)
 );

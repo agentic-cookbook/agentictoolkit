@@ -37,10 +37,10 @@ export interface FieldDefEditorProps {
  * The builder's row for one field definition.
  *
  * Renders its own reorder pair and rule editor inline rather than importing
- * `@agentic-toolkit/ui/components/reorder-control` — this package ships zero runtime
+ * `@agenticdevelopertoolkit/ui/components/reorder-control` — this package ships zero runtime
  * dependencies on purpose (see its package.json's `//devDependencies` note: even
  * `@agentic-toolkit/auth` is dev-only, "so the shipped code carries no auth dependency at
- * all"), and `@agentic-toolkit/ui` is not among its peers or deps, so that import would not
+ * all"), and `@agenticdevelopertoolkit/ui` is not among its peers or deps, so that import would not
  * resolve here. The behaviour still matches the fleet's control — disabled at the ends
  * rather than hidden, so the row's layout never jumps.
  */
@@ -67,16 +67,16 @@ export function FieldDefEditor({
 
   return (
     <div className="rf-def">
-      {/* The plan named `@agentic-toolkit/ui`'s `ReorderControl` for this pair, and this
+      {/* The plan named `@agenticdevelopertoolkit/ui`'s `ReorderControl` for this pair, and this
         * is a hand-rolled ↑/↓ instead. Not a shortcut — that component is unimportable
         * from here. It pulls in `lucide-react` for its two glyphs, `cn` (clsx +
         * tailwind-merge) for its class list, and the `Button` primitive, whose look comes
         * from Tailwind utilities and `--apt-*` tokens. This package declares ZERO runtime
         * dependencies and no Tailwind, on purpose: it is what a site outside the fleet
-        * imports to render a registry, and such a site has no `@agentic-toolkit/ui`, no
+        * imports to render a registry, and such a site has no `@agenticdevelopertoolkit/ui`, no
         * Tailwind build and none of those tokens. Importing it would not merely add
         * weight, it would render unstyled there and would not resolve at all here —
-        * `@agentic-toolkit/ui` is in neither this package's peers nor its deps.
+        * `@agenticdevelopertoolkit/ui` is in neither this package's peers nor its deps.
         *
         * What is copied is the BEHAVIOUR the fleet control documents, because that part
         * is free: the pair is always visible rather than hover-revealed (a reorderable
@@ -183,9 +183,9 @@ export function FieldDefEditor({
           </label>
 
           {dangling ? (
-            // Replicates `@agentic-toolkit/ui`'s `ErrorText` (a `role="alert"` paragraph)
+            // Replicates `@agenticdevelopertoolkit/ui`'s `ErrorText` (a `role="alert"` paragraph)
             // rather than importing it: this package ships zero runtime dependencies on
-            // purpose (see the docblock above on `ReorderControl`), and `@agentic-toolkit/ui`
+            // purpose (see the docblock above on `ReorderControl`), and `@agenticdevelopertoolkit/ui`
             // is not among its peers or deps, so the import would not resolve here.
             <p role="alert" className="rf-def__rule-error">
               This rule points at “{def.showIf.field}”, a field that no longer exists. Repoint

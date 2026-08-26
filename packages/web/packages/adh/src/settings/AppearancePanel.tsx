@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { type ReactElement, type ReactNode } from "react";
 
-import { type AppearancePrefs } from "@agentic-toolkit/themes";
+import { type AppearancePrefs } from "@agenticdevelopertoolkit/themes";
 // The PACKAGE PATH, not '../auth/useAppearanceSettings'. `src/auth/index.ts` is its own tsup
 // entry and `@agentic-toolkit/adh/auth` is `external`, so a relative import would inline a
 // SECOND copy of this hook (and its transitive `@agentic-toolkit/adh/telemetry/report-error`
@@ -16,9 +16,9 @@ import { useAppearanceSettings } from "@agentic-toolkit/adh/auth";
 import {
   ToggleGroup,
   ToggleGroupItem,
-} from "@agentic-toolkit/ui/components/toggle-group";
-import { Checkbox } from "@agentic-toolkit/ui/components/checkbox";
-import { Label } from "@agentic-toolkit/ui/components/label";
+} from "@agenticdevelopertoolkit/ui/components/toggle-group";
+import { Checkbox } from "@agenticdevelopertoolkit/ui/components/checkbox";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 
 import { SettingRow } from "@agentic-toolkit/account";
 

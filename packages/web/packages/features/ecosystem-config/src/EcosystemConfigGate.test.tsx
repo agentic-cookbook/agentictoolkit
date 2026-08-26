@@ -31,7 +31,7 @@ vi.mock("@agentic-toolkit/data/ecosystems", async (importOriginal) => ({
   useWorkspaceDefaultEcosystemId,
 }));
 
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import { RailHostBoundary, StackLevels } from "@agentic-toolkit/resource";
 import { EcosystemConfigGate } from "./EcosystemConfigGate";
 

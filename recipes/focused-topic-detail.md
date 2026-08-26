@@ -49,7 +49,7 @@ kind* (ecosystems, teams, persona-services, …). At any moment the user is eith
 
 The user moves between entities (and into "All") through a single **selector
 popup** at the top-left of the view. The canonical implementation is the shared
-`focused-topic-detail` block in `@agentic-toolkit/ui/blocks` (master/detail layout) —
+`focused-topic-detail` block in `@agenticdevelopertoolkit/ui/blocks` (master/detail layout) —
 all FTD routes compose it; none hand-roll the layout.
 
 **Terminology / parameters.** Every FTD route binds these parameters (Ecosystems
@@ -191,7 +191,7 @@ success. The ecosystem PUT keeps ignoring `identifier` (id is server-managed).
 
 - `websites/main/hub/src/components/settings/topics.ts` — reorder/rename topics: move `settings` → top as **Ecosystem**, rename `schemas` → **Buckets**, drop the divider.
 - `websites/main/hub/src/components/settings/ecosystems/EcosystemDetail.tsx` — editable Identifier; Danger section.
-- `@agentic-toolkit/ui/blocks` — new shared `danger-zone` / `delete-entity-dialog` block (parameterized by `Entity`, `rdid`, `childEntities`).
+- `@agentic-toolkit/adh-ui/blocks` — new shared `danger-zone` / `delete-entity-dialog` block (parameterized by `Entity`, `rdid`, `childEntities`).
 - `websites/main/hub/src/components/home/resource/ResourcePopup.tsx` — New action (trailing `DropdownMenuSeparator` + non-radio `New {Entity}…`).
 - `websites/main/hub/src/components/home/resource/ResourceActionBar.tsx` — removed from the FTD composition.
 - `websites/main/hub/src/components/home/resource/ResourceLanding.tsx` — All toolbar: filter + card/list toggle + list renderer.

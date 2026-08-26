@@ -2,10 +2,10 @@
 
 import { useId, useRef } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { RadioGroup, RadioGroupItem } from "@agentic-toolkit/ui/components/radio";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { RadioGroup, RadioGroupItem } from "@agenticdevelopertoolkit/ui/components/radio";
 import type { FormSlot, SlotInputMode } from "./slots";
 
 /**

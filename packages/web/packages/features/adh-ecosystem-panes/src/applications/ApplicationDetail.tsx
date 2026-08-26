@@ -1,13 +1,13 @@
 "use client";
 
-import { Card, CardContent } from "@agentic-toolkit/ui/components/card";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Label } from "@agentic-toolkit/ui/components/label";
-import { Select } from "@agentic-toolkit/ui/components/select";
-import { EmptyState } from "@agentic-toolkit/ui/components/empty-state";
+import { Card, CardContent } from "@agenticdevelopertoolkit/ui/components/card";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Label } from "@agenticdevelopertoolkit/ui/components/label";
+import { Select } from "@agenticdevelopertoolkit/ui/components/select";
+import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
 import { RdidEditor } from "@agentic-toolkit/adh-ui/components/rdid-editor";
 import { isRdid } from "@agentic-toolkit/adh-ui/rdid";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import {
   APPLICATION_KINDS,
   type ApplicationInput,

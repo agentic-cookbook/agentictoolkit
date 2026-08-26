@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactElement, ReactNode } from "react";
-import { Badge } from "@agentic-toolkit/ui/components/badge";
-import { CopyButton } from "@agentic-toolkit/ui/components/copy-button";
+import { Badge } from "@agenticdevelopertoolkit/ui/components/badge";
+import { CopyButton } from "@agenticdevelopertoolkit/ui/components/copy-button";
 import {
   milestoneProgress,
   type EstimateScale,

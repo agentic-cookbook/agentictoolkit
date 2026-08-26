@@ -4,7 +4,7 @@ import type { IntegrationInput } from "./IntegrationDetail";
 import { saveDraft, loadDraft, clearDraft, listDrafts } from "./integration-draft-store";
 
 // A local blank-draft builder (rather than importing `intBlank` from IntegrationDetail.tsx,
-// which drags in the full component tree + @agentic-toolkit/ui deps) — this store's tests
+// which drags in the full component tree + @agenticdevelopertoolkit/ui deps) — this store's tests
 // only need the plain data shape.
 function blankDraft(providerId: string): IntegrationInput {
   return {

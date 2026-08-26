@@ -1,6 +1,6 @@
 "use client";
 
-import { SearchFilterBar } from "@agentic-toolkit/ui/components/search-filter-bar";
+import { SearchFilterBar } from "@agenticdevelopertoolkit/ui/components/search-filter-bar";
 
 /** Controlled list filters. Empty string means "no filter" for that axis. */
 export interface FilterState {
@@ -14,7 +14,7 @@ export interface FilterState {
  * {@link ResearchPane} into the HOME BAR — the page-level strip between the workspace
  * bar and the breadcrumb bar. A thin domain adapter that maps the {@link FilterState}
  * axes onto the shared `SearchFilterBar` — the filter-bar markup itself lives once in
- * `@agentic-toolkit/ui`. Every axis is wired to the backend list endpoint (`q`,
+ * `@agenticdevelopertoolkit/ui`. Every axis is wired to the backend list endpoint (`q`,
  * `category`, `tag`); the option sets come from the caller's full document universe so
  * a narrowed list never empties its own dropdown.
  */

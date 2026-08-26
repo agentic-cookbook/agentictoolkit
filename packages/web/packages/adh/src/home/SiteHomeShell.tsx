@@ -2,7 +2,7 @@
 
 import { useCallback, type ReactElement } from 'react'
 import { usePathname } from 'next/navigation'
-import { TopicSelectHint } from '@agentic-toolkit/ui/blocks'
+import { TopicSelectHint } from '@agenticdevelopertoolkit/ui/blocks'
 import { useResourceList, workspacesApi, type Workspace } from '@agentic-toolkit/data'
 import { HomeBarHost } from '@agentic-toolkit/resource'
 import { ProfileFallback } from '../profile/ProfileFallback'

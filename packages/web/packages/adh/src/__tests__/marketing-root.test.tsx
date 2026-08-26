@@ -2,7 +2,7 @@ import { Fragment, type ReactNode } from 'react'
 import { describe, expect, it } from 'vitest'
 import { MarketingRootHtml, MarketingSiteHeader, type MarketingRootHtmlProps } from '../marketing'
 import { AuthProvider } from '@agentic-toolkit/adh/auth'
-import { HelpContentProvider } from '@agentic-toolkit/ui/components/help-content'
+import { HelpContentProvider } from '@agenticdevelopertoolkit/ui/components/help-content'
 
 /**
  * Open the document without rendering it.

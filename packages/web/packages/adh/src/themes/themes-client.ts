@@ -5,7 +5,7 @@
 // site with no per-site duplication. Cookies (the session JWT) ride along on
 // same-origin requests, so writes are authorized without extra wiring.
 
-import type { ThemeDelta } from '@agentic-toolkit/themes/tokens'
+import type { ThemeDelta } from '@agenticdevelopertoolkit/themes/tokens'
 
 /** A theme as stored/returned by the backend — `data` is the delta from `basedOn`. */
 export interface StoredTheme {

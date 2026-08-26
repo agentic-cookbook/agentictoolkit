@@ -10,7 +10,7 @@ import { useParams } from "next/navigation";
 // src/home/SiteHomeShell.tsx
 import { useCallback as useCallback3 } from "react";
 import { usePathname } from "next/navigation";
-import { TopicSelectHint } from "@agentic-toolkit/ui/blocks";
+import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 import { useResourceList, workspacesApi } from "@agentic-toolkit/data";
 import { HomeBarHost } from "@agentic-toolkit/resource";
 
@@ -41,10 +41,10 @@ function principalFromOrgCard(body) {
 import { useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { Avatar, AvatarImage, AvatarFallback } from "@agentic-toolkit/ui/components/avatar";
-import { Input } from "@agentic-toolkit/ui/components/input";
-import { Button } from "@agentic-toolkit/ui/components/button";
-import { ErrorText } from "@agentic-toolkit/ui/components/error-text";
+import { Avatar, AvatarImage, AvatarFallback } from "@agenticdevelopertoolkit/ui/components/avatar";
+import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { ErrorText } from "@agenticdevelopertoolkit/ui/components/error-text";
 import { jsx, jsxs } from "react/jsx-runtime";
 function initials(name) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
@@ -188,7 +188,7 @@ function ProfileNotFound() {
 
 // src/profile/ProfileView.tsx
 import { siteUrl, siteProdUrl } from "@agentic-toolkit/adh-registry";
-import { UserCard } from "@agentic-toolkit/ui/blocks/user-card";
+import { UserCard } from "@agenticdevelopertoolkit/ui/blocks/user-card";
 
 // src/header/useClientHost.ts
 import { useEffect, useState as useState2 } from "react";
@@ -335,7 +335,7 @@ import "react";
 // src/home/WorkspacePicker.tsx
 import "react";
 import { ChevronDown } from "lucide-react";
-import { PopupMenu } from "@agentic-toolkit/ui/blocks";
+import { PopupMenu } from "@agenticdevelopertoolkit/ui/blocks";
 import { jsx as jsx4 } from "react/jsx-runtime";
 function WorkspacePicker({
   workspaces,

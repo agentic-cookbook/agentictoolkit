@@ -11,10 +11,10 @@ import { beforeAll, describe, expect, it } from "vitest";
  * dependency that slips out of the derived alias list resolves from a SECOND
  * node_modules tree instead of failing loudly, and the resulting error names React
  * (or whatever the dependency is) rather than the workspace boundary that caused it.
- * `adtAlias()` also swallows an unresolvable name silently (`catch { }`), on the
- * theory that "undeclared" should surface as the resolve error naming it — which
- * means the alias map can go quietly incomplete with no failure anywhere in the
- * normal run.
+ * `adtAlias()` throws on a name it cannot resolve from the consumer, so an
+ * undeclared dependency does fail — but only for a package whose vitest config
+ * actually calls it, and only once a test in that package runs. Deriving the
+ * expected set here fails at the boundary instead, by name.
  *
  * `nextAliasCoverage.test.ts` (packages/adh/src/__tests__) solves the analogous
  * problem for `next/*` aliases by deriving the expected set from source rather than
@@ -38,12 +38,14 @@ function readJson(path: string): Record<string, unknown> {
  * `pnpm run lint` fails with TS6059 — the same reason nextAliasCoverage.test.ts loads
  * vitest.config.ts this way rather than importing it directly.
  */
-let adtAlias: (packageDir: string) => Record<string, string> = () => ({});
+type AliasEntry = { name: string };
+
+let adtAlias: (packageDir: string) => AliasEntry[] = () => [];
 let linkedAdtPackages: (packageDir: string) => { name: string; manifestPath: string }[] = () => [];
 
 beforeAll(async () => {
   const loaded = (await import(new URL("../../../../vitest.adt.ts", import.meta.url).href)) as {
-    adtAlias: (packageDir: string) => Record<string, string>;
+    adtAlias: (packageDir: string) => AliasEntry[];
     linkedAdtPackages: (packageDir: string) => { name: string; manifestPath: string }[];
   };
   adtAlias = loaded.adtAlias;
@@ -60,7 +62,7 @@ describe("adh-ui's ADT alias coverage", () => {
   });
 
   it("aliases every runtime dependency the linked ADT package declares", () => {
-    const alias = adtAlias(PACKAGE_DIR);
+    const pinned = new Set(adtAlias(PACKAGE_DIR).map((entry) => entry.name));
     const missing: string[] = [];
     for (const { name, manifestPath } of linkedAdtPackages(PACKAGE_DIR)) {
       const linked = readJson(manifestPath);
@@ -75,7 +77,7 @@ describe("adh-ui's ADT alias coverage", () => {
         ...Object.keys((linked.peerDependencies as Record<string, string>) ?? {}),
       ];
       for (const dep of deps) {
-        if (!(dep in alias)) missing.push(`${dep} (required by ${name})`);
+        if (!pinned.has(dep)) missing.push(`${dep} (required by ${name})`);
       }
     }
     expect(
@@ -90,8 +92,8 @@ describe("adh-ui's ADT alias coverage", () => {
   // future change dropping the hardcoded add would fail here even if some linked
   // manifest happened to also declare them elsewhere.
   it("always pins react and react-dom", () => {
-    const alias = adtAlias(PACKAGE_DIR);
-    expect(typeof alias.react).toBe("string");
-    expect(typeof alias["react-dom"]).toBe("string");
+    const pinned = new Set(adtAlias(PACKAGE_DIR).map((entry) => entry.name));
+    expect(pinned.has("react")).toBe(true);
+    expect(pinned.has("react-dom")).toBe(true);
   });
 });

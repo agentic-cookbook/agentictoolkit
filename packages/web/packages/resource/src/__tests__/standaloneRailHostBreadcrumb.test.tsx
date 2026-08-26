@@ -14,7 +14,7 @@
 // 0, and an untitled feature still gets no blank bar.
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, within } from "@testing-library/react";
-import type { TopicLevel } from "@agentic-toolkit/ui/blocks";
+import type { TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import { RailHostBoundary, StandaloneRailHost } from "../standalone-rail-host";
 import { RailHostContext, StackLevels, type RailHostRegistry } from "../rail-host";
 

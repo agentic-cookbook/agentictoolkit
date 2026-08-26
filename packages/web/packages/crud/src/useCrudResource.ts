@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { authedJson, authedRequest } from '@agentic-toolkit/auth/client'
-import { errorMessage } from '@agentic-toolkit/ui/lib/errors'
+import { errorMessage } from '@agenticdevelopertoolkit/ui/lib/errors'
 import type { CrudRow, CrudTableMeta } from './types'
 
 /** Every site mounts its BFF proxy at /api (stripped on forward). */

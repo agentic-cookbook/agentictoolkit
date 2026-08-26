@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { cn } from '@agentic-toolkit/ui'
+import { cn } from '@agenticdevelopertoolkit/ui'
 import { CopyButton } from './CopyButton'
 // Package path (not relative): see the matching comment in StaticCodeBlock.tsx / tsup.config.ts.
 import { highlightToHtml, type HighlightLang } from '@agentic-toolkit/api-explorer/lib/highlight'
