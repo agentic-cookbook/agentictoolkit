@@ -4,11 +4,11 @@
 @source "../examples/**/*.{ts,tsx}";
 @source "../src/**/*.{ts,tsx}";
 
-@import '@agentic-toolkit/chat/css/base.css';
-@import '@agentic-toolkit/chat/css/modes/inline.css';
-@import '@agentic-toolkit/chat/css/modes/three-pane.css';
-@import '@agentic-toolkit/chat/css/modes/mobile.css';
-@import '@agentic-toolkit/chat/css/components/content-overlay.css';
+@import '@agenticdevelopertoolkit/chat/css/base.css';
+@import '@agenticdevelopertoolkit/chat/css/modes/inline.css';
+@import '@agenticdevelopertoolkit/chat/css/modes/three-pane.css';
+@import '@agenticdevelopertoolkit/chat/css/modes/mobile.css';
+@import '@agenticdevelopertoolkit/chat/css/components/content-overlay.css';
 
 @import '@agenticdevelopertoolkit/controls/appearance-mode-toggle/styles.css';
 @import '@agenticdevelopertoolkit/controls/dev-banner/styles.css';

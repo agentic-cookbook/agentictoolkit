@@ -10,14 +10,8 @@
 // nothing dedupes across two different directories. A site that never names the
 // scope cannot acquire the second copy.
 //
-// Do NOT substitute `@agentic-toolkit/chat`. It is an older, pruned snapshot of
-// this same code (3 commits, all scope-rename chores, consumed only by
-// `websites/site`) and it is missing the entire API the real consumers use:
-// `statusUtterance`, `thinkingLabels`, the `inactive`/`minimal` idle state, the
-// `transition` option, and the `{ active, inactive, transition }` shape of
-// `InlineChatSizing` — which it defines under the same name as a DIFFERENT type
-// (the union this package calls `ChatSizingBehavior`). Swapping would be a
-// compile break and a silent feature regression, not a move.
+// The older, pruned `@agentic-toolkit/chat` snapshot this comment used to warn
+// against was deleted in 2026-08; `@agenticdevelopertoolkit/chat` is now the only one.
 
 export {
   InlineChat,

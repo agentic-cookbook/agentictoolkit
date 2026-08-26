@@ -9,7 +9,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@agentic-toolkit/chat": "file:../../packages/web/packages/features/chat",
+    "@agenticdevelopertoolkit/chat": "file:../../external/agenticdevelopertoolkit/packages/web/packages/chat",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

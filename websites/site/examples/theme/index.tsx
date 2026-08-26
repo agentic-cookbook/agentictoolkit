@@ -6,9 +6,9 @@ import {
   InlineChatView,
   MockBackend,
   useChatSession,
-} from '@agentic-toolkit/chat'
-import '@agentic-toolkit/chat/css/base.css'
-import '@agentic-toolkit/chat/css/modes/inline.css'
+} from '@agenticdevelopertoolkit/chat'
+import '@agenticdevelopertoolkit/chat/css/base.css'
+import '@agenticdevelopertoolkit/chat/css/modes/inline.css'
 import { SourceCodePanel } from '@agenticdevelopertoolkit/controls/source-code-panel'
 import '@agenticdevelopertoolkit/controls/source-code-panel/styles.css'
 import {
@@ -118,7 +118,7 @@ function ChatSample() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="awt-chat-sample">
-      <InlineChatView session={session} sizing={{ mode: 'fixed' }} />
+      <InlineChatView session={session} sizing={{ active: { mode: 'fixed' } }} />
     </div>
   )
 }

@@ -10,12 +10,12 @@ import {
   MockBackend,
   useChatSession,
   type InlineChatSizing,
-} from '@agentic-toolkit/chat'
-import '@agentic-toolkit/chat/css/base.css'
-import '@agentic-toolkit/chat/css/modes/inline.css'
-import '@agentic-toolkit/chat/css/modes/three-pane.css'
-import '@agentic-toolkit/chat/css/modes/mobile.css'
-import '@agentic-toolkit/chat/css/components/content-overlay.css'
+} from '@agenticdevelopertoolkit/chat'
+import '@agenticdevelopertoolkit/chat/css/base.css'
+import '@agenticdevelopertoolkit/chat/css/modes/inline.css'
+import '@agenticdevelopertoolkit/chat/css/modes/three-pane.css'
+import '@agenticdevelopertoolkit/chat/css/modes/mobile.css'
+import '@agenticdevelopertoolkit/chat/css/components/content-overlay.css'
 
 import backgroundImage from './shih_tzu.webp'
 import { noAutofillProps } from '@agenticdevelopertoolkit/ui/lib/autofill'
@@ -93,10 +93,10 @@ export default function ChatExample() {
     sizingKind === 'fixed'
       ? undefined
       : sizingKind === 'hug-css'
-        ? { mode: 'content-hugging', maxHeight: { kind: 'css', value: '400px' } }
+        ? { active: { mode: 'content-hugging', maxHeight: { kind: 'css', value: '400px' } } }
         : sizingKind === 'hug-viewport'
-          ? { mode: 'content-hugging', maxHeight: { kind: 'viewport-offset', topOffsetPx: 80 } }
-          : { mode: 'content-hugging', maxHeight: { kind: 'element-offset', ref: headerRef, gapPx: 16 } }
+          ? { active: { mode: 'content-hugging', maxHeight: { kind: 'viewport-offset', topOffsetPx: 80 } } }
+          : { active: { mode: 'content-hugging', maxHeight: { kind: 'element-offset', ref: headerRef, gapPx: 16 } } }
 
   const session = useChatSession({
     backend,
