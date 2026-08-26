@@ -6,6 +6,7 @@ export {
   TransferOwnershipSection,
   type TransferOwnershipSectionProps,
   type TransferTarget,
+  type TransferTargetRef,
   type TransferPreviewResult,
 } from "./transfer-ownership-section";
 export {
