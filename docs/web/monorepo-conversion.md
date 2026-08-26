@@ -35,10 +35,12 @@ This doc is the *historical* and *architectural* record.
 > For the current package list see
 > [`packages/web/README.md`](../../packages/web/README.md).
 
-> **Note (August 2026):** five of the eight packages in the table below — `ui`,
-> `themes`, `model`, `controls`, and (after the July deletions) the rest of the
-> shared UI vocabulary — left this repository for the public
-> `agenticdevelopertoolkit` and are now `@agenticdevelopertoolkit/*`. The table
+> **Note (August 2026):** four of the eight packages in the table below — `ui`,
+> `themes`, `model` and `controls` — left this repository for the public
+> `agenticdevelopertoolkit` and are now `@agenticdevelopertoolkit/*`. Four more
+> packages made the same move without ever appearing in this table: `landing`,
+> `markdown`, `search` and `editing`. Three of this table's other rows were
+> deleted outright rather than moved — see the July note. The table
 > and the sub-export example below deliberately keep the OLD names anyway, for
 > the same reason as the July note: they record what shipped in May 2026, when
 > `@agentic-toolkit` was the only scope those packages had ever had. Rewriting
