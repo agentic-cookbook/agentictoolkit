@@ -35,6 +35,12 @@ export interface HelpTopic {
      *  page: its content fills the detail pane while its children show as the next level. (No topic
      *  uses that combination today; the level builder supports it.) */
     children?: HelpTopic[];
+    /** For a section (a node with `children`): the child that stands in as its landing. Selecting the
+     *  section — arriving on its slug, or clicking its row in either rail — auto-selects that child,
+     *  so the section shows real content instead of the children level's select nudge. Opt-in per
+     *  section: a section without it keeps the nudge (docs/ui/fleet-ui-audit.md §1.5). Must name a
+     *  direct child; `helpTopics.test.ts` fails on an id that isn't one. */
+    landingChildId?: HelpTopicId;
     /** Key into `HELP_CONTENT_HTML` (content.generated.ts) — the detail pane renders that pre-rendered
      *  markdown. May coexist with `children` (section page); mutually exclusive with `view`. */
     contentKey?: string;
@@ -60,6 +66,13 @@ export declare function flattenTopics(topics?: HelpTopic[]): HelpTopic[];
 export declare function helpSlugs(): string[];
 /** The topic whose {@link HelpTopic.slug} equals `slug`, or `undefined`. */
 export declare function topicBySlug(slug: string): HelpTopic | undefined;
+/**
+ * The slug that should carry the canonical URL for `slug`. A section's {@link HelpTopic.landingChildId}
+ * renders the identical page as the section itself (the section auto-selects it), so the two routes
+ * are one document: the SECTION wins, because it is the published address others link to. Every
+ * other slug — and an unknown one — is its own canonical.
+ */
+export declare function canonicalSlug(slug: string): string;
 /** The selection path (topic ids, root → leaf) for a base-relative slug, or `null` if unknown. */
 export declare function topicPathForSlug(slug: string): HelpTopicId[] | null;
 /** One hierarchical level's data: its rows, its title, and which row (if any) is selected. Navigation
@@ -82,6 +95,11 @@ export interface TopicLevelData {
  * {@link TopicLevelData} per depth (each level's selection scopes the next) plus the deepest selected
  * topic — the one whose content/view fills the detail pane. A selected node with both content and
  * children contributes BOTH: its content is the `activeTopic`, and its children form the next level.
+ *
+ * Where the path runs out on a section that declares a {@link HelpTopic.landingChildId}, the walk
+ * continues into that child instead of stopping on an unselected frontier — so both surfaces (the
+ * SSR route and the modal) land that section on real content from the one declaration here. The
+ * root level never auto-selects: it has no parent section to declare a landing.
  */
 export declare function buildTopicLevels(path: HelpTopicId[]): {
     levels: TopicLevelData[];

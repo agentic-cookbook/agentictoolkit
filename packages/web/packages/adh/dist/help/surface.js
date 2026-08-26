@@ -1132,12 +1132,16 @@ var HELP_TOPICS = [
     view: "api"
   },
   {
-    // A section, not a monolithic page: the old single mcp.md split into per-concern child topics,
-    // so /mcp lands on the children overview exactly like Quickstart and Reference.
+    // A section, not a monolithic page: the old single mcp.md split into per-concern child topics.
+    // Unlike Quickstart and Reference it does NOT land on the children's select nudge: /mcp is the
+    // published address of the MCP docs (the MCP host's root redirects a browser here, as do three
+    // `/docs/mcp` redirects), so arriving there must read as documentation, not as a menu. The
+    // `landingChildId` auto-selects Overview — the reader lands on prose with the siblings beside it.
     id: "mcp",
     label: "MCP",
     slug: "mcp",
     description: "Connect an agent to the hub over the Model Context Protocol.",
+    landingChildId: "mcp-overview",
     children: [
       { id: "mcp-overview", label: "Overview", slug: "mcp/overview", description: "What the MCP server is, and how it relates to the REST API.", contentKey: "mcp-overview" },
       { id: "mcp-connect", label: "Connect a client", slug: "mcp/connect", description: "Point Claude Desktop, Claude Code, Cursor, or the Inspector at the server.", contentKey: "mcp-connect" },
@@ -1192,6 +1196,14 @@ function helpSlugs() {
 function topicBySlug(slug) {
   return flattenTopics().find((t) => t.slug === slug);
 }
+function canonicalSlug(slug) {
+  const topic = topicBySlug(slug);
+  if (!topic) return slug;
+  const section = flattenTopics().find(
+    (t) => t.landingChildId === topic.id && (t.children ?? []).some((c) => c.id === topic.id)
+  );
+  return section ? section.slug : slug;
+}
 function topicPathForSlug(slug) {
   const topic = topicBySlug(slug);
   if (!topic) return null;
@@ -1203,9 +1215,10 @@ function buildTopicLevels(path) {
   let siblings = HELP_TOPICS;
   let title = "Help";
   let parentId = null;
+  let landing;
   let activeTopic = null;
   for (let depth = 0; ; depth++) {
-    const selId = path[depth] ?? null;
+    const selId = path[depth] ?? (landing != null && siblings.some((t) => t.id === landing) ? landing : null);
     levels.push({
       parentId,
       title,
@@ -1220,6 +1233,7 @@ function buildTopicLevels(path) {
       siblings = node.children;
       title = node.label;
       parentId = node.id;
+      landing = node.landingChildId;
       continue;
     }
     break;
@@ -1324,6 +1338,7 @@ export {
   HELP_TOPICS,
   HelpSurface,
   buildTopicLevels,
+  canonicalSlug,
   findTopicPath,
   flattenTopics,
   hasDetail,

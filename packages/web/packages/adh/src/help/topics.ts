@@ -37,6 +37,12 @@ export interface HelpTopic {
    *  page: its content fills the detail pane while its children show as the next level. (No topic
    *  uses that combination today; the level builder supports it.) */
   children?: HelpTopic[]
+  /** For a section (a node with `children`): the child that stands in as its landing. Selecting the
+   *  section — arriving on its slug, or clicking its row in either rail — auto-selects that child,
+   *  so the section shows real content instead of the children level's select nudge. Opt-in per
+   *  section: a section without it keeps the nudge (docs/ui/fleet-ui-audit.md §1.5). Must name a
+   *  direct child; `helpTopics.test.ts` fails on an id that isn't one. */
+  landingChildId?: HelpTopicId
   /** Key into `HELP_CONTENT_HTML` (content.generated.ts) — the detail pane renders that pre-rendered
    *  markdown. May coexist with `children` (section page); mutually exclusive with `view`. */
   contentKey?: string
@@ -97,12 +103,16 @@ export const HELP_TOPICS: HelpTopic[] = [
     view: 'api',
   },
   {
-    // A section, not a monolithic page: the old single mcp.md split into per-concern child topics,
-    // so /mcp lands on the children overview exactly like Quickstart and Reference.
+    // A section, not a monolithic page: the old single mcp.md split into per-concern child topics.
+    // Unlike Quickstart and Reference it does NOT land on the children's select nudge: /mcp is the
+    // published address of the MCP docs (the MCP host's root redirects a browser here, as do three
+    // `/docs/mcp` redirects), so arriving there must read as documentation, not as a menu. The
+    // `landingChildId` auto-selects Overview — the reader lands on prose with the siblings beside it.
     id: 'mcp',
     label: 'MCP',
     slug: 'mcp',
     description: 'Connect an agent to the hub over the Model Context Protocol.',
+    landingChildId: 'mcp-overview',
     children: [
       { id: 'mcp-overview', label: 'Overview', slug: 'mcp/overview', description: 'What the MCP server is, and how it relates to the REST API.', contentKey: 'mcp-overview' },
       { id: 'mcp-connect', label: 'Connect a client', slug: 'mcp/connect', description: 'Point Claude Desktop, Claude Code, Cursor, or the Inspector at the server.', contentKey: 'mcp-connect' },
@@ -174,6 +184,21 @@ export function topicBySlug(slug: string): HelpTopic | undefined {
   return flattenTopics().find((t) => t.slug === slug)
 }
 
+/**
+ * The slug that should carry the canonical URL for `slug`. A section's {@link HelpTopic.landingChildId}
+ * renders the identical page as the section itself (the section auto-selects it), so the two routes
+ * are one document: the SECTION wins, because it is the published address others link to. Every
+ * other slug — and an unknown one — is its own canonical.
+ */
+export function canonicalSlug(slug: string): string {
+  const topic = topicBySlug(slug)
+  if (!topic) return slug
+  const section = flattenTopics().find(
+    (t) => t.landingChildId === topic.id && (t.children ?? []).some((c) => c.id === topic.id),
+  )
+  return section ? section.slug : slug
+}
+
 /** The selection path (topic ids, root → leaf) for a base-relative slug, or `null` if unknown. */
 export function topicPathForSlug(slug: string): HelpTopicId[] | null {
   const topic = topicBySlug(slug)
@@ -198,16 +223,26 @@ export interface TopicLevelData {
  * {@link TopicLevelData} per depth (each level's selection scopes the next) plus the deepest selected
  * topic — the one whose content/view fills the detail pane. A selected node with both content and
  * children contributes BOTH: its content is the `activeTopic`, and its children form the next level.
+ *
+ * Where the path runs out on a section that declares a {@link HelpTopic.landingChildId}, the walk
+ * continues into that child instead of stopping on an unselected frontier — so both surfaces (the
+ * SSR route and the modal) land that section on real content from the one declaration here. The
+ * root level never auto-selects: it has no parent section to declare a landing.
  */
 export function buildTopicLevels(path: HelpTopicId[]): { levels: TopicLevelData[]; activeTopic: HelpTopic | null } {
   const levels: TopicLevelData[] = []
   let siblings: HelpTopic[] = HELP_TOPICS
   let title = 'Help'
   let parentId: HelpTopicId | null = null
+  /** The enclosing section's landing child, if it declared one — `undefined` at the root, which is
+   *  why the root level never auto-selects. Carried alongside `siblings` rather than read off a
+   *  `parent` topic: that reference would close a type circle back through `node` (TS7022). */
+  let landing: HelpTopicId | undefined
   let activeTopic: HelpTopic | null = null
 
   for (let depth = 0; ; depth++) {
-    const selId = path[depth] ?? null
+    const selId: HelpTopicId | null =
+      path[depth] ?? (landing != null && siblings.some((t) => t.id === landing) ? landing : null)
     levels.push({
       parentId,
       title,
@@ -222,6 +257,7 @@ export function buildTopicLevels(path: HelpTopicId[]): { levels: TopicLevelData[
       siblings = node.children
       title = node.label
       parentId = node.id
+      landing = node.landingChildId
       continue
     }
     break

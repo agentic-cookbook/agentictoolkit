@@ -12,6 +12,7 @@ export { topicIcon } from './topic-icons'
 export {
   HELP_TOPICS,
   buildTopicLevels,
+  canonicalSlug,
   findTopicPath,
   flattenTopics,
   hasDetail,
