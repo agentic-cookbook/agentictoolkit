@@ -1,17 +1,23 @@
 import { describe, it, expect } from 'vitest'
-import { SITE_ROUTES, SITE_ROUTES_MAIN, SITE_ROUTES_MARKETING } from '../sites/routes.generated'
+import {
+  SITE_ROUTES,
+  SITE_ROUTES_MAIN,
+  SITE_ROUTES_MARKETING,
+  SITE_ROUTES_PLACEHOLDER,
+} from '../sites/routes.generated'
 import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 
 // Shape guard for the GENERATED per-site route map. These are the invariants this
 // package can own: the map's keys must be real registry site ids, and its values must
 // be the absolute, sorted, deduplicated paths the site menu assumes.
 //
-// The map arrives in two halves — `routes.main.generated.ts` from adh,
-// `routes.marketing.generated.ts` from adhmarketing — because this package is a
-// submodule of both, each owns part of the fleet, and neither generator can see the
-// other's site tree. `routes.generated.ts` merges them and is hand-written. The two
-// assertions about that arrangement are below; they exist because both of its failure
-// modes are silent, and both look like a perfectly valid smaller map.
+// The map arrives in three shares — `routes.main.generated.ts` from adh,
+// `routes.marketing.generated.ts` from adhmarketing, `routes.placeholder.generated.ts`
+// from adhplaceholders — because this package is a submodule of all three, each owns
+// part of the fleet, and no generator can see the others' site trees.
+// `routes.generated.ts` merges them and is hand-written. The two assertions about that
+// arrangement are below; they exist because both of its failure modes are silent, and
+// both look like a perfectly valid smaller map.
 //
 // The FRESHNESS half deliberately does NOT live here. It used to: this file re-walked
 // `main/`+`marketing/` from an anchor four levels up, which resolves to
@@ -27,27 +33,44 @@ describe('SITE_ROUTES (generated per-site route map)', () => {
     for (const key of Object.keys(SITE_ROUTES)) expect(family).toContain(key)
   })
 
-  it('has both halves filled in', () => {
-    // Each generator takes the half it owns as a `--region` argument, and neither
-    // side can see the other's value. Both repos passing the same one does not
-    // collide and does not fail: the file nobody claimed is simply never rewritten
-    // again, and it keeps whatever it was committed with — so an empty half is the
-    // only symptom that mistake ever produces.
+  it('has every share filled in', () => {
+    // Each generator takes the share it owns as a `--region` argument, and no side
+    // can see the others' values. Two repos passing the same one does not collide
+    // and does not fail: the file nobody claimed is simply never rewritten again,
+    // and it keeps whatever it was committed with — so an empty share is the only
+    // symptom that mistake ever produces.
     expect(Object.keys(SITE_ROUTES_MAIN).length, 'routes.main.generated.ts').toBeGreaterThan(0)
     expect(
       Object.keys(SITE_ROUTES_MARKETING).length,
       'routes.marketing.generated.ts',
     ).toBeGreaterThan(0)
+    expect(
+      Object.keys(SITE_ROUTES_PLACEHOLDER).length,
+      'routes.placeholder.generated.ts',
+    ).toBeGreaterThan(0)
   })
 
-  it('gives every site to exactly one half', () => {
-    // A site in both halves is a spread that quietly resolves rather than an error,
+  it('gives every site to exactly one share', () => {
+    // A site in two shares is a spread that quietly resolves rather than an error,
     // so one repo's route list for it disappears with no diagnostic. It means a site
-    // directory exists in both repos, which is the split itself having gone wrong.
-    const both = Object.keys(SITE_ROUTES_MAIN).filter((id) => id in SITE_ROUTES_MARKETING)
-    expect(both, 'claimed by both repos').toEqual([])
+    // directory exists in two repos, which is the split itself having gone wrong.
+    //
+    // Pairwise, not just against main: adhmarketing and adhplaceholders never see
+    // each other at all — neither repo's CI checks out the other — so a site
+    // duplicated between THEM is the pair no other guard in the fleet looks at.
+    const shares = [
+      ['main', SITE_ROUTES_MAIN],
+      ['marketing', SITE_ROUTES_MARKETING],
+      ['placeholder', SITE_ROUTES_PLACEHOLDER],
+    ] as const
+    for (const [i, [a, left]] of shares.entries()) {
+      for (const [b, right] of shares.slice(i + 1)) {
+        const both = Object.keys(left).filter((id) => id in right)
+        expect(both, `claimed by both ${a} and ${b}`).toEqual([])
+      }
+    }
     expect(Object.keys(SITE_ROUTES).length).toBe(
-      Object.keys(SITE_ROUTES_MAIN).length + Object.keys(SITE_ROUTES_MARKETING).length,
+      shares.reduce((n, [, share]) => n + Object.keys(share).length, 0),
     )
   })
 

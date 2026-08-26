@@ -1,10 +1,10 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate: python3 <websites-root>/tools/gen-site-routes.py --region main
 //
-// main's half of the fleet's page routes, derived from that repo's App Router
-// trees. The other half is its sibling `routes.marketing.generated.ts`, written by
-// the other repo; `routes.generated.ts` merges the two and is what consumers
-// import. See the generator's docstring for why this is two files.
+// main's share of the fleet's page routes, derived from that repo's App Router
+// trees. The rest is in its siblings `routes.marketing.generated.ts`, `routes.placeholder.generated.ts`, written by the other repos;
+// `routes.generated.ts` merges them all and is what consumers import. See the
+// generator's docstring for why this is one file per repo.
 //
 // `gen-site-routes.py --region main --check` re-derives this map in that
 // repo's CI, so a page added, moved, or removed anywhere in its fleet fails there
@@ -19,18 +19,6 @@
 import type { SiteId } from './registry'
 
 export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
-  academy: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   admin: [
     '/',
     '/audit',
@@ -74,32 +62,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/topics/[slug]',
     '/tour',
   ],
-  consultants: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/consultant/[entry]',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/search',
-    '/terms',
-    '/tour',
-  ],
-  consulting: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   cookbook: [
     '/',
     '/[workspace]/[[...path]]',
@@ -131,16 +93,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/tour',
   ],
   docs: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  help: [
     '/',
     '/[workspace]/[[...path]]',
     '/[workspace]/profile',
@@ -242,18 +194,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/rest-api/[...slug]',
     '/terms',
   ],
-  news: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   personaregistry: [
     '/',
     '/[slug]',
@@ -294,39 +234,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/privacy',
     '/terms',
   ],
-  store: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  support: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  teamregistry: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   toolkit: [
     '/',
     '/[workspace]/[[...path]]',
@@ -335,18 +242,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/demo',
     '/demo/chat',
     '/demo/theme',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  tools: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details',
-    '/details/[topic]',
     '/home',
     '/privacy',
     '/terms',
