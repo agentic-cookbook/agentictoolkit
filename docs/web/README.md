@@ -13,8 +13,6 @@
 
 ## Reference
 
-- [`chat.md`](chat.md) — `@agentic-toolkit/chat` usage, components,
-  backends, message-layout spec, and CSS theming.
 - [`monorepo-conversion.md`](monorepo-conversion.md) — historical and
   architectural record of the May 2026 conversion: what shipped, why,
   and what was deferred.

@@ -49,14 +49,8 @@ import { ViewportShell } from '@agentic-toolkit/persona/viewport'
 The entries are separate on purpose: a consumer that only wants viewport
 primitives does not pull chat and themes into its graph.
 
-## Two substitutions that look right and are not
+## A substitution that looks right and is not
 
-- **`@agentic-toolkit/chat`** is an older, pruned snapshot of the same code
-  (three commits, all scope-rename chores; its only consumer is `websites/site`).
-  It is missing `statusUtterance`, `thinkingLabels`, the `inactive`/`minimal`
-  idle state, and the `transition` option — and it defines `InlineChatSizing` as
-  a *different type* under the same name. Swapping is a compile break plus a
-  silent feature regression.
 - **`@agenticdevelopertoolkit/themes`** has an id set **disjoint** from the persona
   toolkit's (`old-school-terminal` exists only there). Swapping silently changes
   which themes exist and breaks every `theme` prop's type contract.

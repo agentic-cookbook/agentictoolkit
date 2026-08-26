@@ -52,7 +52,6 @@ Features (`packages/features/*`) — one package per product area:
 
 | Package | Depends on |
 |---|---|
-| `@agentic-toolkit/chat` | — |
 | `@agentic-toolkit/bitbag` | — |
 | `@agentic-toolkit/authentication` | `auth`, `data`, `resource`, `ui` |
 | `@agentic-toolkit/dashboards` | `auth`, `data`, `resource`, `ui` |
@@ -153,14 +152,20 @@ the built `dist/` into its `node_modules` at install time. After rebuilding a
 package, re-run `npm install` in `websites/site/` or the site keeps serving
 the previous bytes.
 
-While iterating on a package and the site together:
+While iterating on a package in this workspace (e.g. one of the
+`packages/features/*` packages):
 
 ```bash
 # In one shell — package(s) in watch mode, from packages/web/
-pnpm --filter '@agentic-toolkit/chat...' run dev
+pnpm --filter '@agentic-toolkit/personas...' run dev
 # In another shell — site dev server, from websites/site/
 npm run dev
 ```
+
+The site's own shared-UI dependencies (chat, controls, model, themes,
+ui) no longer live in this workspace — they ship from the external
+`agenticdevelopertoolkit` submodule, so watch-mode iteration on them
+happens there, not through `pnpm --filter` here.
 
 ## Tech stack
 
@@ -192,4 +197,3 @@ across `packages/**`.
 
 - [Consumer integration (new consumers)](../../docs/web/next-js-consumer.md)
 - [Migrating an existing consumer](../../docs/web/migrate-consumer.md)
-- [Chat usage, layout & theming](../../docs/web/chat.md)

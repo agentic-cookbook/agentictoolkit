@@ -32,7 +32,6 @@ The Web platform is a pnpm monorepo. Libraries live under
 - `@agentic-toolkit/messaging` — DMs, notifications, presence.
 - `@agentic-toolkit/persona` — the crossing consumers use to reach the
   persona vocabulary (`chat`, `themes`, `viewport`) without pulling a persona in.
-- `@agentic-toolkit/chat` (under `features/chat`) — chat surfaces + backends.
 - the packages under `packages/web/packages/features/` — one per product area
   (projects, teams, research, notebook, ecosystems, …), plus `bitbag`, the
   persona himself.

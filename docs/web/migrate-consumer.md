@@ -13,7 +13,7 @@ Old pattern (going away):
 New pattern (this doc):
 
 ```json
-"@agentic-toolkit/chat": "workspace:*",
+"@agenticdevelopertoolkit/chat": "workspace:*",
 "@agenticdevelopertoolkit/themes": "workspace:*"
 ```
 
@@ -45,7 +45,7 @@ packages:
 
 Adjust the first entries to match your repo's app layout. The `**` glob
 is necessary because some toolkit packages live one level deeper
-(`packages/features/chat`, `packages/features/personas`, …). pnpm filters
+(`packages/features/personas`, …). pnpm filters
 by `package.json` presence so this is safe.
 
 ### 3. Swap the dep in the consumer's `package.json`
@@ -62,7 +62,7 @@ subset of:
 ```json
 {
   "dependencies": {
-    "@agentic-toolkit/chat": "workspace:*",
+    "@agenticdevelopertoolkit/chat": "workspace:*",
     "@agenticdevelopertoolkit/controls": "workspace:*",
     "@agenticdevelopertoolkit/model": "workspace:*",
     "@agenticdevelopertoolkit/themes": "workspace:*",
@@ -84,7 +84,7 @@ roots:
 | `@agentic-cookbook/agentic-web-toolkit/themes/...`        | `@agenticdevelopertoolkit/themes/...`                       |
 | `@agentic-cookbook/agentic-web-toolkit/model/...`         | `@agenticdevelopertoolkit/model/...`                        |
 | `@agentic-cookbook/agentic-web-toolkit/controls/<ctrl>`   | `@agenticdevelopertoolkit/controls/<ctrl>`                  |
-| `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agentic-toolkit/chat/...`                         |
+| `@agentic-cookbook/agentic-web-toolkit/features/chat/...` | `@agenticdevelopertoolkit/chat/...`                     |
 
 Three of the old umbrella sub-paths have **no successor** — `layout/…`,
 `content/…`, and `site-templates/reference-web-site/…` were deleted in July

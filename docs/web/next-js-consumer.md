@@ -35,7 +35,7 @@ packages:
 ```
 
 The `**` glob is necessary because some toolkit packages live one
-level deeper (`packages/features/chat`, `packages/features/personas`,
+level deeper (`packages/features/personas`,
 …). pnpm filters by `package.json` presence so this is safe.
 
 ### 3. Declare per-package deps in the app
@@ -45,7 +45,7 @@ In `app/package.json`:
 ```json
 {
   "dependencies": {
-    "@agentic-toolkit/chat": "workspace:*",
+    "@agenticdevelopertoolkit/chat": "workspace:*",
     "@agenticdevelopertoolkit/controls": "workspace:*",
     "@agenticdevelopertoolkit/model": "workspace:*",
     "@agenticdevelopertoolkit/themes": "workspace:*",
@@ -99,7 +99,7 @@ Commit the submodule SHA bump and `pnpm-lock.yaml` together.
 Once Phase 6 publishing is live:
 
 ```bash
-npm install @agentic-toolkit/chat @agenticdevelopertoolkit/themes ...
+npm install @agenticdevelopertoolkit/chat @agenticdevelopertoolkit/themes ...
 ```
 
 Configure `.npmrc` to point the `@agentic-toolkit` scope at GitHub
@@ -199,7 +199,7 @@ entries:
 
 ```tsx
 'use client'
-import { InlineChat, FetchBackend } from '@agentic-toolkit/chat'
+import { InlineChat, FetchBackend } from '@agenticdevelopertoolkit/chat'
 import { FilteredList } from '@agenticdevelopertoolkit/controls/filtered-list'
 import { useColorMode } from '@agenticdevelopertoolkit/themes'
 import { ContentProvider } from '@agenticdevelopertoolkit/model'
