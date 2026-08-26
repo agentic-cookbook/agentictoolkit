@@ -35,14 +35,81 @@ def test_leaves_an_unmoved_name_alone() -> None:
         assert "@agentic-toolkit/auth" in f.read_text(encoding="utf-8")
 
 
+# Every character npm permits in a package name, immediately after one of the eight.
+# The first four are the ones a reader thinks of; the last three are the ones the
+# original `(?![a-z0-9-])` lookahead let through — legal names, silently mis-scoped
+# to a package that never moved. None exists today, which is exactly why a test has
+# to hold the line: the failure would be silent whenever one is created.
+NOT_MOVED = (
+    "@agentic-toolkit/modelling",
+    "@agentic-toolkit/adh-ui",
+    "@agentic-toolkit/ui-kit",
+    "@agentic-toolkit/search2",
+    "@agentic-toolkit/model_x",
+    "@agentic-toolkit/uiKit",
+    "@agentic-toolkit/ui.legacy",
+)
+
+
 def test_does_not_rewrite_a_prefix_collision() -> None:
-    """@agentic-toolkit/model must not match @agentic-toolkit/modelling."""
+    """A moved name must match only when the name ENDS there."""
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
-        f = root / "a.ts"
-        f.write_text("import { x } from '@agentic-toolkit/modelling'\n", encoding="utf-8")
+        for i, name in enumerate(NOT_MOVED):
+            f = root / f"a{i}.ts"
+            f.write_text(f"import {{ x }} from '{name}'\n", encoding="utf-8")
         assert run(root).returncode == 0
-        assert "@agentic-toolkit/modelling" in f.read_text(encoding="utf-8")
+        for i, name in enumerate(NOT_MOVED):
+            body = (root / f"a{i}.ts").read_text(encoding="utf-8")
+            assert name in body, body
+            assert "@agenticdevelopertoolkit" not in body, body
+
+
+def test_manifest_rewrites_prose_alongside_a_dependency() -> None:
+    """A manifest with BOTH a dependency and a string mention gets both rewritten.
+
+    This is the case the old `if count == 0: return rewrite_source(text)` shape
+    missed entirely: any manifest whose dependencies changed skipped the string
+    pass and kept prose pointing at a package that had moved. Both fields are real
+    shapes from this repo — `comment:`-prefixed and `//`-prefixed sibling keys are
+    how the manifests here carry their explanations.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pkg_dir = root / "packages" / "web" / "packages" / "thing"
+        pkg_dir.mkdir(parents=True)
+        pkg = pkg_dir / "package.json"
+        pkg.write_text(
+            json.dumps(
+                {
+                    "comment:exports": "see @agentic-toolkit/ui for the base components",
+                    "//dependencies": "@agentic-toolkit/themes rides on @agentic-toolkit/auth",
+                    "dependencies": {
+                        "@agentic-toolkit/ui": "workspace:*",
+                        "@agentic-toolkit/auth": "workspace:*",
+                    },
+                },
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        target = root / "external" / "adt" / "packages" / "web" / "packages"
+        target.mkdir(parents=True)
+        assert run(root, "--link-target", str(target)).returncode == 0
+
+        data = json.loads(pkg.read_text(encoding="utf-8"))
+        # the structural rewrite still happened, protocol and path included
+        assert data["dependencies"]["@agenticdevelopertoolkit/ui"] == (
+            "link:../../../../external/adt/packages/web/packages/ui"
+        ), data["dependencies"]
+        assert data["dependencies"]["@agentic-toolkit/auth"] == "workspace:*"
+        # ...and so did the prose, in the same run
+        assert data["comment:exports"] == (
+            "see @agenticdevelopertoolkit/ui for the base components"
+        ), data["comment:exports"]
+        assert data["//dependencies"] == (
+            "@agenticdevelopertoolkit/themes rides on @agentic-toolkit/auth"
+        ), data["//dependencies"]
 
 
 def test_rewrites_package_json_keys_and_link_paths() -> None:
@@ -158,8 +225,9 @@ if __name__ == "__main__":
     test_rewrites_a_moved_name()
     test_leaves_an_unmoved_name_alone()
     test_does_not_rewrite_a_prefix_collision()
+    test_manifest_rewrites_prose_alongside_a_dependency()
     test_rewrites_package_json_keys_and_link_paths()
     test_link_depth_is_computed_per_manifest()
     test_workspace_protocol_becomes_a_link()
     test_dry_run_changes_nothing()
-    print("rewrite_toolkit_scope_test: 7 passed")
+    print("rewrite_toolkit_scope_test: 8 passed")

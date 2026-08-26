@@ -18,8 +18,14 @@ MOVED = ("ui", "landing", "markdown", "search", "editing", "controls", "model", 
 OLD_SCOPE = "@agentic-toolkit"
 NEW_SCOPE = "@agenticdevelopertoolkit"
 
+# The lookahead has to reject every character npm actually permits after the name,
+# not just the ones today's names happen to use. `[a-z0-9-]` let `model_x`, `uiKit`
+# and `ui.legacy` through — all legal package names, all silently mis-scoped to a
+# package that never moved. `[\w.-]` covers the underscore, the uppercase letter and
+# the dot as well; `/` stays out of it deliberately, because a subpath
+# (`@agentic-toolkit/ui/components/button`) IS the thing being rewritten.
 SPEC_RE = re.compile(
-    rf"{re.escape(OLD_SCOPE)}/({'|'.join(MOVED)})(?![a-z0-9-])"
+    rf"{re.escape(OLD_SCOPE)}/({'|'.join(MOVED)})(?![\w.-])"
 )
 
 SOURCE_SUFFIXES = {".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".css"}
@@ -73,10 +79,24 @@ def rewrite_manifest(text: str, manifest: Path, link_target: Path | None) -> tup
                 value = f"{prefix}:{rel}"
             deps[f"{NEW_SCOPE}/{pkg}"] = value
             count += 1
-    if count == 0:
-        # Nothing structural changed; still rewrite any string mentions (comment: fields).
-        return rewrite_source(text)
-    return json.dumps(data, indent=2) + "\n", count
+    if count:
+        text = json.dumps(data, indent=2) + "\n"
+    # BOTH passes always run. A manifest names the old scope in two unrelated
+    # places — the dependency keys, which need the protocol and path rewritten
+    # too, and free prose in `comment:`/`//` fields, which needs only the name
+    # swapped. Gating the string pass on `count == 0` meant a manifest that had a
+    # dependency rewritten kept its stale prose forever, pointing readers at a
+    # package that had moved.
+    #
+    # Structural FIRST, then the string pass — not the other way round. The
+    # structural pass is keyed on the OLD name, so a string pass over the raw text
+    # would rename the dependency keys before it ever ran, and `workspace:*` on a
+    # package that had left the workspace would survive untouched: install then
+    # fails naming the package rather than the cause. Running it over the
+    # already-serialized result leaves the keys alone (they are new-scope by then)
+    # and catches exactly the prose.
+    text, string_count = rewrite_source(text)
+    return text, count + string_count
 
 
 def main() -> int:

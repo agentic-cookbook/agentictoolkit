@@ -47,7 +47,7 @@ def make_tree(tmp: str, files: dict[str, str], packages: dict[str, str]) -> Path
 
 
 PKGS = {
-    "ui": "@agentic-toolkit/ui",
+    "mechanism-fixture": "@agentic-toolkit/mechanism-fixture",
     "adh": "@agentic-toolkit/adh",
     "adh-registry": "@agentic-toolkit/adh-registry",
 }
@@ -58,7 +58,7 @@ PKGS = {
 #     reported. If this ever passes silently the guard is blind again.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "ui/src/x.ts": "import { SITES } from '@agentic-toolkit/adh-registry'\n",
+        "mechanism-fixture/src/x.ts": "import { SITES } from '@agentic-toolkit/adh-registry'\n",
     }, PKGS)
     v = guard.find_violations(root)
     check("mechanism -> vocabulary is a violation", [(p.name, s) for p, _, s, _ in v],
@@ -68,7 +68,7 @@ with tempfile.TemporaryDirectory() as tmp:
 #     A newly added `adh-*` package is banned with no edit to the guard.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "ui/src/x.ts": "import x from '@agentic-toolkit/adh-brandnew'\n",
+        "mechanism-fixture/src/x.ts": "import x from '@agentic-toolkit/adh-brandnew'\n",
     }, {**PKGS, "adh-brandnew": "@agentic-toolkit/adh-brandnew"})
     check("a brand-new adh-* package is banned automatically",
           len(guard.find_violations(root)), 1)
@@ -76,8 +76,8 @@ with tempfile.TemporaryDirectory() as tmp:
 # (3) An empty vocabulary set means the guard cannot fail — so main() must
 #     REFUSE to report clean rather than exit 0 over a tree it cannot judge.
 with tempfile.TemporaryDirectory() as tmp:
-    root = make_tree(tmp, {"ui/src/x.ts": "export const x = 1\n"},
-                     {"ui": "@agentic-toolkit/ui"})
+    root = make_tree(tmp, {"mechanism-fixture/src/x.ts": "export const x = 1\n"},
+                     {"mechanism-fixture": "@agentic-toolkit/mechanism-fixture"})
     check("no vocabulary packages -> refuses to pass", guard.main(["--root", str(root)]), 2)
 
 # ---------------------------------------------------------------- direction
@@ -85,7 +85,7 @@ with tempfile.TemporaryDirectory() as tmp:
 # (4) The legal direction. Vocabulary importing mechanism is the whole design.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "adh/src/Header.tsx": "import { Button } from '@agentic-toolkit/ui'\n",
+        "adh/src/Header.tsx": "import { Button } from '@agentic-toolkit/mechanism-fixture'\n",
     }, PKGS)
     check("vocabulary -> mechanism is fine", guard.find_violations(root), [])
 
@@ -103,7 +103,7 @@ with tempfile.TemporaryDirectory() as tmp:
 check("adh does not prefix-match adhesive", guard._is_vocabulary("@agentic-toolkit/adhesive"), False)
 check("adh-registry is vocabulary", guard._is_vocabulary("@agentic-toolkit/adh-registry"), True)
 check("adh itself is vocabulary", guard._is_vocabulary("@agentic-toolkit/adh"), True)
-check("ui is not", guard._is_vocabulary("@agentic-toolkit/ui"), False)
+check("a mechanism-tier name is not vocabulary", guard._is_vocabulary("@agentic-toolkit/mechanism-fixture"), False)
 check("subpath of adh matches adh, not adh-registry",
       guard.imports_vocabulary("@agentic-toolkit/adh/header",
                                {"@agentic-toolkit/adh": None, "@agentic-toolkit/adh-registry": None}),
@@ -122,7 +122,7 @@ FORMS = {
 }
 for form, body in FORMS.items():
     with tempfile.TemporaryDirectory() as tmp:
-        root = make_tree(tmp, {"ui/src/x.ts": body}, PKGS)
+        root = make_tree(tmp, {"mechanism-fixture/src/x.ts": body}, PKGS)
         check(f"caught in {form} form", len(guard.find_violations(root)), 1)
 
 # (8) Doc-comment example imports are not dependencies — the toolkit's own JSDoc
@@ -130,10 +130,10 @@ for form, body in FORMS.items():
 #     never go green. But a TRAILING comment after real code must still count.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "ui/src/doc.ts": "// import { A } from '@agentic-toolkit/adh'\n"
+        "mechanism-fixture/src/doc.ts": "// import { A } from '@agentic-toolkit/adh'\n"
                          " * import { B } from '@agentic-toolkit/adh'\n"
                          "/* import { C } from '@agentic-toolkit/adh' */\n",
-        "ui/src/real.ts": "import { D } from '@agentic-toolkit/adh' // still a real import\n",
+        "mechanism-fixture/src/real.ts": "import { D } from '@agentic-toolkit/adh' // still a real import\n",
     }, PKGS)
     v = guard.find_violations(root)
     check("comment lines are skipped, trailing comments are not",
@@ -150,7 +150,7 @@ with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
         "adh/src/uses-own-tier.ts": "import { SITES } from '@agentic-toolkit/adh-registry'\n",
         "adh/src/aliased.tsx": "import { Nav } from '@/components/nav'\n",
-        "ui/src/x.ts": "import { Nav } from '@/components/nav'\n",
+        "mechanism-fixture/src/x.ts": "import { Nav } from '@/components/nav'\n",
     }, PKGS)
     v = guard.find_violations(root)
     check("vocabulary may reach its own tier, but nobody may use @/",
@@ -161,7 +161,7 @@ with tempfile.TemporaryDirectory() as tmp:
 #      the committed dist is what consumers actually resolve.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "ui/dist/x.js": "import { a } from '@agentic-toolkit/adh'\n",
+        "mechanism-fixture/dist/x.js": "import { a } from '@agentic-toolkit/adh'\n",
     }, PKGS)
     check("dist skipped by default", guard.find_violations(root), [])
     check("dist scanned with --include-dist",
@@ -171,10 +171,10 @@ with tempfile.TemporaryDirectory() as tmp:
 #      not register as a vocabulary package nor as a source file.
 with tempfile.TemporaryDirectory() as tmp:
     root = make_tree(tmp, {
-        "ui/node_modules/@agentic-toolkit/adh-fake/package.json":
+        "mechanism-fixture/node_modules/@agentic-toolkit/adh-fake/package.json":
             '{"name": "@agentic-toolkit/adh-fake"}',
-        "ui/node_modules/junk/src/x.ts": "import a from '@agentic-toolkit/adh'\n",
-        "ui/src/ok.ts": "export const ok = 1\n",
+        "mechanism-fixture/node_modules/junk/src/x.ts": "import a from '@agentic-toolkit/adh'\n",
+        "mechanism-fixture/src/ok.ts": "export const ok = 1\n",
     }, PKGS)
     check("node_modules contributes no packages",
           "@agentic-toolkit/adh-fake" in guard.vocabulary_packages(root), False)

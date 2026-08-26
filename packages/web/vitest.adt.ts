@@ -31,6 +31,13 @@ import { existsSync, readFileSync } from 'node:fs'
 // "Failed to resolve import" naming the missing package, but now it would just
 // as quietly resolve out of the toolkit's own node_modules and reintroduce the
 // two-copies failure this file exists to prevent.
+//
+// There are TWO throws, because there are two ways to miss. The config-load one
+// above covers a package NAME that does not resolve from the consumer at all.
+// The per-import one in `customResolver` covers a name that resolves while a
+// particular SUBPATH does not — a version skew the first check cannot see. Both
+// exist for the same reason: the only alternative answer is null, and null here
+// means "resolve it from the toolkit's store instead", silently.
 
 interface PluginContextLike {
   resolve(
@@ -40,6 +47,13 @@ interface PluginContextLike {
   ): Promise<{ id: string } | null>
 }
 
+/**
+ * The resolver a pinned entry carries. Async, and it REJECTS rather than
+ * returning null — see `customResolver` below for why null is the one answer
+ * this file cannot afford to give.
+ */
+type PinnedResolver = (this: unknown, source: string) => Promise<{ id: string }>
+
 /** One vitest `resolve.alias` array entry, plus the package name it pins. */
 export interface AliasEntry {
   /** The bare package name this entry pins. Not read by vitest; read by the
@@ -47,7 +61,7 @@ export interface AliasEntry {
   name: string
   find: RegExp
   replacement: string
-  customResolver(this: unknown, source: string): unknown
+  customResolver: PinnedResolver
 }
 
 function escapeForRegExp(literal: string): string {
@@ -69,17 +83,28 @@ function readJson(path: string): Record<string, unknown> {
  */
 export function linkedAdtPackages(packageDir: string): { name: string; manifestPath: string }[] {
   const manifest = readJson(join(packageDir, 'package.json'))
-  const declared = {
-    ...((manifest.dependencies as Record<string, string>) ?? {}),
-    ...((manifest.devDependencies as Record<string, string>) ?? {}),
-    ...((manifest.peerDependencies as Record<string, string>) ?? {}),
-  }
   const found: { name: string; manifestPath: string }[] = []
-  for (const [name, spec] of Object.entries(declared)) {
-    if (!name.startsWith('@agenticdevelopertoolkit/')) continue
-    if (!spec.startsWith('link:') && !spec.startsWith('file:')) continue
-    const manifestPath = join(packageDir, spec.replace(/^(link|file):/, ''), 'package.json')
-    if (existsSync(manifestPath)) found.push({ name, manifestPath })
+  const seen = new Set<string>()
+  // Each field in turn, first `link:`/`file:` spec wins — NOT a single merged
+  // object. One name legitimately appears in two fields: `bitbag` and `registry`
+  // declare their toolkit packages as PEERS at `"*"` (the consumer supplies the
+  // copy, so a bundle holds one instance) and repeat them as devDependencies at
+  // `link:` so they can still build and test themselves. Merging with
+  // peerDependencies last let `"*"` overwrite the link and those two packages
+  // read as linking nothing at all — `adtAlias` then pinned react/react-dom and
+  // nothing else for exactly the two packages that cross into the toolkit most.
+  for (const field of ['dependencies', 'devDependencies', 'peerDependencies'] as const) {
+    const declared = (manifest[field] as Record<string, string>) ?? {}
+    for (const [name, spec] of Object.entries(declared)) {
+      if (seen.has(name)) continue
+      if (!name.startsWith('@agenticdevelopertoolkit/')) continue
+      if (typeof spec !== 'string') continue
+      if (!spec.startsWith('link:') && !spec.startsWith('file:')) continue
+      const manifestPath = join(packageDir, spec.replace(/^(link|file):/, ''), 'package.json')
+      if (!existsSync(manifestPath)) continue
+      seen.add(name)
+      found.push({ name, manifestPath })
+    }
   }
   return found
 }
@@ -112,6 +137,9 @@ export function adtAlias(packageDir: string): AliasEntry[] {
   // read, to root the node-resolution walk here instead of at the toolkit's
   // REAL path.
   const pinnedTo = join(packageDir, '__adt-pin__.js')
+  // `packageDir` arrives from `fileURLToPath(new URL('.', …))` with a trailing
+  // separator; only the error messages below care, and there it reads as a typo.
+  const consumerDir = join(packageDir, '.')
   for (const { manifestPath } of linkedAdtPackages(packageDir)) {
     const linked = readJson(manifestPath)
     for (const dep of Object.keys((linked.dependencies as Record<string, string>) ?? {})) {
@@ -147,11 +175,39 @@ export function adtAlias(packageDir: string): AliasEntry[] {
         find: new RegExp(`^${escapeForRegExp(name)}(/.*)?$`),
         // Identity: the customResolver below re-resolves the untouched specifier.
         replacement: '$&',
-        customResolver(source: string) {
+        async customResolver(source: string) {
           // `this` is rollup's plugin context; `pinnedTo` is a path inside the
           // consumer, so a bare specifier resolves from the consumer's tree.
           // `skipSelf` keeps the alias plugin from matching its own output.
-          return (this as PluginContextLike).resolve(source, pinnedTo, { skipSelf: true })
+          const resolved = await (this as PluginContextLike).resolve(source, pinnedTo, {
+            skipSelf: true,
+          })
+          // A miss MUST throw, not return null. Vite's alias plugin passes a null
+          // straight back, and resolution then falls through to `vite:resolve`,
+          // which resolves from the IMPORTER — a file under the toolkit's REAL
+          // path, i.e. out of the toolkit's own node_modules. That is the second
+          // copy this whole file exists to prevent, arrived at silently.
+          //
+          // The precondition at config load does NOT cover this. It proves the
+          // package NAME resolves from the consumer; it says nothing about a
+          // particular SUBPATH, or about whether the consumer's version is new
+          // enough to publish the subpath the toolkit asks for. A consumer on
+          // 2.0.x of a dependency the toolkit wants at ^2.1 passes that check and
+          // misses here, on exactly one import.
+          if (resolved == null) {
+            throw new Error(
+              `adtAlias: "${source}" is pinned to ${consumerDir}'s own copy of ` +
+                `"${name}", but that copy cannot satisfy it — the specifier ` +
+                `resolves to nothing from there. The package name itself does ` +
+                `resolve (that is checked at config load), so this is a missing ` +
+                `subpath or a version too old to publish it: reconcile the ` +
+                `version in ${join(consumerDir, 'package.json')} with the one the ` +
+                `linked @agenticdevelopertoolkit/* package requires and run ` +
+                `pnpm install. Returning null here instead would resolve it out ` +
+                `of the toolkit's own node_modules — a second copy, silently.`,
+            )
+          }
+          return resolved
         },
       })
       continue

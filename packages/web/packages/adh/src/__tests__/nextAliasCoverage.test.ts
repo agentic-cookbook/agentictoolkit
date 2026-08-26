@@ -101,12 +101,19 @@ function importedNextSubpaths(): Map<string, string[]> {
  * `@agenticdevelopertoolkit/*` pins that `adtAlias()` contributes carry a `customResolver`
  * that RE-RESOLVES the specifier from this package instead of rewriting its prefix (an
  * object entry matches by prefix and would mangle exports-mapped subpaths like
- * `@shikijs/rehype/core`). Only an array entry can carry that resolver. So a pin here is
- * named one of two ways — a literal `find` for the hand-written `next/*` entries, or the
- * `name` field `adtAlias` stamps on the ones it derives — and `pinnedNames()` reads both.
+ * `@shikijs/rehype/core`). Only an array entry can carry that resolver. Both spellings of
+ * `find` therefore appear in one list: a literal string for the hand-written `next/*`
+ * entries, a `RegExp` for the ones `adtAlias` derives.
+ *
+ * `covers()` below asks each entry the way VITE asks it — `find`, and only `find`. The
+ * `name` field is bookkeeping that vitest never reads (vitest.adt.ts says so on the field
+ * itself), so an assertion driven off `name` reports "pinned" for an entry whose pattern
+ * has stopped matching anything of the sort, and every test in this file stays green while
+ * the `^…$` anchors come off and prefix matching returns.
  */
 interface AliasEntry {
-  /** Set by adtAlias() on the entries it derives; absent on hand-written ones. */
+  /** Set by adtAlias() on the entries it derives; absent on hand-written ones. Not read
+   *  by vitest, and deliberately not read by any assertion here — only by messages. */
   name?: string;
   find: string | RegExp;
   replacement: string;
@@ -114,14 +121,17 @@ interface AliasEntry {
 
 let alias: AliasEntry[] = [];
 
-/** Every specifier the config pins, however the entry spells it. */
-function pinnedNames(): Set<string> {
-  const names = new Set<string>();
-  for (const entry of alias) {
-    if (typeof entry.name === "string") names.add(entry.name);
-    if (typeof entry.find === "string") names.add(entry.find);
-  }
-  return names;
+/**
+ * Whether the config pins `specifier`, decided by the same rule vite uses: a string
+ * `find` matches the name exactly or as a `/`-delimited subpath prefix; a RegExp `find`
+ * matches when it tests true.
+ */
+function covers(specifier: string): boolean {
+  return alias.some((entry) =>
+    typeof entry.find === "string"
+      ? specifier === entry.find || specifier.startsWith(`${entry.find}/`)
+      : entry.find.test(specifier),
+  );
 }
 
 beforeAll(async () => {
@@ -139,7 +149,23 @@ describe("vitest.config.ts next/* aliases", () => {
   // thing.
   it("can see the alias list at all", () => {
     expect(alias.length).toBeGreaterThan(0);
-    expect(pinnedNames().has("react")).toBe(true);
+    expect(covers("react")).toBe(true);
+  });
+
+  /**
+   * A pin must match the WHOLE specifier and its `/` subpaths, never a name that merely
+   * contains it. Coverage assertions cannot see the difference — "is react pinned?" is
+   * answered yes whether or not `find` still carries its `^…$` anchors — so ask the
+   * inverse question here. Remove an anchor from `adtAlias`'s pattern and this goes red;
+   * nothing else in this file would.
+   */
+  it("matches whole specifiers, not names that merely contain one", () => {
+    for (const spec of ["react", "react-dom", "next/link"]) {
+      expect(covers(spec), `${spec} must be pinned`).toBe(true);
+      expect(covers(`${spec}/sub/path`), `${spec} subpaths must be pinned`).toBe(true);
+      expect(covers(`zz-${spec}`), `zz-${spec} must not be pinned`).toBe(false);
+      expect(covers(`${spec}-zz`), `${spec}-zz must not be pinned`).toBe(false);
+    }
   });
 
   // Without this, every assertion below is vacuous the moment the scan stops finding
@@ -153,9 +179,8 @@ describe("vitest.config.ts next/* aliases", () => {
   it("aliases every next/* subpath those siblings import", () => {
     const imported = importedNextSubpaths();
     expect(imported.size).toBeGreaterThan(0);
-    const pinned = pinnedNames();
     const missing = [...imported.entries()]
-      .filter(([sub]) => !pinned.has(`next/${sub}`))
+      .filter(([sub]) => !covers(`next/${sub}`))
       .map(([sub, pkgs]) => `next/${sub} (imported by ${pkgs.sort().join(", ")})`);
     expect(missing, "add these to resolve.alias in vitest.config.ts").toEqual([]);
   });

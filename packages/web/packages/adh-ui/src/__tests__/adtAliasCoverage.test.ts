@@ -38,7 +38,26 @@ function readJson(path: string): Record<string, unknown> {
  * `pnpm run lint` fails with TS6059 — the same reason nextAliasCoverage.test.ts loads
  * vitest.config.ts this way rather than importing it directly.
  */
-type AliasEntry = { name: string };
+type AliasEntry = {
+  /** Bookkeeping only — vitest never reads it. Used here for failure messages. */
+  name: string;
+  /** The field vitest actually matches on. Every assertion below drives off THIS. */
+  find: RegExp;
+  customResolver: (this: unknown, source: string) => Promise<{ id: string }>;
+};
+
+/**
+ * Whether the derived list pins `specifier`, asked the way vitest asks it.
+ *
+ * Driving this off `find` rather than off `name` is the whole point. `name` is
+ * bookkeeping (vitest.adt.ts says so on the field itself), so a set built from it
+ * reports "pinned" for an entry whose `find` matches nothing of the sort — every
+ * assertion here would stay green while the anchors came off the pattern and
+ * prefix matching quietly returned. `find` is what decides at runtime.
+ */
+function covers(entries: AliasEntry[], specifier: string): boolean {
+  return entries.some((entry) => entry.find.test(specifier));
+}
 
 let adtAlias: (packageDir: string) => AliasEntry[] = () => [];
 let linkedAdtPackages: (packageDir: string) => { name: string; manifestPath: string }[] = () => [];
@@ -62,7 +81,7 @@ describe("adh-ui's ADT alias coverage", () => {
   });
 
   it("aliases every runtime dependency the linked ADT package declares", () => {
-    const pinned = new Set(adtAlias(PACKAGE_DIR).map((entry) => entry.name));
+    const entries = adtAlias(PACKAGE_DIR);
     const missing: string[] = [];
     for (const { name, manifestPath } of linkedAdtPackages(PACKAGE_DIR)) {
       const linked = readJson(manifestPath);
@@ -77,7 +96,7 @@ describe("adh-ui's ADT alias coverage", () => {
         ...Object.keys((linked.peerDependencies as Record<string, string>) ?? {}),
       ];
       for (const dep of deps) {
-        if (!pinned.has(dep)) missing.push(`${dep} (required by ${name})`);
+        if (!covers(entries, dep)) missing.push(`${dep} (required by ${name})`);
       }
     }
     expect(
@@ -92,8 +111,68 @@ describe("adh-ui's ADT alias coverage", () => {
   // future change dropping the hardcoded add would fail here even if some linked
   // manifest happened to also declare them elsewhere.
   it("always pins react and react-dom", () => {
-    const pinned = new Set(adtAlias(PACKAGE_DIR).map((entry) => entry.name));
-    expect(pinned.has("react")).toBe(true);
-    expect(pinned.has("react-dom")).toBe(true);
+    const entries = adtAlias(PACKAGE_DIR);
+    expect(covers(entries, "react")).toBe(true);
+    expect(covers(entries, "react-dom")).toBe(true);
+  });
+
+  /**
+   * A pin must match the WHOLE specifier (and its `/` subpaths), not merely
+   * contain it. Without the `^…$` anchors on `find`, `react` also matches
+   * `preact` and `react-native-web`, and every other assertion in this file still
+   * passes — the coverage question ("is `dep` pinned?") is answered yes either
+   * way. Only the inverse question catches it, so ask it: drop an anchor from
+   * `adtAlias`'s pattern and this is the test that goes red.
+   */
+  it("matches whole specifiers, not names that merely contain one", () => {
+    const entries = adtAlias(PACKAGE_DIR);
+    const pinned = entries.map((entry) => entry.name);
+    expect(pinned.length).toBeGreaterThan(0);
+    const overreach: string[] = [];
+    for (const name of pinned) {
+      // The real name and its subpaths are pinned...
+      if (!covers(entries, name)) overreach.push(`${name} is not pinned by its own entry`);
+      if (!covers(entries, `${name}/sub/path`)) overreach.push(`${name}/sub/path is not pinned`);
+      // ...and nothing that merely contains it is. `zz-`/`-zz`/`.zz` cannot be a
+      // real pinned name: every entry is built from a literal in the wanted set,
+      // so a decoy matches only once the pattern has stopped being anchored.
+      if (covers(entries, `zz-${name}`)) overreach.push(`zz-${name} must not be pinned`);
+      if (covers(entries, `${name}-zz`)) overreach.push(`${name}-zz must not be pinned`);
+      if (covers(entries, `${name}.zz`)) overreach.push(`${name}.zz must not be pinned`);
+    }
+    expect(overreach).toEqual([]);
+  });
+
+  /**
+   * The pin's resolver has exactly one job — re-resolve the specifier from THIS
+   * package — and exactly one forbidden answer: null. Vite's alias plugin passes a
+   * null straight through to `vite:resolve`, which resolves from the importer,
+   * i.e. from the toolkit's real path and its own node_modules. That is the second
+   * copy this machinery exists to prevent, reached silently.
+   *
+   * The config-load precondition does not cover this. It proves the package NAME
+   * resolves from the consumer, not that a given SUBPATH does. A consumer holding
+   * 2.0.x of a dependency the toolkit wants at ^2.1 passes that check and misses
+   * on the one subpath 2.1 added. So drive the resolver with a plugin context that
+   * misses, and require a rejection naming the specifier.
+   */
+  it("throws when the consumer's copy cannot satisfy a pinned specifier", async () => {
+    const entry = adtAlias(PACKAGE_DIR).find((candidate) => candidate.name === "react");
+    expect(entry, "react is always pinned").toBeDefined();
+    const missingSubpath = "react/a-subpath-this-version-does-not-publish";
+    const context = { resolve: async () => null };
+    await expect(entry?.customResolver.call(context, missingSubpath)).rejects.toThrow(
+      missingSubpath,
+    );
+  });
+
+  // ...and the same resolver hands back whatever the consumer's tree DID resolve,
+  // untouched — without this the test above would also pass against a resolver
+  // that threw unconditionally, which would pin nothing and break everything.
+  it("returns the consumer's resolution when there is one", async () => {
+    const entry = adtAlias(PACKAGE_DIR).find((candidate) => candidate.name === "react");
+    const resolved = { id: "/consumer/node_modules/react/index.js" };
+    const context = { resolve: async () => resolved };
+    await expect(entry?.customResolver.call(context, "react")).resolves.toBe(resolved);
   });
 });

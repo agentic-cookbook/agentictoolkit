@@ -35,6 +35,17 @@ This doc is the *historical* and *architectural* record.
 > For the current package list see
 > [`packages/web/README.md`](../../packages/web/README.md).
 
+> **Note (August 2026):** five of the eight packages in the table below — `ui`,
+> `themes`, `model`, `controls`, and (after the July deletions) the rest of the
+> shared UI vocabulary — left this repository for the public
+> `agenticdevelopertoolkit` and are now `@agenticdevelopertoolkit/*`. The table
+> and the sub-export example below deliberately keep the OLD names anyway, for
+> the same reason as the July note: they record what shipped in May 2026, when
+> `@agentic-toolkit` was the only scope those packages had ever had. Rewriting
+> them would produce a package list that never existed at any moment in history.
+> A scope sweep reading this doc should skip everything under "What the toolkit
+> ships now".
+
 ---
 
 ## What the toolkit ships now
@@ -44,12 +55,12 @@ its own `dist/` and published-or-federated via pnpm workspaces:
 
 | Package                                  | Depends on                | Notes                                            |
 | ---------------------------------------- | ------------------------- | ------------------------------------------------ |
-| `@agenticdevelopertoolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
-| `@agenticdevelopertoolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
-| `@agenticdevelopertoolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
+| `@agentic-toolkit/ui`                | —                         | shadcn slot; `cn`, `useIsomorphicLayoutEffect`, `styles/globals.css` |
+| `@agentic-toolkit/themes`            | `ui`                      | `ColorModeProvider`, `ThemeStyle`, theme manifest + CSS |
+| `@agentic-toolkit/model`             | —                         | Providers, hooks, search/breadcrumbs/nav/lookup  |
 | `@agentic-toolkit/layout`            | —                         | Layout CSS bundles                               |
 | `@agentic-toolkit/content`           | `model`                   | Markdown view, cards, home, section index        |
-| `@agenticdevelopertoolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
+| `@agentic-toolkit/controls`          | `model`, `themes`         | One package, per-control sub-exports             |
 | `@agentic-toolkit/chat`              | —                         | InlineChat / ThreePaneChat / MobileChat / PersonaChat |
 | `@agentic-toolkit/reference-web-site`| `controls`, `model`, `themes` | Vite-only template + plugin                  |
 
@@ -90,7 +101,7 @@ so it's safe.
 Splitting controls per-package would have added ceremony without
 buying anything. Cross-control sharing (the appearance-mode-toggle ↔
 theme bus) is non-trivial. Each control gets a barrel sub-export
-(`@agenticdevelopertoolkit/controls/filtered-list`) so consumers still
+(`@agentic-toolkit/controls/filtered-list`) so consumers still
 only pay for what they import.
 
 ### `"use client"` directive preservation

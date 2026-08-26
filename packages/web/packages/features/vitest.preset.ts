@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { defineConfig } from 'vitest/config'
-import { adtAlias, adtInline } from '../../vitest.adt'
+import { adtAlias, adtInline, linkedAdtPackages } from '../../vitest.adt'
 
 // Single source of the feature-package vitest config (DRY). Self-contained so
 // `pnpm --filter @agentic-toolkit/<pkg> run test` (cwd = the package) discovers
@@ -18,6 +18,44 @@ import { adtAlias, adtInline } from '../../vitest.adt'
 // which has no `@agentic-toolkit/*` in scope, so anything that must reset a toolkit
 // package's module-scope state (the query cache — see `vitest.setup.ts` next to any
 // config that passes this) has to be imported from inside the package that depends on it.
+
+/**
+ * The directory `featureVitest()` builds its alias map from, checked.
+ *
+ * Exported for its own test: the check has to be callable with a directory that
+ * is NOT this process's cwd, and a vitest worker cannot `process.chdir()`.
+ *
+ * Two conditions, and the second is the one that matters. A `package.json` merely
+ * being present proves almost nothing — `packages/web/` has one, links no ADT
+ * package, and from there `adtAlias()` returns its two hardcoded react entries
+ * and does not throw. Every `@agenticdevelopertoolkit/*` import in the run would
+ * then resolve out of the toolkit's own node_modules, which is the exact failure
+ * `vitest.adt.ts` exists to prevent, while a guard that only looked for a
+ * manifest reported everything fine. So assert what the alias map is actually
+ * built from: at least one linked toolkit package.
+ */
+export function assertFeaturePackageDir(packageDir: string): string {
+  if (!existsSync(join(packageDir, 'package.json'))) {
+    throw new Error(
+      `featureVitest: expected the cwd to be the package being tested, but ` +
+        `${packageDir} has no package.json. Run this through the package's own ` +
+        `\`test\` script (pnpm --filter <pkg> run test).`,
+    )
+  }
+  if (linkedAdtPackages(packageDir).length === 0) {
+    throw new Error(
+      `featureVitest: ${packageDir} declares no @agenticdevelopertoolkit/* ` +
+        `\`link:\`/\`file:\` dependency, so there is nothing for adtAlias() to pin ` +
+        `and every toolkit import in this run would resolve out of the toolkit's ` +
+        `own node_modules — a second React, silently. Either the cwd is not the ` +
+        `feature package being tested (run \`pnpm --filter <pkg> run test\`), or ` +
+        `that package's link: dependency is missing and \`pnpm install\` has not ` +
+        `been run since the submodule was checked out.`,
+    )
+  }
+  return packageDir
+}
+
 export function featureVitest(
   opts: { passWithNoTests?: boolean; setupFiles?: string[] } = {},
 ) {
@@ -26,14 +64,7 @@ export function featureVitest(
   // find anything), because a per-package config is only ever loaded by that
   // package's own `test` script. Asserting it keeps a wrong cwd from silently
   // producing an alias map built from the wrong manifest.
-  const packageDir = process.cwd()
-  if (!existsSync(join(packageDir, 'package.json'))) {
-    throw new Error(
-      `featureVitest: expected the cwd to be the package being tested, but ` +
-        `${packageDir} has no package.json. Run this through the package's own ` +
-        `\`test\` script (pnpm --filter <pkg> run test).`,
-    )
-  }
+  const packageDir = assertFeaturePackageDir(process.cwd())
 
   return defineConfig({
     resolve: {
