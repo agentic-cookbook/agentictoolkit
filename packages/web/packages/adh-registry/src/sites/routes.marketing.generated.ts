@@ -1,10 +1,10 @@
 // GENERATED FILE — do not edit by hand.
 // Regenerate: python3 <websites-root>/tools/gen-site-routes.py --region marketing
 //
-// marketing's half of the fleet's page routes, derived from that repo's App Router
-// trees. The other half is its sibling `routes.main.generated.ts`, written by
-// the other repo; `routes.generated.ts` merges the two and is what consumers
-// import. See the generator's docstring for why this is two files.
+// marketing's share of the fleet's page routes, derived from that repo's App Router
+// trees. The rest is in its siblings `routes.main.generated.ts`, `routes.placeholder.generated.ts`, written by the other repos;
+// `routes.generated.ts` merges them all and is what consumers import. See the
+// generator's docstring for why this is one file per repo.
 //
 // `gen-site-routes.py --region marketing --check` re-derives this map in that
 // repo's CI, so a page added, moved, or removed anywhere in its fleet fails there
