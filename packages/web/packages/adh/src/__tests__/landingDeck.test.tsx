@@ -158,7 +158,9 @@ describe('LandingTour', () => {
     // `TourStrip` omits the control when the prop is absent, so absence is the whole
     // mechanism: an edge control that points nowhere is the tour's dead end.
     const { tour, ...rest } = CONTENT
-    const { back, next, ...stop } = tour
+    // `tour` is optional on `LandingContent` in general (a details deck carries none), but
+    // this fixture's is defined above and this test is about its edges specifically.
+    const { back, next, ...stop } = tour!
     render(<LandingTour content={{ ...rest, tour: stop }} />)
     expect(screen.queryByRole('link', { name: /Personas/ })).toBeNull()
     expect(screen.queryByRole('link', { name: /Hub/ })).toBeNull()

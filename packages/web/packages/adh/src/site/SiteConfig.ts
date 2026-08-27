@@ -122,6 +122,19 @@ export interface SiteDefinition {
    *  authorization server — runs the fuller `<SsoCallback>` flow against its own auth
    *  context. Omit and the family callback is used. */
   authCallback?: ReactNode
+  /** This site's `/details`, in place of the family's concept-graph `<DetailsPage>`.
+   *
+   *  A ReactNode for the same reason `authCallback` is one: what replaces the page is a
+   *  specific element with its own props, not a component type the mount could construct.
+   *  `hub` sets it to its generated brochure deck; every other site omits it and keeps the
+   *  concept page, which is still the right page for a site whose `/details` exists to
+   *  explain one branch of the concept tree.
+   *
+   *  A seam rather than an edit to hub's own route file because everything under `app/` is
+   *  byte-identical across the family and verify-site-uniformity.py enforces it — an edit
+   *  there is one site quietly behaving differently, which is the thing that check exists
+   *  to prevent. */
+  details?: ReactNode
 }
 
 /** A gate: a client component that decides whether the route below it may render at all.
@@ -181,6 +194,7 @@ export interface SiteConfig {
   homeGate?: SiteGate
   workspaceGate?: SiteGate
   authCallback?: ReactNode
+  details?: ReactNode
 }
 
 /**
@@ -200,6 +214,7 @@ export function defineSite(site: SiteDefinition): SiteConfig {
     homeGate: site.homeGate,
     workspaceGate: site.workspaceGate,
     authCallback: site.authCallback,
+    details: site.details,
     shell: {
       siteId: site.id,
       header: site.header,

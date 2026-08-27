@@ -19,6 +19,7 @@ import {
   Roadmap,
   Rule,
   Screen,
+  Shot,
   Stats,
   StatusPill,
   Table,
@@ -80,6 +81,15 @@ function renderBlock(block: LandingBlock, key: number): ReactElement {
       return <Points key={key} entries={block.entries} ordered={block.ordered} />
     case 'Code':
       return <Code key={key} text={block.text} />
+    case 'Shot':
+      return (
+        <Shot
+          key={key}
+          title={block.title}
+          caption={block.caption}
+          media={<img src={`/screenshots/${block.src}.png`} alt={block.caption} />}
+        />
+      )
     case 'Table':
       return (
         <Table key={key} caption={block.caption} columns={block.columns} rows={block.rows} />
@@ -245,6 +255,12 @@ export function LandingDeck({ content }: LandingDeckProps): ReactElement {
  */
 export function LandingTour({ content }: LandingDeckProps): ReactElement {
   const { tour } = content
+  // Every site's OWN landing deck carries a `{tour}` section — the generator's validator
+  // refuses one that doesn't — so this is reachable only if `/tour` were ever mounted over
+  // a details deck, which has no tour and no `/tour` route of its own. Render the plain
+  // deck rather than crash: a missing strip is a routing mistake to notice on the page, not
+  // a `tour.eyebrow` thrown from inside it.
+  if (tour === undefined) return deck(content, null, undefined)
   const lead = (
     <TourStrip
       eyebrow={tour.eyebrow}
