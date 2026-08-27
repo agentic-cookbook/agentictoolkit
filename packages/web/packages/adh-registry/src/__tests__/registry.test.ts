@@ -5,7 +5,12 @@ import { dirname, resolve } from 'node:path'
 // isHubWorkspacePath / hubWorkspaceSlug are NOT here any more — they moved to
 // @agentic-toolkit/adh/site, whose reserved-slug list is what now answers them, and their cases
 // went with them (`adh/src/site/__tests__/hubWorkspacePath.test.ts`).
-import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, hubFeatureSegment, SITE_FOR_HUB_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS, siteIdForDir, type SiteId } from '../sites/registry'
+// `hubFeatureSegment` rather than `HUB_FEATURE_SEGMENT[id]`: the map is `as const`, so it
+// carries only the sites it names and indexing it with an arbitrary SiteId is a type error
+// (TS7053) even though "does the hub route this site?" is exactly what these cases ask. The
+// accessor is where that widening is supposed to live — see its doc comment in registry.ts.
+import type { SiteId } from '../sites/registry'
+import { SITES, LISTED_SITES, FOOTER_SITES, MAIN_SITE_IDS, MARKETING_SITE_IDS, SITE_CATEGORIES, groupSitesByCategory, getSite, detectEnv, buildSiteHref, ssoReturnOrigins, HUB_FEATURE_SEGMENT, hubFeatureSegment, SITE_FOR_HUB_SEGMENT, HUB_WORKSPACE_SEGMENTS, siteWorkspaceHref, siteWorkspaceSlug, SITE_LANDING_SEGMENTS, HUB_ROUTE_SEGMENTS, siteIdForDir } from '../sites/registry'
 // The generated route map — imported ONLY here. `registry.ts` keeps its landing-segment
 // set as a hand-written literal so the always-loaded header never pulls the family's
 // whole route inventory into its bundle; this is the oracle that keeps the two equal.
@@ -953,9 +958,6 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
       if (claimants.includes(segment)) {
         expect(siteId, `'${segment}' is claimed by the site named after it`).toBe(segment)
       }
-      // `hubFeatureSegment`, not `HUB_FEATURE_SEGMENT[siteId]`: the map is `as const`, so it
-      // carries only the sites it names and indexing it with an arbitrary SiteId is a type
-      // error — which is the whole reason the registry exports an accessor that widens once.
       expect(hubFeatureSegment(siteId), `${siteId} must map back to '${segment}'`).toBe(segment)
     }
   })
@@ -982,12 +984,10 @@ describe('HUB_FEATURE_SEGMENT (in-hub workspace switching)', () => {
   it('does not map sites whose workspace is not a hub feature route', () => {
     // `cookbook` used to be in this list and is not any more — it has a workspace route, so its
     // workspace is now a hub route too. What is left is the sites that genuinely have none.
-    //
-    // `api` used to be here too and is not a site: it is adh's OpenAPI spec directory, which has
-    // no registry row, so `hubFeatureSegment` cannot be asked about it. It rode along only while
-    // this indexed the raw `as const` map, where an unknown key widened to `any` instead of
-    // failing — the same reason the accessor exists.
-    for (const id of ['hub', 'admin', 'status', 'bitbag', 'personaregistry'] as const) {
+    // `api` was in this list and is dropped, not migrated: no site carries that id, so the
+    // case asserted `undefined` about a site that does not exist and could never have failed.
+    // Typing the ids as SiteId is what surfaced it — a phantom id is now a compile error.
+    for (const id of ['hub', 'admin', 'status', 'bitbag', 'personaregistry'] as const satisfies readonly SiteId[]) {
       expect(hubFeatureSegment(id)).toBeUndefined()
     }
   })
