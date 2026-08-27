@@ -53,9 +53,15 @@ jobs:
           cache-dependency-path: packages/web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       # Per-package vitest suites (the root `test` script is the same recursive run).
-      # Deliberately NOT `lint`: the dormant `controls` package carries pre-existing
-      # type rot (it's excluded from every consumer's build filters — `layout` and
-      # `content`, named here until 8e6c123 deleted them, were the other two),
-      # and per-package tsc resolves sibling DIST types that a fresh checkout hasn't
-      # built — gate types in consumers (which build first) until that's untangled.
+      # Deliberately NOT `lint`: per-package tsc resolves sibling DIST types that a fresh
+      # checkout hasn't built — gate types in consumers (which build first) until that's
+      # untangled.
+      #
+      # The dormant-package half of that reason is gone. `controls` carried pre-existing
+      # type rot and was the standing example here until the 2026-08 extraction moved the
+      # package to agenticdevelopertoolkit, where its lint is that repo's to run; `layout`
+      # and `content`, named alongside it until 8e6c123 deleted them, went the same way.
+      # Updating this comment when the package it cites leaves is the convention, and it
+      # is the point: a reason that outlives its example is how a skip becomes permanent
+      # without anyone deciding it should be.
       - run: pnpm -r --if-present run test

@@ -46,9 +46,12 @@ The shared UI vocabulary they build on lives in the
 workspace, reached from here by `link:`.
 
 `websites/site/` is the in-repo demo consumer. It sits **outside** the
-pnpm workspace and uses `file:` refs into `packages/web/packages/<name>` and
-`external/agenticdevelopertoolkit/packages/web/packages/<name>` so its wiring
-matches what external apps will use.
+pnpm workspace and uses `file:` refs so its wiring matches what external apps
+will use. Since the 2026-08 extraction **every one of those refs points into
+the submodule** — its five dependencies are `chat`, `controls`, `model`,
+`themes` and `ui`, all `@agenticdevelopertoolkit/*`, and it names no
+`packages/web/packages/<name>` target at all. Nothing this workspace builds
+reaches the demo site any more.
 
 ## Where to look first
 

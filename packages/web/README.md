@@ -121,10 +121,12 @@ live in any directory. Putting them in `packages/web/` keeps the repo root
 clean and leaves room for the other platforms alongside.
 
 `websites/site/` is **outside** the workspace and depends on the packages
-through `file:` refs — into `packages/web/packages/<name>` and into
-`external/agenticdevelopertoolkit/packages/web/packages/<name>` alike — so its
-wiring mirrors what an external consumer does rather than what a workspace
-member gets for free.
+through `file:` refs, so its wiring mirrors what an external consumer does
+rather than what a workspace member gets for free. Since the 2026-08
+extraction **every one of those refs points into
+`external/agenticdevelopertoolkit/packages/web/packages/<name>`**: the site's
+five dependencies are `chat`, `controls`, `model`, `themes` and `ui`, and it
+names no `packages/web/packages/<name>` target at all.
 
 ## Local development
 
@@ -152,20 +154,28 @@ the built `dist/` into its `node_modules` at install time. After rebuilding a
 package, re-run `npm install` in `websites/site/` or the site keeps serving
 the previous bytes.
 
-While iterating on a package in this workspace (e.g. one of the
-`packages/features/*` packages):
+**This pairing no longer works from here**, and the paragraph that used to
+show it (`pnpm --filter '@agentic-toolkit/personas...' run dev` in one shell,
+`npm run dev` in `websites/site/` in the other) was misleading after the
+extraction: all five of the site's dependencies are
+`@agenticdevelopertoolkit/*`, so nothing `pnpm --filter` can build in this
+workspace reaches the demo site. Iterate on a package **and** the site together
+from the submodule instead:
 
 ```bash
-# In one shell — package(s) in watch mode, from packages/web/
-pnpm --filter '@agentic-toolkit/personas...' run dev
+# In one shell — package(s) in watch mode, from
+# external/agenticdevelopertoolkit/packages/web/
+pnpm --filter '@agenticdevelopertoolkit/ui...' run dev
 # In another shell — site dev server, from websites/site/
 npm run dev
 ```
 
-The site's own shared-UI dependencies (chat, controls, model, themes,
-ui) no longer live in this workspace — they ship from the external
-`agenticdevelopertoolkit` submodule, so watch-mode iteration on them
-happens there, not through `pnpm --filter` here.
+`file:` refs are hard-copied (see above), so the site still needs an
+`npm install` after each rebuild to pick the new `dist/` up.
+
+Watch mode on a package in THIS workspace is still `pnpm --filter '<name>...'
+run dev` from `packages/web/` — it just has a consumer other than
+`websites/site/`.
 
 ## Tech stack
 

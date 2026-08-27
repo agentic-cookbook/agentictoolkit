@@ -75,6 +75,24 @@ describe("workspace-root vitest.config.ts's --dir guard", () => {
     );
   });
 
+  // `checkDirTarget` reads the value two ways — the separate `--dir value` argument and
+  // the joined `--dir=value` — and only the first was exercised, so deleting the
+  // `--dir=` branch left this file green while every `--dir=<pkg>` invocation walked
+  // straight past the guard. Both spellings are what a human actually types.
+  it("fires for the joined --dir=value spelling too", () => {
+    makeFixture();
+    expect(() =>
+      checkDirTarget(["node", "vitest.mjs", "run", "--dir=has-own-config"], FIXTURE_ROOT, FIXTURE_ROOT),
+    ).toThrow(/has-own-config.*pnpm --filter @agentic-toolkit\/has-own-config run test/s);
+  });
+
+  it("stays out of the way for --dir=value naming a package that owns no config", () => {
+    makeFixture();
+    expect(() =>
+      checkDirTarget(["node", "vitest.mjs", "run", "--dir=no-own-config"], FIXTURE_ROOT, FIXTURE_ROOT),
+    ).not.toThrow();
+  });
+
   it("fires for a --dir value nested inside such a package, not just the exact root", () => {
     makeFixture();
     expect(() =>
