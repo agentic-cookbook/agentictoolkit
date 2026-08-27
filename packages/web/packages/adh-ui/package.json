@@ -10,7 +10,8 @@
     "**/*.css"
   ],
   "files": [
-    "dist"
+    "dist",
+    "sources.css"
   ],
   "exports": {
     ".": {
@@ -47,7 +48,8 @@
       "types": "./dist/components/rdid-editor.d.ts",
       "development": "./src/components/rdid-editor.tsx",
       "import": "./dist/components/rdid-editor.js"
-    }
+    },
+    "./sources.css": "./sources.css"
   },
   "scripts": {
     "build": "tsup && pnpm run build:types && pnpm run build:css",

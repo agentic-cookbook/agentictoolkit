@@ -1,0 +1,37 @@
+/* Tailwind source self-registration for @agentic-toolkit/adh-ui.
+ *
+ * Tailwind v4 does not scan node_modules, so a consumer app must be told to scan
+ * this package's className-bearing modules. Rather than every host copying
+ * @source globs into its own globals.css (drift-prone, and a missed line renders
+ * unstyled with NO error), the package OWNS them here and a dependent adds one line:
+ *
+ *   @import "@agentic-toolkit/adh-ui/sources.css";
+ *
+ * adh-ui was carved out of ui in 2026-08 and shipped without this file — the only
+ * dependency-bearing package in the repo missing one, while 26 peers had it. The
+ * live blast radius was small and should not be overstated: of the 122
+ * utility-shaped tokens in this package, exactly two (`list-disc`, `pl-5`, both on
+ * one element of blocks/transfer-ownership-section.tsx) occur nowhere else in live
+ * source. Everything else was emitted anyway because some registered package
+ * happened to use the same utility. That is luck, not coverage: the next novel
+ * utility written here would simply not render, with nothing red anywhere.
+ * `recipes/site-wordmark.md:173-176` records this fleet hitting exactly that.
+ *
+ * PACKAGE-WIDE, not per subtree, matching @agentic-toolkit/adh/sources.css: one
+ * glob pair over the whole package cannot develop a hole, and a new subtree is
+ * covered the day it is added.
+ *
+ * Paths are relative to THIS file (the package root) and therefore travel with the
+ * package: they resolve identically through a dev pnpm `link:` symlink and a
+ * materialized prod copy. `src` covers `next dev` — the `development` export
+ * condition serves src, so HMR must see source edits — while `dist` covers prod
+ * builds, where `files` ships only `dist` and this file and the `src` glob simply
+ * matches nothing. Neither is relied on where it is absent.
+ *
+ * Nothing is chained from here. This package's one workspace dependency is
+ * @agenticdevelopertoolkit/ui, which ships no sources.css: it self-registers
+ * through its own components.css, the way adh-components.css already imports it.
+ * The rest are third-party runtime libraries that emit no utilities of ours. */
+
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

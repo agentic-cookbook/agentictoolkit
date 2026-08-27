@@ -25,5 +25,14 @@
 @import "@agentic-toolkit/adh/sources.css";
 @import "@agentic-toolkit/ecosystem-config/sources.css";
 
+/* adh-ui ships the rdid grammar, the invitation surfaces, admin notes and the
+ * ownership-transfer block that this package mounts. Carved out of `ui` in 2026-08,
+ * it shipped with no sources.css at all — the only dependency-bearing package in the
+ * repo without one — so its utilities were emitted only where some registered package
+ * happened to use the same ones, which is luck rather than coverage. Chained HERE
+ * because under pnpm's isolated node_modules only a declaring package can resolve the
+ * specifier, and this package declares it. */
+@import "@agentic-toolkit/adh-ui/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";
