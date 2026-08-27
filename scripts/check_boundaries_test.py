@@ -32,9 +32,21 @@ def check(name, got, want):
     cases.append((name, got, want))
 
 
-def make_tree(tmp: str, files: dict[str, str], packages: dict[str, str]) -> Path:
-    """packages: dir -> npm name. files: relative path -> contents."""
+def make_tree(tmp: str, files: dict[str, str], packages: dict[str, str],
+              prefix: str = "") -> Path:
+    """packages: dir -> npm name. files: relative path -> contents.
+
+    `prefix` nests the packages one or more levels below `packages/`, the way
+    this repo's real `packages/web/packages/<pkg>` layout does, so a test can
+    pass a `--root` deeper than the prefix an exemption key is written with.
+
+    The `.git` marker is what `repo_root_for` finds: exemption keys are
+    repo-root-relative, and a fixture without a checkout root is not the tree
+    the guard is ever run against."""
+    (Path(tmp) / ".git").mkdir(exist_ok=True)
     root = Path(tmp) / "packages"
+    if prefix:
+        root = root / prefix
     for d, name in packages.items():
         p = root / d
         p.mkdir(parents=True, exist_ok=True)
@@ -188,6 +200,7 @@ def test_a_stale_exemption_fails_the_guard():
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / ".git").mkdir()  # exemption keys are repo-root-relative
         root = Path(tmp) / "packages"
         (root / "adh-thing" / "src").mkdir(parents=True)
         (root / "adh-thing" / "package.json").write_text(
@@ -231,6 +244,7 @@ def test_no_exempt_reports_what_the_exemption_list_hides():
     from pathlib import Path
 
     with tempfile.TemporaryDirectory() as tmp:
+        (Path(tmp) / ".git").mkdir()  # exemption keys are repo-root-relative
         root = Path(tmp) / "packages"
         (root / "adh-thing" / "src").mkdir(parents=True)
         (root / "adh-thing" / "package.json").write_text(
@@ -276,8 +290,146 @@ def test_no_exempt_reports_what_the_exemption_list_hides():
         )
 
 
+#  ------------------------------------------------- the arguments CI passes
+#
+#  Every fixture above builds `root = <tmp>/packages` and writes exemption keys
+#  in that shape, and none combines an exemption with --include-dist. Those two
+#  blind spots were the whole bug: the suite reported 22/22 on a tree where the
+#  guard's ONLY production invocation — adh's wrapper, `--root
+#  <repo>/packages/web/packages --include-dist` — exited 1 in every mode, on 15
+#  "stale" exemptions that were nothing of the kind. A green suite that never
+#  runs the arguments production runs proves the guard can fail, never that it
+#  can pass.
+
+
+def _wrapper_shaped_tree(tmp: str, dist: "dict[str, str] | None" = None) -> Path:
+    """adh's real layout: `<repo>/packages/web/packages/<pkg>/{src,dist}`.
+
+    `mech` commits the same violation the fifteen exempted files do; `other` is
+    a second mechanism package, so a per-package rule can be told apart from a
+    blanket one. Returns the DEEP root adh's wrapper passes."""
+    root = make_tree(
+        tmp,
+        {
+            "adh-thing/src/index.ts": "export const a = 1\n",
+            "mech/src/index.ts": "import { a } from '@agentic-toolkit/adh-thing'\n",
+        },
+        {
+            "adh-thing": "@agentic-toolkit/adh-thing",
+            "mech": "@agentic-toolkit/mech",
+            "other": "@agentic-toolkit/other",
+        },
+        prefix="web/packages",
+    )
+    for rel, body in (dist or {}).items():
+        f = root / rel
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(body, encoding="utf-8")
+    return root
+
+
+def _run(root: Path, *extra):
+    import subprocess
+
+    return subprocess.run(
+        [sys.executable,
+         str(Path(__file__).resolve().parent / "check_boundaries.py"),
+         "--root", str(root), *extra],
+        capture_output=True, text=True,
+    )
+
+
+EXEMPT_MECH = "packages/web/packages/mech/src/index.ts"
+
+
+def test_an_exemption_key_does_not_depend_on_how_deep_the_root_is():
+    """The same key, from the shallow root and from the deep one.
+
+    `repo_rel` used to be `path.relative_to(root.parent)`, which is only
+    repo-root-relative when --root is the default. Two levels deeper it
+    produced `packages/mech/src/index.ts`, matched no exemption, and every
+    entry read as stale."""
+    with tempfile.TemporaryDirectory() as tmp:
+        deep = _wrapper_shaped_tree(tmp)
+        shallow = Path(tmp) / "packages"
+
+        deep_run = _run(deep, "--exempt", EXEMPT_MECH)
+        assert deep_run.returncode == 0, (
+            "the deep root adh's CI passes rejected the exemption written for it: "
+            f"{deep_run.stdout}{deep_run.stderr}"
+        )
+        assert "stale exemption" not in (deep_run.stdout + deep_run.stderr)
+
+        shallow_run = _run(shallow, "--exempt", EXEMPT_MECH)
+        assert shallow_run.returncode == 0, (
+            "the same exemption stopped matching from the default root: "
+            f"{shallow_run.stdout}{shallow_run.stderr}"
+        )
+
+
+def test_an_exemption_covers_the_dist_echo_of_the_module_it_names():
+    """tsup externalises workspace deps, so the specifier survives into
+    `dist/index.js` — a filename no per-module exemption can name. Without
+    dist coverage, --include-dist re-reports every accepted violation."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _wrapper_shaped_tree(tmp, dist={
+            "mech/dist/index.js": "import { a } from '@agentic-toolkit/adh-thing'\n",
+        })
+        bare = _run(root, "--exempt", EXEMPT_MECH)
+        assert bare.returncode == 0, "src-only scan regressed"
+
+        with_dist = _run(root, "--exempt", EXEMPT_MECH, "--include-dist")
+        assert with_dist.returncode == 0, (
+            "the dist echo of an exempted src module was reported as a fresh "
+            f"violation: {with_dist.stdout}{with_dist.stderr}"
+        )
+
+
+def test_dist_coverage_is_per_package_and_per_specifier():
+    """The dist rule must not become a blanket amnesty for dist/.
+
+    A specifier no exempted src file imports, and the SAME specifier in a
+    package that has no exemption at all, both stay reported — otherwise
+    `--include-dist` would be worth less than not scanning dist."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _wrapper_shaped_tree(tmp, dist={
+            "mech/dist/index.js":
+                "import { a } from '@agentic-toolkit/adh-thing'\n"
+                "import { b } from '@agentic-toolkit/adh-thing/brand-new'\n",
+            "other/dist/index.js": "import { a } from '@agentic-toolkit/adh-thing'\n",
+        })
+        run = _run(root, "--exempt", EXEMPT_MECH, "--include-dist")
+        assert run.returncode == 1, (
+            "an unexempted specifier in dist slipped through: "
+            f"{run.stdout}{run.stderr}"
+        )
+        out = run.stdout + run.stderr
+        assert "brand-new" in out, "a novel specifier in an exempt package's dist went unreported"
+        assert "other/dist/index.js" in out, "a package with no exemption had its dist forgiven"
+        assert "stale exemption" not in out
+
+
+def test_a_tree_outside_a_checkout_cannot_be_judged():
+    """No repo root, no key — so exit 2 (could not check), never 0 or 1.
+
+    Guessing a root is how the original bug produced fifteen confident,
+    wrong `stale exemption` lines."""
+    with tempfile.TemporaryDirectory() as tmp:
+        root = _wrapper_shaped_tree(tmp)
+        (Path(tmp) / ".git").rmdir()
+        run = _run(root, "--exempt", EXEMPT_MECH)
+        assert run.returncode == 2, (
+            f"judged an exemption list it had no key for: {run.stdout}{run.stderr}"
+        )
+        assert "repository root" in (run.stdout + run.stderr)
+
+
 test_a_stale_exemption_fails_the_guard()
 test_no_exempt_reports_what_the_exemption_list_hides()
+test_an_exemption_key_does_not_depend_on_how_deep_the_root_is()
+test_an_exemption_covers_the_dist_echo_of_the_module_it_names()
+test_dist_coverage_is_per_package_and_per_specifier()
+test_a_tree_outside_a_checkout_cannot_be_judged()
 
 fails = [(n, g, w) for n, g, w in cases if g != w]
 for n, g, w in fails:

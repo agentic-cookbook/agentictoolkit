@@ -93,6 +93,44 @@ DIST_SUFFIXES = (".js", ".jsx", ".mjs")
 PRUNE = {"node_modules", ".turbo", ".next", ".git"}
 
 
+def repo_root_for(root: Path) -> "Path | None":
+    """The repository root that `EXEMPT_FILES` keys are written relative to.
+
+    The keys are repo-root-relative (`packages/web/packages/<pkg>/src/<file>`),
+    and they have to mean the same thing no matter how deep `--root` points.
+    Deriving them from `root.parent` did not: this repo's own lint passes the
+    default `<repo>/packages` and got the right key, while adh's CI wrapper
+    passes `<repo>/packages/web/packages` — two levels deeper — and every key
+    lost its `packages/web/` prefix, so all fifteen entries read as stale and
+    the guard returned 1 before reporting or suppressing anything.
+
+    So walk UP from the scanned root to the checkout that contains it. `.git`
+    is the marker: a directory in a normal clone, a file in a submodule
+    checkout (which is how adh's CI sees this repo), and `Path.exists()`
+    covers both. Returning None means "this tree is not in a checkout" — the
+    caller turns that into exit 2, because a guard that cannot compute the key
+    an exemption is written in cannot judge the exemption list either."""
+    resolved = root.resolve()
+    for candidate in (resolved, *resolved.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return None
+
+
+def package_prefix(repo_rel_path: str) -> "str | None":
+    """The package a repo-relative scanned file belongs to, or None.
+
+    `source_files` only ever yields paths under a package's `src/` or `dist/`,
+    so the first such component is the package boundary:
+    `packages/web/packages/features/teams/{src,dist}/…` -> `…/features/teams`.
+    This is what lets ONE exemption cover a module in both trees."""
+    parts = repo_rel_path.split("/")
+    for i, part in enumerate(parts):
+        if part in ("src", "dist"):
+            return "/".join(parts[:i])
+    return None
+
+
 def _is_vocabulary(name: str) -> bool:
     """True for `@agentic-toolkit/adh` and `@agentic-toolkit/adh-*`, false for
     `@agentic-toolkit/adhesive`. Matching on a boundary rather than a bare
@@ -193,6 +231,47 @@ def find_violations(root: Path, include_dist: bool = False) -> list[tuple[Path, 
     return violations
 
 
+def accepted_specifiers(
+    violations: "list[tuple[Path, int, str, str]]",
+    exemptions: "frozenset[str]",
+    key,
+) -> "dict[str, set[str]]":
+    """package -> the specifiers its EXEMPTED src files are allowed to import.
+
+    An exemption names one `src/` module, but tsup externalises workspace
+    dependencies, so the identical specifier survives verbatim into that
+    package's bundled `dist/` — under a filename (`dist/index.js`) that no
+    per-module exemption can name. Without this, `--include-dist` (the one flag
+    adh's CI wrapper exists to pass) re-reported all fifteen already-accepted
+    violations, and the only way out would have been writing the list twice.
+
+    Deriving the accepted set from the exempted files themselves keeps one
+    exemption meaning "this import is accepted for this module": a NEW
+    specifier appearing in dist is still reported, because nothing in that
+    package's exempted src accepts it."""
+    accepted: dict[str, set[str]] = {}
+    for path, _, spec, _ in violations:
+        rel = key(path)
+        if rel not in exemptions:
+            continue
+        pkg = package_prefix(rel)
+        if pkg is not None:
+            accepted.setdefault(pkg, set()).add(spec)
+    return accepted
+
+
+def is_exempt(rel: str, spec: str, exemptions: "frozenset[str]",
+              accepted: "dict[str, set[str]]") -> bool:
+    """Whether one violation is covered — directly, or as the dist echo of an
+    exempted src module in the same package (see `accepted_specifiers`)."""
+    if rel in exemptions:
+        return True
+    pkg = package_prefix(rel)
+    if pkg is None or not rel.startswith(pkg + "/dist/"):
+        return False
+    return spec in accepted.get(pkg, ())
+
+
 def main(argv: "list[str] | None" = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--root", type=Path, default=DEFAULT_ROOT,
@@ -241,19 +320,34 @@ def main(argv: "list[str] | None" = None) -> int:
         )
         return 2
 
+    repo_root = repo_root_for(args.root)
+    if repo_root is None:
+        #  Without a checkout root there is no way to build the key an
+        #  exemption is written in, so every entry would read as stale and the
+        #  guard would blame the list for its own ignorance. Exit 2: could not
+        #  check, not "clean" and not "violation".
+        print(
+            f"cannot locate the repository root above {args.root} (no .git in any "
+            "parent) — EXEMPT_FILES keys are repo-root-relative and cannot be "
+            "computed. Refusing to judge the exemption list.",
+            file=sys.stderr,
+        )
+        return 2
+
     violations = find_violations(args.root, args.include_dist)
 
     def repo_rel(path: Path) -> str:
-        """Path relative to the repo root (the parent of the scanned packages/
-        directory), matching the form EXEMPT_FILES is written in."""
+        """Path relative to the repo root, matching the form EXEMPT_FILES is
+        written in — the same key whatever depth `--root` points at."""
         try:
-            return path.relative_to(args.root.parent).as_posix()
+            return path.resolve().relative_to(repo_root).as_posix()
         except ValueError:
             return path.as_posix()
 
     matched_paths = {repo_rel(path) for path, _, _, _ in violations}
-    suppressed = [v for v in violations if repo_rel(v[0]) in exemptions]
-    reported = [v for v in violations if repo_rel(v[0]) not in exemptions]
+    accepted = accepted_specifiers(violations, exemptions, repo_rel)
+    suppressed = [v for v in violations if is_exempt(repo_rel(v[0]), v[2], exemptions, accepted)]
+    reported = [v for v in violations if not is_exempt(repo_rel(v[0]), v[2], exemptions, accepted)]
 
     #  An exemption that matches nothing is a stale entry — either the
     #  underlying violation was fixed (great: shrink the list) or the entry
@@ -281,7 +375,7 @@ def main(argv: "list[str] | None" = None) -> int:
         exempt_file_count = len({repo_rel(v[0]) for v in suppressed})
         print(
             f"check_boundaries: {len(suppressed)} violation(s) suppressed across "
-            f"{exempt_file_count} exempt file(s)"
+            f"{exempt_file_count} file(s) covered by {len(exemptions)} exemption(s)"
         )
     print(f"boundary check OK ({len(source_files(args.root, args.include_dist))} files, "
           f"{len(vocab)} vocabulary packages banned to mechanism tier)")
