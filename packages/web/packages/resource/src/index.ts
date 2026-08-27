@@ -20,10 +20,16 @@ export type { TopicSelectOptions } from "@agenticdevelopertoolkit/ui/blocks";
 // pass-through under an existing rail host (the hub shell), a self-hosted rail + exit
 // guards on a bare feature site. ResourceExplorer routes through it internally; the
 // publisher-only feature entries (research/dashboards/knowledgebases/personas) wrap
-// explicitly — without it their rails/guards silently no-op standalone. The raw
-// StandaloneRailHost stays package-private: an UNCONDITIONAL wrap inside the hub shell
-// shadows the workspace registry (see its doc), so the safe boundary is the only entry.
-export { RailHostBoundary } from "./standalone-rail-host";
+// explicitly — without it their rails/guards silently no-op standalone.
+//
+// StandaloneRailHost is exported ALONGSIDE it, not instead of it, for the one case the
+// boundary gets wrong: a MODAL. A dialog is rendered inside the page, so the boundary finds
+// the shell's host above it and becomes a pass-through — and the dialog's levels are then
+// published into the page's rail, where they appear behind the dialog and outlive it. A
+// dialog owns its own stack, unconditionally, and this is the component that gives it one.
+// Everywhere else — every feature ENTRY — the boundary is still the right and only answer:
+// an unconditional wrap inside the hub shell shadows the workspace registry (see its doc).
+export { RailHostBoundary, StandaloneRailHost } from "./standalone-rail-host";
 
 // The "All" card/list landing, the "New …" dialog, and the single-record settings pane.
 export { ResourceLanding } from "./resource-landing";

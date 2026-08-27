@@ -1212,6 +1212,7 @@ import {
   NotebookText,
   Package,
   Plug,
+  Rocket,
   Route,
   School,
   ScrollText,
@@ -1329,6 +1330,8 @@ var ICONS = {
   api: Code,
   builds: HardHat,
   // the build console
+  shipr: Rocket,
+  // walks a commit from main to production
   status: Activity,
   // system status / pulse
   support: LifeBuoy,
@@ -1680,7 +1683,8 @@ var FLEET_MENU_GROUPS = [
       { site: "recipes" },
       { site: "toolkit" },
       { site: "tools" },
-      { site: "testing" }
+      { site: "testing" },
+      { site: "shipr" }
     ]
   }),
   topic({

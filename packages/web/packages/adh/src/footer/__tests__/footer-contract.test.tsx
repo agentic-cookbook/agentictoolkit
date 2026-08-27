@@ -165,4 +165,38 @@ describe('SiteFooter (build constants → version)', () => {
     vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '')
     expect(buildVersionLabel()).toBeNull()
   })
+
+  // The dev-mode override. The constants above are baked when Next evaluates
+  // `next.config.ts` — once, at dev-server boot — so across a long session the footer
+  // kept reporting the commit the session started on and a bumped VERSION moved
+  // nothing. AppShell (a Server Component) resolves the real pair per render and
+  // passes it here; see `liveBuildIdentity` and its own tests.
+  describe('the live override', () => {
+    it('wins over both baked constants', () => {
+      vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '1.0.0')
+      vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '618f848dfeedfacecafebabe1234567890abcdef')
+      render(<div>{buildVersionLabel({ version: '1.1.0', sha: 'a73e79b7c0ffee00deadbeef1234567890abcdef' })}</div>)
+      expect(screen.getByText('v1.1.0 · a73e79b7')).toBeTruthy()
+      // The title carries the LIVE full sha too — copying it has to yield a commit that
+      // exists in the tree you are looking at, which is the field's only job.
+      expect(screen.getByTitle('a73e79b7c0ffee00deadbeef1234567890abcdef')).toBeTruthy()
+    })
+
+    it('falls back per field, so a value it could not read leaves the baked one standing', () => {
+      // This is what makes the override safe to apply unconditionally: it can only ever
+      // CORRECT a field, never blank one. A site with no VERSION file, or a dev server
+      // outside a git checkout, keeps whatever the config managed to bake.
+      vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '1.0.0')
+      vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', '618f848dfeedfacecafebabe1234567890abcdef')
+      render(<div>{buildVersionLabel({ version: undefined, sha: 'a73e79b7c0ffee00deadbeef1234567890abcdef' })}</div>)
+      expect(screen.getByText('v1.0.0 · a73e79b7')).toBeTruthy()
+    })
+
+    it('changes nothing when it is absent — the production path is untouched', () => {
+      vi.stubEnv('NEXT_PUBLIC_ADH_SITE_VERSION', '1.0.155')
+      vi.stubEnv('NEXT_PUBLIC_ADH_RELEASE', 'a73e79b7c0ffee00deadbeef1234567890abcdef')
+      render(<div>{buildVersionLabel(undefined)}</div>)
+      expect(screen.getByText('v1.0.155 · a73e79b7')).toBeTruthy()
+    })
+  })
 })

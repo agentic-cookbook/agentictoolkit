@@ -15,12 +15,18 @@ import {
 type Phase = "working" | "error";
 
 /**
- * The OAuth / oauth_instance redirect landing (outside the workspace shell). The
- * provider sends the browser here with `?code=&state=`; React state didn't survive
- * the round-trip, so we recover the connect context from `sessionStorage` (keyed by
- * the signed `state`), finish the connect, clear the entry, and route back to the
- * Integrations topic. Query params are read from `window.location` (client-only), so
- * no Suspense boundary is needed.
+ * The redirect landing for every connect that leaves the app (outside the workspace
+ * shell). React state didn't survive the round-trip, so we recover the connect context
+ * from `sessionStorage` (keyed by the signed `state` every flow echoes back), finish the
+ * connect, clear the entry, and route back to the Integrations topic. Query params are
+ * read from `window.location` (client-only), so no Suspense boundary is needed.
+ *
+ * WHAT sits beside the state differs by flow, which is why the stashed context is read
+ * before any credential is demanded:
+ *   • oauth / oauth_instance → `?code=` — an authorization to exchange for a token.
+ *   • github_app            → `?installation_id=&setup_action=` — not an authorization
+ *     but a thing that now exists at the provider and has an id. `setup_action=request`
+ *     means an org owner still has to approve it, so there is no installation to file yet.
  */
 export function IntegrationsOAuthCallback() {
   const router = useRouter();
@@ -46,6 +52,8 @@ export function IntegrationsOAuthCallback() {
     void (async () => {
       const params = new URLSearchParams(window.location.search);
       const code = params.get("code");
+      const installationId = params.get("installation_id");
+      const setupAction = params.get("setup_action");
       const state = params.get("state");
       const oauthError = params.get("error");
 
@@ -54,9 +62,11 @@ export function IntegrationsOAuthCallback() {
         setMessage(`Authorization was cancelled or failed (${oauthError}).`);
         return;
       }
-      if (!code || !state) {
+      // `state` is checked first and alone: it is the one parameter every flow returns, and
+      // the context it keys is what says which credential the rest of the query owed us.
+      if (!state) {
         setPhase("error");
-        setMessage("This callback is missing its authorization code, so there's nothing to finish.");
+        setMessage("This callback is missing its round-trip state, so there's nothing to finish.");
         return;
       }
       const ctx = readPendingConnect(state);
@@ -73,8 +83,32 @@ export function IntegrationsOAuthCallback() {
         setMessage("Your session isn't active. Sign in, then reconnect from Integrations.");
         return;
       }
+      const missing = (what: string) => {
+        setPhase("error");
+        setMessage(`This callback is missing its ${what}, so there's nothing to finish.`);
+      };
       try {
-        if (ctx.authMethod === "oauth") {
+        if (ctx.authMethod === "github_app") {
+          if (setupAction === "request") {
+            setPhase("error");
+            setMessage(
+              "You asked for the app to be installed on that organization, and an owner has to" +
+                " approve it. Connect again once they have.",
+            );
+            return;
+          }
+          if (!installationId) return missing("installation id");
+          await integrationsApi.connect({
+            type: "github_app",
+            providerId: ctx.providerId,
+            serviceType: ctx.serviceType,
+            ecosystemId: ctx.ecosystemId,
+            installationId,
+            state,
+          });
+        } else if (!code) {
+          return missing("authorization code");
+        } else if (ctx.authMethod === "oauth") {
           await integrationsApi.connect({
             type: "oauth",
             providerId: ctx.providerId,
@@ -101,8 +135,9 @@ export function IntegrationsOAuthCallback() {
           feature: "integration-oauth-callback",
           step: ctx.authMethod,
         });
-        // The provider `code` is single-use, so a retry of this callback can't
-        // succeed — clear the stash and send the user back to try again cleanly.
+        // The provider `code` is single-use — and the signed `state` is one-shot either way
+        // — so a retry of this callback can't succeed: clear the stash and send the user
+        // back to try again cleanly.
         clearPendingConnect(state);
         if (!alive.current) return;
         setPhase("error");

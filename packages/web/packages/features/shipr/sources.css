@@ -1,0 +1,24 @@
+/* Tailwind source self-registration for @agentic-toolkit/shipr.
+ *
+ * Tailwind does not scan node_modules, so a consumer app must tell it to scan this
+ * package's className-bearing components. Rather than every host copying @source globs
+ * into its own globals.css (drift-prone, and a missed line renders unstyled with no
+ * error), the package OWNS them here and a host adds one line:
+ *
+ *   @import "@agentic-toolkit/shipr/sources.css";
+ *
+ * The paths are relative to THIS file (the package root) and therefore travel with the
+ * package — they resolve identically through a dev pnpm link: symlink and a materialized
+ * prod copy. `src` covers `next dev` (the whole package is symlinked, so HMR sees source
+ * edits); `dist` covers prod builds, where `files` ships only `dist` + this file and the
+ * `src` glob simply matches nothing. Mirrors @agentic-toolkit/ui's components.css
+ * self-registration. */
+
+/* This package registers what IT mounts: the console reaches @agentic-toolkit/ui's HTDV
+ * and split primitives, so a host that registers `shipr` alone still loses their
+ * utilities. Chained HERE because under pnpm's isolated node_modules only a declaring
+ * package can resolve the specifier. */
+@import "@agentic-toolkit/ui/styles/components.css";
+
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

@@ -19,6 +19,14 @@ export type SiteFooterProps = {
    *  primitive takes a generic `trailing` slot and has no idea bitbag exists, which
    *  is the whole point of the split. */
   chat?: boolean
+  /** The running server's own build identity, passed by {@link AppShell} in development
+   *  only. Omitted everywhere else, where the baked `NEXT_PUBLIC_*` literals are the
+   *  build and correct by construction — see {@link buildVersionLabel}.
+   *
+   *  A plain serializable object, deliberately: this component is `'use client'`, so the
+   *  value has to cross the server/client boundary as data. It cannot be read here —
+   *  resolving it needs `node:fs` and a `git` fork. */
+  live?: { version?: string; sha?: string }
 }
 
 const COPYRIGHT_PREFIX = '© 2026 '
@@ -69,10 +77,21 @@ const LEGAL_LINKS: FooterLink[] = [
  *
  *  The title carries the FULL sha rather than a build timestamp: a timestamp would
  *  make every build's bundle differ from identical source, and this repo has already
- *  paid for non-reproducible artifacts once. */
-export function buildVersionLabel() {
-  const version = process.env.NEXT_PUBLIC_ADH_SITE_VERSION ?? ''
-  const sha = process.env.NEXT_PUBLIC_ADH_RELEASE ?? ''
+ *  paid for non-reproducible artifacts once.
+ *
+ *  `live` overrides either field, and exists for exactly one mode. Under `next build`
+ *  the literals below ARE the build, so nothing overrides them and this argument is
+ *  never passed. Under `next dev` they freeze at dev-server boot and then keep
+ *  reporting the commit the session started on for as long as it runs — which is how
+ *  a bumped `VERSION` could show nothing on screen. AppShell (a Server Component)
+ *  resolves the real pair per render and passes it down; see `liveBuildIdentity`.
+ *  A field it could not read with confidence arrives `undefined` and the baked
+ *  literal shows through, so this can only ever correct a value, never blank one.
+ *
+ *  @param live the running server's own identity, in development only. */
+export function buildVersionLabel(live?: { version?: string; sha?: string }) {
+  const version = live?.version ?? process.env.NEXT_PUBLIC_ADH_SITE_VERSION ?? ''
+  const sha = live?.sha ?? process.env.NEXT_PUBLIC_ADH_RELEASE ?? ''
   const label = [version && `v${version}`, sha && sha.slice(0, 8)].filter(Boolean).join(' · ')
   if (!label) return null
   return <span title={sha || undefined}>{label}</span>
@@ -86,7 +105,7 @@ export function buildVersionLabel() {
  *  Named `SiteFooter` rather than `AdhFooter`: this barrel already publishes an `AdhFooter`
  *  — the registry-free primitive this component wraps. The two are unrelated components
  *  that happened to share a name; this one is adh's REGISTRY-AWARE composition. */
-export function SiteFooter({ links = [], chat = true }: SiteFooterProps) {
+export function SiteFooter({ links = [], chat = true, live }: SiteFooterProps) {
   // bitbag is rendered here but does NOT live here: FooterChatInner portals him to
   // `document.body` and he fixes himself to the viewport's bottom edge, so the
   // primitive's `trailing` slot is his mount point and nothing else. He therefore
@@ -105,7 +124,7 @@ export function SiteFooter({ links = [], chat = true }: SiteFooterProps) {
             </a>
           </>
         }
-        version={buildVersionLabel()}
+        version={buildVersionLabel(live)}
         trailing={chat ? <FooterChat /> : null}
       />
       <SitesPopover />

@@ -293,6 +293,7 @@ describe('LISTED_SITES (the family roster)', () => {
       'docs',
       'messaging',
       'messages',
+      'shipr',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',
@@ -847,6 +848,7 @@ describe('FOOTER_SITES (SEO interlinks)', () => {
       'docs',
       'messaging',
       'messages',
+      'shipr',
       // </gen:order>
       'fishlamp',
       'fishlampdesign',

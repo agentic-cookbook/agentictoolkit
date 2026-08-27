@@ -40,6 +40,14 @@ import {
  * Extracted from ResourceExplorer (which always self-hosted this way) so the
  * publisher-only feature entries — research/dashboards/knowledgebases/personas — get the same
  * standalone behavior through {@link RailHostBoundary}.
+ *
+ * MOUNT THIS DIRECTLY ONLY INSIDE A MODAL. Every other caller wants the boundary, which
+ * self-hosts only when there is no host above; an unconditional wrap under the hub shell
+ * shadows the workspace registry and renders a second rail inside the frontier pane. A
+ * dialog is the exception in both directions: it renders inside the page, so the boundary
+ * would find the shell's host and pass through — publishing the dialog's levels into the
+ * page's rail, where they draw behind the dialog and survive its close. A dialog's stack is
+ * its own, always, so it takes this component and not the boundary.
  */
 export function StandaloneRailHost({
   children,

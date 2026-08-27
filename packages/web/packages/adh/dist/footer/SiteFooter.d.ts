@@ -13,6 +13,17 @@ export type SiteFooterProps = {
      *  primitive takes a generic `trailing` slot and has no idea bitbag exists, which
      *  is the whole point of the split. */
     chat?: boolean;
+    /** The running server's own build identity, passed by {@link AppShell} in development
+     *  only. Omitted everywhere else, where the baked `NEXT_PUBLIC_*` literals are the
+     *  build and correct by construction — see {@link buildVersionLabel}.
+     *
+     *  A plain serializable object, deliberately: this component is `'use client'`, so the
+     *  value has to cross the server/client boundary as data. It cannot be read here —
+     *  resolving it needs `node:fs` and a `git` fork. */
+    live?: {
+        version?: string;
+        sha?: string;
+    };
 };
 /** The footer's build identity: `v1.0.155 · a73e79b7`, or null when neither field exists.
  *
@@ -29,8 +40,22 @@ export type SiteFooterProps = {
  *
  *  The title carries the FULL sha rather than a build timestamp: a timestamp would
  *  make every build's bundle differ from identical source, and this repo has already
- *  paid for non-reproducible artifacts once. */
-export declare function buildVersionLabel(): import("react").JSX.Element | null;
+ *  paid for non-reproducible artifacts once.
+ *
+ *  `live` overrides either field, and exists for exactly one mode. Under `next build`
+ *  the literals below ARE the build, so nothing overrides them and this argument is
+ *  never passed. Under `next dev` they freeze at dev-server boot and then keep
+ *  reporting the commit the session started on for as long as it runs — which is how
+ *  a bumped `VERSION` could show nothing on screen. AppShell (a Server Component)
+ *  resolves the real pair per render and passes it down; see `liveBuildIdentity`.
+ *  A field it could not read with confidence arrives `undefined` and the baked
+ *  literal shows through, so this can only ever correct a value, never blank one.
+ *
+ *  @param live the running server's own identity, in development only. */
+export declare function buildVersionLabel(live?: {
+    version?: string;
+    sha?: string;
+}): import("react").JSX.Element | null;
 /** adh's footer: the toolkit's identity-free primitive ({@link ToolkitFooter}, published as
  *  `AdhFooter` from this same barrel) plus everything that IS adh — the FishLamp brand
  *  line, the sites popover, the legal modals, and bitbag himself. The copyright is a fixed
@@ -39,5 +64,5 @@ export declare function buildVersionLabel(): import("react").JSX.Element | null;
  *  Named `SiteFooter` rather than `AdhFooter`: this barrel already publishes an `AdhFooter`
  *  — the registry-free primitive this component wraps. The two are unrelated components
  *  that happened to share a name; this one is adh's REGISTRY-AWARE composition. */
-export declare function SiteFooter({ links, chat }: SiteFooterProps): import("react").JSX.Element;
+export declare function SiteFooter({ links, chat, live }: SiteFooterProps): import("react").JSX.Element;
 //# sourceMappingURL=SiteFooter.d.ts.map

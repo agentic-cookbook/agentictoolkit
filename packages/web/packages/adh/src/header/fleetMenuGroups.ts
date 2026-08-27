@@ -139,6 +139,7 @@ export const FLEET_MENU_GROUPS: MenuGroup[] = [
       { site: 'toolkit' },
       { site: 'tools' },
       { site: 'testing' },
+      { site: 'shipr' },
     ],
   }),
   topic({

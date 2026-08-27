@@ -1,0 +1,798 @@
+'use client';
+
+import * as React from 'react';
+
+import { HierarchicalTopicDetail } from '@agentic-toolkit/ui/blocks';
+import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
+
+import { useRunningRepos } from './activity/useRunningRepos';
+import { isFinished, useRuns } from './activity/useRuns';
+import { ConfigureDialog } from './configure/ConfigureDialog';
+import { GroupDetailPane } from './GroupDetailPane';
+import { RepoView } from './RepoView';
+import {
+  EMPTY_SELECTION,
+  targetsOf,
+  toggleChecked,
+  type Selection,
+} from './selection';
+import {
+  SettingsDialog,
+  type RepoSettingsPatch,
+  type SettingsTarget,
+} from './settings/SettingsDialog';
+import { scopeOf, toolbarState, type ActionId } from './toolbar/actions';
+import {
+  ConfirmDialog,
+  DeployDialog,
+  MoveDialog,
+  NameDialog,
+  type ConnectionOption,
+  type DeployRequest,
+} from './toolbar/dialogs';
+import { Toolbar } from './toolbar/Toolbar';
+import { descendantsOf, planLevels, type NodeRef } from './tree/levels';
+import { RailMenu } from './tree/RailMenu';
+import { buildLevels, repoLabel } from './tree/toLevels';
+import { useTree } from './tree/useTree';
+import type { ShiprClient } from './client';
+import type {
+  DevRepo,
+  Environment,
+  Operation,
+  RegisterRequest,
+} from './types';
+
+/**
+ * The whole console: folders, and what has been done to what is in them.
+ *
+ * ONE VIEW, not two. It used to be a split — the tree on the left, a log on the right that
+ * showed whichever run was most recent anywhere in the workspace. Two panes, two subjects:
+ * the one that was selected and the one that had most recently spoken. So the output moved
+ * to where its subject is. Choose a repository and the pane is that repository's ladder and
+ * its latest output; choose a folder and it is every repository under it, each with its own,
+ * in the order the runner walks them.
+ *
+ * THE BACKEND DOES THE WORK. Nothing here runs git, decides an order, or knows what
+ * `prepare` means; it posts an operation and a scope and renders what comes back. That is
+ * also why a folder is ONE run rather than a loop in this file — the backend expands it, in
+ * the rail's own order, and a browser tab closed mid-batch does not strand it.
+ *
+ * THE THREE VERBS NEED A TARGET. Status, Prepare and Deploy act on what is selected and are
+ * dead without a selection. The folder verbs — add, rename, move, delete, select, settings —
+ * hang off the gear in a rail's own header, where "here" is unambiguous. Everything that is
+ * about SETUP rather than about a folder or a run — registering a repository, removing one,
+ * and the forge connections both of those go out over — is behind Configure, which is a
+ * place and therefore a button on the bar rather than an entry in a menu.
+ */
+
+/** What the ROOT rail is a list of. The breadcrumb keeps the workspace's own name. */
+const ROOT_TITLE = 'Projects';
+
+export interface ShiprConsoleProps {
+  client: ShiprClient;
+  /** The caller's forge connections, for the register wizard. The console does not read
+   *  them itself: they live behind `/integrations`, which is the host's concern. */
+  connections?: readonly ConnectionOption[];
+  /** Re-read {@link connections}. Called when the Configure dialog's Connections pane
+   *  reports a write — connecting an account there is exactly what adds an installation to
+   *  that list, and without this seam the wizard opened next would still be offering the
+   *  installations from before it. Optional: a host with nothing to re-read may omit it and
+   *  the list simply stays as it loaded. */
+  onConnectionsChanged?: () => void;
+  /** Breadcrumb root — the workspace's name, as the host already knows it. */
+  rootLabel?: string;
+  className?: string;
+}
+
+/**
+ * The console, PINNED TO ONE WORKSPACE.
+ *
+ * Everything below this line is per-workspace state: the folder path the operator has
+ * walked, the row they highlighted, the runs this tab started, the tree itself. None of it
+ * means anything in a different workspace, and one of them — the tree — is another tenant's
+ * data. So a workspace change is not something the console cleans up after; it is a
+ * DIFFERENT CONSOLE. The key makes React unmount this one and build the next from nothing,
+ * which is a guarantee no effect can be written wrongly and no future prop can defeat.
+ *
+ * The hooks underneath hold the same rule independently (`useTree`, `useRuns` tag their
+ * rows with the workspace they read them from) so a host that mounts the inner parts
+ * itself cannot lose it either.
+ */
+export function ShiprConsole(props: ShiprConsoleProps): React.ReactElement {
+  return <Console key={props.client.workspace ?? ''} {...props} />;
+}
+
+function Console({
+  client,
+  connections,
+  onConnectionsChanged,
+  rootLabel = 'Repositories',
+  className,
+}: ShiprConsoleProps): React.ReactElement {
+  const tree = useTree(client);
+  /**
+   * WHAT THE DETAIL PANES RE-READ ON — deliberately not `tree.reads`.
+   *
+   * The tree is now re-read every time the runner moves from one repository to the next, so
+   * that the rail's dots go out one at a time (see the walk effect below). The panes must
+   * NOT follow that counter: a folder's pane holds one `RepoView` per repository, and forty
+   * of them re-reading on every step transition is forty reads per repository across the
+   * batch — quadratic in the size of the folder, for a pane that only changed in one place.
+   *
+   * This counter moves for the things that change what a pane is OF: a register, a move, a
+   * rename, a settings save, a run leaving the queue. What a pane needs during a batch is
+   * its own repository's turn ending, and each section watches that for itself through
+   * `running`.
+   */
+  const [paneNonce, setPaneNonce] = React.useState(0);
+  const runs = useRuns(client);
+
+  const [path, setPath] = React.useState<string[]>([]);
+  const [selection, setSelection] = React.useState<Selection>(EMPTY_SELECTION);
+  const [error, setError] = React.useState<string | null>(null);
+
+  /** Runs this console started, in the order it started them. Nothing renders it directly
+   *  any more — each pane finds its own repository's latest run — but it is what spins the
+   *  rail's rows, what stands the pipeline buttons down while work is out, and what Cancel
+   *  stops. */
+  const [queue, setQueue] = React.useState<string[]>([]);
+
+  /** WHICH BUTTON is holding that work. Kept beside the queue rather than derived from it
+   *  because a run does not remember which control started it: Deploy posts a `prepare` and
+   *  a `deploy`, and reading the queue's head back would light Prepare for the first half of
+   *  a deploy the operator never pressed Prepare for. */
+  const [activeAction, setActiveAction] = React.useState<ActionId | null>(null);
+
+  /**
+   * Bumped the INSTANT a button is pressed, and used in the detail pane's `key`.
+   *
+   * A press posts one run per target and only then refreshes the tree, so for as long as
+   * those requests take the pane went on showing the previous run's ladder and the previous
+   * run's log — pressing Deploy looked, for a second or more, exactly like not pressing it
+   * (Mike). `tree.reads` cannot fix this: it moves when the read LANDS, which is the moment
+   * the new answer is already there.
+   *
+   * So this is not another nonce. It is a remount: React drops the old pane's state — the
+   * detail it was keeping while re-fetching, the log it had streamed — and builds a new one
+   * with nothing in it. What the operator sees is the pane going blank under their finger
+   * and filling in with what they just started, which is the only honest sequence.
+   */
+  const [pressed, setPressed] = React.useState(0);
+
+  // Dialogs. One at a time by construction: a single discriminated value rather than six
+  // booleans that can all be true.
+  type Modal =
+    | { kind: 'none' }
+    | { kind: 'newGroup'; parentId: string | null }
+    | { kind: 'rename'; id: string; name: string }
+    | { kind: 'delete'; id: string; name: string }
+    | { kind: 'move'; refs: NodeRef[] }
+    // No payload. Configure is a PLACE, not an act on a row: it opens on nothing selected
+    // and the operator chooses inside it, so there is nothing for this console to hand it.
+    | { kind: 'configure' }
+    | { kind: 'deploy' }
+    // The REF, not the row: the tree is re-read while a dialog is open (a run lands, a
+    // folder's contents change), and a captured row would go stale behind it.
+    | { kind: 'settings'; ref: NodeRef };
+  const [modal, setModal] = React.useState<Modal>({ kind: 'none' });
+  const close = React.useCallback(() => setModal({ kind: 'none' }), []);
+
+  const groups = tree.data?.groups ?? [];
+  const items = tree.data?.items ?? [];
+  const verbs = tree.data?.verbs ?? [];
+
+  const plans = React.useMemo(
+    () =>
+      planLevels({
+        tree: { groups, items },
+        path,
+        selectedRepoId:
+          selection.focus?.kind === 'repo' ? selection.focus.id : null,
+        // NOT the workspace's name. The breadcrumb above already opens with it, and the
+        // root rail is a list of the projects filed in it — so naming that list after the
+        // person or the org printed the same word twice and answered "a list of what?"
+        // with the one thing every row in it has in common.
+        rootTitle: ROOT_TITLE,
+      }),
+    [groups, items, path, selection.focus],
+  );
+
+  // ── what the toolbar is pointed at ──────────────────────────────────────────
+
+  const targets = React.useMemo(() => targetsOf(selection), [selection]);
+
+  const targetLabel = React.useMemo(() => {
+    if (targets.length === 0) return 'nothing';
+    if (targets.length > 1) return `${targets.length} selected`;
+    const only = targets[0]!;
+    if (only.kind === 'group') {
+      return groups.find((g) => g.id === only.id)?.name ?? 'a folder';
+    }
+    const item = items.find((r) => r.id === only.id);
+    return item ? repoLabel(item) : 'a repository';
+  }, [targets, groups, items]);
+
+  /** Re-read the tree AND every open pane. The pair, because they answer the same question
+   *  at two grains and a caller that moved a repository has changed both. */
+  const refreshAll = React.useCallback(() => {
+    tree.refresh();
+    setPaneNonce((n) => n + 1);
+  }, [tree]);
+
+  /** Mirrors a queued run is inside RIGHT NOW — including the one a folder-wide run has
+   *  reached, which is a question about the run's steps rather than about its scope. */
+  const runningRepoIds = useRunningRepos(client, queue, runs);
+
+  /**
+   * THE RAIL FOLLOWS THE WALK, one repository at a time.
+   *
+   * The hand-off effect below fires per QUEUE ENTRY, and a run over a folder is a single
+   * entry — so a batch of fourteen re-read the tree once, at the end, and all fourteen dots
+   * went from running to their verdict together (Mike: "we need to finish each repo one at a
+   * time ... update the status dot before moving onto the next repo").
+   *
+   * The runner is serial, and `useRunningRepos` already polls where it is. So the moment the
+   * set of repositories it is inside CHANGES, the one it has just left has a new
+   * `repo_states` row — which is the dot. Keyed on the SET rather than the poll: the poll is
+   * every 750ms and the position is not.
+   */
+  const runningSig = [...runningRepoIds].sort().join(',');
+  const lastRunningSig = React.useRef(runningSig);
+  React.useEffect(() => {
+    if (lastRunningSig.current === runningSig) return;
+    lastRunningSig.current = runningSig;
+    // The TREE only — see `paneNonce`.
+    tree.refresh();
+  }, [runningSig, tree]);
+
+  // ── the queue ───────────────────────────────────────────────────────────────
+
+  React.useEffect(() => {
+    const head = queue[0];
+    if (!head || !isFinished(runs, head)) return;
+    setQueue((prev) => (prev[0] === head ? prev.slice(1) : prev));
+    // A run that touched branches changed what the ladder says, so this is re-read at every
+    // hand-off rather than once at the end. Within a single folder-wide run the walk effect
+    // above is what keeps the rail moving; this is the boundary between one queued run and
+    // the next.
+    refreshAll();
+  }, [queue, runs, refreshAll]);
+
+  const busy = queue.length > 0;
+
+  // The bar comes back when the last run leaves the queue — whether it succeeded, failed, or
+  // was cancelled. Keyed on the LENGTH: the queue's contents change at every hand-off in a
+  // batch, and the button should keep its spinner across all of them.
+  React.useEffect(() => {
+    if (queue.length === 0) setActiveAction(null);
+  }, [queue.length]);
+
+  // ── starting work ───────────────────────────────────────────────────────────
+
+  const start = React.useCallback(
+    async (
+      /** The control that was pressed — see `activeAction`. */
+      action: ActionId,
+      operations: readonly { operation: Operation; environments?: Environment[] }[],
+    ) => {
+      setError(null);
+      if (targets.length === 0) return;
+      // Before the first await, so the pane is empty by the time this function yields.
+      setPressed((n) => n + 1);
+      const started: string[] = [];
+      try {
+        // Sequentially, and awaited: the backend queues by creation time, so posting these
+        // in parallel would hand the runner an order the operator never chose. That is what
+        // makes "prepare, then deploy to staging and production" mean those words in that
+        // order rather than three runs racing.
+        for (const step of operations) {
+          for (const scope of targets.map(scopeOf)) {
+            const { runId } = await client.run({
+              operation: step.operation,
+              ...scope,
+              ...(step.environments?.length
+                ? { environments: step.environments }
+                : {}),
+            });
+            started.push(runId);
+          }
+        }
+      } catch (e) {
+        setError((e as Error).message);
+      }
+      if (started.length > 0) {
+        setQueue((prev) => [...prev, ...started]);
+        setActiveAction(action);
+        runs.refresh();
+        // The panes find their run through the tree read, so refreshing it is what puts the
+        // output of what was just started on the screen.
+        refreshAll();
+      }
+    },
+    [client, targets, runs, refreshAll],
+  );
+
+  const onRun = React.useCallback(
+    (operation: Operation) => void start(operation as ActionId, [{ operation }]),
+    [start],
+  );
+
+  const onDeploy = React.useCallback(
+    ({ prepare, environments }: DeployRequest) => {
+      // Each environment is a run of its own, in ladder order, and prepare goes first.
+      // Splitting them here rather than sending one run with three environments keeps the
+      // per-environment verdict separable in the log.
+      const steps = [
+        ...(prepare ? [{ operation: 'prepare' as const }] : []),
+        ...environments.map((env) => ({
+          operation: 'deploy' as const,
+          environments: [env],
+        })),
+      ];
+      return start('deploy', steps);
+    },
+    [start],
+  );
+
+  const onRegister = React.useCallback(
+    async (body: RegisterRequest) => {
+      setPressed((n) => n + 1);
+      const { runId } = await client.register(body);
+      setQueue((prev) => [...prev, runId]);
+      setActiveAction('register');
+      runs.refresh();
+      refreshAll();
+    },
+    [client, runs, refreshAll],
+  );
+
+  /**
+   * Take a repository out again: unregister every mirror, retire the source row.
+   *
+   * ONE RUN over a `dev_repo` scope, not one per mirror. The backend expands the scope in
+   * its own order and drops the source row as the last mirror goes, so a tab closed halfway
+   * through cannot leave a repository half-removed — which a loop in this file could.
+   *
+   * It is queued exactly like every other run, so the rail spins, the bar stands down, and
+   * Cancel stops it. Removing is a pipeline operation with a forge on the other end of it,
+   * not a row deletion.
+   */
+  const onRemove = React.useCallback(
+    async (devRepo: DevRepo) => {
+      setPressed((n) => n + 1);
+      const { runId } = await client.run({
+        operation: 'unregister',
+        scopeKind: 'dev_repo',
+        scopeId: devRepo.id,
+      });
+      setQueue((prev) => [...prev, runId]);
+      setActiveAction('unregister');
+      runs.refresh();
+      refreshAll();
+    },
+    [client, runs, refreshAll],
+  );
+
+  /**
+   * Stop what is in flight.
+   *
+   * EVERY run in the queue, not just the one that is moving: Deploy queues a `prepare` and a
+   * `deploy` per environment, and stopping only the running one would let the next start
+   * half a second later — which reads, from the operator's side, as a Cancel that did not
+   * work.
+   *
+   * ONLY WHAT WAS ACTUALLY STOPPED LEAVES THE QUEUE. A cancel that failed is a run still
+   * walking branches, and dropping it here would hand the buttons back while it did — so the
+   * failure keeps the bar down and says why, which is the state that matches the repository.
+   */
+  const onCancel = React.useCallback(async () => {
+    setError(null);
+    const stopped: string[] = [];
+    try {
+      for (const id of queue) {
+        await client.cancelRun(id);
+        stopped.push(id);
+      }
+    } catch (e) {
+      setError((e as Error).message);
+    }
+    if (stopped.length === 0) return;
+    setQueue((prev) => prev.filter((id) => !stopped.includes(id)));
+    runs.refresh();
+    // A cancelled deploy left some repositories carried and the rest not, and which is which
+    // is the first thing anybody wants after pressing this.
+    refreshAll();
+  }, [client, queue, runs, refreshAll]);
+
+  // ── folders ─────────────────────────────────────────────────────────────────
+
+  const onCreateGroup = React.useCallback(
+    async (parentId: string | null, name: string) => {
+      await client.createGroup({ name, ...(parentId ? { parentId } : {}) });
+      refreshAll();
+    },
+    [client, refreshAll],
+  );
+
+  const onRename = React.useCallback(
+    async (id: string, name: string) => {
+      await client.updateGroup(id, { name });
+      refreshAll();
+    },
+    [client, refreshAll],
+  );
+
+  const onDelete = React.useCallback(
+    async (id: string) => {
+      await client.deleteGroup(id);
+      // The deleted folder may be open. Truncating the path at it puts the operator in its
+      // parent instead of on a rail of nothing.
+      setPath((prev) => {
+        const at = prev.indexOf(id);
+        return at === -1 ? prev : prev.slice(0, at);
+      });
+      setSelection((prev) =>
+        prev.focus?.kind === 'group' && prev.focus.id === id
+          ? { ...prev, focus: null }
+          : prev,
+      );
+      refreshAll();
+    },
+    [client, refreshAll],
+  );
+
+  const onMove = React.useCallback(
+    async (refs: readonly NodeRef[], destination: string | null) => {
+      // One at a time, and the first failure stops the rest: a partial move the operator can
+      // see half of is recoverable; one that reports success while three rows stayed put is
+      // not. The error carries the backend's own sentence.
+      for (const ref of refs) {
+        if (ref.kind === 'group') {
+          await client.updateGroup(ref.id, { parentId: destination });
+        } else {
+          await client.updateRepo(ref.id, { groupId: destination });
+        }
+      }
+      setSelection((prev) => ({ ...prev, checked: [] }));
+      refreshAll();
+    },
+    [client, refreshAll],
+  );
+
+  const onSaveSettings = React.useCallback(
+    async (patches: RepoSettingsPatch[]) => {
+      // Sequential for the same reason `onMove` is: a folder's save is a request per
+      // repository, and a failure halfway through has to stop rather than leave the
+      // remainder's outcome unknown.
+      for (const patch of patches) {
+        if (patch.envBranches) {
+          await client.updateRepo(patch.repoId, { envBranches: patch.envBranches });
+        }
+      }
+      refreshAll();
+    },
+    [client, refreshAll],
+  );
+
+  // ── rail interaction ────────────────────────────────────────────────────────
+
+  const onSelect = React.useCallback((levelIndex: number, ref: NodeRef) => {
+    setSelection((prev) => ({ ...prev, focus: ref }));
+    setPath((prev) =>
+      ref.kind === 'group'
+        ? [...prev.slice(0, levelIndex), ref.id]
+        : prev.slice(0, levelIndex),
+    );
+  }, []);
+
+  const onClear = React.useCallback((levelIndex: number) => {
+    setSelection((prev) => ({ ...prev, focus: null }));
+    setPath((prev) => prev.slice(0, levelIndex));
+  }, []);
+
+  const onToggleCheck = React.useCallback((ref: NodeRef) => {
+    setSelection((prev) => ({
+      ...prev,
+      checked: toggleChecked(prev.checked, ref),
+    }));
+  }, []);
+
+  const onToggleSelecting = React.useCallback(() => {
+    setSelection((prev) =>
+      prev.selecting
+        ? // Leaving select mode DROPS the batch. A hidden set of ticks that the buttons
+          // still act on is the worst possible state for this console to be in.
+          { ...prev, selecting: false, checked: [] }
+        : {
+            ...prev,
+            selecting: true,
+            // Seeded with the highlighted row, so turning batch mode on continues from
+            // what was already chosen instead of throwing it away. Without this, Select
+            // silently empties the selection the three buttons above are pointed at.
+            checked: prev.focus ? [prev.focus] : [],
+          },
+    );
+  }, []);
+
+  // ── the rows the menu acts on ───────────────────────────────────────────────
+
+  const soleTarget = targets.length === 1 ? targets[0]! : null;
+  const soleGroup =
+    soleTarget?.kind === 'group'
+      ? (groups.find((g) => g.id === soleTarget.id) ?? null)
+      : null;
+  const focusedGroup =
+    selection.focus?.kind === 'group'
+      ? (groups.find((g) => g.id === selection.focus!.id) ?? null)
+      : null;
+  const selectedRepoId =
+    selection.focus?.kind === 'repo' ? selection.focus.id : null;
+
+  const buttons = React.useMemo(
+    () =>
+      toolbarState({
+        selection,
+        verbs,
+        busy,
+        hasGroups: groups.length > 0,
+      }),
+    [selection, verbs, busy, groups.length],
+  );
+
+  /** The gear menu, one per rail. Built here rather than in `toLevels` because every item
+   *  in it is one of this component's own callbacks. */
+  const railActions = React.useCallback(
+    (groupId: string | null) => (
+      <RailMenu
+        state={buttons}
+        groupId={groupId}
+        selecting={selection.selecting}
+        onNewGroup={(parentId) => setModal({ kind: 'newGroup', parentId })}
+        onDelete={() =>
+          soleGroup &&
+          setModal({ kind: 'delete', id: soleGroup.id, name: soleGroup.name })
+        }
+        onRename={() =>
+          soleGroup &&
+          setModal({ kind: 'rename', id: soleGroup.id, name: soleGroup.name })
+        }
+        onMove={() => setModal({ kind: 'move', refs: [...targets] })}
+        onToggleSelecting={onToggleSelecting}
+        onSettings={() =>
+          soleTarget && setModal({ kind: 'settings', ref: soleTarget })
+        }
+      />
+    ),
+    [
+      buttons,
+      targetLabel,
+      soleTarget,
+      soleGroup,
+      selection.selecting,
+      targets,
+      onToggleSelecting,
+    ],
+  );
+
+  const levels = React.useMemo(
+    () =>
+      buildLevels({
+        plans,
+        selection,
+        onSelect,
+        onClear,
+        onToggleCheck,
+        railActions,
+        runningRepoIds,
+        busy: tree.loading,
+      }),
+    [
+      plans,
+      selection,
+      onSelect,
+      onClear,
+      onToggleCheck,
+      railActions,
+      runningRepoIds,
+      tree.loading,
+    ],
+  );
+
+  /** What the settings dialog is looking at, re-derived from the live tree each render so a
+   *  folder's contents stay current while it is open. */
+  const settingsTarget = React.useMemo<SettingsTarget | null>(() => {
+    if (modal.kind !== 'settings') return null;
+    if (modal.ref.kind === 'repo') {
+      const repo = items.find((r) => r.id === modal.ref.id);
+      return repo ? { kind: 'repo', repo } : null;
+    }
+    const group = groups.find((g) => g.id === modal.ref.id);
+    return group
+      ? {
+          kind: 'group',
+          group,
+          contents: descendantsOf(items, groups, group.id),
+        }
+      : null;
+  }, [modal, items, groups]);
+
+  /** A folder's pane: every repository under it, in the order a run over it walks them. */
+  const focusedContents = React.useMemo(
+    () => (focusedGroup ? descendantsOf(items, groups, focusedGroup.id) : []),
+    [focusedGroup, items, groups],
+  );
+
+  return (
+    <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${className ?? ''}`}>
+      <ErrorText error={error ?? tree.error} className="px-4 pt-2" />
+
+      <HierarchicalTopicDetail
+        levels={levels}
+        // The stack keeps memory outside React — pins, hover, and the outgoing detail pane it
+        // crossfades from — and that memory is keyed by what we tell it. Unscoped, every
+        // workspace's console is the same key, and the next workspace inherits this one's.
+        surfaceScope={client.workspace ?? ''}
+        rootLabel={rootLabel}
+        // THE FOLDER'S NAME GOES IN THE PANE'S OWN TOP STRIP (Mike). It used to be a second
+        // header inside the pane, sitting directly under the strip that carries the cover
+        // control — two title bars stacked, the top one empty. This is the strip's whole
+        // purpose, and it puts the name on the same line as the `«` that hides the rail,
+        // where the reader is already looking to find out what they are looking at.
+        detailTitle={
+          !selectedRepoId && focusedGroup ? (
+            <>
+              <span className="font-semibold text-apt-gold">
+                {focusedGroup.name}
+              </span>{' '}
+              <span className="text-apt-text-muted">
+                {focusedContents.length === 1
+                  ? '1 repository'
+                  : `${focusedContents.length} repositories`}
+              </span>
+            </>
+          ) : undefined
+        }
+        // What the repo pane actually needs: six ladder columns beside a commit subject.
+        // Below this the ladder wraps and stops being readable as a ladder, which is the
+        // whole point of the pane — so the rails give way first.
+        minDetailWidth="32rem"
+        toolbar={
+          <Toolbar
+            state={buttons}
+            onRun={onRun}
+            onDeploy={() => setModal({ kind: 'deploy' })}
+            onCancel={() => void onCancel()}
+            onConfigure={() => setModal({ kind: 'configure' })}
+            active={activeAction}
+          />
+        }
+      >
+        {selectedRepoId ? (
+          <RepoView
+            // `pressed` in the key, not just the props: see `pressed` above — a press has to
+            // BLANK this pane, and only a remount can throw away a log that has already
+            // streamed.
+            key={`${selectedRepoId}:${pressed}`}
+            client={client}
+            repoId={selectedRepoId}
+            // Re-read after a run hand-off, a move, a rename, a settings save — see
+            // `paneNonce`. NOT something derived from the rows: a status run changes the
+            // ladder and leaves the row count identical, so a nonce built out of the rows
+            // never moves and the pane sits on the ladder from before the run the operator
+            // just watched finish.
+            nonce={paneNonce}
+            // And re-read on its OWN turn, so a repository inside a folder-wide run shows
+            // its result the moment the runner leaves it rather than when the whole batch
+            // ends.
+            running={runningRepoIds.has(selectedRepoId)}
+            // The only section on the screen, so it is the one an operator watches a run
+            // in. A folder's stack sets this off — see `GroupDetailPane`.
+            follow
+          />
+        ) : focusedGroup ? (
+          <GroupDetailPane
+            key={`${focusedGroup.id}:${pressed}`}
+            client={client}
+            title={focusedGroup.name}
+            contents={focusedContents}
+            nonce={paneNonce}
+            // Each section re-reads on its own turn rather than all of them on every step —
+            // see `paneNonce`.
+            runningRepoIds={runningRepoIds}
+          />
+        ) : (
+          <p className="p-6 text-sm text-apt-text-muted">
+            Choose a repository to see where its branches are standing, or a
+            folder to see what was last run across everything in it.
+          </p>
+        )}
+      </HierarchicalTopicDetail>
+
+      <NameDialog
+        open={modal.kind === 'newGroup'}
+        onClose={close}
+        title="New folder"
+        submitLabel="Create"
+        onSubmit={(name) =>
+          onCreateGroup(
+            modal.kind === 'newGroup' ? modal.parentId : null,
+            name,
+          )
+        }
+      />
+
+      <NameDialog
+        open={modal.kind === 'rename'}
+        onClose={close}
+        title="Rename folder"
+        initial={modal.kind === 'rename' ? modal.name : ''}
+        submitLabel="Rename"
+        onSubmit={(name) =>
+          modal.kind === 'rename'
+            ? onRename(modal.id, name)
+            : Promise.resolve()
+        }
+      />
+
+      <ConfirmDialog
+        open={modal.kind === 'delete'}
+        onClose={close}
+        title="Delete folder"
+        body={
+          modal.kind === 'delete'
+            ? `Delete “${modal.name}”? A folder that still holds repositories or sub-folders cannot be deleted — move them out first.`
+            : ''
+        }
+        confirmLabel="Delete"
+        onConfirm={() =>
+          modal.kind === 'delete' ? onDelete(modal.id) : Promise.resolve()
+        }
+      />
+
+      <MoveDialog
+        open={modal.kind === 'move'}
+        onClose={close}
+        groups={groups}
+        moving={modal.kind === 'move' ? modal.refs : []}
+        movingLabel={targetLabel}
+        onSubmit={(destination) =>
+          modal.kind === 'move'
+            ? onMove(modal.refs, destination)
+            : Promise.resolve()
+        }
+      />
+
+      <ConfigureDialog
+        open={modal.kind === 'configure'}
+        onClose={close}
+        client={client}
+        groups={groups}
+        // The LIVE rows, so a register or a remove queued from inside it moves the list it
+        // is showing as the run lands — the same refresh every other pane rides on.
+        items={items}
+        verbs={verbs}
+        busy={busy}
+        connections={connections}
+        onConnectionsChanged={onConnectionsChanged}
+        onRegister={onRegister}
+        onRemove={onRemove}
+        onSaveSettings={onSaveSettings}
+      />
+
+      <DeployDialog
+        open={modal.kind === 'deploy'}
+        onClose={close}
+        targetLabel={targetLabel}
+        onSubmit={onDeploy}
+      />
+
+      <SettingsDialog
+        open={modal.kind === 'settings'}
+        target={settingsTarget}
+        onClose={close}
+        onSave={onSaveSettings}
+      />
+    </div>
+  );
+}

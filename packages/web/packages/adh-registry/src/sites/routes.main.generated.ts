@@ -151,6 +151,7 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/[workspace]/research/[[...path]]',
     '/[workspace]/server-bags/[[...path]]',
     '/[workspace]/settings/[[...path]]',
+    '/[workspace]/shipr/[[...path]]',
     '/[workspace]/signin-apps/[[...path]]',
     '/[workspace]/sites/[[...path]]',
     '/[workspace]/storage/[[...path]]',

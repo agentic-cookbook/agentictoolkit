@@ -14,6 +14,13 @@ import { HelpProvider } from '@agentic-toolkit/adh/help'
 // fork SettingsOverlayContext from the copy SiteHeader.tsx's useSettingsOverlay() reads.
 import { SettingsOverlayProvider } from '@agentic-toolkit/adh/settings'
 import { AdhAppShell } from '@agentic-toolkit/adh/layout'
+// The `./server` entry, not `./layout`, and that placement is load-bearing: the module
+// behind it imports `node:fs` and `node:child_process`, and `./layout` is a barrel client
+// components import. This component is a Server Component (sync, hook-free — see the doc
+// below), so it is the one seam that can resolve a per-render value and hand it to the
+// client footer as a prop, giving all 45 sites an honest dev-mode footer with no per-site
+// plumbing. Returns `undefined` outside development.
+import { liveBuildIdentity } from '@agentic-toolkit/adh/server'
 // Same rule, different package: deployment-env lives in adh-registry (the leaf this package
 // depends on) so that the registry's own seo/metadata.ts can read the identical allowlist
 // without a cycle. `@agentic-toolkit/adh-registry/*` is in tsup's `external` too, so the
@@ -112,7 +119,7 @@ export function AppShell({ header, children, footer }: AppShellProps) {
           <SettingsOverlayProvider>
             <AdhAppShell
               header={header}
-              footer={<SiteFooter links={footer?.links} />}
+              footer={<SiteFooter links={footer?.links} live={liveBuildIdentity()} />}
               devTools={DEV_TOOLS_BUILD_ENABLED}
             >
               {children}

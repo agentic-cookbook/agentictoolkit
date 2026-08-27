@@ -3,7 +3,7 @@
  *
  * DATA ONLY -- this module imports no model, and must not grow one. Every model is its own
  * entry (`@agentic-toolkit/adh-site-homes/<id>`) precisely so that mounting one costs one; a
- * barrel that imported all 47 to build a lookup would hand every consumer the whole
+ * barrel that imported all 48 to build a lookup would hand every consumer the whole
  * fleet's feature packages in a single chunk, which is the one thing the per-entry shape
  * buys. A caller that needs a model names it statically, the way a route does.
  *
@@ -47,6 +47,7 @@ export const FLEET_HOME_SITE_IDS = [
   'registries',
   'registry',
   'research',
+  'shipr',
   'sites',
   'storage',
   'store',

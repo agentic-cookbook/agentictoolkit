@@ -12,7 +12,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "One entry PER SITE, and deliberately no barrel of models: a barrel would import all 47 and defeat the per-route code splitting this package exists to keep. The `.` entry is data only (FLEET_HOME_SITE_IDS) and imports no model. `development` -> src so `next dev` gets HMR; prod resolves dist.",
+  "comment:exports": "One entry PER SITE, and deliberately no barrel of models: a barrel would import all 48 and defeat the per-route code splitting this package exists to keep. The `.` entry is data only (FLEET_HOME_SITE_IDS) and imports no model. `development` -> src so `next dev` gets HMR; prod resolves dist.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -204,6 +204,11 @@
       "development": "./src/sites/research.tsx",
       "import": "./dist/sites/research.js"
     },
+    "./shipr": {
+      "types": "./dist/sites/shipr.d.ts",
+      "development": "./src/sites/shipr.tsx",
+      "import": "./dist/sites/shipr.js"
+    },
     "./sites": {
       "types": "./dist/sites/sites.d.ts",
       "development": "./src/sites/sites.tsx",
@@ -268,6 +273,7 @@
     "@agentic-toolkit/adh-ecosystem-panes": "workspace:*",
     "@agentic-toolkit/adh-products": "workspace:*",
     "@agentic-toolkit/adh-registry": "workspace:*",
+    "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",
     "@agentic-toolkit/dashboards": "workspace:*",
     "@agentic-toolkit/data": "workspace:*",
@@ -283,6 +289,7 @@
     "@agentic-toolkit/projects": "workspace:*",
     "@agentic-toolkit/research": "workspace:*",
     "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/shipr": "workspace:*",
     "@agentic-toolkit/teams": "workspace:*"
   },
   "peerDependencies": {

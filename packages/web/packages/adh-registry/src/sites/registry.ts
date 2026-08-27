@@ -64,6 +64,7 @@ export type SiteId =
   | 'docs'
   | 'messaging'
   | 'messages'
+  | 'shipr'
   // </gen:union>
   | 'narratives'
   // fishlamp / fishlampdesign: FishLamp Design, the studio that publishes the whole
@@ -287,6 +288,7 @@ export const SITES: SiteDef[] = [
   { id: 'docs', label: 'Docs', fullLabel: 'Agentic Developer Docs', description: 'Organize your documents', prodHost: 'agenticdeveloperdocs.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'messaging', label: 'Messaging', fullLabel: 'Agentic Developer Messaging', description: 'Email & SMS integrations', prodHost: 'agenticdevelopermessaging.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   { id: 'messages', label: 'Messages', fullLabel: 'Agentic Developer Messages', description: 'Send & receive messages', prodHost: 'agenticdevelopermessages.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
+  { id: 'shipr', label: 'Shipr', fullLabel: 'Agentic Developer Shipr', description: 'Move code to production', prodHost: 'shipr.agenticdeveloperhub.com', hasStaging: true, hasTesting: true, hasHome: true, workspaceRoute: 'root' },
   // </gen:sites>
   // --- consulting: FOLDED into the studio brand (brand-story-plan portfolio
   // pruning) — stays registered (its own header resolves, /details keep serving)
@@ -492,7 +494,7 @@ export function siteIdForDir(name: string): SiteId | undefined {
  *  which is why the route did not have to move when the id changed hands. */
 export const MAIN_SITE_IDS: SiteId[] = [
   'admin', 'bitbag', 'community', 'cookbook', 'devteam', 'help', 'hub', 'hub-help',
-  'myagenticteams', 'news', 'personaregistry', 'status', 'support', 'toolkit',
+  'myagenticteams', 'news', 'personaregistry', 'shipr', 'status', 'support', 'toolkit',
 ]
 export const MARKETING_SITE_IDS: SiteId[] = [
   'academy', 'authentication', 'billing', 'codereviews', 'communities', 'consultants', 'consulting',
@@ -560,7 +562,7 @@ export const SITE_CATEGORIES: { label: string; ids: SiteId[] }[] = [
   // developer tooling sits, so that is where it is filed.
   {
     label: 'Build',
-    ids: ['devteam', 'codereviews', 'cookbook', 'toolkit', 'tools', 'testing', 'mcp'],
+    ids: ['devteam', 'codereviews', 'cookbook', 'toolkit', 'tools', 'testing', 'shipr', 'mcp'],
   },
   {
     label: 'Personas',
@@ -820,6 +822,7 @@ export const HUB_FEATURE_SEGMENT = {
   personabuilder: 'personabuilder',
   recipes: 'recipes',
   registry: 'registry',
+  shipr: 'shipr',
   sites: 'sites',
   store: 'store',
   stores: 'stores',

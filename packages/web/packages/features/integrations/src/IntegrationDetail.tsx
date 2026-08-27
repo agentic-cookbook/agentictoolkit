@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@agenticdevelopertoolkit/ui/components/input";
+import { Textarea } from "@agenticdevelopertoolkit/ui/components/textarea";
 import { noAutofillProps } from "@agenticdevelopertoolkit/ui/lib/autofill";
 import { Label } from "@agenticdevelopertoolkit/ui/components/label";
 import { Select } from "@agenticdevelopertoolkit/ui/components/select";
@@ -46,13 +47,16 @@ export interface IntegrationInput {
 // ── auth-method gating ───────────────────────────────────────────────────────
 // These methods are configured at the ECOSYSTEM level: OAuth-family providers store a
 // client app (client id/secret + endpoints); api_key providers store their spec-driven
-// credential + config fields (shared by the whole ecosystem). app_password providers have
-// no ecosystem-level config — their creds are entered per account at connect time.
+// credential + config fields (shared by the whole ecosystem); github_app stores the app's
+// own identity (app id + private key), which every installation of it authenticates with.
+// app_password providers have no ecosystem-level config — their creds are entered per
+// account at connect time.
 const OWNER_CONFIGURABLE: readonly ProviderAuthMethod[] = [
   "oauth",
   "oauth_instance",
   "plaid_link",
   "api_key",
+  "github_app",
 ];
 
 export function ownerConfigurable(authMethod: ProviderAuthMethod | undefined): boolean {
@@ -77,6 +81,7 @@ const AUTH_METHOD_LABEL: Record<ProviderAuthMethod, string> = {
   plaid_link: "Plaid Link",
   api_key: "API key",
   app_password: "App password",
+  github_app: "GitHub App",
 };
 
 export function authMethodLabel(authMethod: ProviderAuthMethod | undefined): string {
@@ -266,7 +271,10 @@ export function intValidate(
   // Non-configurable providers have no owner-level fields, so there is nothing to
   // validate (Save stays disabled anyway — the draft can't differ from blank).
   if (!ownerConfigurable(authMethod)) return null;
-  if (!draft.clientId.trim()) return "Client ID is required.";
+  // Named from the same shape the form labels itself with. Hard-coding "Client ID" here
+  // told a GitHub App operator that a field they cannot see is required, while the empty
+  // one in front of them said "App ID".
+  if (!draft.clientId.trim()) return `${credentialShape(authMethod).idLabel} is required.`;
   return null;
 }
 
@@ -371,64 +379,148 @@ export function ApiKeyFields({ provider, draft, onChange, config }: IntegrationF
   );
 }
 
-/** OAuth-family providers: client id/secret/scopes + the Advanced endpoint overrides. */
+/**
+ * What an ecosystem-level credential PAIR is called, and what shape it has, for one auth
+ * method. `clientId`/`clientSecret` are the storage keys either way — only the words and
+ * the input change.
+ *
+ * This exists because a GitHub App's pair is an app id and a multi-line PEM private key.
+ * Labelling those "Client ID" and "Client secret" on a one-line password input is how an
+ * operator pastes a PEM into a field that visibly refuses newlines and then cannot tell
+ * whether it saved.
+ */
+interface CredentialShape {
+  /** One line under the heading, given the provider's display name. */
+  blurb: (displayName: string) => string;
+  idLabel: string;
+  idPlaceholder: string;
+  secretLabel: string;
+  secretPlaceholder: string;
+  /** A PEM has newlines; a client secret does not. */
+  secretMultiline?: boolean;
+  /** Shown once a secret is stored — same promise, different noun. */
+  storedHelp: string;
+  newHelp: string;
+  /** OAuth negotiates scopes per authorization; an app's permissions live ON the app. */
+  scopes: boolean;
+  /** The endpoint overrides only mean something to an OAuth token exchange. */
+  advanced: boolean;
+}
+
+const OAUTH_CREDENTIALS: CredentialShape = {
+  blurb: (name) =>
+    `your ecosystem's own client credentials drive every ${name} connection here.`,
+  idLabel: "Client ID",
+  idPlaceholder: "your-oauth-client-id",
+  secretLabel: "Client secret",
+  secretPlaceholder: "your-oauth-client-secret",
+  storedHelp: "A secret is stored. Leave blank to keep it, or enter a new one to replace it.",
+  newHelp: "Stored encrypted; it is never shown again after you save.",
+  scopes: true,
+  advanced: true,
+};
+
+const GITHUB_APP_CREDENTIALS: CredentialShape = {
+  blurb: (name) =>
+    `the ${name} you registered on GitHub. Its app id and private key authenticate every` +
+    " installation of it, so an installer never enters a credential.",
+  idLabel: "App ID",
+  idPlaceholder: "123456",
+  secretLabel: "Private key",
+  secretPlaceholder: "-----BEGIN PRIVATE KEY-----\n…\n-----END PRIVATE KEY-----",
+  secretMultiline: true,
+  storedHelp:
+    "A private key is stored. Leave blank to keep it, or paste a new one to replace it.",
+  newHelp:
+    "Paste the whole .pem GitHub downloaded, BEGIN and END lines included. Stored encrypted;" +
+    " it is never shown again after you save.",
+  scopes: false,
+  advanced: false,
+};
+
+function credentialShape(authMethod: ProviderAuthMethod | undefined): CredentialShape {
+  return authMethod === "github_app" ? GITHUB_APP_CREDENTIALS : OAUTH_CREDENTIALS;
+}
+
+/** OAuth-family providers: client id/secret/scopes + the Advanced endpoint overrides.
+ *  Also github_app, whose pair is an app id + a private key — see {@link CredentialShape}. */
 export function OAuthFields({ provider, draft, onChange, config }: IntegrationFieldProps) {
   const authMethod = provider?.authMethod;
   const displayName = provider?.displayName ?? draft.providerId;
   const secretId = `int-secret-${draft.providerId}`;
+  const shape = credentialShape(authMethod);
   return (
     <>
       <p className="text-xs text-apt-text-muted">
-        {authMethodLabel(authMethod)} — your ecosystem&apos;s own client credentials
-        drive every {displayName} connection here.
+        {authMethodLabel(authMethod)} — {shape.blurb(displayName)}
       </p>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor="int-client-id">Client ID</Label>
+        <Label htmlFor="int-client-id">{shape.idLabel}</Label>
         <Input
           id="int-client-id"
           value={draft.clientId}
-          placeholder="your-oauth-client-id"
+          placeholder={shape.idPlaceholder}
           autoComplete="off"
           onChange={(e) => onChange({ ...draft, clientId: e.target.value })}
         />
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label htmlFor={secretId}>Client secret</Label>
+        <Label htmlFor={secretId}>{shape.secretLabel}</Label>
         {/* Defensive token, bag spread first — see the note on the spec-driven
             secret field above. */}
-        <Input
-          id={secretId}
-          type="password"
-          {...noAutofillProps}
-          autoComplete="new-password"
-          value={draft.clientSecret}
-          placeholder={
-            config?.hasSecret ? "Secret set — leave blank to keep" : "your-oauth-client-secret"
-          }
-          onChange={(e) => onChange({ ...draft, clientSecret: e.target.value })}
-        />
+        {shape.secretMultiline ? (
+          // Not type="password": a PEM is 25 lines and pasting one blind is unverifiable.
+          // It is still write-only — the server returns `hasSecret`, never the key — so
+          // there is nothing on screen to mask once the page has loaded.
+          <Textarea
+            id={secretId}
+            rows={6}
+            spellCheck={false}
+            className="font-mono text-xs"
+            {...noAutofillProps}
+            autoComplete="new-password"
+            value={draft.clientSecret}
+            placeholder={
+              config?.hasSecret ? "Key set — leave blank to keep" : shape.secretPlaceholder
+            }
+            onChange={(e) => onChange({ ...draft, clientSecret: e.target.value })}
+          />
+        ) : (
+          <Input
+            id={secretId}
+            type="password"
+            {...noAutofillProps}
+            autoComplete="new-password"
+            value={draft.clientSecret}
+            placeholder={
+              config?.hasSecret ? "Secret set — leave blank to keep" : shape.secretPlaceholder
+            }
+            onChange={(e) => onChange({ ...draft, clientSecret: e.target.value })}
+          />
+        )}
         <p className="text-xs text-apt-text-muted">
-          {config?.hasSecret
-            ? "A secret is stored. Leave blank to keep it, or enter a new one to replace it."
-            : "Stored encrypted; it is never shown again after you save."}
+          {config?.hasSecret ? shape.storedHelp : shape.newHelp}
         </p>
       </div>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="int-scopes">Scopes</Label>
-        <Input
-          id="int-scopes"
-          value={draft.scopes}
-          placeholder="e.g. read write"
-          onChange={(e) => onChange({ ...draft, scopes: e.target.value })}
-        />
-        <p className="text-xs text-apt-text-muted">
-          Space- or comma-separated. Leave blank to use the provider defaults.
-        </p>
-      </div>
+      {shape.scopes && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="int-scopes">Scopes</Label>
+          <Input
+            id="int-scopes"
+            value={draft.scopes}
+            placeholder="e.g. read write"
+            onChange={(e) => onChange({ ...draft, scopes: e.target.value })}
+          />
+          <p className="text-xs text-apt-text-muted">
+            Space- or comma-separated. Leave blank to use the provider defaults.
+          </p>
+        </div>
+      )}
 
+      {shape.advanced && (
       <Disclosure title="Advanced" subtitle="Endpoint & credential overrides">
         <div className="flex flex-col gap-5">
           <p className="text-xs text-apt-text-muted">
@@ -492,6 +584,7 @@ export function OAuthFields({ provider, draft, onChange, config }: IntegrationFi
           </div>
         </div>
       </Disclosure>
+      )}
     </>
   );
 }

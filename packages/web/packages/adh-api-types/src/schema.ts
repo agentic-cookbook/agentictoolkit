@@ -5135,6 +5135,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/integrations/providers/{providerId}/install-url": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                providerId: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Get the app-installation URL for a provider
+         * @description Only valid for github_app providers (400 otherwise). 404 for an unknown provider. The URL points at the provider's own installation page, where the installer picks the account and the repositories; the app returns to the setup URL configured on the app itself, so no redirectUri is taken. The caller must manage the target ecosystem `ecosystemId` (400 when omitted; 404/403 when unknown / not the caller's).
+         */
+        get: {
+            parameters: {
+                query: {
+                    ecosystemId: string;
+                    serviceType?: string;
+                };
+                header?: never;
+                path: {
+                    providerId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Installation URL + round-trip state */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            url: string;
+                            state: string;
+                        };
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Problem Details (RFC 9457) */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/integrations/providers/{providerId}/link-token": {
         parameters: {
             query?: never;
@@ -37105,6 +37190,1543 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shipr/repos": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The whole tree: every folder and repository the caller reaches
+         * @description One request, because the tree is one component. A repository the caller has no grant on is ABSENT, not greyed out; a folder with nothing reachable in it is absent too, unless the caller holds workspace-level R.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The workspace slug to act in. Omitted, the caller's own personal workspace. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The tree */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            workspace?: {
+                                kind?: string;
+                                ownerId?: string;
+                            };
+                            /** @description What the caller may do at workspace level. A hint for what to DRAW — every route re-derives its own verb. */
+                            verbs?: ("C" | "R" | "U" | "D" | "M")[];
+                            groups: components["schemas"]["ShiprGroup"][];
+                            /** @description Every persona this workspace owns — the vocabulary for `items[].personaIds`, carried once here rather than repeated on every row. */
+                            personas?: components["schemas"]["ShiprPersona"][];
+                            items: (components["schemas"]["ShiprRepo"] & {
+                                devRepo?: components["schemas"]["ShiprDevRepo"] | null;
+                                state?: Record<string, never> | null;
+                                /** @description This repository's crew, as ids into `personas`. Who is expected to work on the pipeline — NOT who may run it, which is the `shipr` grant on the persona's role. */
+                                personaIds?: string[];
+                            })[];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * One repository, with its ladder and recent runs
+         * @description The ladder is READ from the last status run, not computed — `readAt` says when it was true, and the status button is the refresh.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The repository */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repo?: components["schemas"]["ShiprRepo"];
+                            devRepo?: components["schemas"]["ShiprDevRepo"] | null;
+                            group?: components["schemas"]["ShiprGroup"] | null;
+                            ladder?: components["schemas"]["ShiprLadder"] | null;
+                            runs?: components["schemas"]["ShiprRun"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Move it, reorder it, or change which branches it ships to
+         * @description `slug` and `shard` are not editable: changing either would re-point a registered pipeline at a different repository while leaving its mirror, ladder and history behind.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        groupId?: string | null;
+                        position?: number;
+                        shipBranch?: string;
+                        ciContext?: string;
+                        envBranches?: {
+                            [key: string]: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The updated repository */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ShiprRepo"];
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/shipr/repos/{id}/personas": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set which personas are on this repository's crew
+         * @description The WHOLE set, not a delta, so that two operators saving different crews end at one of the two rather than at the union. GRANTS NOTHING: a crew says who is expected to work on this pipeline; whether a persona may actually run `deploy` is the `shipr` feature grant on its role, which migration 0206 deliberately withholds. An id naming a persona outside this repository's workspace is a 404 rather than a silent drop.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        personaIds: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description The crew as stored */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repoId: string;
+                            personaIds: string[];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a status for this repository
+         * @description Sugar over POST /shipr/runs with scopeKind=deploy_repo. Returns immediately with a run id — watch it on /shipr/stream/runs/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Which environments a deploy walks, in pipeline order. Ignored by every other operation; required (non-empty) by deploy. */
+                        environments?: ("testing" | "staging" | "production")[];
+                        /** @description Per-operation arguments. Read defensively; unknown keys are ignored. */
+                        options?: {
+                            /** @description prepare: the tip to pin. Absent means the dev repo’s main as it stands. */
+                            sha?: string;
+                            /** @description prepare: proceed although the gate has posted no verdict for the sha. Never overrides a verdict that exists and is red. */
+                            acknowledgedUnverified?: boolean;
+                            /** @description register: which [deployments] key this mirror is. */
+                            shard?: string;
+                            /** @description register: the folder a FIRST registration files its new mirrors under. */
+                            groupId?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The run was queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/prepare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a prepare for this repository
+         * @description Sugar over POST /shipr/runs with scopeKind=deploy_repo. Returns immediately with a run id — watch it on /shipr/stream/runs/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Which environments a deploy walks, in pipeline order. Ignored by every other operation; required (non-empty) by deploy. */
+                        environments?: ("testing" | "staging" | "production")[];
+                        /** @description Per-operation arguments. Read defensively; unknown keys are ignored. */
+                        options?: {
+                            /** @description prepare: the tip to pin. Absent means the dev repo’s main as it stands. */
+                            sha?: string;
+                            /** @description prepare: proceed although the gate has posted no verdict for the sha. Never overrides a verdict that exists and is red. */
+                            acknowledgedUnverified?: boolean;
+                            /** @description register: which [deployments] key this mirror is. */
+                            shard?: string;
+                            /** @description register: the folder a FIRST registration files its new mirrors under. */
+                            groupId?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The run was queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/deploy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a deploy for this repository
+         * @description Sugar over POST /shipr/runs with scopeKind=deploy_repo. Returns immediately with a run id — watch it on /shipr/stream/runs/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Which environments a deploy walks, in pipeline order. Ignored by every other operation; required (non-empty) by deploy. */
+                        environments?: ("testing" | "staging" | "production")[];
+                        /** @description Per-operation arguments. Read defensively; unknown keys are ignored. */
+                        options?: {
+                            /** @description prepare: the tip to pin. Absent means the dev repo’s main as it stands. */
+                            sha?: string;
+                            /** @description prepare: proceed although the gate has posted no verdict for the sha. Never overrides a verdict that exists and is red. */
+                            acknowledgedUnverified?: boolean;
+                            /** @description register: which [deployments] key this mirror is. */
+                            shard?: string;
+                            /** @description register: the folder a FIRST registration files its new mirrors under. */
+                            groupId?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The run was queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/unregister": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Queue a unregister for this repository
+         * @description Sugar over POST /shipr/runs with scopeKind=deploy_repo. Returns immediately with a run id — watch it on /shipr/stream/runs/{id}.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description Which environments a deploy walks, in pipeline order. Ignored by every other operation; required (non-empty) by deploy. */
+                        environments?: ("testing" | "staging" | "production")[];
+                        /** @description Per-operation arguments. Read defensively; unknown keys are ignored. */
+                        options?: {
+                            /** @description prepare: the tip to pin. Absent means the dev repo’s main as it stands. */
+                            sha?: string;
+                            /** @description prepare: proceed although the gate has posted no verdict for the sha. Never overrides a verdict that exists and is red. */
+                            acknowledgedUnverified?: boolean;
+                            /** @description register: which [deployments] key this mirror is. */
+                            shard?: string;
+                            /** @description register: the folder a FIRST registration files its new mirrors under. */
+                            groupId?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The run was queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The runs the caller may watch, newest first */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The workspace slug to act in. Omitted, the caller's own personal workspace. */
+                    workspace?: string;
+                    limit?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Runs */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            items: components["schemas"]["ShiprRun"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Queue any operation over any scope — the toolbar, as one route
+         * @description A group scope walks the folder and everything nested under it, depth-first in tree order, one repository at a time. The caller must hold the operation’s verb over EVERY repository the scope expands to.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description The workspace slug to act in. Omitted, the caller's own personal workspace. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        operation: "status" | "prepare" | "deploy" | "register" | "unregister";
+                        /** @enum {string} */
+                        scopeKind: "deploy_repo" | "dev_repo" | "group" | "all";
+                        /** @description The mirror, dev repo or folder id. Null (or absent) for scopeKind=all. */
+                        scopeId?: string | null;
+                        /** @description Which environments a deploy walks, in pipeline order. Ignored by every other operation; required (non-empty) by deploy. */
+                        environments?: ("testing" | "staging" | "production")[];
+                        /** @description Per-operation arguments. Read defensively; unknown keys are ignored. */
+                        options?: {
+                            /** @description prepare: the tip to pin. Absent means the dev repo’s main as it stands. */
+                            sha?: string;
+                            /** @description prepare: proceed although the gate has posted no verdict for the sha. Never overrides a verdict that exists and is red. */
+                            acknowledgedUnverified?: boolean;
+                            /** @description register: which [deployments] key this mirror is. */
+                            shard?: string;
+                            /** @description register: the folder a FIRST registration files its new mirrors under. */
+                            groupId?: string;
+                        };
+                    };
+                };
+            };
+            responses: {
+                /** @description The run was queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** One run, with its steps */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The run */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            run?: components["schemas"]["ShiprRun"];
+                            steps?: components["schemas"]["ShiprRunStep"][];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/runs/{id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop a queued or running run
+         * @description Retires the run’s lease, so whatever is holding it stops within a heartbeat and can no longer write to the row. A STOP, not an undo: what the run already carried stays carried. Idempotent — a run that has already settled is returned unchanged.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The run, as it now stands */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            run: components["schemas"]["ShiprRun"];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/runs/{id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A page of the run’s log
+         * @description The same `seq` cursor the stream uses, so a client can start here and switch to the stream — or poll this where EventSource is unavailable — with one notion of position.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    after?: string;
+                    limit?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Log lines */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            events: components["schemas"]["ShiprRunEvent"][];
+                            nextSeq: number;
+                            state?: string;
+                            /** @description The run has settled and there will never be more lines. */
+                            done?: boolean;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/connections": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller’s own forge connections, for the register form
+         * @description GitHub App installations belonging to the caller, active and not deleted — the only credential kind that can fast-forward a branch. Deliberately not `/integrations`’ list: that one is keyed on the ecosystem and carries every provider, so on an org workspace it offers rows `register` answers 404 to.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The connections */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            connections: {
+                                id: string;
+                                label: string;
+                                /** @description The GitHub account the app is installed on. This is the register form’s ORG CHOOSER: creating a repository under an org needs the app installed there, so an org with no connection is an org the run would fail in. */
+                                accountLogin: string | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/connections/{id}/repositories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Every repository one connection can reach
+         * @description What the installation was granted, which is exactly the set `register` can act on — offering anything wider means an operator picks a repository whose first push fails minutes later. The account-and-repository picker that produced this set is GitHub’s own installation page, so there is no org listing beside it. A connection that is not the caller’s own is a 404, never a 403: a 403 would confirm it exists.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The repositories */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            repositories: {
+                                /** @description owner/name */
+                                slug: string;
+                                defaultBranch: string;
+                                private: boolean;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/connections/{id}/declaration": {
+        parameters: {
+            query: {
+                /** @description The dev repository, `owner/name`, read through this connection. */
+                slug: string;
+                /** @description Which ref to read `.shipr` on. Defaults to `main`. */
+                branch?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * What a repository’s committed `.shipr` declares it deploys to
+         * @description The register form’s second question, and usually the answer that there is no second question: a declared `[deployments]` shard already names its slug, so the form must not offer an org and a name beside it. `deployments: null` is the fallback branch — no file, an unparseable one, or one declaring no shards — and is the only case in which `deploymentOwner`/`deploymentName` on `POST /shipr/register` are read. `note` carries the parser’s complaint when there was one. A forge that cannot be reached is a 502, never a null: a repository that could not be read is not a repository that declares nothing.
+         */
+        get: {
+            parameters: {
+                query: {
+                    /** @description The dev repository, `owner/name`, read through this connection. */
+                    slug: string;
+                    /** @description Which ref to read `.shipr` on. Defaults to `main`. */
+                    branch?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The declaration, or the fallback */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            deployments: {
+                                /** @description The key in `[deployments]`. */
+                                shard: string;
+                                /** @description owner/name of that shard’s mirror. */
+                                slug: string;
+                            }[] | null;
+                            /** @description The `<name>-deployment` convention applied to this repository — what a run creates when nothing is declared, and what the form prepopulates its org and name fields from. */
+                            fallbackSlug: string;
+                            /** @description Why the declaration was not usable, when it was present but not. */
+                            note?: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                502: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register a source repository and queue its provisioning
+         * @description Find-or-create on the dev repo, then a register run. Re-registering is the ordinary path — it is how branch protection someone turned off gets repaired. What the repository deploys (how many mirrors, under what names) is read from its own `.shipr` by the run, not supplied here.
+         */
+        post: {
+            parameters: {
+                query?: {
+                    /** @description The workspace slug to act in. Omitted, the caller's own personal workspace. */
+                    workspace?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        /** @description owner/name on the forge. */
+                        slug: string;
+                        /** @description A GitHub App installation belonging to the caller, from `GET /shipr/connections`. Omitted, the repository is read anonymously — status works, nothing that writes does. */
+                        connectionId?: string;
+                        /** @description Where a FIRST registration files the mirrors it invents. */
+                        groupId?: string;
+                        mainBranch?: string;
+                        preparedBranch?: string;
+                        /** @description Where the ONE mirror goes when `.shipr` declares no shards. Read only on that fallback — a declared shard’s slug is never overridden, because the file and the form must not be able to say two different things. */
+                        deploymentOwner?: string;
+                        /** @description The mirror’s name on the same fallback. Defaults to `<name>-deployment`; overridable independently of the owner, because changing the org almost always keeps the name. */
+                        deploymentName?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Queued */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            runId: string;
+                            devRepo?: components["schemas"]["ShiprDevRepo"];
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/stream/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * A run’s log as server-sent events
+         * @description Events: `line` (one log line, `id:` is its seq), `state` (the run changed state), `end` (settled — the stream closes). Resume with `Last-Event-ID` or `?after=<seq>`. Because EventSource cannot set headers, the bearer token may be passed as `?access_token=`.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    after?: string;
+                    access_token?: string;
+                };
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description text/event-stream */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace’s runs as they change state
+         * @description A wake channel, not a log: `run` events carry a run’s identity and state so the tree can show what is moving. Open the per-run stream for output.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description The workspace slug to act in. Omitted, the caller's own personal workspace. */
+                    workspace?: string;
+                    access_token?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description text/event-stream */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/event-stream": string;
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/content/feed": {
         parameters: {
             query?: never;
@@ -65315,6 +66937,314 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shipr/groups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List groups */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description List */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            userId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            parentId: string | null;
+                            name: string;
+                            path: string;
+                            depth: number;
+                            position: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        }[];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Create groups */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        parentId?: string | null;
+                        name: string;
+                        path?: string;
+                        depth?: number;
+                        position?: number;
+                        deletedAt?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description groups */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            userId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            parentId: string | null;
+                            name: string;
+                            path: string;
+                            depth: number;
+                            position: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/groups/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** Get groups by id */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description groups */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            userId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            parentId: string | null;
+                            name: string;
+                            path: string;
+                            depth: number;
+                            position: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        /** Update groups */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        ecosystemId?: string;
+                        parentId?: string | null;
+                        name?: string;
+                        path?: string;
+                        depth?: number;
+                        position?: number;
+                        deletedAt?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description groups */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            id: string;
+                            ecosystemId: string;
+                            userId: string;
+                            ownerKind: string;
+                            ownerId: string;
+                            parentId: string | null;
+                            name: string;
+                            path: string;
+                            depth: number;
+                            position: number;
+                            createdAt: string;
+                            updatedAt: string;
+                            deletedAt: string | null;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete groups */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Deleted */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/system/audit-events": {
         parameters: {
             query?: never;
@@ -67591,7 +69521,7 @@ export interface components {
             providerId: string;
             displayName: string;
             /** @enum {string} */
-            authMethod: "oauth" | "oauth_instance" | "plaid_link" | "api_key" | "app_password";
+            authMethod: "oauth" | "oauth_instance" | "plaid_link" | "api_key" | "app_password" | "github_app";
             serviceTypes: string[];
             /** @description read | write | auth */
             capabilities: string[];
@@ -67703,6 +69633,17 @@ export interface components {
             /** @description Target ecosystem id (the caller must manage it) */
             ecosystemId: string;
             code: string;
+            state: string;
+        } | {
+            /** @enum {string} */
+            type: "github_app";
+            providerId: string;
+            serviceType: string;
+            /** @description Target ecosystem id (the caller must manage it) */
+            ecosystemId: string;
+            /** @description The numeric installation id the provider redirects back with */
+            installationId: string;
+            /** @description The HMAC-signed state returned by the install-url endpoint (CSRF) */
             state: string;
         };
         IntegrationActionRequest: {
@@ -70864,6 +72805,105 @@ export interface components {
             content: string;
             createdAt: string;
             updatedAt: string;
+        };
+        /** @description A persona that may be put on a repository's crew. THREE FIELDS: the crew names an actor, it does not copy one — everything else about a persona is read where personas are read. */
+        ShiprPersona: {
+            id?: string;
+            slug?: string;
+            name?: string;
+        };
+        /** @description A folder in the deployment tree. `path` and `depth` are trigger-maintained. */
+        ShiprGroup: {
+            id?: string;
+            parentId?: string | null;
+            name?: string;
+            path?: string;
+            depth?: number;
+            position?: number;
+        };
+        /** @description One deployment repository — a mirror. A dev repo with several `[deployments]` shards has one of these per shard. */
+        ShiprRepo: {
+            id?: string;
+            devRepoId?: string;
+            groupId?: string | null;
+            /** @description owner/name on the forge. */
+            slug?: string;
+            shard?: string;
+            shipBranch?: string;
+            ciContext?: string;
+            /** @description environment → branch. An environment absent here is one this repository does not deploy to, and its ladder column is not drawn. */
+            envBranches?: {
+                [key: string]: string;
+            };
+            registeredAt?: string | null;
+            provisioned?: Record<string, never> | null;
+            position?: number;
+        };
+        /** @description The source repository a mirror is fed from. */
+        ShiprDevRepo: {
+            id?: string;
+            slug?: string;
+            mainBranch?: string;
+            preparedBranch?: string;
+            declarationSha?: string | null;
+            connectionId?: string | null;
+        };
+        /** @description The column-aligned commit view: one row per commit, oldest first, with a mark in each branch column whose tip is at or above it. */
+        ShiprLadder: {
+            columns?: string[];
+            rows?: {
+                sha?: string;
+                when?: string;
+                subject?: string;
+                marks?: string[];
+                settled?: boolean;
+            }[];
+            /** @description Every live branch is on the newest commit — nothing is in flight. */
+            settled?: boolean;
+            tips?: {
+                [key: string]: string | null;
+            };
+            notes?: string[];
+            /** @description When the last status run read this. */
+            readAt?: string;
+        };
+        /** @description One queued or completed operation over a scope. */
+        ShiprRun: {
+            id?: string;
+            /** @enum {string} */
+            operation?: "status" | "prepare" | "deploy" | "register" | "unregister";
+            /** @enum {string} */
+            scopeKind?: "deploy_repo" | "dev_repo" | "group" | "all";
+            scopeId?: string | null;
+            environments?: string[];
+            /** @enum {string} */
+            state?: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+            summary?: Record<string, never> | null;
+            startedAt?: string | null;
+            finishedAt?: string | null;
+            createdAt?: string;
+        };
+        /** @description One repository within a run — and, for a deploy, one stage of it. A failed step does not fail the run. */
+        ShiprRunStep: {
+            id?: string;
+            runId?: string;
+            deployRepoId?: string | null;
+            ordinal?: number;
+            environment?: string | null;
+            /** @enum {string|null} */
+            stage?: "advance" | "arrival" | "verify" | null;
+            /** @enum {string} */
+            state?: "pending" | "running" | "succeeded" | "failed" | "skipped";
+            detail?: Record<string, never> | null;
+        };
+        /** @description One line of a run’s log. `seq` is per-run and monotone — use it as a cursor. */
+        ShiprRunEvent: {
+            seq?: number;
+            stepId?: string | null;
+            /** @enum {string} */
+            stream?: "out" | "err" | "meta";
+            text?: string;
+            at?: string;
         };
         FeedItem: {
             id: string;

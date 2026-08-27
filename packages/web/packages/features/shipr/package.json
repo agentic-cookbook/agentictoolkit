@@ -1,0 +1,71 @@
+{
+  "name": "@agentic-toolkit/shipr",
+  "version": "0.1.0",
+  "description": "The shipr deployment console: the folder tree over deploy repositories, the toolbar that runs prepare/deploy/status/register/unregister on the selection, the column-aligned commit ladder, and the activity log beside it.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./types` and `./client` are their OWN entries, not re-exports off the barrel: both are directive-free (no React at all), and the barrel hoists 'use client', so folding them in would make the wire types and the API client unusable from a server component or a route handler.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "development": "./src/types.ts",
+      "import": "./dist/types.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "development": "./src/client.ts",
+      "import": "./dist/client.js"
+    },
+    "./sources.css": "./sources.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/integrations": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "@agentic-toolkit/ui": "workspace:*",
+    "lucide-react": "^1.16.0"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}

@@ -14,7 +14,16 @@ export interface ProviderCatalogEntryRow {
   description: string;
   /** Related links (docs, sign-up, dashboard) rendered as anchors. */
   links: { label: string; url: string }[];
-  authMethod: "oauth" | "oauth_instance" | "plaid_link" | "api_key" | "app_password";
+  authMethod:
+    | "oauth"
+    | "oauth_instance"
+    | "plaid_link"
+    | "api_key"
+    | "app_password"
+    /** A provider-hosted APP the operator installs, rather than an authorization the
+     *  operator grants. The ecosystem config holds the app's own identity (id + private
+     *  key); a connection holds the id of one installation of it. */
+    | "github_app";
   serviceTypes: string[];
   /** read | write | auth */
   capabilities: string[];
@@ -193,9 +202,22 @@ export type ConnectRequestBody =
       ecosystemId: string;
       code: string;
       state: string;
+    }
+  | {
+      type: "github_app";
+      providerId: string;
+      serviceType: string;
+      ecosystemId: string;
+      /** The numeric installation id the provider redirects back with. There is no `code`
+       *  here and that is the difference from `oauth`: an installation is not an
+       *  authorization to exchange, it is a thing that now exists and has an id. */
+      installationId: string;
+      /** The HMAC-signed state returned by the install-url endpoint (CSRF). Without it a
+       *  forged connect could file an ATTACKER's installation into a victim's ecosystem. */
+      state: string;
     };
 
-/** `{ url, state }` — the OAuth authorize URL + the round-trip CSRF state. */
+/** `{ url, state }` — a redirect URL (OAuth authorize, or app install) + its CSRF state. */
 export interface AuthUrlResultRow {
   url: string;
   state: string;

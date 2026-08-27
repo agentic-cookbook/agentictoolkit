@@ -262,7 +262,7 @@ export const integrationsApi = {
     });
   },
 
-  // ── OAuth / instance / link-token start endpoints ────────────────────────────
+  // ── OAuth / install / instance / link-token start endpoints ─────────────────
 
   /** Get the provider's OAuth authorize URL + the signed round-trip `state`, for the
    *  target ecosystem (its client id drives the URL; caller authorized against it). */
@@ -278,6 +278,26 @@ export const integrationsApi = {
     if (params.scopes) qs.set("scopes", params.scopes);
     return authedJson<AuthUrlResult>(
       `${BASE}/providers/${enc(providerId)}/auth-url?${qs.toString()}`,
+    );
+  },
+
+  /**
+   * Get the provider's app-INSTALLATION URL + the signed round-trip `state` (`github_app`
+   * providers only; 400 otherwise).
+   *
+   * No `redirectUri`, and that absence is the whole difference from {@link getAuthUrl}: an
+   * app returns to the setup URL configured ON THE APP at the provider, so there is nothing
+   * here for a caller to point somewhere else — and no `scopes` either, because an app's
+   * permissions are declared on the app, not negotiated per request.
+   */
+  async getInstallUrl(
+    providerId: string,
+    params: { ecosystemId: string; serviceType?: string },
+  ): Promise<AuthUrlResult> {
+    const qs = new URLSearchParams({ ecosystemId: params.ecosystemId });
+    if (params.serviceType) qs.set("serviceType", params.serviceType);
+    return authedJson<AuthUrlResult>(
+      `${BASE}/providers/${enc(providerId)}/install-url?${qs.toString()}`,
     );
   },
 

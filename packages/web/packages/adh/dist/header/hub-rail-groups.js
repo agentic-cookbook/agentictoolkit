@@ -79,7 +79,8 @@ var FLEET_MENU_GROUPS = [
       { site: "recipes" },
       { site: "toolkit" },
       { site: "tools" },
-      { site: "testing" }
+      { site: "testing" },
+      { site: "shipr" }
     ]
   }),
   topic({

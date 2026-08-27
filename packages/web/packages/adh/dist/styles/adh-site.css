@@ -169,6 +169,25 @@
   padding-bottom: 6rem;
 }
 
+/* …EXCEPT ON A PAGE THAT IS SIZED TO THE VIEWPORT. The reservation above buys a
+   scrolling page one screenful of slack at the very bottom, which costs nothing —
+   you scroll past it once and never see it again. On a page whose content is
+   MEASURED against the viewport (an HTDV console, a split view: `min-h-0
+   flex-1` all the way down, no page scroll at all) it is not slack, it is a
+   permanent 72px band of empty between the last row and the footer, in view the
+   entire time — and the layout has already shrunk itself to fit above it, so the
+   band is content the page gave up rather than space it had spare.
+
+   Nothing is at risk there either: the dock overhangs a viewport-filling page's
+   own SCROLL CONTAINER, whose last row scrolls clear of it, rather than a final
+   page row that is stuck under it. So the page declares itself with
+   `data-fills-viewport` and this hands the space back. Declarative on purpose —
+   the fact lives on the block that knows it (the HTDV root sets the attribute),
+   not in a per-site override that every new console would have to remember. */
+.adh-app-shell__main:has([data-fills-viewport]) {
+  padding-bottom: 0;
+}
+
 /* The shared footer modal dialog (native HTML Popover API) — used by the Sites,
    Terms and Privacy triggers. Open state is centered in the top layer with a
    dimmed backdrop; a flex column pins the header while the body scrolls.

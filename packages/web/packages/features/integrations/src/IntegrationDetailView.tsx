@@ -66,12 +66,14 @@ export type IntegrationDetailViewProps = {
 const NAME_REQUIRED_MESSAGE = "A name is required.";
 
 // Auth methods that connect real accounts (everything except ecosystem-only api_key),
-// so a saved instance shows the connected-accounts manager below its cards.
+// so a saved instance shows the connected-accounts manager below its cards. github_app is
+// here for the same reason as oauth: one installation of the app is one connected account.
 const CONNECTION_METHODS: readonly ProviderAuthMethod[] = [
   "oauth",
   "oauth_instance",
   "plaid_link",
   "app_password",
+  "github_app",
 ];
 
 /** A one-sentence, plain-language summary of what enabling this provider does. */

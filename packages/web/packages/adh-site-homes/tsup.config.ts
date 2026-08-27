@@ -3,11 +3,11 @@ import { featureTsup } from '../features/tsup.preset'
 // Shares the feature build knowledge (ESM, browser, splitting, directives preserved,
 // react/next/@agentic-toolkit external) rather than restating it. The entry MAP is the
 // only thing this package adds: one entry per site, so mounting one model never pulls
-// the other 46. Generated alongside package.json's exports -- the two must
-// name the same 47 sites, which `pnpm lint` in this package proves by resolving them.
+// the other 47. Generated alongside package.json's exports -- the two must
+// name the same 48 sites, which `pnpm lint` in this package proves by resolving them.
 export default featureTsup({
   // The `.` entry: data only (FLEET_HOME_SITE_IDS), and it imports no model — see src/index.ts
-  // for why there is deliberately no barrel of the 47 here.
+  // for why there is deliberately no barrel of the 48 here.
   index: "src/index.ts",
   "sites/academy": "src/sites/academy.tsx",
   "sites/authentication": "src/sites/authentication.tsx",
@@ -46,6 +46,7 @@ export default featureTsup({
   "sites/registries": "src/sites/registries.tsx",
   "sites/registry": "src/sites/registry.tsx",
   "sites/research": "src/sites/research.tsx",
+  "sites/shipr": "src/sites/shipr.tsx",
   "sites/sites": "src/sites/sites.tsx",
   "sites/storage": "src/sites/storage.tsx",
   "sites/store": "src/sites/store.tsx",

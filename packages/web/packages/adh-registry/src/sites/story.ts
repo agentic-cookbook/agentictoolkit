@@ -119,6 +119,10 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
   stores: { tier: 'chapter', pillar: 'backend', funnelStage: 'ship', nextStep: 'products' },
   // Testing is the other half of shipping quality, beside code review.
   testing: { tier: 'chapter', pillar: 'build', funnelStage: 'ship', nextStep: 'codereviews' },
+  // Shipr is the last step of building: a reviewed, tested commit walked from main to
+  // production one branch at a time. It hands off to status, which is where you watch
+  // what you just shipped.
+  shipr: { tier: 'chapter', pillar: 'build', funnelStage: 'ship', nextStep: 'status' },
   // The developer directory — the people layer beside the consultant directory.
   registry: { tier: 'chapter', pillar: 'build', funnelStage: 'adopt', nextStep: 'consultants' },
   // Docs is research with the publishing stripped out, so it hands off to research.
