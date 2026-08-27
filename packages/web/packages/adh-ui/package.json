@@ -60,7 +60,7 @@
     "lint": "tsc --noEmit",
     "test": "vitest run"
   },
-  "comment:dependencies": "`link:`, not `workspace:*`: agenticdevelopertoolkit is a SEPARATE pnpm workspace reached through this repo's own submodule, and pnpm cannot nest workspaces. Same shape as persona, adh, features/bitbag and features/registry already use \u2014 note the depth is four levels here and five under packages/features/.",
+  "comment:dependencies": "`link:`, not `workspace:*`: agenticdevelopertoolkit is a SEPARATE pnpm workspace reached through this repo's own submodule, and pnpm cannot nest workspaces. Same shape as persona, adh, features/bitbag and features/registry already use — note the depth is four levels here and five under packages/features/.",
   "dependencies": {
     "@agenticdevelopertoolkit/ui": "link:../../../../external/agenticdevelopertoolkit/packages/web/packages/ui",
     "@base-ui/react": "1.5.0",

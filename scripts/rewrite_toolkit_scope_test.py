@@ -209,6 +209,87 @@ def test_workspace_protocol_becomes_a_link() -> None:
         assert deps["@agentic-toolkit/auth"] == "workspace:*"
 
 
+def test_rewrites_css_import_and_source_specifiers() -> None:
+    """`.css` is in SOURCE_SUFFIXES, and nothing was holding it there.
+
+    No test fed the codemod a non-`.ts`, non-`package.json` input, so deleting
+    `".css"` from SOURCE_SUFFIXES left all eight tests green while the sweep
+    silently stopped rewriting every stylesheet. CSS is where this repo carries
+    two whole classes of scope-bearing specifier that appear nowhere else:
+    `@import "<pkg>/sources.css"` (26 packages ship one) and Tailwind's
+    `@source` globs into a dependency's dist. websites/site/app/globals.css
+    alone holds 13 scope-bearing @import lines.
+
+    The unmoved name in the fixture keeps this from passing for the wrong
+    reason -- a `.css` sweep that rewrote everything would also be a bug.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        css = root / "globals.css"
+        css.write_text(
+            '@import "@agentic-toolkit/ui/components.css";\n'
+            '@import "@agentic-toolkit/themes/sources.css";\n'
+            '@import "@agentic-toolkit/auth/sources.css";\n'
+            '@source "../node_modules/@agentic-toolkit/model/dist/**/*.js";\n',
+            encoding="utf-8",
+        )
+        result = run(root)
+        assert result.returncode == 0, result.stderr
+        body = css.read_text(encoding="utf-8")
+        assert '@import "@agenticdevelopertoolkit/ui/components.css";' in body, body
+        assert '@import "@agenticdevelopertoolkit/themes/sources.css";' in body, body
+        assert '@agenticdevelopertoolkit/model/dist/**/*.js' in body, body
+        assert '@import "@agentic-toolkit/auth/sources.css";' in body, body
+        assert "globals.css" in result.stdout, result.stdout
+
+
+def test_manifest_prose_and_key_order_survive_a_rewrite() -> None:
+    """A re-scope must change the scope and NOTHING else.
+
+    Two ways it did not. `json.dumps(..., indent=2)` defaults to
+    ensure_ascii=True, so every non-ASCII character in an untouched field came
+    back as a `\\uXXXX` escape -- messaging's `description` and `comment:exports`
+    and adh-ui's `comment:dependencies` all shipped with their em dashes and
+    arrows mangled. And `pop()`-then-reassign moved the renamed key to the end
+    of its object, tearing moved dependencies out of the sorted block.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        root = Path(tmp)
+        pkg_dir = root / "packages" / "web" / "packages" / "thing"
+        pkg_dir.mkdir(parents=True)
+        pkg = pkg_dir / "package.json"
+        prose = "hooks → dist — see the exports map"
+        pkg.write_text(
+            json.dumps(
+                {
+                    "name": "@agentic-toolkit/thing",
+                    "description": prose,
+                    "dependencies": {
+                        "@agentic-toolkit/auth": "workspace:*",
+                        "@agentic-toolkit/themes": "workspace:*",
+                        "zod": "^3.0.0",
+                    },
+                },
+                indent=2,
+                ensure_ascii=False,
+            ),
+            encoding="utf-8",
+        )
+        target = root / "external" / "adt" / "packages" / "web" / "packages"
+        target.mkdir(parents=True)
+        assert run(root, "--link-target", str(target)).returncode == 0
+
+        raw = pkg.read_text(encoding="utf-8")
+        assert "\\u" not in raw, raw
+        data = json.loads(raw)
+        assert data["description"] == prose, data["description"]
+        assert list(data["dependencies"]) == [
+            "@agentic-toolkit/auth",
+            "@agenticdevelopertoolkit/themes",
+            "zod",
+        ], list(data["dependencies"])
+
+
 def test_dry_run_changes_nothing() -> None:
     with tempfile.TemporaryDirectory() as tmp:
         root = Path(tmp)
@@ -229,5 +310,7 @@ if __name__ == "__main__":
     test_rewrites_package_json_keys_and_link_paths()
     test_link_depth_is_computed_per_manifest()
     test_workspace_protocol_becomes_a_link()
+    test_rewrites_css_import_and_source_specifiers()
+    test_manifest_prose_and_key_order_survive_a_rewrite()
     test_dry_run_changes_nothing()
-    print("rewrite_toolkit_scope_test: 8 passed")
+    print("rewrite_toolkit_scope_test: 10 passed")

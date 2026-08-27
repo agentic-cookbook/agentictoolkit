@@ -1,7 +1,7 @@
 {
   "name": "@agentic-toolkit/messaging",
   "version": "0.1.0",
-  "description": "Direct messages and notifications for agentic-web-toolkit consumers \u2014 authed SSE-backed hooks over the backend's DM/notification API, plus the DM list/thread/panel, notification bell/inbox and presence-dot components.",
+  "description": "Direct messages and notifications for agentic-web-toolkit consumers — authed SSE-backed hooks over the backend's DM/notification API, plus the DM list/thread/panel, notification bell/inbox and presence-dot components.",
   "license": "UNLICENSED",
   "type": "module",
   "main": "./dist/index.js",
@@ -11,7 +11,7 @@
     "dist",
     "sources.css"
   ],
-  "comment:exports": "`development` \u2192 src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it \u2192 dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale. `./sources.css` is the Tailwind @source self-registration a host @imports once. `./hooks/*` resolves .ts and `./components/*` .tsx \u2014 an exports map has no extension fallback, so tsup's entry globs must name exactly these two extensions and no others.",
+  "comment:exports": "`development` → src for `next dev` (HMR, no build/restart); prod (NODE_ENV=production) skips it → dist. Self-degrading if the bundler ignores it. See @agentic-toolkit/adh for the full rationale. `./sources.css` is the Tailwind @source self-registration a host @imports once. `./hooks/*` resolves .ts and `./components/*` .tsx — an exports map has no extension fallback, so tsup's entry globs must name exactly these two extensions and no others.",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

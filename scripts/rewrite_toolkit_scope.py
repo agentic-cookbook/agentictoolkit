@@ -54,11 +54,16 @@ def rewrite_manifest(text: str, manifest: Path, link_target: Path | None) -> tup
         deps = data.get(field)
         if not isinstance(deps, dict):
             continue
-        for name in list(deps):
+        #  Rebuilt in order rather than pop()-then-reassign, which appended the
+        #  renamed key to the END of the object: a scope rename is not a
+        #  reordering, and every manifest it touched came back with its moved
+        #  dependencies torn out of the sorted block and piled at the bottom.
+        rebuilt: dict = {}
+        for name, value in deps.items():
             match = SPEC_RE.fullmatch(name)
             if not match:
+                rebuilt[name] = value
                 continue
-            value = deps.pop(name)
             pkg = match.group(1)
             if link_target and isinstance(value, str) and value.startswith(("link:", "file:", "workspace:")):
                 # `workspace:` becomes `link:`. A moved package is no longer a
@@ -77,10 +82,18 @@ def rewrite_manifest(text: str, manifest: Path, link_target: Path | None) -> tup
                 # prefix is wrong for at least one of them by construction.
                 rel = os.path.relpath(link_target / pkg, manifest.parent)
                 value = f"{prefix}:{rel}"
-            deps[f"{NEW_SCOPE}/{pkg}"] = value
+            rebuilt[f"{NEW_SCOPE}/{pkg}"] = value
             count += 1
+        data[field] = rebuilt
     if count:
-        text = json.dumps(data, indent=2) + "\n"
+        #  ensure_ascii=False, because the parts of a manifest this codemod does
+        #  NOT touch must come out byte-identical. The default escapes every
+        #  non-ASCII character, so an em dash or an arrow in an untouched
+        #  `description` or `comment:` field came back as the literal six
+        #  characters `\u2014` / `\u2192` -- prose damage in a file
+        #  the tool was only asked to re-scope. Two manifests here (messaging, adh-ui)
+        #  shipped that way before this was fixed.
+        text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     # BOTH passes always run. A manifest names the old scope in two unrelated
     # places — the dependency keys, which need the protocol and path rewritten
     # too, and free prose in `comment:`/`//` fields, which needs only the name
