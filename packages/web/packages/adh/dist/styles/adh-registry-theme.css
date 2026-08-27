@@ -1,0 +1,72 @@
+/* adh/src/styles/adh-registry-theme.css
+ *
+ * The adh half of a seam two registry stylesheets designed and no adh host ever
+ * used. `@agenticdevelopertoolkit/registry-profile`'s profile.css and
+ * `@agentic-toolkit/registry`'s editor.css each declare their own neutral palette
+ * — `--rp-*` and `--rf-*`, light-dark() pairs of raw greys — and each says why:
+ *
+ *   "It names NO host colour on purpose. A package stylesheet that hardcodes one
+ *    site's palette looks correct on that site forever and wrong on the second
+ *    one — so an unconfigured host gets something legible and obviously unthemed,
+ *    and a themed host redefines `--rf-*` rather than fighting these rules."
+ *
+ * This is the host redefining them. profile.css is an ADT package that drops into
+ * anyone's site, so adh's palette may not enter it; it enters here instead, and
+ * deleting this file returns every registry surface to that documented neutral
+ * baseline rather than breaking it.
+ *
+ * TWO THINGS ABOUT THIS FILE ARE LOAD-BEARING AND LOOK ARBITRARY.
+ *
+ * 1. The selectors match the package's own, and this import must come AFTER
+ *    theirs. Both stylesheets declare their tokens ON the block root (`.rp`,
+ *    `.rf-field`, `.rf-def`) rather than reading them as var(--x, fallback) — so
+ *    unlike adh-landing-bridge.css, which assigns landing's contract at :root
+ *    precisely because landing never assigns one, this cannot be hoisted to
+ *    :root. A custom property declared directly on an element always beats one
+ *    inherited from an ancestor, whatever the specificity, so a :root block here
+ *    would lose to `.rp` silently and completely. Same selectors, equal
+ *    specificity, later in source order: the cascade then resolves it by order,
+ *    with no !important and no specificity inflation.
+ *
+ * 2. The values are the M3 ROLE vars, not --color-apt-*. apt-* is the family's
+ *    token vocabulary and would read more naturally here, but it is declared in
+ *    themes/tailwind.css's `@theme` block, and Tailwind v4 tree-shakes @theme
+ *    variables down to the ones its generated utilities actually reference. A
+ *    stylesheet that consumes a token through var() rather than through a utility
+ *    class is invisible to that pass, so an apt-* token could be stripped out
+ *    from under this file by an unrelated change elsewhere. themes/tailwind.css
+ *    hit this already and documents the rule twice — the categorical hues sit in
+ *    a plain :root "so Tailwind's theme tree-shaking can't strip them", and the
+ *    shadcn token layer beneath them maps --background/--foreground/... from the
+ *    role vars for the same reason. adh-landing-bridge.css resolves it the same
+ *    way. These are the roles apt-* itself aliases, so the result is identical
+ *    to the apt-* spelling and cannot rot.
+ */
+
+.rp {
+  /* profile.css sets `color-scheme: light dark` so an unthemed host follows the
+   * OS. Inside an adh document the page has already declared its scheme, and
+   * leaving this one standing lets the UA paint native controls, scrollbars and
+   * the canvas of this subtree in the opposite mode to the page around it.
+   * `inherit` hands that decision back to the document, where it belongs. */
+  color-scheme: inherit;
+
+  --rp-fg: var(--color-on-surface);
+  --rp-muted: var(--color-on-surface-variant);
+  --rp-border: var(--color-outline);
+  /* The link role, not the brand role: the family's own link treatment is
+   * ui/components/external-link.tsx, which is `text-apt-blue` with
+   * `ring-apt-gold/40` on focus — blue is the link, gold is the focus accent.
+   * --color-apt-blue aliases --color-info, so this is that same colour. */
+  --rp-accent: var(--color-info);
+}
+
+.rf-field,
+.rf-def {
+  color-scheme: inherit;
+
+  --rf-fg: var(--color-on-surface);
+  --rf-muted: var(--color-on-surface-variant);
+  --rf-border: var(--color-outline);
+  --rf-danger: var(--color-error);
+}

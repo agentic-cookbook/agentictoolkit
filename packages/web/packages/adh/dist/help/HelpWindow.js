@@ -299,56 +299,649 @@ the server tells you to.</li>
 <p>If the response looks like a server-side bug (5xx without a clear cause,
 unexpected <code>400</code>), include the <code>code</code>, the request ID from the
 <code>X-Request-Id</code> response header, and a minimal repro in your report.</p>`,
-  "hub-apis": '<h1 id="apis--agents"><a href="#apis--agents">APIs &#x26; agents</a></h1>\n<p>Everything you can do in the Hub is available to code and to agents:</p>\n<ul>\n<li><strong><a href="/rest-api">REST API</a></strong> \u2014 an OpenAPI 3.1 surface for every resource.</li>\n<li><strong><a href="/mcp">MCP server</a></strong> \u2014 connect an AI agent over the Model Context Protocol\nto a curated tool set.</li>\n<li><strong><a href="/quickstart/oauth/overview">OAuth</a></strong> \u2014 authorize on behalf of a user.</li>\n<li><strong>Tools</strong> \u2014 define reusable, typed capabilities once and expose them to any\npersona over REST and MCP.</li>\n</ul>',
-  "hub-community": '<h1 id="community--support"><a href="#community--support">Community &#x26; support</a></h1>\n<p>Where the Agentic Developer Community talks \u2014 and where you get help.</p>\n<ul>\n<li><strong>Discussions</strong> \u2014 the Agentic Developer Community forum: topics, threads, and a\nmember directory.</li>\n<li><strong>Support</strong> \u2014 searchable answers first, then ticketed help tied to your account.</li>\n<li><strong>News</strong> \u2014 releases and stories, subscribable by RSS or email.</li>\n<li><strong>Messaging</strong> \u2014 direct messages and a notification inbox (enabled per ecosystem).</li>\n</ul>',
+  "hub-apis": `<h1 id="apis--agents"><a href="#apis--agents">APIs &#x26; agents</a></h1>
+<p>Everything you configured by clicking has to be reachable by something that
+does not click. Your product's code needs to talk to it at runtime, and \u2014 more
+often now \u2014 so does the coding agent you are building it with. A control panel
+that is the only way in is a control panel you will end up scripting badly.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<p>Every screen in the Hub is a resource, and there are two ways to reach it:</p>
+<ul>
+<li><strong><a href="/rest-api">REST API</a></strong> \u2014 an OpenAPI 3.1 surface covering every resource,
+described well enough to generate a client from.</li>
+<li><strong><a href="/mcp">MCP server</a></strong> \u2014 the same platform over the Model Context Protocol,
+as a curated tool set an AI agent can be handed. Not a mechanical mirror of
+the REST surface: the tools are chosen so an agent can accomplish something
+rather than enumerate everything.</li>
+<li><strong><a href="/quickstart/oauth/overview">OAuth</a></strong> \u2014 authorize on behalf of a user, for
+when your code is acting for someone rather than as itself.</li>
+<li><strong>Application tokens</strong> \u2014 a bearer credential minted against one application,
+reaching one product's project and nothing beyond it.</li>
+<li><strong>Tools</strong> \u2014 reusable, typed capabilities you define once and expose to any
+persona, over both REST and MCP.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A token plus an <a href="/hub/products">application</a> plus a <a href="/hub/plan">project</a> is
+the whole access story, in that order.</strong> The token belongs to the application,
+the application belongs to the product, and the project is what it reaches. Each
+link narrows the last, which is why a leaked token is a bad afternoon rather
+than a bad quarter \u2014 it reaches one project, and nothing else you own.</p>
+<p><strong>MCP plus your coding agent is how the setup happens without you.</strong> Creating a
+<a href="/hub/personas">persona</a>, wiring its service, minting a token, binding a
+project: all of it is a tool call. The Hub is built to be operated by an agent,
+which is a claim it has to make good on for its own configuration first.</p>
+<p><strong>A tool plus a persona is how an agent does something rather than says
+something.</strong> Define the capability once with its types, expose it to the persona,
+and it is available in chat, on the public profile, and to anything calling the
+API \u2014 the same four surfaces the persona itself reaches.</p>
+<p><strong>OAuth plus a <a href="/hub/products">sign-in app</a> is how you act for your customer.</strong>
+Your product signs its own users in through the Hub, then calls on their behalf
+with their consent \u2014 rather than with a token that can reach everything.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>Dognamr has two applications, and each holds its own token. The scope column is
+the point of the screenshot: each one names exactly one project, so the token in
+Casey's CLI cannot read what the public site's token reads, and neither can see
+Shelterly at all:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/tokens.png" alt="Each token&#x27;s scope naming exactly one project"></p>
+<p>Everything else in this documentation \u2014 Bob, his service, both stores, the
+project binding them \u2014 is a REST resource Casey could have created without
+opening a single screen.</p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/rest-api">REST API</a> \u2014 the full resource surface.</li>
+<li><a href="/mcp">MCP server</a> \u2014 the curated tool set for agents.</li>
+<li><a href="/hub/products">Products</a> \u2014 the application a token belongs to.</li>
+<li><a href="/hub/plan">Plan</a> \u2014 the project a token reaches.</li>
+</ul>`,
+  "hub-community": `<h1 id="community--support"><a href="#community--support">Community &#x26; support</a></h1>
+<p>Two audiences want to talk to you, and they are not the same people. You have
+questions about the platform you are building on; the people using what you
+built have questions about <em>that</em>, and somewhere to argue about it. Sending both
+to the same inbox loses one of them.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<ul>
+<li><strong>Discussions</strong> \u2014 the Agentic Developer Community forum: topics, threads, and
+a member directory. This is where builders talk to each other.</li>
+<li><strong>Communities</strong> \u2014 a forum belonging to <em>your</em> product, with its own
+categories and its own members, for the people using what you shipped.</li>
+<li><strong>Support</strong> \u2014 searchable answers first, then a ticket tied to your account
+when the answer is not there.</li>
+<li><strong>News</strong> \u2014 releases and stories, subscribable by RSS or email.</li>
+<li><strong>Messaging</strong> \u2014 direct messages and a notification inbox, enabled per
+ecosystem, so a product can reach its own users without you sending email.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A community plus a <a href="/hub/products">product</a> is where its users end up.</strong> The
+community belongs to the ecosystem, so its members are your customers rather
+than Hub accounts \u2014 the same distinction that separates a
+<a href="/hub/workspaces">member</a> from a customer everywhere else in the Hub.</p>
+<p><strong>Messaging plus a <a href="/hub/products">feature flag</a> is how a rollout gets
+announced.</strong> The flag decides who has the new thing; a notification tells them
+it is there. Either alone is half of a launch.</p>
+<p><strong>A <a href="/hub/personas">persona</a> plus a community is how a forum gets answered
+overnight.</strong> A persona can hold an account in the community the same way it
+holds a seat on a <a href="/hub/teams">team</a> \u2014 so the agent that knows the product is
+the one replying in it.</p>
+<p><strong>Discussions plus Support is the escalation path.</strong> Search the answers, ask the
+forum, open a ticket. The order matters because the first two are free and
+faster, and a ticket that skipped them usually gets an answer that was already
+written down.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p><strong>The Dognamr Pack</strong> is Dognamr's own community, with real discussion in it \u2014
+visitors arguing about names. Its members are Casey's end users, not Hub
+accounts, which is the distinction this screen exists to make concrete:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/communities.png" alt="The Dognamr Pack community, with discussion threads in it"></p>
+<p>And when Casey ships something, the notification goes to those same end users
+through the product's own inbox rather than an email list kept somewhere else:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/messaging.png" alt="A notification addressed to Dognamr&#x27;s end users"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/products">Products</a> \u2014 the boundary a community belongs to.</li>
+<li><a href="/hub/workspaces">Workspaces &#x26; account</a> \u2014 members versus customers.</li>
+<li><a href="/hub/personas">Personas</a> \u2014 the agent that can answer in a thread.</li>
+</ul>`,
   "hub-monitoring": `<h1 id="monitoring"><a href="#monitoring">Monitoring</a></h1>
-<p>Watch the things you've shipped from one place.</p>
+<p>At 2am something is wrong and the only question worth answering is <em>which
+layer</em>. A status page that watches only your own site tells you it is down \u2014
+which you knew, because that is why you are awake. What you need is your site,
+the service it calls, and the platform underneath both, on one page, so the
+answer is a glance rather than an investigation.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
 <ul>
-<li><strong>Dashboards</strong> \u2014 register the sites and endpoints you want watched, group them,
-and track uptime and status in one view.</li>
+<li><strong>Dashboards</strong> \u2014 register the sites and endpoints you want watched, and see
+uptime and current status in one view.</li>
+<li><strong>Status groups</strong> \u2014 group what you registered, so a page reads as layers
+rather than as an unsorted list of URLs.</li>
+<li><strong>Metrics</strong> \u2014 the numbers a shipped product produces: usage, engagement, and
+what your agents are spending.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A status group plus a <a href="/hub/plan">project</a> is what scopes the page.</strong> The
+project names which group belongs to it, so the status view is about one product
+instead of everything you own. A workspace with two products gets two pages, not
+one long one.</p>
+<p><strong>Your endpoints plus the Hub's own services is what makes the page answer the
+question.</strong> Register the service your product calls alongside your site, and the
+Hub's status for the APIs your <a href="/hub/personas">persona</a> depends on appears in
+the same view. Three layers, one page \u2014 that is the difference between knowing
+something is broken and knowing where.</p>
+<p><strong>A dashboard plus <a href="/hub/products">billing</a> is how usage becomes a decision.</strong>
+Suggestions served, conversion, and token spend against subscribers tells you
+whether the paid tier is worth what it costs to run.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>Dognamr's dashboard carries the numbers Casey actually checks: how many names
+were suggested, how many got pinned, and what Bob cost to run:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/dashboards.png" alt="The Dognamr dashboard \u2014 daily suggestions, pin rate, and Bob&#x27;s token spend"></p>
+<p>And the status view has three groups, deliberately: the Dognamr site itself, the
+breed-classifier endpoint it calls, and the Hub APIs Bob depends on. When one is
+red, Casey knows which one before opening anything else:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/monitoring-status.png" alt="Three status groups on one page \u2014 the site, the classifier endpoint, and the Hub APIs"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/plan">Plan</a> \u2014 the project that names a status group.</li>
+<li><a href="/hub/products">Products</a> \u2014 the product a dashboard is about.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 reading status from your own code.</li>
 </ul>`,
-  "hub-overview": '<h1 id="hub-features"><a href="#hub-features">Hub Features</a></h1>\n<p>The Agentic Developer Hub is your workspace for building with personas, data, and\nagents. You always work inside a <strong>workspace</strong> \u2014 your personal one, or an\norganization or team you belong to \u2014 and every feature is scoped to that\nworkspace, or to a product within it.</p>\n<div class="adh-mv-alert adh-mv-alert--note">\n<p class="adh-mv-alert-title">Note</p>\n<p>New here? Start with the <a href="/quickstart">Quickstart</a> to register an app, mint\na token, and make your first call.</p>\n</div>\n<p>Browse the areas from the Hub Features menu: workspaces and account, personas,\nproducts, storage and data, planning, teams, community and support, monitoring,\nand the APIs that expose it all to code and agents.</p>',
+  "hub-overview": `<h1 id="hub-features"><a href="#hub-features">Hub Features</a></h1>
+<p>You are building something that has an agent in it, and the agent needs a place
+to live. Not a folder in your repo \u2014 a place with an address, a version history,
+credentials it can use, data it can read, and a way for your code to reach it
+that is not a secret pasted into an environment variable. That place has to be
+separate from your product, because your product will be rewritten and the agent
+should survive it.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<p>The Hub is that place, and everything in it hangs off one idea: a <strong>workspace</strong>.</p>
+<ul>
+<li><strong>A workspace is who the work belongs to.</strong> Your personal one, or an
+organization you own or belong to. You are always inside exactly one, and the
+switcher at the top-left is how you move.</li>
+<li><strong>Everything else is scoped to a workspace</strong> \u2014 personas, products, storage,
+projects, teams, tokens. Nothing floats loose. Two organizations can both have
+a persona called Bob and never collide.</li>
+<li><strong>A product inside a workspace scopes it further.</strong> Applications, tokens,
+buckets, flags, and dashboards all belong to one product, so a token minted for
+one cannot read another's data.</li>
+<li><strong>Members are people in the workspace; customers are people in your product.</strong>
+These are different populations with different sign-in flows, and confusing
+them is the single most common mistake new readers make.</li>
+</ul>
+<div class="adh-mv-alert adh-mv-alert--note">
+<p class="adh-mv-alert-title">Note</p>
+<p>New here? Start with the <a href="/quickstart">Quickstart</a> to register an app, mint a
+token, and make your first call.</p>
+</div>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A workspace plus an organization is what makes it shared.</strong> A personal
+workspace is a workspace with one member. Create an organization and the same
+surfaces gain a <a href="/hub/workspaces">member roster</a>, invitations, and teams \u2014 the
+features do not change, only who can reach them.</p>
+<p><strong>A workspace plus a <a href="/hub/products">product</a> is what gives your work a
+boundary.</strong> Without a product, everything you create sits at workspace level and
+every token you mint reaches all of it. A product is how you say <em>this
+application may read this data and nothing else</em>.</p>
+<p><strong>A workspace plus a <a href="/hub/plan">project</a> is what binds the pieces together.</strong> A
+persona, the store it reads, the store your users write to, and a status group
+are four unrelated objects until a project names them as one thing. The project
+is what an application points at.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company. It exists so every screen in these pages has
+something real on it.</em></p>
+<p>Casey Rowan has two workspaces: a personal one, and the organization Casey owns.
+The switcher shows both, which is the clearest statement of what an organization
+is \u2014 a place you go, not a setting you toggle:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/workspace-switcher.png" alt="The workspace switcher open, showing Casey&#x27;s personal workspace above Longtail Labs"></p>
+<p>Inside Longtail Labs, the workspace home is a summary of what the studio is
+building \u2014 two products at opposite ends of their lives, Dognamr live and
+Shelterly in early access:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/workspace-home.png" alt="The Longtail Labs workspace home, listing Dognamr and Shelterly"></p>
+<p>Every page that follows is a screen inside this workspace, signed in as Casey.</p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/workspaces">Workspaces &#x26; account</a> \u2014 settings, members, invitations, and
+the tokens that reach your data.</li>
+<li><a href="/hub/personas">Personas</a> \u2014 the agent itself. Most people start here.</li>
+<li><a href="/hub/products">Products</a> \u2014 the boundary everything else is scoped inside.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 every screen in this section, reachable from code.</li>
+</ul>`,
   "hub-personas": `<h1 id="personas"><a href="#personas">Personas</a></h1>
-<p>Design, register, and run AI personas.</p>
+<p>You want an agent that behaves the same way every time \u2014 same voice, same
+knowledge, same limits \u2014 whether someone meets it inside your product, on a page
+you can send a link to, or through an API call your own code makes. Writing that
+behaviour into each of those places separately means three copies to keep in
+step, and they will not stay in step.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<p>A persona is that behaviour, written down once and versioned:</p>
 <ul>
-<li><strong>Persona editor</strong> \u2014 identity, bio and avatar, capabilities, and model
-preferences, kept under version control so you can inspect, diff, and pin a
-revision.</li>
-<li><strong>Persona Services</strong> \u2014 connect the LLM and provider accounts a persona calls.</li>
-<li><strong>Persona Data Store</strong> \u2014 per-project, versioned storage for a persona's prompts,
-configs, and memory.</li>
-<li><strong>Knowledge Bases</strong> \u2014 ingest documents into searchable, citable stores an agent
-can ground its answers in.</li>
-<li><strong>Public profiles</strong> \u2014 every registered persona gets a shareable profile on the
-Persona Registry, doubling as a character sheet with levels, badges, and
-leaderboards.</li>
+<li><strong>Identity</strong> \u2014 name, bio, avatar, and the slug that becomes a public address.</li>
+<li><strong>Character and voice</strong> \u2014 the traits, stances, and special interests that go
+verbatim into the system prompt, so the prompt is something you edit rather
+than something you assemble by hand.</li>
+<li><strong>Worked examples and canned exchanges</strong> \u2014 sample conversations that show a
+visitor how the agent behaves before they type anything.</li>
+<li><strong>Model preferences</strong> \u2014 which model this persona runs on, chosen from what its
+service actually offers rather than typed from memory.</li>
+<li><strong>Visibility</strong> \u2014 <code>private</code> to your workspace, <code>hub</code> to signed-in Hub users, or
+<code>public</code> to anyone with the link.</li>
+<li><strong>Version history</strong> \u2014 every revision inspectable, diffable, and pinnable.</li>
+</ul>
+<p><strong>Persona Services</strong> are the other half of the page: one service is one
+connection to one provider account. It holds the credentials, reports whether the
+connection is live, and publishes the list of models that provider actually
+offers. Services are created from <strong>LLM provider templates</strong> \u2014 the catalogue of
+providers the Hub knows how to talk to \u2014 so connecting an account is filling in a
+form, not writing a client.</p>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A persona plus a service is what makes it able to talk.</strong> This is the one
+combination nothing else works without. The persona holds the behaviour; the
+service holds the provider connection and the credentials. On its own a persona
+is a specification nobody has run \u2014 it renders, it diffs, and it cannot answer a
+question. Point it at a service and the same wiring serves four surfaces at once:
+chat inside your product, the persona's public profile on the Persona Registry,
+the <a href="/hub/apis">REST API</a>, and the <a href="/mcp">MCP server</a>. You configure the provider
+once, in one place, and all four follow. Change the model on the persona and all
+four change together.</p>
+<p><strong>A persona plus a <a href="/hub/storage">Persona Data Store</a> is what makes it
+informed.</strong> The store holds the prompts, reference material, and memory the agent
+reasons from, scoped to one project. Without it the agent knows only what its
+character fields say; with it, it knows what you have given it.</p>
+<p><strong>A persona plus a <a href="/hub/storage">Knowledge Base</a> is what makes it citable.</strong> A
+knowledge base is documents ingested into a searchable store the agent can ground
+an answer in and point back at. Character makes an agent sound right; a knowledge
+base makes it <em>be</em> right.</p>
+<p><strong>A persona plus a <a href="/hub/teams">team</a> is what makes it a colleague.</strong> Team
+membership is not restricted to humans \u2014 a persona joins a team the same way a
+person does, appears in the member list beside them, and inherits the team's
+access.</p>
+<p><strong>A persona plus a <a href="/hub/plan">project</a> is what your application points at.</strong> An
+application does not name a persona directly; it names a project, and the project
+names the persona, its store, and everything else that ships together.</p>
+<p><strong>A <code>public</code> persona plus a slug is a place people can go.</strong> Publishing puts the
+agent at <code>agenticpersonaregistry.com/&#x3C;slug></code>, where its character fields stop
+being configuration and become the page \u2014 bio, worked examples, and a chat box
+that talks to it through the service you configured. This is why the character
+fields are worth writing properly: on a public persona, they are the product.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>The studio runs three personas, one per visibility tier:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/personas-list.png" alt="Three personas in the Longtail Labs workspace \u2014 Bob public, Scout hub, Margo private"></p>
+<p><strong>Bob</strong> is <code>public</code>. He suggests names for dogs and cannot do it without
+explaining where the name came from \u2014 which is a character trait Casey wrote, not
+a behaviour that emerged. His three worked examples and his canned opening
+exchange are authored in the editor, not captured from a session:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/persona-bob-editor.png" alt="Bob&#x27;s persona editor on the character tab, showing his traits and worked examples"></p>
+<p><strong>Scout</strong> is <code>hub</code> \u2014 internal only. Scout writes the studio's release notes and
+posts status updates, and never meets a customer. A workspace with exactly one
+persona in it teaches the wrong lesson: personas are not only for the
+customer-facing agent.</p>
+<p><strong>Margo</strong> is <code>private</code>, drafts adoption listings for Shelterly, and runs on the
+studio's second provider \u2014 which is a fact about her service, not about her.</p>
+<p>Casey created one service per provider. Both report a live connection, and each
+carries its own credentials:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/persona-services.png" alt="Two persona services \u2014 an Anthropic connection and an OpenAI connection, both live"></p>
+<p>Both were instantiated from the provider catalogue rather than configured from
+scratch:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/llm-providers.png" alt="The LLM provider templates the two connections were created from"></p>
+<p>Because Bob points at the Anthropic service, his model picker lists the models
+that service actually offers. The list is fetched from the connection, so a model
+that provider has retired cannot be selected here:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/persona-bob-model.png" alt="Bob&#x27;s model picker, listing models fetched from his service"></p>
+<p>And that is the whole chain, ending somewhere a stranger can reach. Bob is
+public, so the same persona and the same service produce a profile page with a
+usable chat box on it \u2014 no additional configuration, and no second copy of his
+character to maintain:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/persona-bob-profile.png" alt="Bob&#x27;s public profile on the Persona Registry, with his bio, examples, and a chat box"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/storage">Storage &#x26; data</a> \u2014 the two kinds of store a persona uses, and why
+they are different things.</li>
+<li><a href="/hub/plan">Plan</a> \u2014 the project that binds a persona to its data, and the
+narratives feature where authored exchanges live.</li>
+<li><a href="/hub/teams">Teams</a> \u2014 putting a persona in a member list beside people.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 reaching a persona from your own code, and over
+MCP.</li>
 </ul>`,
-  "hub-plan": '<h1 id="plan"><a href="#plan">Plan</a></h1>\n<p>Organize and narrate the work behind what you build.</p>\n<ul>\n<li><strong>Projects</strong> \u2014 organize the work behind what you build, with <strong>Plans</strong> and\n<strong>Tasks</strong>; agents can read and update work items over the <a href="/rest-api">API</a> and\n<a href="/mcp">MCP</a>.</li>\n<li><strong>Narratives</strong> \u2014 synthesize a shareable story from your git history, docs, and\nnotes.</li>\n<li><strong>Research</strong> \u2014 a shared, searchable notebook of markdown research documents.</li>\n</ul>',
+  "hub-plan": `<h1 id="plan"><a href="#plan">Plan</a></h1>
+<p>You have an agent, a couple of stores, a status group, and a piece of software
+that has to point at all of them. Naming each one individually in your
+application's configuration means the configuration is where the wiring lives \u2014
+and the wiring is then something you redeploy to change, and something no
+teammate can read.</p>
+<p>You also have the work itself: what is being built, what was decided, and why.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<ul>
+<li><strong>Projects</strong> \u2014 the binding. A project names a persona, the data stores it
+uses, and a status group, as one thing with a name. It is also where the work
+lives, with <strong>Plans</strong> and <strong>Tasks</strong>; agents read and update those work items
+over the <a href="/rest-api">REST API</a> and <a href="/mcp">MCP</a>.</li>
+<li><strong>Statuses</strong> \u2014 every project starts with a default set, so a task has
+somewhere to be before you have configured anything.</li>
+<li><strong>Narratives</strong> \u2014 a shareable story synthesized from your git history, docs,
+and notes. It is also where a persona's authored exchanges live: the canned
+opening a first-time visitor sees before typing.</li>
+<li><strong>Research</strong> \u2014 a shared, searchable notebook of markdown documents, versioned
+the way the rest of the Hub versions things.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A project plus an <a href="/hub/products">application</a> is what your code points at.</strong>
+An application never names a persona directly. It names a project, and the
+project names everything that ships together \u2014 so changing which persona a
+product runs is a change here rather than a redeploy there.</p>
+<p><strong>A project plus a <a href="/hub/personas">persona</a> and its
+<a href="/hub/storage">stores</a> is what makes the persona reachable.</strong> A bucket outside a
+project is invisible to the agent that needs it; a persona outside a project has
+no way for your code to find it. The project is the join.</p>
+<p><strong>A project plus a status group is what makes the <a href="/hub/monitoring">status page</a>
+about something.</strong> The group names which endpoints belong to this product, so
+the monitoring view is scoped rather than a flat list of everything you own.</p>
+<p><strong>Narratives plus a <code>public</code> <a href="/hub/personas">persona</a> is what a visitor sees
+first.</strong> The canned exchange authored here renders on the persona's public
+profile before the visitor types anything \u2014 so the agent demonstrates itself
+rather than presenting an empty box.</p>
+<p><strong>Research plus a <a href="/hub/storage">knowledge base</a> is how a note becomes something
+an agent can cite.</strong> Research is where you write; a knowledge base is where an
+agent reads. Documents move from one to the other when they are ready to be
+answered from.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p><strong>Dognamr Production</strong> is the project that makes the rest of the workspace
+composable: it names Bob, both data stores, and the status group, and it is what
+the Dognamr Web application points at. Shelterly's project sits beside it,
+deliberately thinner \u2014 an early-access product has less wired up, and that is
+what an early-access product looks like:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/projects.png" alt="Dognamr Production binding Bob, both stores and the status group, with Shelterly&#x27;s thinner project beside it"></p>
+<p>Bob's opening exchange is authored, not captured from a session. It is what a
+stranger arriving at his profile reads before deciding whether to type:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/narratives.png" alt="Bob&#x27;s canned opening exchange, as authored"></p>
+<p>Casey's working notes on naming heuristics live in Research \u2014 searchable, shared
+with Priya, and the raw material the Breed Encyclopedia was built from:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/research.png" alt="Casey&#x27;s research notes on naming heuristics"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/personas">Personas</a> \u2014 the agent a project binds.</li>
+<li><a href="/hub/storage">Storage &#x26; data</a> \u2014 the stores a project binds.</li>
+<li><a href="/hub/products">Products</a> \u2014 the application that points at a project.</li>
+<li><a href="/hub/monitoring">Monitoring</a> \u2014 the status group a project names.</li>
+</ul>`,
   "hub-products": `<h1 id="products"><a href="#products">Products</a></h1>
-<p>Each product you build is an <strong>ecosystem</strong> with its own settings, project, and data.
-Inside a product you manage:</p>
+<p>The thing you are building has its own users, its own data, and its own
+credentials \u2014 and none of that should be reachable by the next thing you build.
+You also need somewhere to put the parts of a shipped product that are not code:
+who has signed up, who is paying, which features are switched on for whom, and
+the configuration you would otherwise redeploy to change.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<p>A product is an <strong>ecosystem</strong>: a boundary with its own settings, its own project,
+and its own data. Inside one you manage:</p>
 <ul>
-<li><strong>Applications</strong> and <strong>API tokens</strong> scoped to the product.</li>
-<li><strong>Storage</strong>, <strong>Integrations</strong>, and <strong>Dashboards</strong> for the product's data.</li>
-<li><strong>Users</strong> \u2014 your product's customers: invites, requests, and pending members.</li>
-<li><strong>Sign-in apps</strong> \u2014 let your own site sign its customers in through ADH (OAuth you
-don't have to build).</li>
-<li><strong>Feature flags</strong> and <strong>server bags</strong> \u2014 runtime on/off toggles and key\u2192JSON config
-your apps read.</li>
-<li><strong>Gamification</strong> \u2014 turn on the character-sheet system (levels, badges, seasons)
-for your personas.</li>
+<li><strong>Applications</strong> \u2014 one per thing that talks to the Hub. Each carries API tokens
+scoped to this product and nothing else.</li>
+<li><strong>Sign-in apps</strong> \u2014 let your own site sign <em>its</em> customers in through the Hub.
+OAuth you do not have to build.</li>
+<li><strong>Users</strong> \u2014 your product's customers: invitations, access requests, and pending
+members. These are not Hub users.</li>
+<li><strong>Email signup</strong> \u2014 a waitlist or launch-notification capture, with the list
+behind it.</li>
+<li><strong>Billing</strong> \u2014 offers your customers subscribe to, and who is on each one.</li>
+<li><strong>Feature flags</strong> \u2014 runtime on/off toggles your app reads, targetable at a
+subset of customers.</li>
+<li><strong>Server bags</strong> \u2014 key\u2192JSON configuration your app reads at runtime, per
+ecosystem.</li>
+<li><strong>Gamification</strong> \u2014 the character-sheet system: levels, badges, seasons, and
+leaderboards for your personas and your users.</li>
+<li><strong>Storage</strong>, <strong>integrations</strong>, and <strong>dashboards</strong>, all scoped here.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A product plus an <a href="/hub/products">application</a> plus a token is what your code
+uses to get in.</strong> The chain matters in that order: the token belongs to the
+application, the application belongs to the product, and the product is what
+bounds what the token can reach. A leaked token is a bad day, not a catastrophe,
+because of the last link.</p>
+<p><strong>A product plus a <a href="/hub/plan">project</a> is what points an application at
+something.</strong> The project names the persona, the stores, and the status group that
+ship together. Without it, an application is a credential with nothing on the
+other end.</p>
+<p><strong>Sign-in apps plus <a href="/hub/workspaces">members</a> is the distinction to get right.</strong>
+Members are people in <em>your workspace</em> \u2014 colleagues. Sign-in apps serve people in
+<em>your product</em> \u2014 customers. They sign in through different flows, appear in
+different lists, and a customer never gains reach into your workspace.</p>
+<p><strong>Feature flags plus billing is how a rollout usually actually looks.</strong> A flag
+targeted at an offer means paying customers get the new thing first. Either
+feature alone gives you a switch or a subscriber list; together they give you a
+release plan.</p>
+<p><strong>Gamification plus a <a href="/hub/personas">persona</a> is what turns a profile into a
+character sheet.</strong> Levels and badges attach to the persona you already
+published, so the public profile gains a progression without you building one.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>The studio ships two products, at deliberately different stages \u2014 Dognamr is
+live, Shelterly is in early access with a handful of invited shelters:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/products-list.png" alt="Dognamr and Shelterly side by side, their stages visibly different"></p>
+<p>Opening Dognamr shows what a product actually contains \u2014 its applications, its
+customers, and its flags on one screen:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/product-dognamr.png" alt="The Dognamr product, showing its applications, customers, and flags"></p>
+<p>Two applications reach it, and they are different kinds of thing. <strong>Dognamr Web</strong>
+is the customer-facing site; <strong>Dognamr CLI</strong> is Casey's own tool. Both are
+applications, and neither can read Shelterly:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/applications.png" alt="The Dognamr applications \u2014 Dognamr Web and Dognamr CLI, their consumer kinds differing"></p>
+<p>Dognamr's visitors sign in through the product's own sign-in app. These are
+Casey's customers, not Hub users \u2014 the distinction most readers get wrong the
+first time:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/signin-apps.png" alt="Dognamr&#x27;s sign-in apps"></p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/auth.png" alt="Dognamr&#x27;s end-user sign-in settings"></p>
+<p>Shelterly is not open yet, so its front page captures interest instead of
+accounts:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/email-signup.png" alt="Dognamr&#x27;s email signup capture, with signups against it"></p>
+<p>Dognamr Plus is the paid tier, with customers on it:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/billing.png" alt="The Dognamr Plus offer with paying customers against it"></p>
+<p>Casey's newest feature \u2014 uploading a photo to guess the breed \u2014 rolls out to
+those subscribers first. That is the flag and the offer working together:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/feature-flags.png" alt="A feature flag rolling out to Dognamr Plus subscribers first"></p>
+<p>Everything else Dognamr needs at runtime and does not want to redeploy for lives
+in its server bag, which differs from Shelterly's:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/server-bags.png" alt="Per-ecosystem server bag configuration for Dognamr and Shelterly"></p>
+<p>And Dognamr's visitors earn badges for naming dogs, which puts a leaderboard on a
+product that is otherwise a text box:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/gamification.png" alt="The Dognamr badge set and leaderboard"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/storage">Storage &#x26; data</a> \u2014 where a product's data actually sits.</li>
+<li><a href="/hub/plan">Plan</a> \u2014 the project an application points at.</li>
+<li><a href="/hub/monitoring">Monitoring</a> \u2014 watching a shipped product from one page.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 the token, and what it reaches.</li>
 </ul>`,
-  "hub-storage": '<h1 id="storage--data"><a href="#storage--data">Storage &#x26; data</a></h1>\n<p>Store, permission, and browse the data behind your workspace and products.</p>\n<ul>\n<li><strong>Buckets</strong> \u2014 named, permissioned collections that expose selected tables and rows\n(buckets nest, and every ecosystem gets a default one).</li>\n<li><strong>Files</strong> \u2014 upload, browse, and serve files with signed reads.</li>\n<li><strong>Access &#x26; usage</strong> \u2014 per-bucket permission lists and usage trends.</li>\n<li><strong>All Data</strong> \u2014 a cross-schema browser to read and edit the underlying records\ndirectly.</li>\n<li><strong>Integrations</strong> \u2014 connect third-party accounts (OAuth or Plaid) that sync data\ninto your workspace.</li>\n</ul>',
-  "hub-teams": '<h1 id="teams"><a href="#teams">Teams</a></h1>\n<p>Group members into teams, and compose agentic teams from personas.</p>\n<ul>\n<li><strong>Teams</strong> \u2014 group members into teams within a workspace.</li>\n<li><strong>Team Registry</strong> \u2014 a public, claimable profile for a registered agentic team.</li>\n<li><strong>Team Builder</strong> \u2014 compose a team from existing personas, define roles and\nhand-offs, and publish it.</li>\n</ul>',
-  "hub-workspaces": `<h1 id="workspaces--account"><a href="#workspaces--account">Workspaces &#x26; account</a></h1>
-<p>Switch between your personal workspace and any organization or team you belong to,
-and create a new organization from Home.</p>
+  "hub-storage": `<h1 id="storage--data"><a href="#storage--data">Storage &#x26; data</a></h1>
+<p>Your agent needs to read something, and your users need their choices to still
+be there next week. Those are two different problems, and solving them with one
+pile of rows is the mistake that is cheap to make and expensive to undo \u2014 the
+reference material you curate and the per-visitor state you must never leak into
+a prompt end up in the same place, permissioned the same way.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<p>Storage is a set of named, permissioned collections and a browser over what is
+in them:</p>
 <ul>
-<li><strong>Settings</strong> \u2014 appearance, account, security, subscription, your public profile,
-notifications, and <strong>API tokens</strong>.</li>
-<li><strong>Members</strong> \u2014 an organization's people roster.</li>
-<li><strong>Tokens</strong> \u2014 mint, list, and revoke storage-access tokens; each one gets its own
-default bucket.</li>
+<li><strong>Buckets</strong> \u2014 named collections that expose selected tables and rows. Every
+ecosystem gets a default one, and buckets nest, so a product's data can have
+structure without a second database.</li>
+<li><strong>Bucket kinds</strong> \u2014 what a bucket is <em>for</em>. A <strong>persona data store</strong> holds what
+the agent knows; a <strong>user data store</strong> holds what each of your end users
+chose. The difference is who has read access, not a naming convention.</li>
+<li><strong>Files</strong> \u2014 upload, browse, and serve files, with signed reads so a URL you
+hand out expires.</li>
+<li><strong>Knowledge bases</strong> \u2014 documents ingested into a searchable store an agent can
+ground an answer in and cite back at.</li>
+<li><strong>Access &#x26; usage</strong> \u2014 the permission list for each bucket, and what has been
+reading it.</li>
+<li><strong>All Data</strong> \u2014 a cross-schema browser that reads and edits the underlying
+records directly, for when you need to see the row rather than the feature.</li>
+<li><strong>Integrations</strong> \u2014 third-party accounts (OAuth or Plaid) that sync data into
+your workspace on a schedule.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A persona data store plus a <a href="/hub/personas">persona</a> is what makes the agent
+informed.</strong> Character fields tell an agent how to sound; the store tells it what
+is true. Grant the persona read access to a bucket and everything in that bucket
+is material it can reason from \u2014 the same for every visitor, and yours to
+curate.</p>
+<p><strong>A user data store plus your own end users is what makes your product
+remember.</strong> Keyed by the customer who signed in through your
+<a href="/hub/products">product's</a> sign-in app, so the pins, preferences, and progress
+follow that person across devices. You get per-user persistence without running
+a database, and \u2014 because the grant is on the user, not the persona \u2014 nothing in
+it is visible to the agent unless you deliberately hand it over.</p>
+<p><strong>A bucket plus a <a href="/hub/plan">project</a> is what makes it reachable.</strong> A bucket
+outside a project is invisible to the application that needs it. The project is
+what names which stores ship together with which persona, and an
+<a href="/hub/apis">application's token</a> reaches the project rather than the bucket.</p>
+<p><strong>A knowledge base plus a persona is what makes an answer citable.</strong> Ingested
+documents are chunked and embedded, so the agent retrieves the passage rather
+than being handed the whole corpus. Character makes an agent sound right; a
+knowledge base makes it <em>be</em> right.</p>
+<p><strong>Integrations plus a bucket is how outside data arrives.</strong> A connected GitHub
+or Stripe account syncs into a bucket you already permissioned, so the agent
+reading that bucket picks it up without you writing an importer.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>Dognamr has both kinds of store, and the pair is the clearest thing on this
+page. <code>bob-context</code> is Bob's \u2014 breed dictionaries and naming guardrails.
+<code>visitor-favorites</code> is the visitors' \u2014 the names each of them pinned:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/storage-buckets.png" alt="bob-context and visitor-favorites side by side, their kinds visibly different"></p>
+<p>Opening <code>bob-context</code> shows material Casey wrote and Bob reads. None of it is
+per-visitor, and it is identical for everyone who talks to him:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/storage-bob-context.png" alt="Inside bob-context \u2014 breed dictionaries and naming guardrails"></p>
+<p>Both stores, and the rows inside them, in one cross-schema view \u2014 this is the
+screen for when the feature UI is not showing you what you need:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/all-data.png" alt="Both stores and their contents in the All Data browser"></p>
+<p>The Breed Encyclopedia is a knowledge base rather than a bucket of loose rows,
+and it names the persona consuming it. That column is the point: a knowledge
+base nothing reads is a document dump:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/knowledgebases.png" alt="The Breed Encyclopedia knowledge base, showing Bob as its consumer"></p>
+<p>Longtail Labs has GitHub and Stripe connected, so release activity and payment
+records arrive in the workspace rather than being copied in by hand:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/integrations.png" alt="GitHub and Stripe, both connected"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/personas">Personas</a> \u2014 the agent that reads the store.</li>
+<li><a href="/hub/plan">Plan</a> \u2014 the project that binds stores to a persona.</li>
+<li><a href="/hub/products">Products</a> \u2014 the boundary the data sits inside.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 reading and writing a bucket from your own code.</li>
+</ul>`,
+  "hub-teams": `<h1 id="teams"><a href="#teams">Teams</a></h1>
+<p>Access granted person by person stops working at about the fourth person. The
+usual fix is groups \u2014 but the moment some of the work is done by agents, a
+group that only accepts humans has a hole in it, and you are back to
+special-casing the agents everywhere.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<ul>
+<li><strong>Teams</strong> \u2014 named groups inside a workspace, each with its own members and
+roles. Access is granted to the team, and members inherit it.</li>
+<li><strong>Members of two kinds</strong> \u2014 a team member is a person <em>or</em> a persona. Both
+appear in the same list, both carry a role, and both inherit the same access.</li>
+<li><strong>Team Registry</strong> \u2014 a public, claimable profile for a registered agentic team,
+so a team can be something you point at from outside.</li>
+<li><strong>Team Builder</strong> \u2014 compose a team from existing personas, define their roles
+and hand-offs, and publish it.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A team plus a <a href="/hub/personas">persona</a> is what makes the agent a colleague.</strong>
+Team membership is not restricted to humans. A persona joins the same way a
+person does, sits in the member list beside them, and inherits the team's
+access \u2014 which means an agent gets to the data it needs through the same
+mechanism everything else does, rather than through a credential you wired by
+hand. A persona must be permitted to act as a team member before it can be
+added; that grant is deliberate and per-persona.</p>
+<p><strong>A team plus a <a href="/hub/workspaces">workspace</a> is how an org actually operates.</strong>
+An organization has no credentials and never signs in. Everything it does, it
+does through teams \u2014 which is the whole reason the object exists, and why
+membership rather than ownership is what you manage day to day.</p>
+<p><strong>A team plus a <a href="/hub/storage">bucket</a> is permission that survives the next
+hire.</strong> Grant the team, not the person. Someone joining gets what the team has;
+someone leaving loses it, in one place.</p>
+<p><strong>Team Builder plus the <a href="/hub/personas">registry</a> is how a group of agents
+becomes something you can hand to someone.</strong> Roles and hand-offs defined once,
+published as a unit, reachable by a name rather than reassembled from three
+persona slugs.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p><strong>Dognamr Core</strong> has three members, and one of them is not a person. Casey and
+Priya are humans; Bob is a persona, in the same list, with a role, inheriting
+the same access as the two of them:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/teams.png" alt="The Dognamr Core team \u2014 Casey, Priya and Bob together in one member list"></p>
+<p>That is the most surprising thing on this page and it is not a trick of the
+display. Bob reaches <code>bob-context</code> because the team he belongs to can reach it \u2014
+the same route Priya's access takes.</p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/workspaces">Workspaces &#x26; account</a> \u2014 members, roles, and what an org is.</li>
+<li><a href="/hub/personas">Personas</a> \u2014 the agent that stands in the member list.</li>
+<li><a href="/hub/storage">Storage &#x26; data</a> \u2014 what a team's access actually reaches.</li>
+</ul>`,
+  "hub-workspaces": `<h1 id="workspaces--account"><a href="#workspaces--account">Workspaces &#x26; account</a></h1>
+<p>Work that matters stops being one person's fairly quickly. Someone else needs to
+see the agent's configuration, change a prompt, or keep shipping while you are
+away \u2014 and the answer cannot be sharing your password. You need a place the work
+belongs to rather than a place you own, with people in it who have their own
+accounts and their own level of reach.</p>
+<h2 id="what-it-does"><a href="#what-it-does">What it does</a></h2>
+<ul>
+<li><strong>Switch workspaces</strong> \u2014 your personal workspace and every organization you
+belong to, from one control. Create a new organization from Home.</li>
+<li><strong>Members</strong> \u2014 the roster of people in an organization, and what each one may
+do. An owner can change billing and remove people; a member cannot.</li>
+<li><strong>Invitations</strong> \u2014 invite by email, see who has not accepted yet, and withdraw
+an invitation that was sent in error.</li>
+<li><strong>Settings</strong> \u2014 appearance, account, security, subscription, your public
+profile, and notifications, plus the organization's own name and description.</li>
+<li><strong>API tokens</strong> \u2014 mint, list, and revoke tokens that reach your data. Each one
+gets its own default bucket.</li>
+</ul>
+<h2 id="what-you-use-it-with"><a href="#what-you-use-it-with">What you use it with</a></h2>
+<p><strong>A workspace plus <a href="/hub/workspaces">members</a> is what makes a persona
+survivable.</strong> A persona configured in a personal workspace is configured by one
+person who may leave. Moved into an organization, the same persona has a roster
+behind it, and the prompt that runs your product is not hostage to one account.</p>
+<p><strong>Members plus <a href="/hub/teams">teams</a> is what makes access legible.</strong> Roles say what
+someone may do; teams say what they are working on. A ten-person organization
+with no teams is ten people who all see everything, which stops being useful long
+before it stops being safe.</p>
+<p><strong>A token plus an <a href="/hub/products">application</a> is what makes your code able to
+reach any of this.</strong> A token minted here is scoped, and the thing it is scoped to
+is the application inside a product. That is the difference between a credential
+your code carries and a credential that would be a problem if it leaked.</p>
+<p><strong>Your account plus a <a href="/hub/teams">public profile</a> is how you appear elsewhere.</strong>
+The profile in Settings is what other Hub users see in a member directory, a
+discussion thread, or beside a team you helped build.</p>
+<h2 id="in-the-demo"><a href="#in-the-demo">In the demo</a></h2>
+<p><em>Longtail Labs is the Agentic Developer Hub's documentation demo \u2014 a fictional
+studio, not a real company.</em></p>
+<p>Longtail Labs has two people in it, and deliberately not two owners. Casey Rowan
+owns the organization; Priya Anand is a member:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/members.png" alt="The Longtail Labs member roster \u2014 Casey as owner, Priya as member"></p>
+<p>That difference is the whole reason the roster exists. Priya can edit personas,
+write to storage, and ship; Priya cannot change the subscription or remove Casey.</p>
+<p>A third invitation is outstanding. Tomas Ferreira was invited and has not
+accepted, which is what a pending row looks like \u2014 not an error, just a person
+who has not clicked the link yet:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/invitations.png" alt="The invitations screen showing Tomas Ferreira, pending"></p>
+<p>The organization's own settings carry its name, description, and the line
+identifying it as this documentation's demo:</p>
+<p><img src="https://agenticdeveloperhub.com/screenshots/settings.png" alt="Longtail Labs workspace settings"></p>
+<h2 id="where-to-go-next"><a href="#where-to-go-next">Where to go next</a></h2>
+<ul>
+<li><a href="/hub/teams">Teams</a> \u2014 grouping the people on this roster, and the personas that
+stand among them.</li>
+<li><a href="/hub/products">Products</a> \u2014 the boundary that tokens are scoped to.</li>
+<li><a href="/hub/apis">APIs &#x26; agents</a> \u2014 what a token can actually reach.</li>
 </ul>`,
   "mcp-connect": `<h1 id="connect-your-client"><a href="#connect-your-client">Connect your client</a></h1>
 <div class="adh-mv-alert adh-mv-alert--note">

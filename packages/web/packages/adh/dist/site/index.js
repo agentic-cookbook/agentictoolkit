@@ -16,6 +16,7 @@ function defineSite(site) {
     homeGate: site.homeGate,
     workspaceGate: site.workspaceGate,
     authCallback: site.authCallback,
+    details: site.details,
     shell: {
       siteId: site.id,
       header: site.header,

@@ -25,13 +25,17 @@ export interface LandingContent {
     hero: LandingHero;
     sections: LandingSection[];
     /**
-     * The `{tour}` blurb. Required, not optional: `<LandingTour>` renders `/tour` for every
-     * site in the family, and a site with no blurb would render a page identical to `/` —
-     * no step counter, no way on to the next site, the walk silently ending there. The
-     * generator's own validator refuses a site whose markdown has no `{tour}` section, so
-     * this is a fact about the content, not a default to fill in here.
+     * The `{tour}` blurb. Required for every site's OWN landing deck: `<LandingTour>`
+     * renders `/tour` for every site in the family, and a site with no blurb would render a
+     * page identical to `/` — no step counter, no way on to the next site, the walk
+     * silently ending there. The generator's own validator refuses a site whose markdown
+     * has no `{tour}` section, so absence there is a fact about the content, not a default
+     * to fill in here.
+     *
+     * Absent on a site's own second deck (`/details`), which is a page rather than a stop
+     * on the family walk. `<LandingTour>` is the only reader; `<LandingDeck>` never was.
      */
-    tour: LandingTourStop;
+    tour?: LandingTourStop;
 }
 export interface LandingHero {
     headline: ReactNode;
@@ -91,6 +95,15 @@ export type LandingBlock = {
 } | {
     kind: 'Code';
     text: string;
+}
+/** `src` is a screenshot id, not a URL. The deck resolves it against the hub's own
+ *  origin (`/screenshots/<id>.png`) so one image set serves the brochure and the help
+ *  site, whose Markdown sanitizer accepts only absolute http/https sources. */
+ | {
+    kind: 'Shot';
+    src: string;
+    title: string;
+    caption: string;
 } | {
     kind: 'Table';
     caption: ReactNode;

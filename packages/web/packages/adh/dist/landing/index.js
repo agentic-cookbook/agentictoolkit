@@ -19,6 +19,7 @@ import {
   Roadmap,
   Rule,
   Screen,
+  Shot,
   Stats,
   StatusPill,
   Table,
@@ -45,6 +46,16 @@ function renderBlock(block, key) {
       return /* @__PURE__ */ jsx(Points, { entries: block.entries, ordered: block.ordered }, key);
     case "Code":
       return /* @__PURE__ */ jsx(Code, { text: block.text }, key);
+    case "Shot":
+      return /* @__PURE__ */ jsx(
+        Shot,
+        {
+          title: block.title,
+          caption: block.caption,
+          media: /* @__PURE__ */ jsx("img", { src: `/screenshots/${block.src}.png`, alt: block.caption })
+        },
+        key
+      );
     case "Table":
       return /* @__PURE__ */ jsx(Table, { caption: block.caption, columns: block.columns, rows: block.rows }, key);
     case "StatusPill":
@@ -120,6 +131,7 @@ function LandingDeck({ content }) {
 }
 function LandingTour({ content }) {
   const { tour } = content;
+  if (tour === void 0) return deck(content, null, void 0);
   const lead = /* @__PURE__ */ jsx(
     TourStrip,
     {
