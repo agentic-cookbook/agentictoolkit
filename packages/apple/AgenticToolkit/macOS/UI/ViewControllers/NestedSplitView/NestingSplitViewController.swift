@@ -3,7 +3,7 @@ import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
 @MainActor
-public final class NestingSplitViewController: NSSplitViewController {
+public final class NestingSplitViewController: ThemedSplitViewController {
 
     public enum Direction {
         case left, right, above, below
@@ -48,7 +48,6 @@ public final class NestingSplitViewController: NSSplitViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        splitView = ThemedSplitView()
         splitView.isVertical = (orientation == .horizontal)
         splitView.dividerStyle = .thin
 

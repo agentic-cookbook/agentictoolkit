@@ -8,7 +8,7 @@ extension ComposableSettings {
     /// calling `addPanel(_:)`. Sidebar is a `PanelListViewController`; the
     /// detail pane hosts the currently selected `any ComposableSettingsPanel`.
     @MainActor
-    open class SplitViewController: NSSplitViewController {
+    open class SplitViewController: ThemedSplitViewController {
 
         public private(set) var panels: [any ComposableSettingsPanel] = []
 
@@ -82,8 +82,6 @@ extension ComposableSettings {
 
         open override func viewDidLoad() {
             super.viewDidLoad()
-
-            splitView = ThemedSplitView()
 
             listViewController.setTitle(sidebarTitle)
 

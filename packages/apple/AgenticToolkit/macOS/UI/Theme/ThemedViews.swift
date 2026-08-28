@@ -296,8 +296,8 @@ public final class ThemedSeparatorView: NSView, Themeable {
 ///
 /// `NSSplitView` draws its divider from a system color that no theme reaches,
 /// so a themed window ends up with a system-grey seam down the middle. This is
-/// the one hook AppKit gives for it. Assign it to an `NSSplitViewController`'s
-/// `splitView` before `viewDidLoad` adds any items.
+/// the one hook AppKit gives for it. Split view *controllers* get it by
+/// subclassing `ThemedSplitViewController` rather than assigning this directly.
 @MainActor
 public final class ThemedSplitView: NSSplitView, Themeable {
     private var observer: ThemePaletteObserver?
@@ -317,6 +317,33 @@ public final class ThemedSplitView: NSSplitView, Themeable {
     public func applyTheme(_ palette: SemanticPalette) {
         currentPalette = palette
         needsDisplay = true
+    }
+}
+
+/// An `NSSplitViewController` whose divider follows the theme.
+///
+/// The swap lives in `loadView()` because AppKit allows `splitView` to be
+/// assigned only *before* the view is loaded — doing it in `viewDidLoad` raises
+/// `NSInternalInconsistencyException` ("The -splitView can only be assigned
+/// before the view is loaded"), which AppKit swallows at the top of the run
+/// loop and which therefore aborts whatever was mid-way through building the
+/// controller. Subclassing keeps that one-shot constraint in one place.
+@MainActor
+open class ThemedSplitViewController: NSSplitViewController {
+    open override func loadView() {
+        splitView = ThemedSplitView()
+        super.loadView()
+    }
+
+    /// A split view with a custom `dividerColor` gets view-backed dividers, and
+    /// AppKit asks a view-backed divider whether to hide itself while measuring
+    /// the split view inside `viewDidLoad` — before any subclass has added its
+    /// items. `NSSplitViewController`'s own implementation indexes
+    /// `splitViewItems` unguarded and throws on the empty array, so the answer
+    /// for an item that doesn't exist yet has to come from here.
+    open override func splitView(_ splitView: NSSplitView, shouldHideDividerAt dividerIndex: Int) -> Bool {
+        guard dividerIndex < splitViewItems.count else { return false }
+        return super.splitView(splitView, shouldHideDividerAt: dividerIndex)
     }
 }
 

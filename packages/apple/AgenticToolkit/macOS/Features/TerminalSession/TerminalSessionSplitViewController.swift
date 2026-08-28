@@ -4,7 +4,7 @@ import AgenticToolkitCoreMacOS
 
 /// Split view controller with a sidebar (session list) and content area (terminal).
 @MainActor
-public final class TerminalSessionSplitViewController: NSSplitViewController {
+public final class TerminalSessionSplitViewController: ThemedSplitViewController {
 
     public let sessionManager: TerminalSessionManager
     public let sessionListVC: TerminalSessionListViewController
@@ -22,8 +22,6 @@ public final class TerminalSessionSplitViewController: NSSplitViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-
-        splitView = ThemedSplitView()
 
         let sidebarItem = NSSplitViewItem(sidebarWithViewController: sessionListVC)
         sidebarItem.minimumThickness = 150
