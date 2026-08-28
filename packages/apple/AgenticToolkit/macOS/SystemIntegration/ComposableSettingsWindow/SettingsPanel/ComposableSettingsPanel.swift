@@ -18,8 +18,12 @@ public protocol ComposableSettingsPanel: NSViewController {
     var hostsOwnScroll: Bool { get }
 
     /// Reference prose for this panel, shown in the detail pane's help drawer.
-    /// `nil` retires the help button for this panel entirely — better than an
-    /// empty drawer, which promises an explanation and then withholds it.
+    ///
+    /// `nil` is a panel with nothing to add, not a panel without a help button:
+    /// the button belongs to the window, and hiding it per panel made it appear
+    /// and vanish as the selection moved down the sidebar — and took an open
+    /// drawer with it. A panel that offers no prose gets the drawer's own empty
+    /// state instead, which says so.
     var helpContent: ComposableSettings.PanelHelp? { get }
 }
 

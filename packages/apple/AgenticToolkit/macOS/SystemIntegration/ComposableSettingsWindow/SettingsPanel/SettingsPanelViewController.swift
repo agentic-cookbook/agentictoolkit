@@ -16,7 +16,8 @@ extension ComposableSettings {
         public let settingsView = PanelView()
 
         /// Reference prose for the detail pane's help drawer; `nil` means this
-        /// panel offers none. See `ComposableSettingsPanel.helpContent`.
+        /// panel offers none, and the drawer shows its empty state rather than
+        /// the help button disappearing. See `ComposableSettingsPanel.helpContent`.
         ///
         /// Redeclared here (rather than left to the protocol's extension default)
         /// so subclass overrides are actually reached: a protocol extension's

@@ -76,8 +76,11 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
         tableView.dataSource = self
         tableView.delegate = self
         // Banding is off (`ThemedTableView` turns it off too): the stripe comes
-        // from a system color pair the palette has no say in. Rows separate on
-        // the palette's own selection fill instead, via `ThemedTableRowView`.
+        // from a system color pair the palette has no say in. What separates
+        // *unselected* rows is a horizontal rule in the palette's divider colour
+        // — `ThemedTableRowView` only paints the selected row, so without this
+        // the log was an unbroken block of text with no row boundaries at all.
+        tableView.gridStyleMask = [.solidHorizontalGridLineMask]
         tableView.allowsColumnResizing = true
         tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         tableView.rowSizeStyle = .default

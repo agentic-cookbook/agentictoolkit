@@ -40,6 +40,15 @@ public final class ThemedLabel: NSTextField, Themeable {
         self.isBordered = false
         self.isBezeled = false
         self.drawsBackground = false
+        // The rest of `NSTextField(labelWithString:)`'s defaults, which
+        // `init(frame:)` does not give: a field built by frame wraps, breaks on
+        // words, and asks for 150 × 64 points. A label does none of that, and
+        // every caller of this class uses it as one — a toolbar caption, a table
+        // cell, a form value — so a two-line intrinsic height was a caption
+        // fighting a 40-point toolbar for room it never needed.
+        self.cell?.wraps = false
+        self.cell?.usesSingleLineMode = true
+        self.lineBreakMode = .byClipping
         self.stringValue = string
         self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
     }
@@ -156,6 +165,77 @@ public extension NSButton {
                 return style
             }()
         ])
+    }
+}
+
+/// The themed secondary action as a *control* rather than a paint job: it sizes
+/// itself from the palette's own button font, and it reacts to being pressed.
+///
+/// ``NSButton/applySecondaryActionTheme(_:)`` stays for the stock buttons in
+/// dialogs that a caller lays out by hand. What an extension cannot do is the
+/// two things a button in a toolbar needs.
+///
+/// Its size: a borderless button's intrinsic size is only its title, so callers
+/// pinned a hard width instead — and `palette.font(.button)` scales with the
+/// theme's `sizeScale`, so at 1.5 the word "Resume" is wider than the 68 points
+/// it was given and clips with no ellipsis to say so. Sizing from the title
+/// that will actually be drawn cannot go wrong that way.
+///
+/// Its pressed state: the explicit `.foregroundColor` on the attributed title is
+/// precisely what stops AppKit dimming a borderless button's text on mouse-down,
+/// so the painted version gave no feedback at all when clicked. The fill answers
+/// instead.
+@MainActor
+public final class ThemedSecondaryButton: NSButton, Themeable {
+
+    /// The floor: the stock textured-rounded metrics, so a short title still
+    /// looks like a button and a row of them stays even.
+    public static let minimumSize = NSSize(width: 68, height: 22)
+
+    /// Room around the title, so a long one is not painted edge to edge.
+    private static let padding = NSSize(width: 20, height: 8)
+
+    private var observer: ThemePaletteObserver?
+
+    public init(title: String, target: AnyObject? = nil, action: Selector? = nil) {
+        super.init(frame: .zero)
+        self.title = title
+        self.target = target
+        self.action = action
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    /// Re-titling repaints. The attributed title is built from `title` when the
+    /// theme is applied, so assigning `title` alone would change the property
+    /// and leave the old word on screen — the bug every caller had to know
+    /// about, now the class's own business.
+    public override var title: String {
+        didSet { applyTheme(ThemePaletteObserver.currentPalette) }
+    }
+
+    public override var isHighlighted: Bool {
+        didSet { paintFill(ThemePaletteObserver.currentPalette) }
+    }
+
+    public override var intrinsicContentSize: NSSize {
+        let title = attributedTitle.size()
+        return NSSize(
+            width: max(Self.minimumSize.width, ceil(title.width) + Self.padding.width),
+            height: max(Self.minimumSize.height, ceil(title.height) + Self.padding.height))
+    }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        applySecondaryActionTheme(palette)
+        paintFill(palette)
+        invalidateIntrinsicContentSize()
+    }
+
+    private func paintFill(_ palette: SemanticPalette) {
+        layer?.backgroundColor = palette
+            .nsColor(isHighlighted ? .selection : .elevatedSurface).cgColor
     }
 }
 

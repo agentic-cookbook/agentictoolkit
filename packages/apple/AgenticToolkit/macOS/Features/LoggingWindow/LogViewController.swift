@@ -19,8 +19,8 @@ open class LogViewController: NSViewController {
     /// Stock buttons painted as *secondary* actions rather than `ThemedButton`s:
     /// Pause and Clear sit in a toolbar, and two accent-filled pills there would
     /// claim more emphasis than a log's controls deserve.
-    private let pauseButton = NSButton()
-    private let clearButton = NSButton()
+    private let pauseButton = ThemedSecondaryButton(title: "Pause")
+    private let clearButton = ThemedSecondaryButton(title: "Clear")
     private let statusDot = NSView()
     private let statusLabel = ThemedLabel(role: .secondaryText, textRole: .caption)
 
@@ -132,12 +132,10 @@ open class LogViewController: NSViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
 
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
-        pauseButton.title = "Pause"
         pauseButton.target = self
         pauseButton.action = #selector(pauseTapped)
 
         clearButton.translatesAutoresizingMaskIntoConstraints = false
-        clearButton.title = "Clear"
         clearButton.target = self
         clearButton.action = #selector(clearTapped)
 
@@ -172,16 +170,11 @@ open class LogViewController: NSViewController {
             trailing.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             statusDot.widthAnchor.constraint(equalToConstant: 8),
-            statusDot.heightAnchor.constraint(equalToConstant: 8),
-
-            // A borderless button has no bezel padding, so it has no useful
-            // intrinsic size — `applySecondaryActionTheme` says as much. These
-            // are the stock textured-rounded metrics the buttons used to get
-            // from their bezel.
-            pauseButton.widthAnchor.constraint(equalToConstant: 68),
-            pauseButton.heightAnchor.constraint(equalToConstant: 22),
-            clearButton.widthAnchor.constraint(equalToConstant: 68),
-            clearButton.heightAnchor.constraint(equalToConstant: 22)
+            statusDot.heightAnchor.constraint(equalToConstant: 8)
+            // No size for the buttons: `ThemedSecondaryButton` measures the
+            // title it is about to draw, in the theme's own button font, and
+            // grows past the stock 68 × 22 rather than clipping at a large
+            // `sizeScale`.
         ])
         return container
     }
@@ -210,14 +203,10 @@ open class LogViewController: NSViewController {
         statusLabel.stringValue = label
         statusLabel.toolTip = label
 
-        // The title is set *before* the theme is applied, not after: a button
-        // painted by `applySecondaryActionTheme` draws its `attributedTitle`,
-        // which is built from `title` at the moment the theme is applied. Setting
-        // `title` alone would change the property and leave the button reading
-        // "Pause" forever.
+        // Just the title: `ThemedSecondaryButton` repaints and re-measures
+        // itself on being re-titled, and owns a palette observer of its own for
+        // the theme changing underneath it.
         pauseButton.title = controller.isPaused ? "Resume" : "Pause"
-        pauseButton.applySecondaryActionTheme(palette)
-        clearButton.applySecondaryActionTheme(palette)
     }
 
     // MARK: - Actions
