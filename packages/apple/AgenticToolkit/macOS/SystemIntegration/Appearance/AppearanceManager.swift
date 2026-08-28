@@ -10,6 +10,19 @@ import AgenticToolkitCore
 @MainActor
 public final class AppearanceManager: AppFeature {
 
+    /// When true (the default), the manager writes `NSApp.appearance` from
+    /// `UserSettings.appearanceMode`. A host that also runs a `ThemeManager`
+    /// must set this to false: the theme's own light/dark is what makes AppKit's
+    /// unthemed chrome contrast correctly against themed surfaces, so two
+    /// writers would race and the loser's colors would look wrong. `ThemeManager`
+    /// reads `appearanceMode` itself, so the setting keeps working either way.
+    public var drivesApplicationAppearance = true {
+        didSet {
+            guard drivesApplicationAppearance, drivesApplicationAppearance != oldValue else { return }
+            applyAppearance(UserSettings.appearanceMode.currentValue)
+        }
+    }
+
     private var modeObserver: UserSettingObserver<AppearanceMode>?
     private var textSizeObserver: UserSettingObserver<TextSize>?
 
@@ -28,6 +41,7 @@ public final class AppearanceManager: AppFeature {
     }
 
     private func applyAppearance(_ mode: AppearanceMode) {
+        guard drivesApplicationAppearance else { return }
         NSApp.appearance = mode.nsAppearance
         Self.logger.info("Appearance mode: \(mode.rawValue, privacy: .public)")
     }

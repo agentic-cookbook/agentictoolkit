@@ -32,6 +32,7 @@ public final class ThemeManager: AppFeature {
 
     private var activeObserver: UserSettingObserver<String>?
     private var customObserver: UserSettingObserver<[ColorTheme]>?
+    private var appearanceModeObserver: UserSettingObserver<AppearanceMode>?
 
     public override init() {
         let store = ThemeStore()
@@ -52,6 +53,12 @@ public final class ThemeManager: AppFeature {
         customObserver = UserSettingObserver(UserSettings.customThemes) { [weak self] _ in
             self?.reload()
         }
+        // A theme pinned to light or dark decides the appearance itself, so this
+        // only ever changes anything for an `.auto` theme — but the user can flip
+        // the mode while such a theme is active, and nothing else would repaint.
+        appearanceModeObserver = UserSettingObserver(UserSettings.appearanceMode) { [weak self] _ in
+            self?.applyApplicationAppearance()
+        }
     }
 
     private func applyApplicationAppearance() {
@@ -62,8 +69,22 @@ public final class ThemeManager: AppFeature {
         // builds it in `main.swift` ahead of `NSApplication.shared`) would
         // crash force-unwrapping `NSApp`. `NSApplication.shared` lazily creates
         // the instance and is safe at any point.
-        NSApplication.shared.appearance = currentTheme.appearance.nsAppearance
+        NSApplication.shared.appearance = resolvedAppearance
         applyWindowBackgrounds()
+    }
+
+    /// The `NSAppearance` to run AppKit's unthemed chrome under.
+    ///
+    /// A theme pinned to `.light` or `.dark` wins outright: its colors *are* that
+    /// brightness, and forcing the opposite system appearance would put light
+    /// system chrome against a dark themed surface. Only an `.auto` theme — one
+    /// that makes no claim — defers to `UserSettings.appearanceMode`, which is
+    /// why the Appearance panel's mode control still does something.
+    private var resolvedAppearance: NSAppearance? {
+        switch currentTheme.appearance {
+        case .light, .dark: return currentTheme.appearance.nsAppearance
+        case .auto:         return UserSettings.appearanceMode.currentValue.nsAppearance
+        }
     }
 
     /// Paints every titled app window's backdrop with the theme's window color so
