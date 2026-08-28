@@ -91,7 +91,7 @@ public enum ProviderPickerInfo {
     /// no provider selected at all.
     public static func placeholder(_ text: String, palette: SemanticPalette) -> NSAttributedString {
         NSAttributedString(string: text, attributes: [
-            .font: NSFont.systemFont(ofSize: 12),
+            .font: palette.font(.body),
             .foregroundColor: palette.nsColor(.tertiaryText),
             .paragraphStyle: proseStyle
         ])
@@ -101,7 +101,7 @@ public enum ProviderPickerInfo {
 
     private static func eyebrow(_ text: String, _ palette: SemanticPalette) -> NSAttributedString {
         NSAttributedString(string: text.uppercased() + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
+            .font: palette.font(.caption, weight: .semibold),
             .foregroundColor: palette.nsColor(.tertiaryText),
             .kern: 0.9,
             .paragraphStyle: eyebrowStyle
@@ -110,7 +110,7 @@ public enum ProviderPickerInfo {
 
     private static func title(_ text: String, _ palette: SemanticPalette) -> NSAttributedString {
         NSAttributedString(string: text + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 15, weight: .bold),
+            .font: palette.font(.heading, weight: .bold),
             .foregroundColor: palette.primaryTextColor,
             .paragraphStyle: titleStyle
         ])
@@ -120,7 +120,7 @@ public enum ProviderPickerInfo {
     /// it, so the pane reads as titled blocks rather than one column of text.
     private static func heading(_ text: String, _ palette: SemanticPalette) -> NSAttributedString {
         NSAttributedString(string: text.uppercased() + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
+            .font: palette.font(.caption, weight: .semibold),
             .foregroundColor: palette.nsColor(.tertiaryText),
             .kern: 0.9,
             .paragraphStyle: headingStyle
@@ -129,7 +129,7 @@ public enum ProviderPickerInfo {
 
     private static func prose(_ text: String, _ palette: SemanticPalette) -> NSAttributedString {
         NSAttributedString(string: text + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 12),
+            .font: palette.font(.body),
             .foregroundColor: palette.secondaryTextColor,
             .paragraphStyle: proseStyle
         ])
@@ -139,12 +139,12 @@ public enum ProviderPickerInfo {
         _ label: String, _ value: String, _ palette: SemanticPalette
     ) -> NSAttributedString {
         let out = NSMutableAttributedString(string: label + "\t", attributes: [
-            .font: NSFont.systemFont(ofSize: 11),
+            .font: palette.font(.caption),
             .foregroundColor: palette.nsColor(.tertiaryText),
             .paragraphStyle: rowStyle
         ])
         out.append(NSAttributedString(string: value + "\n", attributes: [
-            .font: NSFont.systemFont(ofSize: 12),
+            .font: palette.font(.body),
             .foregroundColor: palette.primaryTextColor,
             .paragraphStyle: rowStyle
         ]))
@@ -158,12 +158,12 @@ public enum ProviderPickerInfo {
         _ label: String, _ url: String, _ palette: SemanticPalette
     ) -> NSAttributedString {
         let out = NSMutableAttributedString(string: label + "\t", attributes: [
-            .font: NSFont.systemFont(ofSize: 11),
+            .font: palette.font(.caption),
             .foregroundColor: palette.nsColor(.tertiaryText),
             .paragraphStyle: rowStyle
         ])
         var attrs: [NSAttributedString.Key: Any] = [
-            .font: NSFont.systemFont(ofSize: 12),
+            .font: palette.font(.body),
             .foregroundColor: palette.accentColor,
             .paragraphStyle: rowStyle
         ]
@@ -180,11 +180,11 @@ public enum ProviderPickerInfo {
         for (index, text) in titles.enumerated() {
             if index > 0 {
                 out.append(NSAttributedString(string: " ", attributes: [
-                    .font: NSFont.systemFont(ofSize: 10), .paragraphStyle: chipStyle
+                    .font: palette.font(.caption), .paragraphStyle: chipStyle
                 ]))
             }
             out.append(NSAttributedString(string: "  \(text)  ", attributes: [
-                .font: NSFont.systemFont(ofSize: 10, weight: .semibold),
+                .font: palette.font(.caption, weight: .semibold),
                 .foregroundColor: palette.accentColor,
                 .backgroundColor: palette.accentColor.withAlphaComponent(0.16),
                 .kern: 0.4,

@@ -154,6 +154,7 @@ open class TopicListViewController: NSViewController {
         headerView.layer?.backgroundColor = background.cgColor
         footerContainer.wantsLayer = true
         footerContainer.layer?.backgroundColor = background.cgColor
+        titleLabel.font = palette.font(.button)
         titleLabel.textColor = palette.secondaryTextColor
         scrollView.backgroundColor = background
         outlineView.backgroundColor = background
@@ -191,8 +192,6 @@ open class TopicListViewController: NSViewController {
     }
 
     private func configureHeader() {
-        titleLabel.font = CellMetrics.titleFont
-        titleLabel.textColor = .secondaryLabelColor
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         headerView.translatesAutoresizingMaskIntoConstraints = false
@@ -277,10 +276,14 @@ open class TopicListViewController: NSViewController {
     /// The one source of truth for the row layout, shared by `preferredWidth`
     /// (which measures it) and `makeItemCell`/`makeHeaderCell` (which build it),
     /// so the two can never drift and silently re-clip labels.
+    @MainActor
     fileprivate enum CellMetrics {
-        static var itemFont: NSFont { .systemFont(ofSize: 13) }
-        static var headerFont: NSFont { .systemFont(ofSize: 11, weight: .semibold) }
-        static var titleFont: NSFont { .systemFont(ofSize: 13, weight: .semibold) }
+        // The theme owns the fonts, so these read the live palette rather than
+        // baking in a size — `preferredWidth()` measures with the same font the
+        // cells are about to be drawn in, whichever theme is active.
+        static var itemFont: NSFont { ThemePaletteObserver.currentPalette.font(.body) }
+        static var headerFont: NSFont { ThemePaletteObserver.currentPalette.font(.caption) }
+        static var titleFont: NSFont { ThemePaletteObserver.currentPalette.font(.button) }
         static let titleLeadingInset: CGFloat = 14
         static let iconLeadingInset: CGFloat = 4
         static let iconSize: CGFloat = 16
@@ -421,6 +424,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
             let cell = outlineView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView
                 ?? Self.makeHeaderCell(identifier: id)
             cell.textField?.stringValue = title
+            cell.textField?.font = CellMetrics.headerFont
             cell.textField?.textColor = palette.secondaryTextColor
             return cell
 
@@ -429,6 +433,9 @@ extension TopicListViewController: NSOutlineViewDelegate {
             let cell = outlineView.makeView(withIdentifier: id, owner: nil) as? NSTableCellView
                 ?? Self.makeItemCell(identifier: id)
             cell.textField?.stringValue = item.title
+            // Cells are pooled, so the font is reapplied here alongside the color
+            // rather than at creation — a font baked in stays stale after a swap.
+            cell.textField?.font = CellMetrics.itemFont
             cell.textField?.textColor = item.isDisabled ? palette.tertiaryTextColor : palette.primaryTextColor
             cell.textField?.alphaValue = 1.0
             cell.imageView?.image = item.icon
@@ -470,8 +477,6 @@ extension TopicListViewController: NSOutlineViewDelegate {
         let cell = NSTableCellView()
         cell.identifier = identifier
         let textField = NSTextField(labelWithString: "")
-        textField.font = CellMetrics.headerFont
-        textField.textColor = .secondaryLabelColor
         textField.translatesAutoresizingMaskIntoConstraints = false
         cell.addSubview(textField)
         cell.textField = textField
@@ -491,7 +496,6 @@ extension TopicListViewController: NSOutlineViewDelegate {
         imageView.translatesAutoresizingMaskIntoConstraints = false
 
         let textField = NSTextField(labelWithString: "")
-        textField.font = CellMetrics.itemFont
         textField.lineBreakMode = .byTruncatingTail
         textField.translatesAutoresizingMaskIntoConstraints = false
 

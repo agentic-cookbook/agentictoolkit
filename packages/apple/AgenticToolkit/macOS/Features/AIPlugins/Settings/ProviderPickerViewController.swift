@@ -113,16 +113,16 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     private let tableScroll = NSScrollView()
     private let infoTextView = NSTextView()
     private let infoScroll = NSScrollView()
-    private let providerSplit = NSSplitView()
+    private let providerSplit = ThemedSplitView()
 
     private let modelTitle = NSTextField(labelWithString: "Models")
     private let modelTableView = ThemedTableView()
     private let modelTableScroll = NSScrollView()
     private let modelInfoTextView = NSTextView()
     private let modelInfoScroll = NSScrollView()
-    private let modelSplit = NSSplitView()
+    private let modelSplit = ThemedSplitView()
 
-    private let splitView = NSSplitView()
+    private let splitView = ThemedSplitView()
     private let cancelButton = NSButton()
     private let chooseButton = NSButton()
 
@@ -269,7 +269,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     public required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     /// The font the table cells render in (must match `fittedColumnWidths`).
-    private static let cellFont = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+    /// Computed, not stored: the theme owns the font, so the column widths have to
+    /// be measured in whichever one is active rather than one baked in at launch.
+    private static var cellFont: NSFont { ThemePaletteObserver.currentPalette.font(.body) }
 
     /// The Model column's width. Fixed rather than fitted: the model list changes
     /// with every selection (and again when a live fetch lands), so a width measured
@@ -280,7 +282,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// The capability columns have no per-row text, so they fit their header alone.
     private static func fittedColumnWidths(for rows: [ProviderPickerRow])
         -> [NSUserInterfaceItemIdentifier: CGFloat] {
-        let headerFont = NSFont.boldSystemFont(ofSize: 11)
+        let headerFont = ThemePaletteObserver.currentPalette.font(.caption, weight: .bold)
         func measure(_ string: String, _ withFont: NSFont) -> CGFloat {
             (string as NSString).size(withAttributes: [.font: withFont]).width
         }
@@ -532,7 +534,9 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     /// it. All three dividers are user-draggable.
     private func configureSplit() {
         for title in [providerTitle, modelTitle] {
-            title.font = NSFont.boldSystemFont(ofSize: 11)
+            title.observeTheme { field, palette in
+                field.font = palette.font(.caption, weight: .bold)
+            }
             title.alignment = .center
         }
 
@@ -887,7 +891,6 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
             let field = NSTextField(labelWithString: "")
             field.translatesAutoresizingMaskIntoConstraints = false
             field.lineBreakMode = .byTruncatingTail
-            field.font = Self.cellFont
             field.alignment = alignment
             view.addSubview(field)
             view.textField = field
@@ -899,6 +902,9 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
             return view
         }()
         cell.textField?.stringValue = text
+        // Cells are pooled, so the font is reapplied per row alongside the color —
+        // one baked in at creation would survive a theme swap unchanged.
+        cell.textField?.font = Self.cellFont
         cell.textField?.textColor = color
         return cell
     }
@@ -979,12 +985,8 @@ public enum ProviderPicker {
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Add a Provider"
-        // Force a STANDARD dark/light appearance (matched to the theme's background)
-        // so standard AppKit controls render with proper contrast — a custom theme
-        // appearance draws the non-default Cancel button's bezel invisibly.
-        let background = ThemePaletteObserver.currentPalette.windowBackgroundColor
-        let isDark = (background.usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5) < 0.5
-        window.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        window.appearance = ThemePaletteObserver.currentPalette.standardAppearance
+        window.backgroundColor = ThemePaletteObserver.currentPalette.windowBackgroundColor
         window.contentMinSize = NSSize(width: 640, height: 380)
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
         window.setContentSize(controller.initialContentSize)

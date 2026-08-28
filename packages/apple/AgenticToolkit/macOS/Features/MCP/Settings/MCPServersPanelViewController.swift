@@ -65,7 +65,7 @@ private final class MCPServersListPanelViewController: ComposableSettings.Settin
     }
 
     override func loadView() {
-        let hosting = NSHostingView(rootView: MCPServersListView(viewModel: viewModel))
+        let hosting = NSHostingView(rootView: MCPServersListView(viewModel: viewModel).themedRoot())
         hosting.translatesAutoresizingMaskIntoConstraints = false
         self.view = hosting
     }
@@ -126,18 +126,20 @@ private struct MCPServersListView: View {
     @ObservedObject var viewModel: MCPServersListViewModel
     @State private var showingAdd = false
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 Text("Configured Servers")
-                    .font(.headline)
+                    .font(theme.font(.heading))
                 Spacer()
                 Button("Add Server…") { showingAdd = true }
             }
 
             if viewModel.configurations.isEmpty {
                 Text("No MCP servers configured.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(theme.secondaryText)
                     .padding(.vertical, 8)
             } else {
                 VStack(spacing: 0) {
@@ -178,19 +180,21 @@ private struct MCPServerRow: View {
     let onToggle: (Bool) -> Void
     let onRemove: () -> Void
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         HStack(spacing: 12) {
             Circle()
-                .fill(isConnected ? Color.green : Color.secondary)
+                .fill(isConnected ? theme.success : theme.secondaryText)
                 .frame(width: 8, height: 8)
                 .help(isConnected ? "Connected" : "Not connected")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(configuration.name)
-                    .font(.body)
+                    .font(theme.font(.body))
                 Text(transportSummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
@@ -245,6 +249,7 @@ private struct MCPAddServerSheet: View {
     var onCommit: (MCPServerConfiguration) -> Void
     var onCancel: () -> Void
 
+    @Environment(\.theme) private var theme
     @State private var name: String = ""
     @State private var transportKind: TransportKind = .stdio
     @State private var command: String = ""
@@ -255,8 +260,7 @@ private struct MCPAddServerSheet: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Add MCP Server")
-                .font(.title3)
-                .bold()
+                .font(theme.font(.heading))
 
             Form {
                 TextField("Name", text: $name)

@@ -1,6 +1,8 @@
 import SwiftUI
 import CodeEditLanguages
 
+import AgenticToolkitCore
+
 // MARK: - Custom File Type Mapping Model
 
 /// A user-defined mapping from a file extension to a language name and icon.
@@ -270,28 +272,30 @@ private struct FileTypeRow: View {
     public let iconName: String
     public let isCustom: Bool
 
+    @Environment(\.theme) private var theme
+
     public var body: some View {
         HStack(spacing: 12) {
             Image(systemName: iconName)
                 .frame(width: 20)
-                .foregroundStyle(isCustom ? .blue : .secondary)
+                .foregroundStyle(isCustom ? theme.accent : theme.secondaryText)
 
             Text(".\(fileExtension)")
-                .font(.system(.body, design: .monospaced))
+                .font(theme.font(.code))
                 .frame(width: 100, alignment: .leading)
 
             Text(languageName)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.secondaryText)
 
             Spacer()
 
             if isCustom {
                 Text("Custom")
-                    .font(.caption)
-                    .foregroundStyle(.blue)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.accent)
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
-                    .background(Color.blue.opacity(0.1))
+                    .background(theme.accent.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 4))
             }
         }
@@ -307,6 +311,7 @@ private struct AddCustomFileTypeSheet: View {
     public let onSave: (CustomFileTypeMapping) -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.theme) private var theme
     @State private var fileExtension = ""
     @State private var languageName = ""
     @State private var selectedIcon = "doc"
@@ -343,7 +348,7 @@ private struct AddCustomFileTypeSheet: View {
     public var body: some View {
         VStack(spacing: 0) {
             Text("Add Custom File Type")
-                .font(.headline)
+                .font(theme.font(.heading))
                 .padding(.top, 16)
                 .padding(.bottom, 12)
 
@@ -354,8 +359,8 @@ private struct AddCustomFileTypeSheet: View {
 
                     if extensionConflict {
                         Text("A custom mapping for this extension already exists.")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                            .font(theme.font(.caption))
+                            .foregroundStyle(theme.danger)
                     }
                 }
 
@@ -375,7 +380,7 @@ private struct AddCustomFileTypeSheet: View {
                                     .frame(width: 36, height: 36)
                                     .background(
                                         selectedIcon == choice.symbol
-                                            ? Color.accentColor.opacity(0.2)
+                                            ? theme.accent.opacity(0.2)
                                             : Color.clear
                                     )
                                     .clipShape(RoundedRectangle(cornerRadius: 6))

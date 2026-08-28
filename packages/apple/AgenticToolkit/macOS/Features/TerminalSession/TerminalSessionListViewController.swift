@@ -1,13 +1,15 @@
 import AppKit
 import Combine
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Displays the list of terminal sessions in a sidebar table view.
 @MainActor
 public final class TerminalSessionListViewController: NSViewController, NSTableViewDataSource, NSTableViewDelegate {
 
     public let sessionManager: TerminalSessionManager
-    private let tableView = NSTableView()
-    private let scrollView = NSScrollView()
+    private let tableView = ThemedTableView(role: .surface)
+    private let scrollView = ThemedScrollView(frame: .zero)
     private var cancellables = Set<AnyCancellable>()
     private var isUpdatingSelection = false
 
@@ -20,7 +22,9 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
     public required init?(coder: NSCoder) { fatalError() }
 
     public override func loadView() {
-        let container = NSView()
+        // The session list is a sidebar, so it sits on `surface` rather than
+        // the window backdrop the terminal itself fills.
+        let container = ThemedBackgroundView(role: .surface)
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("SessionColumn"))
         column.title = ""
@@ -50,13 +54,15 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
         addButton.isBordered = false
         addButton.toolTip = "New Session"
         addButton.translatesAutoresizingMaskIntoConstraints = false
+        addButton.observeTheme { button, palette in
+            button.contentTintColor = palette.nsColor(.accent)
+        }
 
-        let bottomBar = NSView()
+        let bottomBar = ThemedBackgroundView(role: .surface)
         bottomBar.translatesAutoresizingMaskIntoConstraints = false
         bottomBar.addSubview(addButton)
 
-        let separator = NSBox()
-        separator.boxType = .separator
+        let separator = ThemedSeparatorView(role: .divider)
         separator.translatesAutoresizingMaskIntoConstraints = false
 
         container.addSubview(scrollView)
@@ -100,6 +106,13 @@ public final class TerminalSessionListViewController: NSViewController, NSTableV
                 self.syncTableSelection(to: selectedID)
             }
             .store(in: &cancellables)
+    }
+
+    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        // AppKit pools row views, so the row has to own a palette observer of
+        // its own — a selection fill baked in at creation draws stale after a
+        // theme swap.
+        ThemedTableRowView()
     }
 
     public func numberOfRows(in tableView: NSTableView) -> Int {

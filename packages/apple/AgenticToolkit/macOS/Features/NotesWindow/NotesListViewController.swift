@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 @MainActor public protocol NotesListViewControllerDelegate: AnyObject {
     func notesListDidSelectNote(_ note: Note?)
@@ -57,14 +59,13 @@ public final class NotesListViewController: NSViewController {
     }()
 
     private lazy var headerLabel: NSTextField = {
-        let label = NSTextField(labelWithString: "Notes")
-        label.font = .boldSystemFont(ofSize: 13)
+        let label = ThemedLabel(string: "Notes", role: .primaryText, textRole: .heading)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
     }()
 
     private lazy var scrollView: NSScrollView = {
-        let scroll = NSScrollView()
+        let scroll = ThemedScrollView(frame: .zero)
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.translatesAutoresizingMaskIntoConstraints = false
@@ -72,7 +73,7 @@ public final class NotesListViewController: NSViewController {
     }()
 
     private lazy var tableView: NSTableView = {
-        let table = NSTableView()
+        let table = ThemedTableView(role: .surface)
         table.headerView = nil
         table.rowHeight = 60
         table.selectionHighlightStyle = .regular
@@ -88,7 +89,9 @@ public final class NotesListViewController: NSViewController {
     // MARK: - View Lifecycle
 
     override public func loadView() {
-        view = NSView()
+        // The notes list is the sidebar of the split view, so it sits on
+        // `surface` rather than the window backdrop the editor pane fills.
+        view = ThemedBackgroundView(role: .surface)
         view.translatesAutoresizingMaskIntoConstraints = false
     }
 
@@ -164,6 +167,13 @@ extension NotesListViewController: NSTableViewDelegate {
 
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 60 }
 
+    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        // AppKit pools row views, so the row has to own a palette observer of
+        // its own — a selection fill baked in at creation draws stale after a
+        // theme swap.
+        ThemedTableRowView()
+    }
+
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         // NSTableView can request a row that's just been removed (e.g. between
         // a data mutation and the next reload). Guard rather than crash.
@@ -194,9 +204,9 @@ public final class NoteListCellView: NSTableCellView {
     }()
 
     private let pinIndicator = NSImageView()
-    private let titleLabel = NSTextField(labelWithString: "")
-    private let dateLabel = NSTextField(labelWithString: "")
-    private let previewLabel = NSTextField(labelWithString: "")
+    private let titleLabel = ThemedLabel(role: .primaryText, textRole: .body)
+    private let dateLabel = ThemedLabel(role: .secondaryText, textRole: .caption)
+    private let previewLabel = ThemedLabel(role: .tertiaryText, textRole: .caption)
 
     public init(identifier: NSUserInterfaceItemIdentifier) {
         super.init(frame: .zero)
@@ -207,23 +217,22 @@ public final class NoteListCellView: NSTableCellView {
     public required init?(coder: NSCoder) { fatalError() }
 
     private func setupViews() {
-        titleLabel.font = .systemFont(ofSize: 13, weight: .medium)
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        dateLabel.font = .systemFont(ofSize: 11)
-        dateLabel.textColor = .secondaryLabelColor
         dateLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        previewLabel.font = .systemFont(ofSize: 11)
-        previewLabel.textColor = .tertiaryLabelColor
         previewLabel.lineBreakMode = .byTruncatingTail
         previewLabel.translatesAutoresizingMaskIntoConstraints = false
 
         pinIndicator.image = NSImage(systemSymbolName: "pin.fill", accessibilityDescription: "Pinned")
-        pinIndicator.contentTintColor = .systemOrange
         pinIndicator.translatesAutoresizingMaskIntoConstraints = false
         pinIndicator.setContentHuggingPriority(.required, for: .horizontal)
+        // The pin glyph borrows the theme's warning-accent tint rather than a
+        // hardcoded orange, so it still reads against every palette.
+        pinIndicator.observeTheme { view, palette in
+            view.contentTintColor = palette.nsColor(.warning)
+        }
 
         addSubview(titleLabel)
         addSubview(dateLabel)

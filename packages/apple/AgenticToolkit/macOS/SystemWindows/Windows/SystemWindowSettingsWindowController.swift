@@ -18,6 +18,7 @@ public final class SystemWindowSettingsWindowController: SingleWindowController 
     public init(model: SystemWindowContextsModel) {
         let root = SystemWindowSettingsView()
             .environmentObject(model)
+            .themedRoot()
         super.init(
             windowID: Self.windowID,
             contentViewController: NSHostingController(rootView: root)

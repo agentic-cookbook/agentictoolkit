@@ -83,6 +83,8 @@ extension ComposableSettings {
         open override func viewDidLoad() {
             super.viewDidLoad()
 
+            splitView = ThemedSplitView()
+
             listViewController.setTitle(sidebarTitle)
 
             let detailView = NSView()

@@ -25,7 +25,7 @@ final class MCPChipsBarView: NSView {
         translatesAutoresizingMaskIntoConstraints = false
 
         let model = MCPChipsBarViewModel(registry: registry, activeServerIds: activeServerIds)
-        let hosting = NSHostingView(rootView: MCPChipsBar(viewModel: model))
+        let hosting = NSHostingView(rootView: MCPChipsBar(viewModel: model).themedRoot())
         hosting.translatesAutoresizingMaskIntoConstraints = false
         addSubview(hosting)
 
@@ -91,10 +91,12 @@ private struct MCPChipsBar: View {
     @ObservedObject var viewModel: MCPChipsBarViewModel
     @State private var showingPicker = false
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "server.rack")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.secondaryText)
 
             Button {
                 showingPicker.toggle()
@@ -102,12 +104,15 @@ private struct MCPChipsBar: View {
                 HStack(spacing: 4) {
                     Text(buttonLabel)
                     Image(systemName: "chevron.down")
-                        .font(.caption2)
                 }
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.accent)
             }
             .buttonStyle(.borderless)
             .popover(isPresented: $showingPicker, arrowEdge: .bottom) {
-                MCPServerPicker(viewModel: viewModel)
+                // A popover is its own window, so it is outside this view's
+                // environment and needs the palette injected again.
+                MCPServerPicker(viewModel: viewModel).themedRoot()
             }
 
             Spacer()
@@ -132,15 +137,17 @@ private struct MCPServerPicker: View {
 
     @ObservedObject var viewModel: MCPChipsBarViewModel
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Active MCP Servers")
-                .font(.headline)
+                .font(theme.font(.heading))
 
             if viewModel.availableServerIds.isEmpty {
                 Text("No connected servers.\nAdd one in Settings → MCP Servers.")
-                    .foregroundStyle(.secondary)
-                    .font(.callout)
+                    .foregroundStyle(theme.secondaryText)
+                    .font(theme.font(.caption))
             } else {
                 ForEach(viewModel.availableServerIds, id: \.self) { id in
                     Toggle(isOn: Binding(

@@ -48,4 +48,14 @@ extension SemanticPalette {
     public func font(_ role: TextRole) -> NSFont {
         theme.typography.style(role).nsFont(scaledSize: CGFloat(theme.typography.size(role)))
     }
+
+    /// `font(_:)` re-weighted. For text that needs its own emphasis *within* a
+    /// role — an all-caps eyebrow, a bolded pane title — without inventing a
+    /// point size the theme doesn't own: the family, size and scale still come
+    /// from the role, only the weight is the call site's.
+    public func font(_ role: TextRole, weight: FontWeight) -> NSFont {
+        var style = theme.typography.style(role)
+        style.weight = weight
+        return style.nsFont(scaledSize: CGFloat(theme.typography.size(role)))
+    }
 }

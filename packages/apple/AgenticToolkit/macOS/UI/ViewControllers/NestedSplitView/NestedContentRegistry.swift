@@ -1,5 +1,6 @@
 import AppKit
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 @MainActor
 public enum NestedContentRegistry {
@@ -42,19 +43,21 @@ public enum NestedContentRegistry {
 
     // MARK: - Placeholder
 
-    private static let placeholderTints: [NSColor] = [
-        .systemTeal, .systemOrange, .systemPurple, .systemPink,
-        .systemGreen, .systemIndigo, .systemYellow, .systemBrown
-    ]
-
     private static func makePlaceholderView(paneNumber: Int) -> NSView {
-        let tint = placeholderTints[(paneNumber - 1) % placeholderTints.count]
         let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
         container.wantsLayer = true
-        container.layer?.backgroundColor = tint.withAlphaComponent(0.15).cgColor
+        // The panes are told apart by their tints, so this wants the palette's
+        // chart-series colors — the set whose job is to be mutually distinct —
+        // rather than a fixed list of system hues no theme reaches.
+        container.observeTheme { view, palette in
+            let series = palette.chartSeriesNSColors
+            guard !series.isEmpty else { return }
+            let tint = series[(paneNumber - 1) % series.count]
+            view.layer?.backgroundColor = tint.withAlphaComponent(0.15).cgColor
+        }
 
-        let title = NSTextField(labelWithString: "Pane \(paneNumber)")
-        title.font = .systemFont(ofSize: 16, weight: .semibold)
+        let title = ThemedLabel(
+            string: "Pane \(paneNumber)", role: .primaryText, textRole: .heading)
         title.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(title)
         NSLayoutConstraint.activate([

@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A window's gear-button config popover, shared so every window can reuse the
 /// same chrome: a borderless gear `NSButton` that toggles a transient
@@ -57,7 +59,9 @@ public final class WindowConfigPopover: NSObject {
         gearButton.toolTip = tooltip
         gearButton.target = self
         gearButton.action = #selector(gearTapped)
-        gearButton.contentTintColor = .secondaryLabelColor
+        gearButton.observeTheme { button, palette in
+            button.contentTintColor = palette.nsColor(.secondaryText)
+        }
 
         popover.behavior = .transient
         popover.delegate = self
@@ -139,9 +143,8 @@ public final class WindowConfigPopover: NSObject {
         required init?(coder: NSCoder) { fatalError("ContentViewController is code-built, never decoded") }
 
         override func loadView() {
-            let titleLabel = NSTextField(labelWithString: popoverTitle)
-            titleLabel.font = NSFont.boldSystemFont(ofSize: NSFont.smallSystemFontSize)
-            titleLabel.textColor = .secondaryLabelColor
+            let titleLabel = ThemedLabel(
+                string: popoverTitle, role: .secondaryText, textRole: .button)
 
             let stack = NSStackView(views: [titleLabel] + controls)
             stack.orientation = .vertical
@@ -150,7 +153,9 @@ public final class WindowConfigPopover: NSObject {
             stack.edgeInsets = NSEdgeInsets(top: 14, left: 16, bottom: 14, right: 16)
             stack.translatesAutoresizingMaskIntoConstraints = false
 
-            let root = NSView()
+            // A popover floats above everything, so it takes the theme's most
+            // elevated surface rather than the window backdrop.
+            let root = ThemedBackgroundView(role: .elevatedSurface)
             root.addSubview(stack)
             var constraints = [
                 stack.topAnchor.constraint(equalTo: root.topAnchor),

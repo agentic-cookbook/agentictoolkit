@@ -89,6 +89,8 @@ struct WorkGroupSidebarView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
     @Binding var selectedGroupID: UUID?
 
+    @Environment(\.theme) private var theme
+
     @State private var isCreating = false
     @State private var newName = ""
     @State private var editingID: UUID?
@@ -132,7 +134,7 @@ struct WorkGroupSidebarView: View {
     private var header: some View {
         HStack {
             Text("Work Groups")
-                .font(.headline)
+                .font(theme.font(.heading))
             Spacer()
         }
         .padding(.horizontal, 12)
@@ -177,8 +179,8 @@ struct WorkGroupSidebarView: View {
 
             if context.windowSnapshots.count > 0 {
                 Text("\(context.liveWindowCount)/\(context.windowSnapshots.count)")
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.tertiaryText)
                     .monospacedDigit()
             }
         }
@@ -258,6 +260,8 @@ struct AssignedWindowsView: View {
     let groupID: UUID?
     let contexts: [SystemWindowContext]
 
+    @Environment(\.theme) private var theme
+
     private var selectedGroup: SystemWindowContext? {
         guard let id = groupID else { return nil }
         return contexts.first(where: { $0.id == id })
@@ -283,14 +287,14 @@ struct AssignedWindowsView: View {
     private var assignedHeader: some View {
         HStack {
             Image(systemName: "macwindow.on.rectangle")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
             if let group = selectedGroup {
                 Text("\(group.name) Windows")
-                    .font(.headline)
+                    .font(theme.font(.heading))
             } else {
                 Text("Assigned Windows")
-                    .font(.headline)
+                    .font(theme.font(.heading))
             }
             Spacer()
         }
@@ -302,10 +306,10 @@ struct AssignedWindowsView: View {
         VStack(spacing: 8) {
             Spacer()
             Image(systemName: "sidebar.left")
-                .font(.system(size: 28))
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.tertiaryText)
             Text("Select a work group")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.secondaryText)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -315,13 +319,13 @@ struct AssignedWindowsView: View {
         VStack(spacing: 8) {
             Spacer()
             Image(systemName: "rectangle.dashed")
-                .font(.system(size: 28))
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.tertiaryText)
             Text("No windows assigned")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.secondaryText)
             Text("Select windows above and click Add.")
-                .font(.system(size: 11))
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.tertiaryText)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -347,22 +351,22 @@ struct AssignedWindowsView: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 0) {
                 Text(snapshot.title.isEmpty ? "(untitled)" : snapshot.title)
-                    .font(.callout)
+                    .font(theme.font(.body))
                     .lineLimit(1)
                     .truncationMode(.middle)
-                    .foregroundStyle(snapshot.isLive ? .primary : .secondary)
+                    .foregroundStyle(snapshot.isLive ? theme.primaryText : theme.secondaryText)
 
                 HStack(spacing: 4) {
                     Text("\(Int(snapshot.savedFrame.width))x\(Int(snapshot.savedFrame.height))")
-                        .font(.caption2.monospaced())
-                        .foregroundStyle(.tertiary)
+                        .font(theme.font(.code))
+                        .foregroundStyle(theme.tertiaryText)
 
                     if !snapshot.isLive {
                         Text("dormant")
-                            .font(.caption2.bold())
-                            .foregroundStyle(.orange)
+                            .font(theme.font(.caption).bold())
+                            .foregroundStyle(theme.warning)
                             .padding(.horizontal, 4)
-                            .background(Color.orange.opacity(0.12), in: Capsule())
+                            .background(theme.warning.opacity(0.12), in: Capsule())
                     }
                 }
             }
@@ -377,7 +381,7 @@ struct AssignedWindowsView: View {
                 }
             } label: {
                 Image(systemName: "minus.circle.fill")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(theme.danger)
             }
             .buttonStyle(.borderless)
             .help("Remove from group")

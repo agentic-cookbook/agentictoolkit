@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Animated typing indicator with three pulsing dots.
 @MainActor
@@ -7,7 +9,6 @@ public final class TypingIndicatorView: NSView {
         let dot = NSView()
         dot.wantsLayer = true
         dot.layer?.cornerRadius = 3.5
-        dot.layer?.backgroundColor = NSColor.secondaryLabelColor.cgColor
         dot.translatesAutoresizingMaskIntoConstraints = false
         return dot
     }
@@ -25,8 +26,17 @@ public final class TypingIndicatorView: NSView {
     private func setup() {
         wantsLayer = true
         layer?.cornerRadius = 12
-        layer?.backgroundColor = NSColor.secondaryLabelColor.withAlphaComponent(0.08).cgColor
         translatesAutoresizingMaskIntoConstraints = false
+
+        // Matches the assistant bubble's fill, so the indicator reads as the
+        // message that is about to appear rather than a separate control.
+        observeTheme { view, palette in
+            view.layer?.backgroundColor = palette.nsColor(.secondaryText)
+                .withAlphaComponent(0.08).cgColor
+            for dot in view.dots {
+                dot.layer?.backgroundColor = palette.nsColor(.secondaryText).cgColor
+            }
+        }
 
         let stack = NSStackView(views: dots)
         stack.orientation = .horizontal

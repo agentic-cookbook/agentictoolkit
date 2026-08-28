@@ -44,6 +44,14 @@ extension EnvironmentValues {
         get { self[ThemePaletteKey.self] }
         set { self[ThemePaletteKey.self] = newValue }
     }
+
+    /// `themePalette`'s SwiftUI face — `Color`s and `Font`s rather than
+    /// `RGBAColor`/`NSFont`. Derived, not stored, so there is still exactly one
+    /// palette in the environment; this only spares every SwiftUI call site the
+    /// `.swiftUI` hop on a value it is only ever going to use that way.
+    public var theme: SwiftUIPalette {
+        themePalette.swiftUI
+    }
 }
 
 /// Injects the live palette into a subtree and paints the backdrop with it.

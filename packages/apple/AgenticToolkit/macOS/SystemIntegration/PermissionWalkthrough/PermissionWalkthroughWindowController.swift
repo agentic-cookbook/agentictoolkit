@@ -19,7 +19,8 @@ final class PermissionWalkthroughWindowController: WindowController<WindowConten
     /// permission cards so content can't clip; it is intentionally not closable —
     /// "Done" is the only exit, which guarantees the completion handler runs.
     init(title: String = "Permissions") {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 460, height: 480))
+        let container = ThemedBackgroundView(role: .windowBackground)
+        container.frame = NSRect(x: 0, y: 0, width: 460, height: 480)
         super.init(
             windowID: Self.windowID,
             contentViewController: WindowContentViewController<NSView>(contentView: container)

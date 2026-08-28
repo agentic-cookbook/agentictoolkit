@@ -24,7 +24,9 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
     // pair, both of which paint straight over the theme — which is why this
     // window stayed system-grey while every other window in the app followed
     // the palette. `windowBackground` (not `surface`) so the log reads as the
-    // window itself, matching the timeline's table.
+    // window itself — it is the full content of its own window or pane rather
+    // than a sidebar, so it blends into the backdrop instead of reading as its
+    // own plane, matching the timeline's table.
     private let tableView = ThemedTableView(role: .windowBackground)
     private let scrollView = ThemedScrollView(frame: .zero)
     private var columnIDByIndex: [Int: String] = [:]
@@ -152,12 +154,6 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
         return visible.maxY >= docHeight - 2
     }
 
-    /// Themed rows so selection is drawn from the palette's `selection` role
-    /// rather than the system's highlight blue.
-    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
-        ThemedTableRowView()
-    }
-
     // MARK: - NSTableViewDataSource
 
     public func numberOfRows(in tableView: NSTableView) -> Int {
@@ -165,6 +161,15 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
     }
 
     // MARK: - NSTableViewDelegate
+
+    /// Themed rows so selection is drawn from the palette's `selection` role
+    /// rather than the system's highlight blue.
+    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        // AppKit pools row views, so the row has to own a palette observer of
+        // its own — a selection fill baked in at creation draws stale after a
+        // theme swap.
+        ThemedTableRowView()
+    }
 
     public func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard let tableColumn else { return nil }

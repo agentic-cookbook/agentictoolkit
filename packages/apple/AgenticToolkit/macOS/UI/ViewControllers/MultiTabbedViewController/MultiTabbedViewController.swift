@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// IDE-style tabbed container with up to four edge-docked tab bars (top,
 /// right, bottom, left) around a single shared content area. Each enabled
@@ -70,7 +72,7 @@ open class MultiTabbedViewController: NSViewController {
 
     private var tabBars: [Edge: TabBarView] = [:]
 
-    private let centerContainer = NSView()
+    private let centerContainer = ThemedBackgroundView(role: .windowBackground)
     private var mountedCenterController: NSViewController?
     private var edgeConstraints: [NSLayoutConstraint] = []
 
@@ -89,7 +91,7 @@ open class MultiTabbedViewController: NSViewController {
     public required init?(coder: NSCoder) { fatalError() }
 
     open override func loadView() {
-        let root = NSView()
+        let root = ThemedBackgroundView(role: .windowBackground)
 
         centerContainer.translatesAutoresizingMaskIntoConstraints = false
         root.addSubview(centerContainer)

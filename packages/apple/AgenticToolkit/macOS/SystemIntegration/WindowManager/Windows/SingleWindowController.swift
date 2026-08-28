@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A reusable `NSWindowController` base that lazily builds a single
 /// `NSWindow` from subclass-supplied configuration and persists its frame
@@ -464,7 +466,10 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     private func applyHUDChrome(_ config: HUDConfiguration, to window: NSWindow) {
         window.isMovableByWindowBackground = true
         window.hasShadow = true
-        window.backgroundColor = .windowBackgroundColor
+        // Only the initial color: `ThemeManager` repaints every titled window
+        // on a theme change, so a per-window observer here would be a second
+        // mechanism doing the same job.
+        window.backgroundColor = ThemePaletteObserver.currentPalette.windowBackgroundColor
         window.isOpaque = false
         window.collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary]
         window.level = config.floating ? .floating : .normal

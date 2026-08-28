@@ -38,6 +38,10 @@ public final class SystemWindowContextPickerPanel: NSPanel {
 
         let pickerView = ContextPickerView()
             .environmentObject(model)
+            // The picker paints its own translucent `.ultraThinMaterial`
+            // background over this borderless panel; skip the themed opaque
+            // backdrop so the floating-panel blur isn't covered up.
+            .themedRoot(paintsBackground: false)
 
         let hosting = NSHostingView(rootView: AnyView(pickerView))
         hosting.frame = contentRect(forFrameRect: frame)

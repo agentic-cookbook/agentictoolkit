@@ -787,7 +787,6 @@ extension SessionWatcher {
             warningIcon = icon
 
             let lbl = NSTextField(wrappingLabelWithString: message)
-            lbl.font = .systemFont(ofSize: 11)
             lbl.maximumNumberOfLines = 3
             bannerLabel = lbl
 
@@ -801,7 +800,9 @@ extension SessionWatcher {
                     target: self,
                     action: #selector(openSettingsClicked)
                 )
-                button.font = .systemFont(ofSize: 11, weight: .medium)
+                // Sized with the banner text it sits under, not with the app's
+                // default control label.
+                button.observeTheme { btn, palette in btn.font = palette.font(.caption) }
                 button.bezelStyle = .recessed
                 button.accessibilityID("session-panel.error-banner.open-settings")
                 stack.addArrangedSubview(button)

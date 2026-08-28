@@ -14,6 +14,8 @@ import AgenticToolkitCoreMacOS
 public struct ContextVisualizationView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// The grid layout: adaptive columns that fit cards nicely.
     private let columns = [
         GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 12)
@@ -43,14 +45,14 @@ public struct ContextVisualizationView: View {
         VStack(spacing: 12) {
             Spacer()
             Image(systemName: "rectangle.3.group")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.secondaryText)
             Text("No \(appState.contextNounPlural) to visualize")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
             Text("Create a \(appState.contextNoun) from the menu bar to see window layouts here.")
-                .font(.callout)
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
             Spacer()
         }
@@ -65,6 +67,8 @@ struct ContextCard: View {
     let context: SystemWindowContext
     let isActive: Bool
 
+    @Environment(\.theme) private var theme
+
     /// The height for the display preview area.
     private let previewHeight: CGFloat = 120
 
@@ -77,7 +81,7 @@ struct ContextCard: View {
                     .frame(width: 10, height: 10)
 
                 Text(context.name)
-                    .font(.headline)
+                    .font(theme.font(.heading))
                     .lineLimit(1)
 
                 Spacer()
@@ -86,15 +90,15 @@ struct ContextCard: View {
                 let totalCount = context.windowSnapshots.count
                 if totalCount > 0 {
                     Text("\(liveCount)/\(totalCount)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                         .monospacedDigit()
                 }
 
                 if isActive {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.caption)
+                        .foregroundStyle(theme.success)
+                        .font(theme.font(.caption))
                 }
             }
 
@@ -106,14 +110,17 @@ struct ContextCard: View {
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(theme.controlBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(
+                    // The active card's border uses the context's own color
+                    // (user data); an inactive card just needs the theme's
+                    // divider.
                     isActive
                         ? (Color(hex: context.color) ?? .blue)
-                        : Color(nsColor: .separatorColor),
+                        : theme.divider,
                     lineWidth: isActive ? 2 : 0.5
                 )
         )
@@ -132,13 +139,13 @@ struct ContextCard: View {
             ZStack(alignment: .topLeading) {
                 // Background representing the display area
                 RoundedRectangle(cornerRadius: 4)
-                    .fill(Color(nsColor: .windowBackgroundColor).opacity(0.5))
+                    .fill(theme.windowBackground.opacity(0.5))
 
                 // Display boundary outlines
                 ForEach(Array(distinctDisplays(snapshots: snapshots).enumerated()), id: \.offset) { _, displayRect in
                     let scaled = scaleRect(displayRect, bounds: bounds, scale: scale, viewSize: geo.size)
                     RoundedRectangle(cornerRadius: 2)
-                        .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                        .strokeBorder(theme.divider, lineWidth: 0.5)
                         .frame(width: scaled.width, height: scaled.height)
                         .offset(x: scaled.minX, y: scaled.minY)
                 }
@@ -154,9 +161,9 @@ struct ContextCard: View {
                         )
                         .overlay(
                             Text(snapshot.app)
-                                .font(.system(size: 7))
+                                .font(theme.font(.caption))
                                 .lineLimit(1)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(theme.secondaryText)
                                 .padding(2)
                             , alignment: .topLeading
                         )
@@ -171,8 +178,8 @@ struct ContextCard: View {
                         HStack {
                             Spacer()
                             Text("No windows")
-                                .font(.caption)
-                                .foregroundStyle(.tertiary)
+                                .font(theme.font(.caption))
+                                .foregroundStyle(theme.tertiaryText)
                             Spacer()
                         }
                         Spacer()

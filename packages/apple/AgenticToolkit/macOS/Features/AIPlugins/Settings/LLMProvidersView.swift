@@ -19,6 +19,8 @@ struct LLMProviderEditorView: View {
     /// any other surface) writes a new one while this editor is on screen.
     @State private var model: String = ""
 
+    @Environment(\.theme) private var theme
+
     init(configuration: AIProviderConfiguration, viewModel: LLMProvidersListViewModel) {
         self.configuration = configuration
         self.viewModel = viewModel
@@ -74,11 +76,10 @@ struct LLMProviderEditorView: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.title2)
-                    .bold()
+                    .font(theme.font(.title))
                 Text(subtitle)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             }
 
             Form {
@@ -99,7 +100,7 @@ struct LLMProviderEditorView: View {
 
                 LabeledContent("Model") {
                     Text(model.isEmpty ? "None chosen" : model)
-                        .foregroundStyle(model.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(model.isEmpty ? theme.secondaryText : theme.primaryText)
                 }
             }
 
@@ -107,8 +108,8 @@ struct LLMProviderEditorView: View {
                 Button("Chat…") { viewModel.onRequestChat?(configuration) }
                     .disabled(template == nil)
                 Text(chatHint)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             }
 
             Spacer(minLength: 0)

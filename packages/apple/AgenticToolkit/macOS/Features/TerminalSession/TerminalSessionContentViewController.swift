@@ -1,6 +1,8 @@
 import AppKit
 import Combine
 import SwiftTerm
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Hosts the active session's terminal view and applies terminal profiles.
 ///
@@ -24,7 +26,9 @@ public final class TerminalSessionContentViewController: NSViewController {
     public required init?(coder: NSCoder) { fatalError() }
 
     public override func loadView() {
-        let container = NSView()
+        // Only the backdrop behind the terminal is ours to theme — the terminal's
+        // own colors come from its profile, which is user data.
+        let container = ThemedBackgroundView(role: .windowBackground)
         container.autoresizesSubviews = true
         self.view = container
     }

@@ -11,6 +11,8 @@ import AgenticToolkitCoreMacOS
 public struct HeuristicsSettingsTab: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// Whether the add/edit sheet is showing.
     @State private var showingEditor = false
 
@@ -80,10 +82,10 @@ public struct HeuristicsSettingsTab: View {
     private var builtInSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("Built-in Heuristics")
-                .font(.headline)
+                .font(theme.font(.heading))
             Text("These are built in and cannot be deleted.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.secondaryText)
 
             List {
                 ForEach(appState.builtInHeuristics, id: \.name) { heuristic in
@@ -98,8 +100,8 @@ public struct HeuristicsSettingsTab: View {
     private func builtInRow(for heuristic: AppHeuristic) -> some View {
         HStack {
             Image(systemName: "lock.fill")
-                .foregroundStyle(.secondary)
-                .font(.caption)
+                .foregroundStyle(theme.secondaryText)
+                .font(theme.font(.caption))
 
             Text(heuristic.name)
                 .fontWeight(.medium)
@@ -107,14 +109,14 @@ public struct HeuristicsSettingsTab: View {
             Spacer()
 
             Text(heuristic.appNames.joined(separator: ", "))
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.secondaryText)
 
             Text(heuristic.recommendedStrategy.displayName)
-                .font(.caption2)
+                .font(theme.font(.caption))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(Color.secondary.opacity(0.15))
+                .background(theme.secondaryText.opacity(0.15))
                 .cornerRadius(4)
         }
         .padding(.vertical, 1)
@@ -126,7 +128,7 @@ public struct HeuristicsSettingsTab: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text("Custom Rules")
-                    .font(.headline)
+                    .font(theme.font(.heading))
                 Spacer()
                 Button {
                     editingRule = nil
@@ -139,8 +141,8 @@ public struct HeuristicsSettingsTab: View {
 
             Text("Custom rules are checked when new windows appear. Rules with auto-assign " +
                  "enabled will automatically add matching windows to the target \(appState.contextNoun).")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.secondaryText)
 
             if appState.customHeuristicRules.isEmpty {
                 emptyCustomRulesState
@@ -154,14 +156,14 @@ public struct HeuristicsSettingsTab: View {
         VStack(spacing: 8) {
             Spacer()
             Image(systemName: "wand.and.stars")
-                .font(.system(size: 28))
-                .foregroundStyle(.secondary)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.secondaryText)
             Text("No custom rules yet")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.secondaryText)
             Text("Add a rule to automatically match windows by app name and title pattern.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.tertiaryText)
                 .multilineTextAlignment(.center)
             Spacer()
         }
@@ -186,14 +188,14 @@ public struct HeuristicsSettingsTab: View {
                     .fontWeight(.medium)
                 HStack(spacing: 4) {
                     Text(rule.appName)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                     Text("/")
-                        .font(.caption2)
-                        .foregroundStyle(.quaternary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.tertiaryText)
                     Text(rule.titlePattern)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                         .lineLimit(1)
                 }
             }
@@ -202,24 +204,24 @@ public struct HeuristicsSettingsTab: View {
 
             // Match mode badge
             Text(rule.matchMode.displayName)
-                .font(.caption2)
+                .font(theme.font(.caption))
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
-                .background(Color.secondary.opacity(0.15))
+                .background(theme.secondaryText.opacity(0.15))
                 .cornerRadius(4)
 
             // Auto-assign indicator
             if rule.autoAssign {
                 HStack(spacing: 2) {
                     Image(systemName: "bolt.fill")
-                        .font(.caption2)
+                        .font(theme.font(.caption))
                     if let target = rule.targetContextName {
                         Text(target)
-                            .font(.caption2)
+                            .font(theme.font(.caption))
                             .lineLimit(1)
                     }
                 }
-                .foregroundStyle(.blue)
+                .foregroundStyle(theme.accent)
             }
 
             // Edit button
@@ -237,7 +239,7 @@ public struct HeuristicsSettingsTab: View {
                 ruleToDelete = rule.id
             } label: {
                 Image(systemName: "trash")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(theme.danger)
             }
             .buttonStyle(.borderless)
             .help("Delete rule")
@@ -265,6 +267,8 @@ struct HeuristicRuleEditor: View {
     /// Called when the user cancels.
     let onCancel: () -> Void
 
+    @Environment(\.theme) private var theme
+
     @State private var name: String = ""
     @State private var appName: String = ""
     @State private var titlePattern: String = ""
@@ -277,7 +281,7 @@ struct HeuristicRuleEditor: View {
             // Header
             HStack {
                 Text(rule != nil ? "Edit Heuristic Rule" : "New Heuristic Rule")
-                    .font(.headline)
+                    .font(theme.font(.heading))
                 Spacer()
             }
             .padding()

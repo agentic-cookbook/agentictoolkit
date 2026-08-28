@@ -1,5 +1,7 @@
 import AppKit
 import Combine
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A table cell view displaying a terminal session's status dot, title, and subtitle lines.
 @MainActor
@@ -8,7 +10,7 @@ public final class TerminalSessionRowCellView: NSTableCellView {
     public static let identifier = NSUserInterfaceItemIdentifier("TerminalSessionRowCellView")
 
     private let dotView = NSView()
-    private let titleLabel = NSTextField(labelWithString: "")
+    private let titleLabel = ThemedLabel(role: .primaryText, textRole: .body)
     private let subtitleStack = NSStackView()
     private var cancellables = Set<AnyCancellable>()
 
@@ -25,7 +27,6 @@ public final class TerminalSessionRowCellView: NSTableCellView {
         dotView.layer?.cornerRadius = 4
         dotView.translatesAutoresizingMaskIntoConstraints = false
 
-        titleLabel.font = .systemFont(ofSize: NSFont.systemFontSize)
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -78,7 +79,11 @@ public final class TerminalSessionRowCellView: NSTableCellView {
             let (oscTitle, name) = titlePair
 
             MainActor.assumeIsolated {
-                self?.dotView.layer?.backgroundColor = (state == .terminated ? NSColor.gray : dotColor).cgColor
+                // A live session's dot is its own profile color — user data, not
+                // theme. Only the terminated state is ours to color, and it uses
+                // the theme's lowest-emphasis text role.
+                let terminatedColor = ThemePaletteObserver.currentPalette.nsColor(.tertiaryText)
+                self?.dotView.layer?.backgroundColor = (state == .terminated ? terminatedColor : dotColor).cgColor
                 self?.titleLabel.stringValue = oscTitle ?? name
 
                 self?.rebuildSubtitles(
@@ -137,15 +142,15 @@ public final class TerminalSessionRowCellView: NSTableCellView {
             imageView.image = image
         }
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentTintColor = .secondaryLabelColor
+        imageView.observeTheme { view, palette in
+            view.contentTintColor = palette.nsColor(.secondaryText)
+        }
         NSLayoutConstraint.activate([
             imageView.widthAnchor.constraint(equalToConstant: 12),
             imageView.heightAnchor.constraint(equalToConstant: 12)
         ])
 
-        let label = NSTextField(labelWithString: text)
-        label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        label.textColor = .secondaryLabelColor
+        let label = ThemedLabel(string: text, role: .secondaryText, textRole: .caption)
         label.lineBreakMode = truncation
         label.maximumNumberOfLines = 1
 

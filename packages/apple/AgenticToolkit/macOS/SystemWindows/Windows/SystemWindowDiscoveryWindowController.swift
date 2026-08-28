@@ -19,6 +19,7 @@ public final class SystemWindowDiscoveryWindowController: SingleWindowController
     public init(model: SystemWindowContextsModel) {
         let root = DiscoveryView()
             .environmentObject(model)
+            .themedRoot()
         super.init(
             windowID: Self.windowID,
             contentViewController: NSHostingController(rootView: root)

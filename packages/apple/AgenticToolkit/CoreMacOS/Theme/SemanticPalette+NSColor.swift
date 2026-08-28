@@ -37,6 +37,31 @@ extension SemanticPalette {
         theme.ansi.map { NSColor($0) }
     }
 
+    /// The standard `NSAppearance` this palette reads as.
+    ///
+    /// Stock AppKit control chrome — a push button's bezel, a checkbox glyph, a
+    /// popup's arrow — is drawn by the appearance, not the palette, and a
+    /// *custom* appearance draws some of it invisibly (the non-default Cancel
+    /// button's bezel is the usual casualty). So a window that hosts stock
+    /// controls over a themed backdrop pins itself to whichever of the two
+    /// standard appearances the theme's background actually reads as.
+    ///
+    /// `ThemeManager` applies this app-wide; the property is here so a window
+    /// that has to set its own does not re-derive the rule.
+    public var standardAppearance: NSAppearance? {
+        let brightness = nsColor(.windowBackground)
+            .usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5
+        return NSAppearance(named: brightness < 0.5 ? .darkAqua : .aqua)
+    }
+
+    /// The chart-series colors as `NSColor`s — distinct theme-derived hues for
+    /// N-of-a-kind UI (series lines, per-pane tints) where the *difference*
+    /// between the colors is what carries the meaning. Mirrors `chartSeries` on
+    /// the SwiftUI face.
+    public var chartSeriesNSColors: [NSColor] {
+        chartSeriesColors.map { NSColor($0) }
+    }
+
     /// `identitySeriesColors` as `NSColor`s — the hues for telling members of a
     /// set apart in a view that also colors by state.
     public var identitySeriesNSColors: [NSColor] {

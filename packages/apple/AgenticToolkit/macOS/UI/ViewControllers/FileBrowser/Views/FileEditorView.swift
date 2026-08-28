@@ -52,15 +52,17 @@ public struct FileEditorView: View {
 private struct EditorPlaceholderView: View {
     public let message: String
 
+    @Environment(\.theme) private var theme
+
     public var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text")
                 .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(theme.tertiaryText)
 
             Text(message)
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -75,6 +77,7 @@ private struct FileEditorContentView: View {
     public let darkTheme: EditorTheme
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.themePalette) private var appPalette
     @StateObject private var editorState = EditorState()
     @State private var theme: EditorTheme
 
@@ -104,8 +107,10 @@ private struct FileEditorContentView: View {
                     configuration: SourceEditorConfiguration(
                         appearance: .init(
                             theme: theme,
-                            font: NSFont(name: "Menlo", size: 13)
-                                ?? .monospacedSystemFont(ofSize: 13, weight: .regular),
+                            // Was a hardcoded Menlo/monospaced-system fallback; now tracks
+                            // the app theme's `code` role so the editor's font follows a
+                            // theme switch like everything else.
+                            font: appPalette.font(.code),
                             wrapLines: false
                         ),
                         peripherals: .init(

@@ -15,7 +15,7 @@ public final class WindowDiscoveryWindowController: WindowController<WindowConte
     public static let windowID = "windowDiscovery"
 
     public init() {
-        let container = NSView()
+        let container = ThemedBackgroundView(role: .windowBackground)
         super.init(
             windowID: Self.windowID,
             contentViewController: WindowContentViewController<NSView>(contentView: container)

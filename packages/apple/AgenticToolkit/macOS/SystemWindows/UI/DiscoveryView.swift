@@ -10,6 +10,8 @@ import AgenticToolkitCoreMacOS
 public struct DiscoveryView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// Set of selected window IDs for batch-adding.
     @State private var selectedWindowIDs: Set<UInt32> = []
 
@@ -46,8 +48,8 @@ public struct DiscoveryView: View {
 
             HStack(spacing: 12) {
                 Text("\(selectedWindowIDs.count) selected")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
                     .frame(width: 80, alignment: .leading)
 
                 Spacer()

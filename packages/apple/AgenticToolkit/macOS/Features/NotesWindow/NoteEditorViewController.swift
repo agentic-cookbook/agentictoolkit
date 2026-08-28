@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 @MainActor public protocol NoteEditorViewControllerDelegate: AnyObject {
     func noteEditorDidChangeTitle(_ title: String, for noteID: UUID)
@@ -37,10 +39,19 @@ public final class NoteEditorViewController: NSViewController {
         field.placeholderString = "Note title"
         field.isBezeled = false
         field.drawsBackground = false
-        field.font = .systemFont(ofSize: 16, weight: .semibold)
         field.focusRingType = .none
         field.delegate = self
         field.translatesAutoresizingMaskIntoConstraints = false
+        field.observeTheme { field, palette in
+            field.font = palette.font(.heading)
+            field.textColor = palette.primaryTextColor
+            if let placeholder = field.placeholderString {
+                field.placeholderAttributedString = NSAttributedString(string: placeholder, attributes: [
+                    .foregroundColor: palette.placeholderTextColor,
+                    .font: palette.font(.heading)
+                ])
+            }
+        }
         return field
     }()
 
@@ -49,6 +60,9 @@ public final class NoteEditorViewController: NSViewController {
         scroll.hasVerticalScroller = true
         scroll.autohidesScrollers = true
         scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.observeTheme { view, palette in
+            view.backgroundColor = palette.controlBackgroundColor
+        }
         return scroll
     }()
 
@@ -57,7 +71,6 @@ public final class NoteEditorViewController: NSViewController {
         textView.isEditable = true
         textView.isSelectable = true
         textView.isRichText = false
-        textView.font = .systemFont(ofSize: 14)
         textView.textContainerInset = NSSize(width: 8, height: 8)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
@@ -65,6 +78,16 @@ public final class NoteEditorViewController: NSViewController {
         textView.delegate = self
         textView.textContainer?.widthTracksTextView = true
         textView.autoresizingMask = [.width]
+        textView.observeTheme { view, palette in
+            view.font = palette.font(.body)
+            view.textColor = palette.primaryTextColor
+            view.backgroundColor = palette.controlBackgroundColor
+            view.insertionPointColor = palette.cursorColor
+            view.selectedTextAttributes = [
+                .backgroundColor: palette.selectionColor,
+                .foregroundColor: palette.selectionTextColor
+            ]
+        }
         return textView
     }()
 
@@ -93,9 +116,7 @@ public final class NoteEditorViewController: NSViewController {
     }()
 
     private lazy var emptyLabel: NSTextField = {
-        let label = NSTextField(labelWithString: "Select or create a note")
-        label.font = .systemFont(ofSize: 14)
-        label.textColor = .secondaryLabelColor
+        let label = ThemedLabel(string: "Select or create a note", role: .secondaryText, textRole: .body)
         label.alignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -104,7 +125,9 @@ public final class NoteEditorViewController: NSViewController {
     // MARK: - View Lifecycle
 
     override public func loadView() {
-        view = NSView()
+        // The editor is the split view's main content pane, so it sits directly
+        // on the window backdrop rather than a `surface` plane.
+        view = ThemedBackgroundView(role: .windowBackground)
         view.translatesAutoresizingMaskIntoConstraints = false
     }
 

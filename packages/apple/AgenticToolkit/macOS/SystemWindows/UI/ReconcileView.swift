@@ -12,6 +12,8 @@ import AgenticToolkitCoreMacOS
 public struct ReconcileView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     public init() {}
 
     public var body: some View {
@@ -47,17 +49,17 @@ public struct ReconcileView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
                 Image(systemName: "arrow.triangle.2.circlepath")
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.heading))
+                    .foregroundStyle(theme.secondaryText)
                 Text("Reconcile Windows")
-                    .font(.title2.bold())
+                    .font(theme.font(.heading).bold())
                 Spacer()
             }
 
             Text("Some windows could not be automatically matched to their previous " +
                  "\(appState.contextNounPlural). Assign them manually or skip to leave unassigned.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding()
@@ -69,13 +71,13 @@ public struct ReconcileView: View {
         VStack(spacing: 12) {
             Spacer()
             Image(systemName: "checkmark.circle")
-                .font(.system(size: 48))
-                .foregroundStyle(.green)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.success)
             Text("All windows reconciled")
-                .font(.headline)
+                .font(theme.font(.heading))
             Text("You can close this window.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.secondaryText)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -87,8 +89,8 @@ public struct ReconcileView: View {
         HStack {
             let remaining = appState.unmatchedItems.count
             Text("\(remaining) unmatched \(remaining == 1 ? "window" : "windows")")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.secondaryText)
 
             Spacer()
 
@@ -112,6 +114,8 @@ struct UnmatchedItemCard: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
     let item: ReconcileItem
 
+    @Environment(\.theme) private var theme
+
     /// Whether the candidate list is expanded.
     @State private var isExpanded = true
 
@@ -126,16 +130,16 @@ struct UnmatchedItemCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.app)
-                        .font(.headline)
+                        .font(theme.font(.heading))
                     Text(item.titlePattern.isEmpty ? "(no title pattern)" : item.titlePattern)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                 }
 
                 Spacer()
 
                 Text(item.contextName)
-                    .font(.caption)
+                    .font(theme.font(.caption))
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
                     .background(
@@ -153,8 +157,8 @@ struct UnmatchedItemCard: View {
             // Candidate windows
             if item.candidates.isEmpty {
                 Text("No candidate windows found")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.tertiaryText)
                     .padding(.leading, 18)
             } else {
                 DisclosureGroup(isExpanded: $isExpanded) {
@@ -165,19 +169,19 @@ struct UnmatchedItemCard: View {
                     }
                 } label: {
                     Text("\(item.candidates.count) \(item.candidates.count == 1 ? "candidate" : "candidates")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                 }
             }
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 8)
-                .fill(Color(nsColor: .controlBackgroundColor))
+                .fill(theme.controlBackground)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                .strokeBorder(theme.divider, lineWidth: 0.5)
         )
     }
 
@@ -186,11 +190,11 @@ struct UnmatchedItemCard: View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(candidate.windowTitle.isEmpty ? "(untitled)" : candidate.windowTitle)
-                    .font(.callout)
+                    .font(theme.font(.body))
                     .lineLimit(1)
                 Text(candidate.app)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             }
 
             Spacer()
@@ -214,7 +218,7 @@ struct UnmatchedItemCard: View {
     /// A colored badge showing the match score.
     private func scoreBadge(_ score: Int) -> some View {
         Text("\(score)")
-            .font(.caption.monospacedDigit().bold())
+            .font(theme.font(.caption).monospacedDigit().bold())
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(
@@ -227,11 +231,11 @@ struct UnmatchedItemCard: View {
     /// Returns a color appropriate for the given match score.
     private func scoreColor(_ score: Int) -> Color {
         if score >= 80 {
-            return .green
+            return theme.success
         } else if score >= 60 {
-            return .orange
+            return theme.warning
         } else {
-            return .red
+            return theme.danger
         }
     }
 }

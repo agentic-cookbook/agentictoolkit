@@ -558,7 +558,9 @@ final class ThemeDetailPanelViewController: ComposableSettings.SettingsPanelView
             let path = NSBezierPath(roundedRect: body, xRadius: 4, yRadius: 4)
             NSColor(theme.background).setFill()
             path.fill()
-            NSColor.separatorColor.setStroke()
+            // The swatch's *contents* are the theme being previewed; its outline is
+            // sidebar chrome, so it comes from the active theme like the rest.
+            ThemePaletteObserver.currentPalette.nsColor(.divider).setStroke()
             path.lineWidth = 1
             path.stroke()
             let palette = SemanticPalette(theme: theme)

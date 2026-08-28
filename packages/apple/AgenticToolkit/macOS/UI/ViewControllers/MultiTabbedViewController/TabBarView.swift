@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Edge-aligned tab bar header for `MultiTabbedViewController`. Renders one
 /// pill-style button per tab inside an `NSStackView` whose orientation
@@ -71,8 +73,13 @@ final class TabBarView: NSView {
         stack.translatesAutoresizingMaskIntoConstraints = false
 
         edgeDivider.wantsLayer = true
-        edgeDivider.layer?.backgroundColor = NSColor.separatorColor.cgColor
         edgeDivider.translatesAutoresizingMaskIntoConstraints = false
+
+        wantsLayer = true
+        observeTheme { bar, palette in
+            bar.layer?.backgroundColor = palette.nsColor(.surface).cgColor
+            bar.edgeDivider.layer?.backgroundColor = palette.nsColor(.divider).cgColor
+        }
 
         addSubview(stack)
         addSubview(edgeDivider)
@@ -202,7 +209,7 @@ private final class TabButton: NSView {
     var onSelect: ((UUID) -> Void)?
     var onClose: ((UUID) -> Void)?
 
-    private let titleLabel = NSTextField(labelWithString: "")
+    private let titleLabel = ThemedLabel(role: .secondaryText, textRole: .caption)
     private let closeButton = NSButton()
     private let backgroundView = NSView()
 
@@ -218,7 +225,6 @@ private final class TabButton: NSView {
         backgroundView.layer?.cornerRadius = 4
         backgroundView.translatesAutoresizingMaskIntoConstraints = false
 
-        titleLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
         titleLabel.stringValue = title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         titleLabel.lineBreakMode = .byTruncatingTail
@@ -257,7 +263,7 @@ private final class TabButton: NSView {
             closeButton.heightAnchor.constraint(equalToConstant: 14)
         ])
 
-        updateAppearance()
+        observeTheme { tab, _ in tab.updateAppearance() }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
@@ -276,9 +282,15 @@ private final class TabButton: NSView {
     }
 
     private func updateAppearance() {
+        let palette = ThemePaletteObserver.currentPalette
         backgroundView.layer?.backgroundColor = isHighlighted
-            ? NSColor.controlAccentColor.withAlphaComponent(0.18).cgColor
+            ? palette.nsColor(.selection).cgColor
             : NSColor.clear.cgColor
-        titleLabel.textColor = isHighlighted ? .labelColor : .secondaryLabelColor
+        // `ThemedLabel` recolors itself from whichever role it holds, so the
+        // selected/unselected distinction is a role swap, not a color.
+        titleLabel.role = isHighlighted ? .selectionText : .secondaryText
+        closeButton.contentTintColor = palette.nsColor(
+            isHighlighted ? .selectionText : .tertiaryText
+        )
     }
 }

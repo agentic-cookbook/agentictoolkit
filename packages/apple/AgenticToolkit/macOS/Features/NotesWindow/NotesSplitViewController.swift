@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 public final class NotesSplitViewController: NSSplitViewController {
 
@@ -25,6 +27,8 @@ public final class NotesSplitViewController: NSSplitViewController {
 
     override public func viewDidLoad() {
         super.viewDidLoad()
+
+        splitView = ThemedSplitView()
 
         splitView.isVertical = true
         splitView.dividerStyle = .thin

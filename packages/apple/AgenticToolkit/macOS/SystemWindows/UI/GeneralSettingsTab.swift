@@ -9,6 +9,8 @@ import AgenticToolkitCoreMacOS
 public struct GeneralSettingsTab: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// Whether the add-app menu is showing.
     @State private var showingAddApp = false
 
@@ -39,8 +41,8 @@ public struct GeneralSettingsTab: View {
                 .pickerStyle(.radioGroup)
 
                 Text("Controls what happens on launch when previously tracked windows can't be automatically matched.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             }
 
             filteredAppsSection
@@ -48,9 +50,9 @@ public struct GeneralSettingsTab: View {
             Section("Data") {
                 HStack {
                     Text("State directory:")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.secondaryText)
                     Text((appState.stateDirectory.path as NSString).abbreviatingWithTildeInPath)
-                        .font(.system(.body, design: .monospaced))
+                        .font(theme.font(.code))
                     Spacer()
                     Button("Show in Finder") {
                         NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: appState.stateDirectory.path)
@@ -71,8 +73,8 @@ public struct GeneralSettingsTab: View {
 
             if hiddenApps.isEmpty {
                 Text("No apps are filtered. All apps appear in the Discover Windows list.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             } else {
                 ForEach(hiddenApps, id: \.self) { app in
                     HStack {
@@ -82,7 +84,7 @@ public struct GeneralSettingsTab: View {
                             appState.removeHiddenApp(app)
                         } label: {
                             Image(systemName: "minus.circle.fill")
-                                .foregroundStyle(.red)
+                                .foregroundStyle(theme.danger)
                         }
                         .buttonStyle(.borderless)
                         .help("Remove \(app) from filter")
@@ -106,8 +108,8 @@ public struct GeneralSettingsTab: View {
             .fixedSize()
 
             Text("Filtered apps are hidden from the Discover Windows list.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.secondaryText)
         }
     }
 

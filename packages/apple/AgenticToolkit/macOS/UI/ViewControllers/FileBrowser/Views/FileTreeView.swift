@@ -1,6 +1,8 @@
 import AppKit
 import SwiftUI
 
+import AgenticToolkitCore
+
 /// A file tree browser view that displays a repository's directory structure.
 ///
 /// Uses `List` with `OutlineGroup` to show an expandable, hierarchical file tree.
@@ -37,6 +39,8 @@ public struct FileTreeView: View {
 public struct FileTreeRow: View {
     @ObservedObject public var node: FileTreeNode
 
+    @Environment(\.theme) private var theme
+
     public init(node: FileTreeNode) {
         self.node = node
     }
@@ -57,7 +61,7 @@ public struct FileTreeRow: View {
 
             if let status = node.gitStatus {
                 Text(status.displayCharacter)
-                    .font(.caption2.monospaced().bold())
+                    .font(theme.font(.code).bold())
                     .foregroundStyle(status.color)
                     .padding(.horizontal, 3)
             }
@@ -70,35 +74,42 @@ public struct FileTreeRow: View {
         }
     }
 
-    /// Name color tinted by git status.
+    /// Name color tinted by git status. `status.color` is the git status's own
+    /// color, not app chrome, so it stays as-is (see FileTreeNode.GitStatus).
     private var nameColor: Color {
         if let status = node.gitStatus {
             return status.color
         }
-        return .primary
+        return theme.primaryText
     }
 
     /// The color for the file/folder icon.
+    ///
+    /// The palette has no per-language "brand color" role, so these map onto
+    /// the nearest status role the same way `SwiftUIPalette.color(named:)`
+    /// does (orange/yellow → warning, blue → accent, purple → info) — swift
+    /// and json land on the same tone, which is already true of that shared
+    /// mapping.
     private var iconColor: Color {
         if node.isPackage {
-            return .orange
+            return theme.warning
         }
         if node.isDirectory {
             if node.name == ".claude" {
-                return .purple
+                return theme.info
             }
-            return .accentColor
+            return theme.accent
         }
         let ext = node.url.pathExtension.lowercased()
         switch ext {
         case "swift":
-            return .orange
+            return theme.warning
         case "json":
-            return .yellow
+            return theme.warning
         case "md", "markdown":
-            return .blue
+            return theme.accent
         default:
-            return .secondary
+            return theme.secondaryText
         }
     }
 }

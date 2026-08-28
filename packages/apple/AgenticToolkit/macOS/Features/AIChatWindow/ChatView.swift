@@ -1,5 +1,7 @@
 import AppKit
 import Combine
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A chat view with transcript, message bubbles, typing indicator, and input field.
 public final class ChatView: NSView, NSTextFieldDelegate {
@@ -53,12 +55,20 @@ public final class ChatView: NSView, NSTextFieldDelegate {
             object: transcriptScroll.contentView
         )
 
-        let divider = NSBox()
-        divider.boxType = .separator
+        let divider = ThemedSeparatorView(role: .divider)
         divider.translatesAutoresizingMaskIntoConstraints = false
 
-        inputField.placeholderString = "Type a message..."
-        inputField.font = .systemFont(ofSize: 13)
+        inputField.observeTheme { field, palette in
+            field.font = palette.font(.body)
+            field.textColor = palette.nsColor(.primaryText)
+            field.placeholderAttributedString = NSAttributedString(
+                string: "Type a message...",
+                attributes: [
+                    .font: palette.font(.body),
+                    .foregroundColor: palette.nsColor(.placeholderText)
+                ]
+            )
+        }
         inputField.isBordered = false
         inputField.focusRingType = .none
         inputField.drawsBackground = false
@@ -73,6 +83,14 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         sendButton.action = #selector(sendTapped)
         sendButton.translatesAutoresizingMaskIntoConstraints = false
         sendButton.accessibilityID("ai-chat.send-button")
+        sendButton.observeTheme { button, palette in
+            button.contentTintColor = palette.nsColor(.accent)
+        }
+
+        observeTheme { view, palette in
+            view.wantsLayer = true
+            view.layer?.backgroundColor = palette.nsColor(.windowBackground).cgColor
+        }
 
         let inputRow = NSStackView(views: [inputField, sendButton])
         inputRow.orientation = .horizontal

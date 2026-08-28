@@ -15,6 +15,8 @@ struct AppWindowGroup: Identifiable {
 struct WindowExplorerView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// Set of selected window IDs, managed by the parent.
     @Binding var selectedWindowIDs: Set<UInt32>
 
@@ -57,10 +59,10 @@ struct WindowExplorerView: View {
     private var headerBar: some View {
         HStack {
             Image(systemName: "magnifyingglass.circle")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
             Text("Windows")
-                .font(.headline)
+                .font(theme.font(.heading))
             Spacer()
             Button {
                 refreshAsync()
@@ -89,8 +91,8 @@ struct WindowExplorerView: View {
                     ProgressView()
                         .scaleEffect(0.8)
                     Text("Scanning windows...")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, minHeight: 200)
@@ -98,13 +100,13 @@ struct WindowExplorerView: View {
                 VStack(spacing: 12) {
                     Spacer()
                     Image(systemName: "macwindow.on.rectangle")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.tertiary)
+                        .font(theme.font(.title))
+                        .foregroundStyle(theme.tertiaryText)
                     Text("No windows found")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.secondaryText)
                     Text("Make sure Accessibility permission is granted.")
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.tertiaryText)
                     Spacer()
                 }
                 .frame(maxWidth: .infinity, minHeight: 200)
@@ -128,20 +130,20 @@ struct WindowExplorerView: View {
     private var accessibilityBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(theme.warning)
             Text("Accessibility permission needed for window titles.")
-                .font(.caption)
+                .font(theme.font(.caption))
             Spacer()
             Button("Open Settings") {
                 SystemAccessibilityPermission.request()
             }
-            .font(.caption)
+            .font(theme.font(.caption))
             .buttonStyle(.bordered)
             .controlSize(.small)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.orange.opacity(0.1))
+        .background(theme.warning.opacity(0.1))
     }
 
     // MARK: - Rows
@@ -181,17 +183,17 @@ struct WindowExplorerView: View {
                     } else {
                         Image(systemName: "app.fill")
                             .frame(width: 16, height: 16)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                     }
 
                     Text(app)
-                        .font(.subheadline.bold())
+                        .font(theme.font(.caption).bold())
 
                     Text("\(windows.count)")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.tertiaryText)
                         .padding(.horizontal, 4)
-                        .background(Color.primary.opacity(0.06), in: Capsule())
+                        .background(theme.primaryText.opacity(0.06), in: Capsule())
                 }
             }
             .toggleStyle(.checkbox)
@@ -209,19 +211,19 @@ struct WindowExplorerView: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 0) {
                     Text(window.title.isEmpty ? "(untitled)" : window.title)
-                        .font(.callout)
+                        .font(theme.font(.body))
                         .lineLimit(1)
                         .truncationMode(.middle)
-                        .foregroundStyle(selectable ? .primary : .secondary)
+                        .foregroundStyle(selectable ? theme.primaryText : theme.secondaryText)
 
                     HStack(spacing: 4) {
                         Text("\(Int(window.frame.width))x\(Int(window.frame.height))")
-                            .font(.caption2.monospaced())
-                            .foregroundStyle(.tertiary)
+                            .font(theme.font(.code))
+                            .foregroundStyle(theme.tertiaryText)
 
                         if showBadge, let ctx = existingContext {
                             Text(ctx.name)
-                                .font(.caption2.bold())
+                                .font(theme.font(.caption).bold())
                                 .foregroundStyle(Color(hex: ctx.color) ?? .blue)
                                 .padding(.horizontal, 4)
                                 .background((Color(hex: ctx.color) ?? .blue).opacity(0.12), in: Capsule())

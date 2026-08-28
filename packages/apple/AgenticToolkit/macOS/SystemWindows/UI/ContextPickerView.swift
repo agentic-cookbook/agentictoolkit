@@ -10,6 +10,8 @@ import AgenticToolkitCoreMacOS
 public struct ContextPickerView: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// The current search/filter text.
     @State private var searchText = ""
 
@@ -48,7 +50,7 @@ public struct ContextPickerView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(Color(nsColor: .separatorColor), lineWidth: 0.5)
+                .strokeBorder(theme.divider, lineWidth: 0.5)
         )
         .shadow(color: .black.opacity(0.2), radius: 20, y: 10)
         .onChange(of: searchText) { _, _ in
@@ -62,10 +64,13 @@ public struct ContextPickerView: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(theme.secondaryText)
             TextField("Search \(appState.contextNounPlural)...", text: $searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 16))
+                // Larger than body, but this is plain editable text, not a
+                // heading, so it stays on `.body` rather than `.heading`'s
+                // semibold weight.
+                .font(theme.font(.body))
                 .onSubmit {
                     confirmSelection()
                 }
@@ -80,8 +85,8 @@ public struct ContextPickerView: View {
         VStack(spacing: 8) {
             Spacer()
             Text("No matching \(appState.contextNounPlural)")
-                .font(.callout)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.secondaryText)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -127,7 +132,7 @@ public struct ContextPickerView: View {
 
                 // Context name
                 Text(context.name)
-                    .font(.system(size: 14))
+                    .font(theme.font(.body))
                     .fontWeight(isActive ? .semibold : .regular)
 
                 Spacer()
@@ -135,23 +140,23 @@ public struct ContextPickerView: View {
                 // Window count
                 if context.windowSnapshots.count > 0 {
                     Text("\(context.liveWindowCount)w")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
                         .monospacedDigit()
                 }
 
                 // Active indicator
                 if isActive {
                     Image(systemName: "checkmark")
-                        .font(.caption.bold())
-                        .foregroundStyle(.green)
+                        .font(theme.font(.caption).bold())
+                        .foregroundStyle(theme.success)
                 }
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .fill(isSelected ? theme.accent.opacity(0.2) : Color.clear)
             )
             .contentShape(Rectangle())
         }

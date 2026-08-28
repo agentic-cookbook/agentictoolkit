@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 @MainActor
 public final class NestedViewController: NSViewController {
@@ -27,7 +29,8 @@ public final class NestedViewController: NSViewController {
     }
 
     public override func loadView() {
-        let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 200))
+        let container = ThemedBackgroundView(role: .windowBackground)
+        container.frame = NSRect(x: 0, y: 0, width: 300, height: 200)
 
         let content: NSView
         if let document = splitDocument {

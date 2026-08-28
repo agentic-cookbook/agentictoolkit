@@ -26,6 +26,7 @@ public final class SystemWindowReconcileWindowController: SingleWindowController
         self.model = model
         let root = ReconcileView()
             .environmentObject(model)
+            .themedRoot()
         super.init(
             windowID: Self.windowID,
             contentViewController: NSHostingController(rootView: root)

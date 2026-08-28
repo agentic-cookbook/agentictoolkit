@@ -14,8 +14,8 @@ public final class TerminalSessionProfilesSettingsView:
         didSet { updateDetail() }
     }
 
-    private let splitView = NSSplitView()
-    private let profileTable = NSTableView()
+    private let splitView = ThemedSplitView()
+    private let profileTable = ThemedTableView(role: .surface)
     private let detailContainer = NSView()
     private let duplicateButton = NSButton()
     private let deleteButton = NSButton()
@@ -100,7 +100,7 @@ public final class TerminalSessionProfilesSettingsView:
         profileTable.delegate = self
         profileTable.rowSizeStyle = .custom
 
-        let scrollView = NSScrollView()
+        let scrollView = ThemedScrollView(frame: .zero)
         scrollView.documentView = profileTable
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
@@ -194,7 +194,9 @@ public final class TerminalSessionProfilesSettingsView:
         stack.addArrangedSubview(generalSection)
 
         // Font section
-        fontNameLabel.textColor = .secondaryLabelColor
+        fontNameLabel.observeTheme { view, palette in
+            view.textColor = palette.nsColor(.secondaryText)
+        }
 
         fontSizeStepper.minValue = 8
         fontSizeStepper.maxValue = 72
@@ -249,8 +251,7 @@ public final class TerminalSessionProfilesSettingsView:
         stack.alignment = .leading
         stack.spacing = 6
 
-        let header = NSTextField(labelWithString: title)
-        header.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+        let header = ThemedLabel(string: title, role: .primaryText, textRole: .heading)
         stack.addArrangedSubview(header)
         for row in rows { stack.addArrangedSubview(row) }
         return stack
@@ -285,14 +286,18 @@ public final class TerminalSessionProfilesSettingsView:
         cell.identifier = cellID
         cell.subviews.forEach { $0.removeFromSuperview() }
 
-        // Color dot
+        // Color dot — the fill is the profile's own background color (user data,
+        // not chrome); only the fallback and border stroke are ours to theme.
         let dot = NSView()
         dot.wantsLayer = true
         dot.layer?.cornerRadius = 6
-        dot.layer?.backgroundColor = (NSColor(hex: profile.colors.background) ?? .gray).cgColor
+        dot.layer?.backgroundColor = (NSColor(hex: profile.colors.background)
+            ?? ThemePaletteObserver.currentPalette.nsColor(.tertiaryText)).cgColor
         dot.layer?.borderWidth = 0.5
-        dot.layer?.borderColor = NSColor.separatorColor.cgColor
         dot.translatesAutoresizingMaskIntoConstraints = false
+        dot.observeTheme { view, palette in
+            view.layer?.borderColor = palette.nsColor(.divider).cgColor
+        }
 
         // Name
         let nameLabel = NSTextField(labelWithString: profile.name)
@@ -300,9 +305,11 @@ public final class TerminalSessionProfilesSettingsView:
         nameLabel.translatesAutoresizingMaskIntoConstraints = false
 
         // Appearance badge (D/L/A)
-        let badge = NSTextField(labelWithString: profile.appearance.rawValue.prefix(1).uppercased())
-        badge.font = .boldSystemFont(ofSize: NSFont.smallSystemFontSize)
-        badge.textColor = .secondaryLabelColor
+        let badge = ThemedLabel(
+            string: profile.appearance.rawValue.prefix(1).uppercased(),
+            role: .secondaryText,
+            textRole: .caption
+        )
         badge.translatesAutoresizingMaskIntoConstraints = false
 
         cell.addSubview(dot)
@@ -327,6 +334,13 @@ public final class TerminalSessionProfilesSettingsView:
     }
 
     public func tableView(_ tableView: NSTableView, heightOfRow row: Int) -> CGFloat { 28 }
+
+    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        // AppKit pools row views, so the row has to own a palette observer of
+        // its own — a selection fill baked in at creation draws stale after a
+        // theme swap.
+        ThemedTableRowView()
+    }
 
     public func tableViewSelectionDidChange(_ notification: Notification) {
         let row = profileTable.selectedRow
@@ -410,9 +424,7 @@ public final class TerminalSessionProfilesSettingsView:
         stack.addArrangedSubview(swatchRow)
 
         // ANSI colors
-        let ansiLabel = NSTextField(labelWithString: "ANSI Colors")
-        ansiLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        ansiLabel.textColor = .secondaryLabelColor
+        let ansiLabel = ThemedLabel(string: "ANSI Colors", role: .secondaryText, textRole: .caption)
         stack.addArrangedSubview(ansiLabel)
 
         let normalRow = NSStackView()
@@ -449,21 +461,24 @@ public final class TerminalSessionProfilesSettingsView:
         stack.spacing = 2
         stack.alignment = .centerX
 
+        // The fill is the profile's own color (user data, not chrome); only the
+        // fallback and border stroke are ours to theme.
         let swatch = NSView()
         swatch.wantsLayer = true
         swatch.layer?.cornerRadius = 4
-        swatch.layer?.backgroundColor = (NSColor(hex: hex) ?? .gray).cgColor
+        swatch.layer?.backgroundColor = (NSColor(hex: hex)
+            ?? ThemePaletteObserver.currentPalette.nsColor(.tertiaryText)).cgColor
         swatch.layer?.borderWidth = 0.5
-        swatch.layer?.borderColor = NSColor.separatorColor.cgColor
         swatch.translatesAutoresizingMaskIntoConstraints = false
+        swatch.observeTheme { view, palette in
+            view.layer?.borderColor = palette.nsColor(.divider).cgColor
+        }
         NSLayoutConstraint.activate([
             swatch.widthAnchor.constraint(equalToConstant: 36),
             swatch.heightAnchor.constraint(equalToConstant: 24)
         ])
 
-        let labelField = NSTextField(labelWithString: label)
-        labelField.font = .systemFont(ofSize: 9)
-        labelField.textColor = .secondaryLabelColor
+        let labelField = ThemedLabel(string: label, role: .secondaryText, textRole: .caption)
 
         stack.addArrangedSubview(swatch)
         stack.addArrangedSubview(labelField)
@@ -471,13 +486,18 @@ public final class TerminalSessionProfilesSettingsView:
     }
 
     private func makeAnsiSwatch(hex: String, index: Int) -> NSView {
+        // The fill is the profile's own ANSI color (user data, not chrome);
+        // only the fallback and border stroke are ours to theme.
         let swatch = NSView()
         swatch.wantsLayer = true
         swatch.layer?.cornerRadius = 3
-        swatch.layer?.backgroundColor = (NSColor(hex: hex) ?? .gray).cgColor
+        swatch.layer?.backgroundColor = (NSColor(hex: hex)
+            ?? ThemePaletteObserver.currentPalette.nsColor(.tertiaryText)).cgColor
         swatch.layer?.borderWidth = 0.5
-        swatch.layer?.borderColor = NSColor.separatorColor.cgColor
         swatch.translatesAutoresizingMaskIntoConstraints = false
+        swatch.observeTheme { view, palette in
+            view.layer?.borderColor = palette.nsColor(.divider).cgColor
+        }
         swatch.toolTip = "ANSI \(index)"
         NSLayoutConstraint.activate([
             swatch.widthAnchor.constraint(equalToConstant: 24),
@@ -492,18 +512,19 @@ public final class TerminalSessionProfilesSettingsView:
         stack.alignment = .leading
         stack.spacing = 2
 
-        let previewLabel = NSTextField(labelWithString: "Preview")
-        previewLabel.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        previewLabel.textColor = .secondaryLabelColor
+        let previewLabel = ThemedLabel(string: "Preview", role: .secondaryText, textRole: .caption)
         stack.addArrangedSubview(previewLabel)
 
+        // These three colors render the mock terminal session itself — user
+        // data, not chrome — so their `??` fallbacks stay literal system colors
+        // rather than routing through the palette.
         let bgColor = NSColor(hex: profile.colors.background) ?? .black
         let fgColor = NSColor(hex: profile.colors.foreground) ?? .white
         let blueColor = profile.colors.ansi.count > 4
             ? (NSColor(hex: profile.colors.ansi[4]) ?? .systemBlue)
             : .systemBlue
 
-        let monoFont = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
+        let monoFont = ThemePaletteObserver.currentPalette.font(.code)
 
         let previewBox = NSView()
         previewBox.wantsLayer = true

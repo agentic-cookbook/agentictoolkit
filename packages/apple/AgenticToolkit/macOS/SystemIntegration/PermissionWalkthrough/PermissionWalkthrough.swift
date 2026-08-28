@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 import AgenticToolkitPermissions
 import AgenticToolkitPermissionsUI
 
@@ -70,14 +72,16 @@ public final class PermissionWalkthrough: AppFeature {
         let container = windowController.contentContainer
         container.subviews.forEach { $0.removeFromSuperview() }
 
-        let title = NSTextField(labelWithString: "Grant Permissions")
-        title.font = .systemFont(ofSize: 18, weight: .semibold)
+        let title = ThemedLabel(string: "Grant Permissions", role: .primaryText, textRole: .title)
 
-        let explanation = NSTextField(wrappingLabelWithString:
-            "These permissions let the app monitor and activate your Claude Code sessions."
-            + " Grant them in System Settings — this list updates automatically.")
-        explanation.font = .systemFont(ofSize: 12)
-        explanation.textColor = .secondaryLabelColor
+        let explanation = ThemedLabel(
+            string: "These permissions let the app monitor and activate your Claude Code sessions."
+                + " Grant them in System Settings — this list updates automatically.",
+            role: .secondaryText,
+            textRole: .caption
+        )
+        explanation.usesSingleLineMode = false
+        explanation.lineBreakMode = .byWordWrapping
         explanation.translatesAutoresizingMaskIntoConstraints = false
 
         let panel = PermissionsPanelView(permissions: pending, checker: checker)

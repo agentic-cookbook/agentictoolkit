@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A small rounded "pill" label — a status or category badge (e.g. "dev",
 /// "stopped", "3"). Theme-agnostic: the caller supplies the color (typically drawn
@@ -17,7 +19,9 @@ public final class Badge: NSView {
 
     private let label = NSTextField(labelWithString: "")
     private var style: Style = .filled
-    private var color: NSColor = .secondaryLabelColor
+    /// Only a placeholder until `init` assigns the caller's color; themed anyway
+    /// so a badge is never briefly painted in a color the theme doesn't own.
+    private var color: NSColor = ThemePaletteObserver.currentPalette.nsColor(.secondaryText)
 
     public init(text: String, color: NSColor, style: Style = .filled) {
         super.init(frame: .zero)
@@ -26,7 +30,9 @@ public final class Badge: NSView {
         translatesAutoresizingMaskIntoConstraints = false
 
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 10, weight: .semibold)
+        // The badge's *color* stays the caller's (that is the point of the
+        // class), but its type size is chrome and follows the theme.
+        label.observeTheme { field, palette in field.font = palette.font(.caption) }
         label.alignment = .center
         label.setContentHuggingPriority(.required, for: .horizontal)
         addSubview(label)

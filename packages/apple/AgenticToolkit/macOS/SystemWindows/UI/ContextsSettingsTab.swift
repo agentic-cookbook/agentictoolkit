@@ -7,6 +7,8 @@ import AgenticToolkitCoreMacOS
 public struct ContextsSettingsTab: View {
     @EnvironmentObject private var appState: SystemWindowContextsModel
 
+    @Environment(\.theme) private var theme
+
     /// Tracks which context ID is being edited for rename.
     @State private var editingContextID: UUID?
 
@@ -58,14 +60,14 @@ public struct ContextsSettingsTab: View {
         VStack(spacing: 12) {
             Spacer()
             Image(systemName: "square.stack.3d.up.slash")
-                .font(.system(size: 36))
-                .foregroundStyle(.secondary)
+                .font(theme.font(.title))
+                .foregroundStyle(theme.secondaryText)
             Text("No \(appState.contextNounPlural) yet")
-                .font(.headline)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
             Text("Create a \(appState.contextNoun) from the menu bar to get started.")
-                .font(.callout)
-                .foregroundStyle(.tertiary)
+                .font(theme.font(.body))
+                .foregroundStyle(theme.tertiaryText)
             Spacer()
         }
         .frame(maxWidth: .infinity)
@@ -119,8 +121,8 @@ public struct ContextsSettingsTab: View {
 
                 if isActive {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .font(.caption)
+                        .foregroundStyle(theme.success)
+                        .font(theme.font(.caption))
                 }
             }
 
@@ -131,8 +133,8 @@ public struct ContextsSettingsTab: View {
             let totalCount = context.windowSnapshots.count
             if totalCount > 0 {
                 Text("\(liveCount)/\(totalCount) windows")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
                     .monospacedDigit()
             }
 
@@ -152,7 +154,7 @@ public struct ContextsSettingsTab: View {
                 contextToDelete = context.id
             } label: {
                 Image(systemName: "trash")
-                    .foregroundStyle(.red)
+                    .foregroundStyle(theme.danger)
             }
             .buttonStyle(.borderless)
             .help("Delete \(appState.contextNoun)")

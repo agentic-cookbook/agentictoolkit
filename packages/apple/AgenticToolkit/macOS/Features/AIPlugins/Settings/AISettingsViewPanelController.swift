@@ -317,7 +317,7 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
 
     override func loadView() {
         let editor = LLMProviderEditorView(configuration: config, viewModel: viewModel)
-        let hosting = NSHostingView(rootView: editor)
+        let hosting = NSHostingView(rootView: editor.themedRoot())
         hosting.translatesAutoresizingMaskIntoConstraints = false
         self.view = hosting
     }

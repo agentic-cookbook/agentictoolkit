@@ -1,6 +1,7 @@
 import AppKit
 import os
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A small floating window for quickly capturing a note.
 /// Positions itself near a given screen rect (typically a status bar item).
@@ -18,8 +19,17 @@ public final class QuickNoteWindowController: NSWindowController {
         let field = NSTextField()
         field.placeholderString = "Note title..."
         field.bezelStyle = .roundedBezel
-        field.font = .systemFont(ofSize: 14, weight: .medium)
         field.translatesAutoresizingMaskIntoConstraints = false
+        field.observeTheme { field, palette in
+            field.font = palette.font(.heading)
+            field.textColor = palette.primaryTextColor
+            if let placeholder = field.placeholderString {
+                field.placeholderAttributedString = NSAttributedString(string: placeholder, attributes: [
+                    .foregroundColor: palette.placeholderTextColor,
+                    .font: palette.font(.heading)
+                ])
+            }
+        }
         return field
     }()
 
@@ -29,6 +39,9 @@ public final class QuickNoteWindowController: NSWindowController {
         scroll.autohidesScrollers = true
         scroll.borderType = .bezelBorder
         scroll.translatesAutoresizingMaskIntoConstraints = false
+        scroll.observeTheme { view, palette in
+            view.backgroundColor = palette.controlBackgroundColor
+        }
         return scroll
     }()
 
@@ -37,16 +50,25 @@ public final class QuickNoteWindowController: NSWindowController {
         textView.isEditable = true
         textView.isSelectable = true
         textView.isRichText = false
-        textView.font = .systemFont(ofSize: 13)
         textView.textContainerInset = NSSize(width: 6, height: 6)
         textView.isAutomaticQuoteSubstitutionEnabled = false
         textView.isAutomaticDashSubstitutionEnabled = false
         textView.allowsUndo = true
+        textView.observeTheme { view, palette in
+            view.font = palette.font(.body)
+            view.textColor = palette.primaryTextColor
+            view.backgroundColor = palette.controlBackgroundColor
+            view.insertionPointColor = palette.cursorColor
+            view.selectedTextAttributes = [
+                .backgroundColor: palette.selectionColor,
+                .foregroundColor: palette.selectionTextColor
+            ]
+        }
         return textView
     }()
 
     private lazy var saveButton: NSButton = {
-        let btn = NSButton(title: "Save", target: self, action: #selector(saveAction))
+        let btn = ThemedButton(title: "Save", target: self, action: #selector(saveAction))
         btn.keyEquivalent = "\r"
         btn.keyEquivalentModifierMask = [.command]
         btn.translatesAutoresizingMaskIntoConstraints = false
@@ -57,6 +79,12 @@ public final class QuickNoteWindowController: NSWindowController {
         let btn = NSButton(title: "Cancel", target: self, action: #selector(cancelAction))
         btn.keyEquivalent = "\u{1b}"
         btn.translatesAutoresizingMaskIntoConstraints = false
+        // The same explicit Cancel styling used elsewhere in the app, so this
+        // dialog agrees with the others — AppKit's stock bezel does not (see
+        // `applySecondaryActionTheme`).
+        btn.observeTheme { button, palette in
+            button.applySecondaryActionTheme(palette)
+        }
         return btn
     }()
 
@@ -107,6 +135,11 @@ public final class QuickNoteWindowController: NSWindowController {
 
             cancelButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             cancelButton.trailingAnchor.constraint(equalTo: saveButton.leadingAnchor, constant: -8),
+            // Cancel is drawn by the theme rather than by a stock bezel (see
+            // `applySecondaryActionTheme`), so its size is stated here — matching
+            // the default button beside it — instead of coming from the bezel.
+            cancelButton.heightAnchor.constraint(equalTo: saveButton.heightAnchor),
+            cancelButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 60),
 
             saveButton.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16),
             saveButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),

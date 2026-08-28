@@ -66,7 +66,7 @@ public final class ModelChooserViewController: NSViewController {
     /// Canonical composable-settings scroll host: top-anchored, width pinned to
     /// the viewport so rebuilt detail content can never tug the split divider.
     private let detailScroll = ComposableSettings.PanelScrollView()
-    private let splitView = NSSplitView()
+    private let splitView = ThemedSplitView()
     private let cancelButton = NSButton()
     private let okButton = NSButton()
     private let keyboard = PickerKeyboardController()
@@ -596,9 +596,8 @@ public enum ModelChooser {
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Choose Model"
-        let background = ThemePaletteObserver.currentPalette.windowBackgroundColor
-        let isDark = (background.usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5) < 0.5
-        window.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        window.appearance = ThemePaletteObserver.currentPalette.standardAppearance
+        window.backgroundColor = ThemePaletteObserver.currentPalette.windowBackgroundColor
         window.contentMinSize = NSSize(width: 560, height: 340)
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
         window.setContentSize(controller.initialContentSize)

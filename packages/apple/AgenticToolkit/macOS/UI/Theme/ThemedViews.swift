@@ -292,6 +292,34 @@ public final class ThemedSeparatorView: NSView, Themeable {
     }
 }
 
+/// A split view whose divider comes from the palette.
+///
+/// `NSSplitView` draws its divider from a system color that no theme reaches,
+/// so a themed window ends up with a system-grey seam down the middle. This is
+/// the one hook AppKit gives for it. Assign it to an `NSSplitViewController`'s
+/// `splitView` before `viewDidLoad` adds any items.
+@MainActor
+public final class ThemedSplitView: NSSplitView, Themeable {
+    private var observer: ThemePaletteObserver?
+
+    public override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    private var currentPalette: SemanticPalette = ThemePaletteObserver.currentPalette
+
+    public override var dividerColor: NSColor { currentPalette.nsColor(.divider) }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        currentPalette = palette
+        needsDisplay = true
+    }
+}
+
 /// A scroll view whose backdrop tracks the window-background role.
 @MainActor
 public final class ThemedScrollView: NSScrollView, Themeable {

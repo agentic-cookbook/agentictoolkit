@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Terminal general settings: startup behavior, default shell, new session profile defaults.
 public final class TerminalSessionGeneralSettingsView: NSView {
@@ -78,8 +80,10 @@ public final class TerminalSessionGeneralSettingsView: NSView {
 
         stack.addArrangedSubview(makeLabeledRow("Profile:", control: profilePopUp))
 
-        followSystemNote.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        followSystemNote.textColor = .secondaryLabelColor
+        followSystemNote.observeTheme { view, palette in
+            view.font = palette.font(.caption)
+            view.textColor = palette.nsColor(.secondaryText)
+        }
         followSystemNote.isHidden = true
         followSystemNote.translatesAutoresizingMaskIntoConstraints = false
         followSystemNote.widthAnchor.constraint(lessThanOrEqualToConstant: 350).isActive = true
@@ -96,8 +100,7 @@ public final class TerminalSessionGeneralSettingsView: NSView {
         stack.alignment = .leading
         stack.spacing = 6
 
-        let header = NSTextField(labelWithString: title)
-        header.font = .boldSystemFont(ofSize: NSFont.systemFontSize)
+        let header = ThemedLabel(string: title, role: .primaryText, textRole: .heading)
         stack.addArrangedSubview(header)
         stack.addArrangedSubview(content)
 

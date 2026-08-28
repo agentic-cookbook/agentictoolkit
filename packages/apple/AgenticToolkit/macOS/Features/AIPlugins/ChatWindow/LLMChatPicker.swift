@@ -30,12 +30,8 @@ public enum LLMChatPicker {
         let window = NSWindow(contentViewController: controller)
         window.styleMask = [.titled, .closable, .resizable]
         window.title = "Choose an LLM"
-        // Force a STANDARD dark/light appearance (matched to the theme's background)
-        // so standard AppKit controls render with proper contrast — a custom theme
-        // appearance draws the non-default Cancel button's bezel invisibly.
-        let background = ThemePaletteObserver.currentPalette.windowBackgroundColor
-        let isDark = (background.usingColorSpace(.sRGB)?.brightnessComponent ?? 0.5) < 0.5
-        window.appearance = NSAppearance(named: isDark ? .darkAqua : .aqua)
+        window.appearance = ThemePaletteObserver.currentPalette.standardAppearance
+        window.backgroundColor = ThemePaletteObserver.currentPalette.windowBackgroundColor
         window.contentMinSize = NSSize(width: 420, height: 420)
         window.contentMaxSize = NSSize(width: 4000, height: 4000)
         window.setContentSize(controller.initialContentSize)

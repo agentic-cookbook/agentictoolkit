@@ -1,5 +1,6 @@
 import AppKit
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 import AIPluginKit
 
 /// The shared "which LLM runs this feature" control: a Provider popup over a Model
@@ -110,6 +111,13 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
             self?.refreshModelRow()
         }
 
+        // The model row's text color depends on the palette, not just on the
+        // selection/list observers above, so it needs its own theme observer
+        // to repaint on a theme switch.
+        observeTheme { view, _ in
+            view.refreshModelRow()
+        }
+
         rebuildProviderChoices()
         refreshModelRow()
     }
@@ -158,7 +166,6 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     /// right-justified next to the rows above and below it.)
     private func buildLayout() {
         for label in [providerLabel, modelLabel] {
-            label.font = .systemFont(ofSize: 13, weight: .semibold)
             // Right-aligned *within* that shared column, so the two labels end
             // together and their controls line up.
             label.alignment = .right
@@ -169,6 +176,11 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
             // the narrower one has to give.
             label.setContentHuggingPriority(.defaultHigh, for: .horizontal)
             label.setContentCompressionResistancePriority(.required, for: .horizontal)
+            // These sit beside a popup/buttons rather than heading a section, so
+            // they use the control-label font role and repaint on theme change.
+            label.observeTheme { view, palette in
+                view.font = palette.font(.button)
+            }
         }
         modelNameLabel.lineBreakMode = .byTruncatingMiddle
         for button in [chooseButton, tryButton] {
@@ -279,16 +291,17 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     }
 
     private func refreshModelRow() {
+        let palette = ThemePaletteObserver.currentPalette
         guard let (config, template) = resolvedSelection() else {
             modelNameLabel.stringValue = Self.noProviderModelText
-            modelNameLabel.textColor = .secondaryLabelColor
+            modelNameLabel.textColor = palette.secondaryTextColor
             chooseButton.isEnabled = false
             tryButton.isEnabled = false
             return
         }
         let stored = modelSetting(config.id, template).value
         modelNameLabel.stringValue = stored.isEmpty ? Self.noProviderModelText : stored
-        modelNameLabel.textColor = stored.isEmpty ? .secondaryLabelColor : .labelColor
+        modelNameLabel.textColor = stored.isEmpty ? palette.secondaryTextColor : palette.primaryTextColor
         chooseButton.isEnabled = true
         // Chatting needs a plugin host to build a backend from; listing models
         // doesn't, so Try is the only one of the two that can be unavailable here.

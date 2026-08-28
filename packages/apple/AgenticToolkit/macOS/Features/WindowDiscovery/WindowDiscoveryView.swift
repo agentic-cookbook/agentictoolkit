@@ -1,5 +1,7 @@
 import AppKit
 import Combine
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// A floating panel view that shows all discoverable windows grouped by app.
 /// Opens immediately with a spinner while window enumeration runs asynchronously.
@@ -23,17 +25,20 @@ public final class WindowDiscoveryView: NSView {
 
     private func setupViews() {
         // Header
-        let titleLabel = NSTextField(labelWithString: "Select Window")
-        titleLabel.font = .systemFont(ofSize: 13, weight: .semibold)
+        let titleLabel = ThemedLabel(string: "Select Window", role: .primaryText, textRole: .heading)
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
         let projectBadge = NSTextField(labelWithString: viewModel.session.projectName)
-        projectBadge.font = .systemFont(ofSize: 11)
-        projectBadge.textColor = .secondaryLabelColor
         projectBadge.wantsLayer = true
-        projectBadge.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
         projectBadge.layer?.cornerRadius = 4
         projectBadge.translatesAutoresizingMaskIntoConstraints = false
+        projectBadge.observeTheme { view, palette in
+            view.font = palette.font(.caption)
+            view.textColor = palette.nsColor(.secondaryText)
+            // A hand-rolled "subtle raised surface" fill — one step up from the
+            // header it sits in.
+            view.layer?.backgroundColor = palette.nsColor(.elevatedSurface).cgColor
+        }
 
         headerView.translatesAutoresizingMaskIntoConstraints = false
         headerView.addSubview(titleLabel)
@@ -46,8 +51,7 @@ public final class WindowDiscoveryView: NSView {
             projectBadge.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
         ])
 
-        let divider = NSBox()
-        divider.boxType = .separator
+        let divider = ThemedSeparatorView(role: .divider)
         divider.translatesAutoresizingMaskIntoConstraints = false
 
         contentContainer.translatesAutoresizingMaskIntoConstraints = false
@@ -119,13 +123,13 @@ public final class WindowDiscoveryView: NSView {
             let imageView = NSImageView()
             imageView.image = icon
             imageView.symbolConfiguration = .init(pointSize: 24, weight: .regular)
-            imageView.contentTintColor = .secondaryLabelColor
+            imageView.observeTheme { view, palette in
+                view.contentTintColor = palette.nsColor(.secondaryText)
+            }
             stack.addArrangedSubview(imageView)
         }
 
-        let label = NSTextField(labelWithString: title)
-        label.font = .systemFont(ofSize: 11)
-        label.textColor = .secondaryLabelColor
+        let label = ThemedLabel(string: title, role: .secondaryText, textRole: .caption)
         stack.addArrangedSubview(label)
 
         contentContainer.addSubview(stack)
@@ -145,16 +149,19 @@ public final class WindowDiscoveryView: NSView {
         let icon = NSImageView()
         icon.image = NSImage(systemSymbolName: "lock.shield", accessibilityDescription: nil)
         icon.symbolConfiguration = .init(pointSize: 24, weight: .regular)
-        icon.contentTintColor = .systemOrange
+        icon.observeTheme { view, palette in
+            view.contentTintColor = palette.nsColor(.warning)
+        }
 
-        let title = NSTextField(labelWithString: "Accessibility Access Required")
-        title.font = .systemFont(ofSize: 12, weight: .medium)
+        let title = ThemedLabel(string: "Accessibility Access Required", role: .primaryText, textRole: .heading)
 
         let desc = NSTextField(
             wrappingLabelWithString: "Grant Whippet Accessibility access to discover and activate windows."
         )
-        desc.font = .systemFont(ofSize: 11)
-        desc.textColor = .secondaryLabelColor
+        desc.observeTheme { view, palette in
+            view.font = palette.font(.caption)
+            view.textColor = palette.nsColor(.secondaryText)
+        }
         desc.alignment = .center
         desc.translatesAutoresizingMaskIntoConstraints = false
         desc.widthAnchor.constraint(lessThanOrEqualToConstant: 260).isActive = true
@@ -228,12 +235,16 @@ public final class DiscoveredAppSectionView: NSView {
         super.init(frame: .zero)
         wantsLayer = true
         layer?.cornerRadius = 6
-        layer?.backgroundColor = (app.hasMatch
-            ? NSColor.controlAccentColor.withAlphaComponent(0.06)
-            : NSColor.white.withAlphaComponent(0.03)).cgColor
-        if app.hasMatch {
-            layer?.borderColor = NSColor.controlAccentColor.withAlphaComponent(0.2).cgColor
-            layer?.borderWidth = 0.5
+        layer?.borderWidth = app.hasMatch ? 0.5 : 0
+        observeTheme { view, palette in
+            if view.app.hasMatch {
+                view.layer?.backgroundColor = palette.nsColor(.accent).withAlphaComponent(0.06).cgColor
+                view.layer?.borderColor = palette.nsColor(.accent).withAlphaComponent(0.2).cgColor
+            } else {
+                // A hand-rolled "subtle raised surface" fill, one step up from
+                // the list background.
+                view.layer?.backgroundColor = palette.nsColor(.surface).cgColor
+            }
         }
         setupViews()
     }
@@ -270,13 +281,10 @@ public final class DiscoveredAppSectionView: NSView {
             headerStack.addArrangedSubview(iconView)
         }
 
-        let nameLabel = NSTextField(labelWithString: app.name)
-        nameLabel.font = .systemFont(ofSize: 11, weight: .semibold)
+        let nameLabel = ThemedLabel(string: app.name, role: .primaryText, textRole: .button)
         headerStack.addArrangedSubview(nameLabel)
 
-        let countLabel = NSTextField(labelWithString: "(\(app.windows.count))")
-        countLabel.font = .systemFont(ofSize: 10)
-        countLabel.textColor = .tertiaryLabelColor
+        let countLabel = ThemedLabel(string: "(\(app.windows.count))", role: .tertiaryText, textRole: .caption)
         headerStack.addArrangedSubview(countLabel)
 
         let spacer = NSView()
@@ -286,7 +294,9 @@ public final class DiscoveredAppSectionView: NSView {
         let chevron = NSImageView()
         chevron.image = NSImage(systemSymbolName: "chevron.down", accessibilityDescription: nil)
         chevron.symbolConfiguration = .init(pointSize: 9, weight: .regular)
-        chevron.contentTintColor = .tertiaryLabelColor
+        chevron.observeTheme { view, palette in
+            view.contentTintColor = palette.nsColor(.tertiaryText)
+        }
         headerStack.addArrangedSubview(chevron)
 
         // Use a clickable container instead of wrapping in a button
@@ -354,16 +364,21 @@ public final class DiscoveredWindowRowView: NSView {
         stack.edgeInsets = NSEdgeInsets(top: 4, left: 24, bottom: 4, right: 8)
         stack.translatesAutoresizingMaskIntoConstraints = false
 
+        let iconTintRole: ThemeRole = discoveredWindow.isMatch ? .accent : .secondaryText
         let icon = NSImageView()
         icon.image = NSImage(systemSymbolName: "macwindow", accessibilityDescription: nil)
         icon.symbolConfiguration = .init(pointSize: 10, weight: .regular)
-        icon.contentTintColor = discoveredWindow.isMatch ? .controlAccentColor : .secondaryLabelColor
+        icon.observeTheme { view, palette in
+            view.contentTintColor = palette.nsColor(iconTintRole)
+        }
         icon.translatesAutoresizingMaskIntoConstraints = false
         icon.widthAnchor.constraint(equalToConstant: 16).isActive = true
 
-        let titleLabel = NSTextField(labelWithString: discoveredWindow.title)
-        titleLabel.font = .systemFont(ofSize: 11, weight: discoveredWindow.isMatch ? .medium : .regular)
-        titleLabel.textColor = discoveredWindow.isMatch ? .labelColor : .secondaryLabelColor
+        let titleLabel = ThemedLabel(
+            string: discoveredWindow.title,
+            role: discoveredWindow.isMatch ? .primaryText : .secondaryText,
+            textRole: .caption
+        )
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.maximumNumberOfLines = 1
         titleLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
@@ -376,12 +391,12 @@ public final class DiscoveredWindowRowView: NSView {
         stack.addArrangedSubview(spacer)
 
         if discoveredWindow.isMatch {
-            let badge = NSTextField(labelWithString: "match")
-            badge.font = .systemFont(ofSize: 9)
-            badge.textColor = .controlAccentColor
+            let badge = ThemedLabel(string: "match", role: .accent, textRole: .caption)
             badge.wantsLayer = true
-            badge.layer?.backgroundColor = NSColor.controlAccentColor.withAlphaComponent(0.1).cgColor
             badge.layer?.cornerRadius = 3
+            badge.observeTheme { view, palette in
+                view.layer?.backgroundColor = palette.nsColor(.accent).withAlphaComponent(0.1).cgColor
+            }
             stack.addArrangedSubview(badge)
         }
 
@@ -408,7 +423,8 @@ public final class DiscoveredWindowRowView: NSView {
     public override func mouseEntered(with event: NSEvent) {
         isHovered = true
         wantsLayer = true
-        layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
+        // A hand-rolled "subtle raised surface" fill for the hover state.
+        layer?.backgroundColor = ThemePaletteObserver.currentPalette.nsColor(.elevatedSurface).cgColor
     }
 
     public override func mouseExited(with event: NSEvent) {

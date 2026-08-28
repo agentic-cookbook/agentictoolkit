@@ -1,5 +1,7 @@
 import SwiftUI
 
+import AgenticToolkitCore
+
 /// The content viewer pane that displays file metadata when a file is selected.
 ///
 /// Shows a placeholder message ("Select a file to view its details") when no file
@@ -33,15 +35,17 @@ public struct ContentViewerView: View {
 
 /// Shown when no file is selected in the file tree.
 private struct PlaceholderView: View {
+    @Environment(\.theme) private var theme
+
     public var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "doc.text.magnifyingglass")
                 .font(.system(size: 48))
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(theme.tertiaryText)
 
             Text("Select a file to view its details")
-                .font(.title3)
-                .foregroundStyle(.secondary)
+                .font(theme.font(.heading))
+                .foregroundStyle(theme.secondaryText)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -53,6 +57,8 @@ private struct PlaceholderView: View {
 private struct FileDetailView: View {
     public let node: FileTreeNode
     public let config: FileTreeConfig
+
+    @Environment(\.theme) private var theme
 
     /// Formatter for file sizes.
     private static let byteCountFormatter: ByteCountFormatter = {
@@ -78,14 +84,13 @@ private struct FileDetailView: View {
                     .foregroundStyle(headerIconColor)
 
                 Text(node.name)
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                    .font(theme.font(.title))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
 
                 Text(typeDescription)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .font(theme.font(.caption))
+                    .foregroundStyle(theme.secondaryText)
             }
             .padding(.bottom, 20)
 
@@ -96,7 +101,7 @@ private struct FileDetailView: View {
             Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 12) {
                 GridRow {
                     Text("Path:")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.secondaryText)
                         .gridColumnAlignment(.trailing)
                     Text(node.url.path)
                         .textSelection(.enabled)
@@ -107,7 +112,7 @@ private struct FileDetailView: View {
                 if let size = node.fileSize {
                     GridRow {
                         Text("Size:")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                         Text(Self.byteCountFormatter.string(fromByteCount: Int64(size)))
                     }
                 }
@@ -115,21 +120,21 @@ private struct FileDetailView: View {
                 if let date = node.modificationDate {
                     GridRow {
                         Text("Modified:")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                         Text(Self.dateFormatter.string(from: date))
                     }
                 }
 
                 GridRow {
                     Text("Type:")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(theme.secondaryText)
                     Text(typeDescription)
                 }
 
                 if !node.isDirectory, !node.url.pathExtension.isEmpty {
                     GridRow {
                         Text("Extension:")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                         Text(".\(node.url.pathExtension)")
                     }
                 }
@@ -137,12 +142,12 @@ private struct FileDetailView: View {
                 if let children = node.children {
                     GridRow {
                         Text("Items:")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(theme.secondaryText)
                         Text("\(children.count)")
                     }
                 }
             }
-            .font(.body)
+            .font(theme.font(.body))
             .padding(.top, 20)
             .padding(.horizontal, 40)
 
@@ -191,15 +196,20 @@ private struct FileDetailView: View {
     }
 
     /// Color for the header icon.
+    ///
+    /// The palette has no per-language "brand color" role, so these map onto
+    /// the nearest status role the same way `SwiftUIPalette.color(named:)`
+    /// does (orange/yellow → warning, blue → accent) — swift and json land on
+    /// the same tone, which is already true of that shared mapping.
     private var headerIconColor: Color {
-        if node.isPackage { return .orange }
-        if node.isDirectory { return .accentColor }
+        if node.isPackage { return theme.warning }
+        if node.isDirectory { return theme.accent }
         let ext = node.url.pathExtension.lowercased()
         switch ext {
-        case "swift": return .orange
-        case "json": return .yellow
-        case "md", "markdown": return .blue
-        default: return .secondary
+        case "swift": return theme.warning
+        case "json": return theme.warning
+        case "md", "markdown": return theme.accent
+        default: return theme.secondaryText
         }
     }
 }
