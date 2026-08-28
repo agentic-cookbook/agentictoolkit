@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// AppKit view controller pairing a ``LogView`` with a toolbar that
 /// surfaces the common controls a streaming log needs: pause, clear,
@@ -14,10 +16,20 @@ open class LogViewController: NSViewController {
     public let controller: any LogController
     public let logView: LogView
 
+    /// Stock buttons painted as *secondary* actions rather than `ThemedButton`s:
+    /// Pause and Clear sit in a toolbar, and two accent-filled pills there would
+    /// claim more emphasis than a log's controls deserve.
     private let pauseButton = NSButton()
     private let clearButton = NSButton()
     private let statusDot = NSView()
-    private let statusLabel = NSTextField(labelWithString: "Connecting…")
+    private let statusLabel = ThemedLabel(role: .secondaryText, textRole: .caption)
+
+    /// Repaints on every theme change. It routes through
+    /// `updateStateIndicators` rather than painting here, because the dot's
+    /// colour and the pause button's title both depend on controller state: a
+    /// theme change and a state change have to land in the same place or one
+    /// overwrites the other with the previous theme's colours.
+    private var themeObserver: ThemePaletteObserver?
 
     public init(controller: any LogController) {
         self.controller = controller
@@ -52,12 +64,15 @@ open class LogViewController: NSViewController {
     // MARK: - View lifecycle
 
     open override func loadView() {
-        let root = NSView(frame: NSRect(origin: .zero, size: defaultStartSize))
+        let root = ThemedBackgroundView(role: .windowBackground)
+        root.frame = NSRect(origin: .zero, size: defaultStartSize)
         root.autoresizingMask = [.width, .height]
 
         let toolbar = makeToolbar()
-        let divider = NSBox()
-        divider.boxType = .separator
+        // `ThemedSeparatorView` rather than a separator `NSBox`: the box draws a
+        // system hairline, which is the one line in this window the palette could
+        // not reach. It carries its own 1pt height constraint.
+        let divider = ThemedSeparatorView(role: .divider)
         divider.translatesAutoresizingMaskIntoConstraints = false
 
         logView.translatesAutoresizingMaskIntoConstraints = false
@@ -78,7 +93,6 @@ open class LogViewController: NSViewController {
             divider.topAnchor.constraint(equalTo: toolbar.bottomAnchor),
             divider.leadingAnchor.constraint(equalTo: root.leadingAnchor),
             divider.trailingAnchor.constraint(equalTo: root.trailingAnchor),
-            divider.heightAnchor.constraint(equalToConstant: 1),
 
             logView.topAnchor.constraint(equalTo: divider.bottomAnchor),
             logView.leadingAnchor.constraint(equalTo: root.leadingAnchor),
@@ -91,7 +105,9 @@ open class LogViewController: NSViewController {
 
     open override func viewDidLoad() {
         super.viewDidLoad()
-        updateStateIndicators()
+        themeObserver = ThemePaletteObserver { [weak self] _ in
+            self?.updateStateIndicators()
+        }
     }
 
     open override func viewDidAppear() {
@@ -116,13 +132,11 @@ open class LogViewController: NSViewController {
         container.translatesAutoresizingMaskIntoConstraints = false
 
         pauseButton.translatesAutoresizingMaskIntoConstraints = false
-        pauseButton.bezelStyle = .texturedRounded
         pauseButton.title = "Pause"
         pauseButton.target = self
         pauseButton.action = #selector(pauseTapped)
 
         clearButton.translatesAutoresizingMaskIntoConstraints = false
-        clearButton.bezelStyle = .texturedRounded
         clearButton.title = "Clear"
         clearButton.target = self
         clearButton.action = #selector(clearTapped)
@@ -132,8 +146,6 @@ open class LogViewController: NSViewController {
         statusDot.layer?.cornerRadius = 4
 
         statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
-        statusLabel.textColor = .secondaryLabelColor
 
         let leading = NSStackView(views: leadingToolbarItems())
         leading.translatesAutoresizingMaskIntoConstraints = false
@@ -160,7 +172,16 @@ open class LogViewController: NSViewController {
             trailing.centerYAnchor.constraint(equalTo: container.centerYAnchor),
 
             statusDot.widthAnchor.constraint(equalToConstant: 8),
-            statusDot.heightAnchor.constraint(equalToConstant: 8)
+            statusDot.heightAnchor.constraint(equalToConstant: 8),
+
+            // A borderless button has no bezel padding, so it has no useful
+            // intrinsic size — `applySecondaryActionTheme` says as much. These
+            // are the stock textured-rounded metrics the buttons used to get
+            // from their bezel.
+            pauseButton.widthAnchor.constraint(equalToConstant: 68),
+            pauseButton.heightAnchor.constraint(equalToConstant: 22),
+            clearButton.widthAnchor.constraint(equalToConstant: 68),
+            clearButton.heightAnchor.constraint(equalToConstant: 22)
         ])
         return container
     }
@@ -169,21 +190,34 @@ open class LogViewController: NSViewController {
     /// controller's state. Safe to call from `viewDidLoad`, the state
     /// callback, or any time the caller wants to force a redraw.
     public final func updateStateIndicators() {
+        // Status colours from the palette's own roles, not `.systemGreen` and
+        // friends: a theme picks its green, and the dot is the one place in this
+        // window where "connected" has to read as the same green the rest of the
+        // app uses for it.
+        let palette = ThemePaletteObserver.currentPalette
         let (color, label): (NSColor, String)
         if controller.isConnected {
-            color = .systemGreen
+            color = palette.nsColor(.success)
             label = "Connected"
         } else if let err = controller.lastError {
-            color = .systemRed
+            color = palette.nsColor(.danger)
             label = err
         } else {
-            color = .systemOrange
+            color = palette.nsColor(.warning)
             label = "Connecting…"
         }
         statusDot.layer?.backgroundColor = color.cgColor
         statusLabel.stringValue = label
         statusLabel.toolTip = label
+
+        // The title is set *before* the theme is applied, not after: a button
+        // painted by `applySecondaryActionTheme` draws its `attributedTitle`,
+        // which is built from `title` at the moment the theme is applied. Setting
+        // `title` alone would change the property and leave the button reading
+        // "Pause" forever.
         pauseButton.title = controller.isPaused ? "Resume" : "Pause"
+        pauseButton.applySecondaryActionTheme(palette)
+        clearButton.applySecondaryActionTheme(palette)
     }
 
     // MARK: - Actions

@@ -1,4 +1,6 @@
 import AppKit
+import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 /// Scrolling table-view of ``LogLine``s driven by a ``LogProvider``.
 ///
@@ -17,8 +19,14 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
     /// builds a "pause auto-scroll" control.
     public var followTail: Bool = true
 
-    private let tableView = NSTableView()
-    private let scrollView = NSScrollView()
+    // Themed rather than stock: a plain `NSTableView` fills itself with the
+    // system `controlBackgroundColor` and bands its rows from a system color
+    // pair, both of which paint straight over the theme — which is why this
+    // window stayed system-grey while every other window in the app followed
+    // the palette. `windowBackground` (not `surface`) so the log reads as the
+    // window itself, matching the timeline's table.
+    private let tableView = ThemedTableView(role: .windowBackground)
+    private let scrollView = ThemedScrollView(frame: .zero)
     private var columnIDByIndex: [Int: String] = [:]
 
     public init(provider: any LogProvider) {
@@ -67,7 +75,9 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
     private func configureTable() {
         tableView.dataSource = self
         tableView.delegate = self
-        tableView.usesAlternatingRowBackgroundColors = true
+        // Banding is off (`ThemedTableView` turns it off too): the stripe comes
+        // from a system color pair the palette has no say in. Rows separate on
+        // the palette's own selection fill instead, via `ThemedTableRowView`.
         tableView.allowsColumnResizing = true
         tableView.columnAutoresizingStyle = .uniformColumnAutoresizingStyle
         tableView.rowSizeStyle = .default
@@ -139,6 +149,12 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
         return visible.maxY >= docHeight - 2
     }
 
+    /// Themed rows so selection is drawn from the palette's `selection` role
+    /// rather than the system's highlight blue.
+    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+        ThemedTableRowView()
+    }
+
     // MARK: - NSTableViewDataSource
 
     public func numberOfRows(in tableView: NSTableView) -> Int {
@@ -178,11 +194,11 @@ public final class LogView: NSView, NSTableViewDataSource, NSTableViewDelegate, 
         if let existing = tableView.makeView(withIdentifier: identifier, owner: nil) as? NSTextField {
             return existing
         }
-        let field = NSTextField(labelWithString: "")
+        // A `ThemedLabel`, so cell text tracks the palette's primary-text role
+        // and body font. A provider handing back an `.attributed` value still
+        // wins — its own attributes are applied over this.
+        let field = ThemedLabel()
         field.identifier = identifier
-        field.isBordered = false
-        field.drawsBackground = false
-        field.isEditable = false
         field.isSelectable = false
         return field
     }

@@ -83,10 +83,10 @@ extension ComposableSettings {
             Self.pinToEdges(view, of: self.contentContainer)
         }
 
-        /// Hands the panel's help to the presenter and restyles the button. `nil`
-        /// retires the button and closes the drawer without touching the
-        /// remembered preference, so a panel that offers no help doesn't teach the
-        /// window to stay shut.
+        /// Hands the panel's help to the presenter and restyles the button.
+        /// `nil` is passed through rather than filtered out: the drawer shows its
+        /// own empty state for a panel with no prose, and the button stays where
+        /// it is either way.
         public func setHelp(_ help: PanelHelp?) {
             self.help = help
             self.helpPresenter?.setHelp(help)
@@ -112,7 +112,12 @@ extension ComposableSettings {
         private func updateHelpButton() {
             let disclosed = self.helpPresenter?.isHelpVisible ?? false
             let palette = ThemePaletteObserver.currentPalette
-            self.helpButton.isHidden = self.help == nil || self.helpPresenter == nil
+            // Shown for every panel this split hosts, whether or not that panel
+            // has prose. It used to come and go with `help != nil`, which put a
+            // control in the corner of some panels and not others and made the
+            // drawer look like a property of the panel rather than of the window.
+            // A nested split still has no button at all — it has no presenter.
+            self.helpButton.isHidden = self.helpPresenter == nil
             // Filled while open, outlined while closed — the button reports the
             // drawer's state as well as toggling it, which matters because the
             // drawer is remembered across launches.

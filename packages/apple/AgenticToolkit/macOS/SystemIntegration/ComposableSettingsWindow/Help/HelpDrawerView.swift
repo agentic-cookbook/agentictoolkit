@@ -54,13 +54,27 @@ extension ComposableSettings {
         @available(*, unavailable)
         public required init?(coder: NSCoder) { fatalError() }
 
-        /// Replaces the drawer's contents. `nil` empties it — the controller
-        /// closes the drawer in that case, but clearing keeps a stale panel's
-        /// help from flashing back the next time it opens.
+        /// What the drawer says for a panel that offers no prose. The drawer no
+        /// longer closes itself in that case — see `HelpDrawerController`'s
+        /// `isHelpVisible` — so something has to occupy it, and an honest
+        /// sentence beats an empty pane that reads as a rendering failure.
+        private static let emptyTitle = "No Help Yet"
+        private static let emptyBody =
+            "This panel doesn't have any help written for it. Its controls each "
+            + "carry their own explanation underneath."
+
+        /// Replaces the drawer's contents. `nil` shows the empty state rather
+        /// than blanking the drawer.
         public func setHelp(_ help: PanelHelp?) {
             self.help = help
+            let topics = help?.topics ?? []
             let panel = PanelView()
-            for topic in help?.topics ?? [] {
+            if topics.isEmpty {
+                let group = GroupView(withTitle: Self.emptyTitle)
+                group.addSettingSubview(ExplanationView(withText: Self.emptyBody))
+                panel.addGroup(group)
+            }
+            for topic in topics {
                 let group = GroupView(withTitle: topic.title)
                 group.addSettingSubview(ExplanationView(withText: topic.body))
                 panel.addGroup(group)

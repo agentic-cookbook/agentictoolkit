@@ -35,14 +35,18 @@ extension ComposableSettings {
         private let helpView = HelpDrawerView()
         private let preference: UserSettingObserver<Bool>
 
-        /// Whether the panel now showing has anything to say. Kept apart from the
-        /// preference so a panel without help closes the drawer *without* teaching
-        /// the window to stay shut for the panels that do have some.
-        private var hasHelp = false
-
         public var onVisibilityChange: (() -> Void)?
 
-        public var isHelpVisible: Bool { self.hasHelp && self.preference.value }
+        /// The drawer is open because the reader asked for it to be open, and for
+        /// no other reason.
+        ///
+        /// It used to be `hasHelp && preference`, which made the drawer slam shut
+        /// on the way to a panel that had no prose and slide open again on the way
+        /// out — an animation triggered by clicking the sidebar, which nobody
+        /// asked for and which reads as the window flinching. A panel with nothing
+        /// to say now says so *inside* the drawer, where it costs a line of text
+        /// instead of a change of layout.
+        public var isHelpVisible: Bool { self.preference.value }
 
         public init(parentWindow: NSWindow) {
             self.drawer = NSDrawer(
@@ -92,7 +96,6 @@ extension ComposableSettings {
         // MARK: - SettingsHelpPresenting
 
         public func setHelp(_ help: PanelHelp?) {
-            self.hasHelp = help != nil
             self.helpView.setHelp(help)
             self.applyVisibility()
         }
