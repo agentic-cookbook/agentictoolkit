@@ -319,8 +319,25 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
     }
 
     private func wireLayoutCallback(on split: NestingSplitViewController, tabID: UUID) {
-        split.onLayoutDidChange = { [weak self] _ in
-            self?.persistAllTabs()
+        split.onLayoutDidChange = { [weak self] node in
+            guard let self else { return }
+            // A removed pane must not leave a focus record behind, or
+            // `installInitialTabs()` restores focus to a node that no
+            // longer exists on the next launch.
+            if let focused = self.focusedLeafByTabID[tabID],
+               !Self.leafIDs(in: node).contains(focused) {
+                self.focusedLeafByTabID[tabID] = nil
+            }
+            self.persistAllTabs()
+        }
+    }
+
+    private static func leafIDs(in node: LayoutNode) -> Set<UUID> {
+        switch node.kind {
+        case .leaf:
+            return [node.id]
+        case .split(_, let first, let second):
+            return leafIDs(in: first).union(leafIDs(in: second))
         }
     }
 

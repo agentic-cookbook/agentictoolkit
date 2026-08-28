@@ -77,6 +77,19 @@ public final class NestedViewController: NSViewController {
             item.representedObject = direction
             button.menu?.addItem(item)
         }
+        button.menu?.addItem(.separator())
+        let remove = NSMenuItem(
+            title: "Remove",
+            action: #selector(removeSelected(_:)),
+            keyEquivalent: ""
+        )
+        remove.target = self
+        button.menu?.addItem(remove)
+        // "Remove" is enabled from the *tab's* pane count, which AppKit's
+        // automatic validation cannot see, so enablement is decided in
+        // `menuNeedsUpdate(_:)` instead.
+        button.menu?.autoenablesItems = false
+        button.menu?.delegate = self
         return button
     }
 
@@ -86,10 +99,44 @@ public final class NestedViewController: NSViewController {
         parent.split(self, direction: direction)
     }
 
+    @objc private func removeSelected(_ sender: NSMenuItem) {
+        guard let parent = parent as? NestingSplitViewController else { return }
+        parent.remove(self)
+    }
+
+    /// False for the last pane in the tab — a tab always keeps at least one.
+    private var canRemove: Bool {
+        guard let parent = parent as? NestingSplitViewController,
+              let root = parent.rootSplit() else { return false }
+        return root.leafCount() > 1
+    }
+
+    /// Whether the window's first responder lives inside this pane, so a
+    /// removal can re-home focus rather than leaving the window without one.
+    var containsFirstResponder: Bool {
+        guard let responder = view.window?.firstResponder as? NSView else { return false }
+        var current: NSView? = responder
+        while let candidate = current {
+            if candidate === view { return true }
+            current = candidate.superview
+        }
+        return false
+    }
+
     private static let menuItems: [(String, NestingSplitViewController.Direction)] = [
         ("Split Left", .left),
         ("Split Right", .right),
         ("Split Above", .above),
         ("Split Below", .below)
     ]
+}
+
+extension NestedViewController: NSMenuDelegate {
+
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        guard let item = menu.items.first(where: { $0.action == #selector(removeSelected(_:)) }) else {
+            return
+        }
+        item.isEnabled = canRemove
+    }
 }
