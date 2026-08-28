@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 
-import { Spinner } from '@agentic-toolkit/ui/components/spinner';
+import { Spinner } from '@agenticdevelopertoolkit/ui/components/spinner';
 
 import { LogLines } from '../activity/LogLines';
 import { useRunLog } from '../activity/useRunLog';

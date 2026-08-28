@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 
-import { Button } from '@agentic-toolkit/ui/components/button';
-import { Checkbox } from '@agentic-toolkit/ui/components/checkbox';
+import { Button } from '@agenticdevelopertoolkit/ui/components/button';
+import { Checkbox } from '@agenticdevelopertoolkit/ui/components/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -11,11 +11,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog';
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
-import { Input } from '@agentic-toolkit/ui/components/input';
-import { Label } from '@agentic-toolkit/ui/components/label';
-import { Select } from '@agentic-toolkit/ui/components/select';
+} from '@agenticdevelopertoolkit/ui/components/dialog';
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
+import { Input } from '@agenticdevelopertoolkit/ui/components/input';
+import { Label } from '@agenticdevelopertoolkit/ui/components/label';
+import { Select } from '@agenticdevelopertoolkit/ui/components/select';
 
 import { flattenGroups, type NodeRef } from '../tree/levels';
 import {

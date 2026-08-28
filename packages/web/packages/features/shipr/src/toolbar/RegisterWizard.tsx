@@ -2,17 +2,17 @@
 
 import * as React from 'react';
 
-import { Button } from '@agentic-toolkit/ui/components/button';
+import { Button } from '@agenticdevelopertoolkit/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog';
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
-import { Input } from '@agentic-toolkit/ui/components/input';
-import { Label } from '@agentic-toolkit/ui/components/label';
-import { Select } from '@agentic-toolkit/ui/components/select';
+} from '@agenticdevelopertoolkit/ui/components/dialog';
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
+import { Input } from '@agenticdevelopertoolkit/ui/components/input';
+import { Label } from '@agenticdevelopertoolkit/ui/components/label';
+import { Select } from '@agenticdevelopertoolkit/ui/components/select';
 
 import { flattenGroups } from '../tree/levels';
 import type {

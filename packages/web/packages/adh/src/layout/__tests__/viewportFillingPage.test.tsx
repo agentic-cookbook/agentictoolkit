@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { render } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
-import { HierarchicalTopicDetail, type TopicLevel } from '@agentic-toolkit/ui/blocks'
+import { HierarchicalTopicDetail, type TopicLevel } from '@agenticdevelopertoolkit/ui/blocks'
 import { AdhAppShell } from '../AdhAppShell'
 
 /**

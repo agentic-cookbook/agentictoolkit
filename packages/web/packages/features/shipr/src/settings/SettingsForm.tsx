@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 
-import { Button } from '@agentic-toolkit/ui/components/button';
-import { Checkbox } from '@agentic-toolkit/ui/components/checkbox';
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
+import { Button } from '@agenticdevelopertoolkit/ui/components/button';
+import { Checkbox } from '@agenticdevelopertoolkit/ui/components/checkbox';
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
 
 import { useSubmit } from '../toolbar/dialogs';
 import { repoLabel, shardLabel } from '../tree/toLevels';

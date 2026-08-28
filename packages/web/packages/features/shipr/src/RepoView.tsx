@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
-import { Spinner } from '@agentic-toolkit/ui/components/spinner';
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
+import { Spinner } from '@agenticdevelopertoolkit/ui/components/spinner';
 
 import type { ShiprClient } from './client';
 import { Ladder } from './ladder/Ladder';

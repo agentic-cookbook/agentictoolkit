@@ -1,4 +1,4 @@
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks';
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks';
 import type { ThemeEditorApi } from '@agentic-toolkit/adh/themes';
 import type { ThemeAreasSurface } from './seams';
 export declare function useSiteThemeBranch(ed: ThemeEditorApi, themeAreas: ThemeAreasSurface): {

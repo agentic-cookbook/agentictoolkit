@@ -3,16 +3,16 @@
 import * as React from 'react';
 
 import { StackLevels, StandaloneRailHost } from '@agentic-toolkit/resource';
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks';
-import { TopicSelectHint } from '@agentic-toolkit/ui/blocks';
-import { Button } from '@agentic-toolkit/ui/components/button';
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks';
+import { TopicSelectHint } from '@agenticdevelopertoolkit/ui/blocks';
+import { Button } from '@agenticdevelopertoolkit/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog';
+} from '@agenticdevelopertoolkit/ui/components/dialog';
 import { Minus, Plug, Plus } from 'lucide-react';
 
 import { ConnectionsDialog } from './ConnectionsDialog';

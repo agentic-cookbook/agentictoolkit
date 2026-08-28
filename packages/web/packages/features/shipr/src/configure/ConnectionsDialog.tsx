@@ -5,15 +5,15 @@ import * as React from 'react';
 import { useWorkspaceDefaultEcosystemId } from '@agentic-toolkit/data/ecosystems';
 import { IntegrationsPane } from '@agentic-toolkit/integrations';
 import { StandaloneRailHost } from '@agentic-toolkit/resource';
-import { Button } from '@agentic-toolkit/ui/components/button';
+import { Button } from '@agenticdevelopertoolkit/ui/components/button';
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@agentic-toolkit/ui/components/dialog';
-import { EmptyState } from '@agentic-toolkit/ui/components/empty-state';
+} from '@agenticdevelopertoolkit/ui/components/dialog';
+import { EmptyState } from '@agenticdevelopertoolkit/ui/components/empty-state';
 
 import type { ShiprClient } from '../client';
 

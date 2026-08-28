@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 
-import { HierarchicalTopicDetail } from '@agentic-toolkit/ui/blocks';
-import { ErrorText } from '@agentic-toolkit/ui/components/error-text';
+import { HierarchicalTopicDetail } from '@agenticdevelopertoolkit/ui/blocks';
+import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
 
 import { useRunningRepos } from './activity/useRunningRepos';
 import { isFinished, useRuns } from './activity/useRuns';

@@ -1,4 +1,4 @@
-import type { TopicLevel } from '@agentic-toolkit/ui/blocks';
+import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks';
 import type { DebugConsoleChatTheme } from './DebugConsoleProvider';
 /** Build the chat-themes rail level. Selecting a row applies that theme immediately. */
 export declare function buildChatThemeLevel(chat: DebugConsoleChatTheme): TopicLevel;
