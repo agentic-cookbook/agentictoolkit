@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 extension ComposableSettings {
 
@@ -69,7 +70,9 @@ extension ComposableSettings {
             swatch.layer?.cornerRadius = 3
             swatch.layer?.backgroundColor = color.cgColor
             swatch.layer?.borderWidth = 0.5
-            swatch.layer?.borderColor = NSColor.separatorColor.cgColor
+            swatch.observeTheme { view, palette in
+                view.layer?.borderColor = palette.nsColor(.border).cgColor
+            }
             swatch.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 swatch.widthAnchor.constraint(equalToConstant: self.swatchSize.width),

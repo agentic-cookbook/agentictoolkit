@@ -64,6 +64,7 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		005D33E8BEDCDD9EF8506865 /* SettingsLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 648BC67413C7979A2DE2FB0C /* SettingsLabels.swift */; };
 		00D18DF46FCAF355B0DEB859 /* MCPServersPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */; };
 		012DD02876D159608328D05C /* SystemWindowObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3993E448E21F5D13A0ECCEB /* SystemWindowObserver.swift */; };
 		0140756863045D57212786E6 /* SwatchGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05BD9A0A3BC969FF0031625D /* SwatchGridView.swift */; };
@@ -186,6 +187,7 @@
 		3CBCD0A41F04581E70F5932C /* AIRequestBuilderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD7610008818461A7BFD0669 /* AIRequestBuilderTests.swift */; };
 		3CC93775A0519CD6A75E67E2 /* KeychainSecureSettingsStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33F852968686967ACD65E1B5 /* KeychainSecureSettingsStorageProvider.swift */; };
 		3D38B1E9199B53A685D7BECA /* TextEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 426B8225A1D8E3C1C86F547B /* TextEditView.swift */; };
+		3D6D242273D6BEDD8B16AE6B /* ThemeEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00B9D963DAE74394A2EFB02D /* ThemeEnvironment.swift */; };
 		3D8FDE69F0862424CB6065B5 /* ModelUseFacet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D68CD35D9ECBEB6AC5B40C8 /* ModelUseFacet.swift */; };
 		3E0056F9234A29B727840889 /* ContextPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB8CF91E48AC58132935F43 /* ContextPickerView.swift */; };
 		3E4FBCAC30712619E45DA1FC /* SqliteStorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831448F23EB8464AE194DE61 /* SqliteStorageProvider.swift */; };
@@ -303,6 +305,7 @@
 		697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */; };
 		699D0BDBD0FF23DBFF85FD1C /* NSWindow+FitHeight.swift in Sources */ = {isa = PBXBuildFile; fileRef = B6F3B2DDE9E4F4930EF59CDC /* NSWindow+FitHeight.swift */; };
 		69A4F55A1A5232DC43433D61 /* SystemPermissionChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = FCADA5C4506D83ABF68AC262 /* SystemPermissionChecker.swift */; };
+		6BB4F6E73F21E0104231BB26 /* SemanticPalette+SwiftUI.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECBBFE24B8B46A204F53E629 /* SemanticPalette+SwiftUI.swift */; };
 		6C620EF13FC80A3002135271 /* TerminalSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22AF47A752273B94A3878209 /* TerminalSessionManager.swift */; };
 		6CB386464D1A769B4DC084E5 /* SystemWindowShortcutNamesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8D88457CCF67BF90188C52B /* SystemWindowShortcutNamesTests.swift */; };
 		6D8381DDE965C718F595FEDD /* Project.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0813A7282649BE9C8162E901 /* Project.swift */; };
@@ -1199,6 +1202,7 @@
 /* Begin PBXFileReference section */
 		0028396C00D80631AFF612E5 /* HeuristicsSettingsTab.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeuristicsSettingsTab.swift; sourceTree = "<group>"; };
 		00A0969DF238A10DDDAED065 /* PanelHelp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelHelp.swift; sourceTree = "<group>"; };
+		00B9D963DAE74394A2EFB02D /* ThemeEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEnvironment.swift; sourceTree = "<group>"; };
 		01D6F9AF7E95A2FD23693783 /* GroupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GroupView.swift; sourceTree = "<group>"; };
 		01DA1274B94A6E335F136DF5 /* AIProviderMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderMigrationTests.swift; sourceTree = "<group>"; };
 		02A0409594B91B8612E5DFA9 /* LLMProvidersListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LLMProvidersListViewModelTests.swift; sourceTree = "<group>"; };
@@ -1409,6 +1413,7 @@
 		62FE1E6B9845CD68F2E7DEE9 /* TopicListViewControllerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopicListViewControllerTests.swift; sourceTree = "<group>"; };
 		635A19282B38E0A6A626932E /* MCPServerConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServerConfiguration.swift; sourceTree = "<group>"; };
 		645F3729EEAEC76F45754792 /* SyncEngineGRDBIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineGRDBIntegrationTests.swift; sourceTree = "<group>"; };
+		648BC67413C7979A2DE2FB0C /* SettingsLabels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsLabels.swift; sourceTree = "<group>"; };
 		64A98A60FFB1917014F3BD5A /* TerminalSessionWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSessionWindowController.swift; sourceTree = "<group>"; };
 		659E37C58EEAD586A1CB9F82 /* WhippetDocumentController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhippetDocumentController.swift; sourceTree = "<group>"; };
 		65AD1E929AB88513FB11E84F /* TerminalSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalSession.swift; sourceTree = "<group>"; };
@@ -1681,6 +1686,7 @@
 		EBF39C026522BC346B944957 /* MCPServersPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MCPServersPanelViewController.swift; sourceTree = "<group>"; };
 		EC220478903118D361CF5A97 /* HorizontalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HorizontalStackView.swift; sourceTree = "<group>"; };
 		EC7181F57AD1A664A8DA86E0 /* NestedSplitViewWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NestedSplitViewWindowController.swift; sourceTree = "<group>"; };
+		ECBBFE24B8B46A204F53E629 /* SemanticPalette+SwiftUI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SemanticPalette+SwiftUI.swift"; sourceTree = "<group>"; };
 		ED359566B6228E80AD5790E7 /* AIPluginKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginKitTests.swift; sourceTree = "<group>"; };
 		ED4D63AE8BFB6DB277DD4091 /* ProjectHost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectHost.swift; sourceTree = "<group>"; };
 		EDA65482B1211A93412EC507 /* ContentViewerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentViewerView.swift; sourceTree = "<group>"; };
@@ -2041,6 +2047,7 @@
 			children = (
 				DEC1699BDA1A015CB677274D /* NSFont+TabularFigures.swift */,
 				3ED3EAE0DC19C68ED4E091A0 /* SemanticPalette+NSColor.swift */,
+				ECBBFE24B8B46A204F53E629 /* SemanticPalette+SwiftUI.swift */,
 				8538B5AC2EE46C8506D9449C /* ThemeTypography+NSFont.swift */,
 			);
 			path = Theme;
@@ -2789,6 +2796,7 @@
 				2035AE53EF8F5238E77BF732 /* ProgressView.swift */,
 				BEDE81A0A5A28045A2DF62BF /* RadioButtonChoiceView.swift */,
 				F055899B54CE2F0A16060100 /* SecureTextEditView.swift */,
+				648BC67413C7979A2DE2FB0C /* SettingsLabels.swift */,
 				24D9B70A850325218B915C39 /* SettingsViewProtocol.swift */,
 				93E5BDE4C30A4CBC805A5B01 /* SliderView.swift */,
 				918004B1B4E31BFD1A4DE40B /* StepperView.swift */,
@@ -3402,6 +3410,7 @@
 			children = (
 				9F660C80736D52BE380955C0 /* ThemeBinding.swift */,
 				AE176E76A4DCA8EB707F7E28 /* ThemedViews.swift */,
+				00B9D963DAE74394A2EFB02D /* ThemeEnvironment.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -4533,6 +4542,7 @@
 				A550F3AD5FC8720B890E7CEB /* SessionWatcherSession.swift in Sources */,
 				533AEB3D0652FA90160D2719 /* SettingsCoordinator.swift in Sources */,
 				B4E4B5EC3E50F76CE53A1B4B /* SettingsHelpPresenting.swift in Sources */,
+				005D33E8BEDCDD9EF8506865 /* SettingsLabels.swift in Sources */,
 				A2248B641042A09BBE6A55C8 /* SettingsPanelDescriptor.swift in Sources */,
 				A68B6F745019C14AFC2FB782 /* SettingsPanelListViewController.swift in Sources */,
 				F7DE43710415ABA99C80B275 /* SettingsPanelSplitViewController.swift in Sources */,
@@ -4579,6 +4589,7 @@
 				E7429E822F8B685077EAE8CE /* ThemeBinding.swift in Sources */,
 				FC38B3E73FEE0108DA9C8242 /* ThemeChoiceViewModel.swift in Sources */,
 				675B06D9A4A33156817D9200 /* ThemeDetailPanelViewController.swift in Sources */,
+				3D6D242273D6BEDD8B16AE6B /* ThemeEnvironment.swift in Sources */,
 				CDCA325EB6B1E31C32F44699 /* ThemeManager.swift in Sources */,
 				7447E333BF884B0A86BDD60F /* ThemePickerView.swift in Sources */,
 				0FD51C329CCD840A0184F220 /* ThemePreviewView.swift in Sources */,
@@ -4889,6 +4900,7 @@
 				2574598DAD92C7B1127E0465 /* Placeholder.swift in Sources */,
 				9B04CDC955CED31768F4E7FE /* RGBAColor+NSColor.swift in Sources */,
 				F103A7103A86DCCAD65C9BE2 /* SemanticPalette+NSColor.swift in Sources */,
+				6BB4F6E73F21E0104231BB26 /* SemanticPalette+SwiftUI.swift in Sources */,
 				147D81ADF8BEFA3096888A41 /* SystemAccessibilityPermission.swift in Sources */,
 				E5090C6BD300CC12A4D8E203 /* SystemWindowAXHelper.swift in Sources */,
 				5E8B6B3AE4FCA0E36A375CFC /* SystemWindowContextError.swift in Sources */,

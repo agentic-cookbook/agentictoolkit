@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 extension ComposableSettings {
 
@@ -36,11 +37,23 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
-            let font: NSFont = monospaced
-                ? .monospacedSystemFont(ofSize: 12, weight: .regular)
-                : .systemFont(ofSize: 12)
+            let palette = ThemePaletteObserver.currentPalette
+            let font = palette.font(monospaced ? .code : .body)
             self.textView.font = font
             self.textView.string = viewModel.value
+            // An `NSTextView` has no themed subclass — it is the document, not a
+            // control — so it carries its own observer for the four colors that
+            // otherwise stay AppKit's.
+            self.textView.observeTheme { [monospaced] view, palette in
+                view.font = palette.font(monospaced ? .code : .body)
+                view.textColor = palette.primaryTextColor
+                view.backgroundColor = palette.controlBackgroundColor
+                view.insertionPointColor = palette.cursorColor
+                view.selectedTextAttributes = [
+                    .backgroundColor: palette.selectionColor,
+                    .foregroundColor: palette.selectionTextColor
+                ]
+            }
             self.textView.delegate = self
             self.textView.isRichText = false
             self.textView.allowsUndo = true
@@ -68,6 +81,9 @@ extension ComposableSettings {
             self.scrollView.hasVerticalScroller = true
             self.scrollView.borderType = .bezelBorder
             self.scrollView.drawsBackground = true
+            self.scrollView.observeTheme { view, palette in
+                view.backgroundColor = palette.controlBackgroundColor
+            }
 
             let stack = NSStackView(views: [self.label, self.scrollView])
             stack.orientation = .vertical

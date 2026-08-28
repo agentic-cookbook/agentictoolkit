@@ -21,8 +21,12 @@ extension ComposableSettings {
         ) {
             self.observer = UserSettingObserver(dismissedSetting)
             self.textLabel = NSTextField(wrappingLabelWithString: text)
-            self.textLabel.font = .systemFont(ofSize: 12)
-            self.textLabel.textColor = .secondaryLabelColor
+            // Wrapping labels have no themed equivalent (`ThemedLabel` is
+            // single-line), so this one carries its own observer.
+            self.textLabel.observeTheme { label, palette in
+                label.textColor = palette.secondaryTextColor
+                label.font = palette.font(.caption)
+            }
 
             self.dismissButton = NSButton(title: buttonTitle, target: nil, action: nil)
             self.dismissButton.bezelStyle = .rounded

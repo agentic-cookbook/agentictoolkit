@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 extension ComposableSettings {
 
@@ -23,6 +24,22 @@ extension ComposableSettings {
 
             self.textField.target = self
             self.textField.action = #selector(textFieldChanged(_:))
+            // Subclasses substitute their own field (`SecureTextEditView` returns
+            // an `NSSecureTextField`), so the theme is attached here rather than
+            // by returning a `ThemedTextField` from the factory.
+            self.textField.observeTheme { field, palette in
+                field.font = palette.font(.body)
+                field.textColor = palette.primaryTextColor
+                if let placeholder = field.placeholderString {
+                    field.placeholderAttributedString = NSAttributedString(
+                        string: placeholder,
+                        attributes: [
+                            .foregroundColor: palette.placeholderTextColor,
+                            .font: palette.font(.body)
+                        ]
+                    )
+                }
+            }
 
             viewModel.onChange = { [weak self] _ in
                 guard let self else { return }
@@ -47,9 +64,7 @@ extension ComposableSettings {
         }
 
         static func createLabel(title: String) -> NSTextField {
-            let label = NSTextField(labelWithString: title)
-            label.font = .systemFont(ofSize: 13, weight: .semibold)
-            return label
+            ComposableSettings.makeRowLabel(title)
         }
 
         /// Override to substitute a different `NSTextField` subclass — e.g.

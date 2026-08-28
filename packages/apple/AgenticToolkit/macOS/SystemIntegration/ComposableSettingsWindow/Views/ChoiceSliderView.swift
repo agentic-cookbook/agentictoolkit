@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 extension ComposableSettings {
 
@@ -97,21 +98,20 @@ extension ComposableSettings {
         }
 
         static func createLabel(title: String) -> NSTextField {
-            let label = NSTextField(labelWithString: title)
-            label.font = .systemFont(ofSize: 13, weight: .semibold)
-            return label
+            ComposableSettings.makeRowLabel(title)
         }
 
         static func createValueLabel() -> NSTextField {
-            let label = NSTextField(labelWithString: "")
-            label.font = .systemFont(ofSize: 11)
-            label.textColor = .secondaryLabelColor
+            let label = ComposableSettings.makeValueLabel()
             label.alignment = .left
             return label
         }
 
         private static func maxLabelWidth(for labels: [String], font: NSFont?) -> CGFloat {
-            let font = font ?? .systemFont(ofSize: 11)
+            // The widest choice label decides the column width, so it has to be
+            // measured in the font the label will actually draw in — the theme's
+            // caption style, not a fixed 11pt system font.
+            let font = font ?? ThemePaletteObserver.currentPalette.font(.caption)
             return labels
                 .map { $0.renderedWidth(usingFont: font) }
                 .max() ?? 0

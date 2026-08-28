@@ -1,4 +1,5 @@
 import AppKit
+import AgenticToolkitCore
 
 extension ComposableSettings {
 
@@ -76,9 +77,7 @@ extension ComposableSettings {
         }
 
         static func createLabel(title: String) -> NSTextField {
-            let label = NSTextField(labelWithString: title)
-            label.font = .systemFont(ofSize: 13, weight: .semibold)
-            return label
+            ComposableSettings.makeRowLabel(title)
         }
     }
 }
