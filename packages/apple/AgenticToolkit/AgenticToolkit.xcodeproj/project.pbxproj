@@ -325,6 +325,7 @@
 		7AEBC5E448A05B939573C457 /* AgenticToolkitSync.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 085D01FE73EBFAD731A18864 /* AgenticToolkitSync.framework */; };
 		7B2ED1D6783038C46E7AD287 /* HeuristicsSettingsTab.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0028396C00D80631AFF612E5 /* HeuristicsSettingsTab.swift */; };
 		7B33D61A136B5ED511F288E5 /* pull-response.json in Resources */ = {isa = PBXBuildFile; fileRef = EDB9B2647670F382562A9558 /* pull-response.json */; };
+		7B8B9A6164DDB230C9EF1139 /* SingleWindowControllerMoveRefitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C739791754B51B423D9CDB07 /* SingleWindowControllerMoveRefitTests.swift */; };
 		7BD4A4B433DBC67EA2012DE8 /* AgenticToolkitDatabase.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4BB62E3D95DA86CAF132B225 /* AgenticToolkitDatabase.framework */; };
 		7CB3DB6B65E9305CAA792C9F /* FileSystemWatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2951B18E81A33463286D9EE4 /* FileSystemWatcher.swift */; };
 		7CFFEA150BB6C132E93BA1A7 /* SessionListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC98A9EAFD2AEA6EFC2F2DE2 /* SessionListViewModelTests.swift */; };
@@ -1599,6 +1600,7 @@
 		C48F7CD91D0F1AE1F9CB1C72 /* SystemWindowShortcutManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowShortcutManager.swift; sourceTree = "<group>"; };
 		C6CCE95461780CEB975B410C /* ColorViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorViewModel.swift; sourceTree = "<group>"; };
 		C6F58AE1CB2D2BDD4638722E /* ChoiceSliderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceSliderView.swift; sourceTree = "<group>"; };
+		C739791754B51B423D9CDB07 /* SingleWindowControllerMoveRefitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleWindowControllerMoveRefitTests.swift; sourceTree = "<group>"; };
 		C83086F9AA30ABF344231CA8 /* VerticalStackView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerticalStackView.swift; sourceTree = "<group>"; };
 		C85ABE851B5CCFC3FBFC8591 /* LanguageDetectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageDetectionTests.swift; sourceTree = "<group>"; };
 		C8CE9CC3B7493BF16445C111 /* SplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SplitViewController.swift; sourceTree = "<group>"; };
@@ -2836,6 +2838,7 @@
 				F0D644FBD5150190F9AD9E9A /* ReopenOnLaunchPolicyTests.swift */,
 				EA0CDF0223338F1A986F66B0 /* ScreenManagerTests.swift */,
 				8D21F8F899C4B44436BA0F07 /* ScreenMatcherTests.swift */,
+				C739791754B51B423D9CDB07 /* SingleWindowControllerMoveRefitTests.swift */,
 				5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */,
 				B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */,
 				8F32D28A8E0199C82E8216B0 /* WindowManagerRecentsTests.swift */,
@@ -3829,9 +3832,10 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 2640;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = ED6B4A0D97F331B23F4B3844 /* Build configuration list for PBXProject "AgenticToolkit" */;
-			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -3849,6 +3853,7 @@
 				FD865BFA13E614B94554F325 /* XCRemoteSwiftPackageReference "SwiftTerm" */,
 			);
 			preferredProjectObjectVersion = 77;
+			productRefGroup = 1FB4D33EE74A5956DAF82520 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -4825,6 +4830,7 @@
 				7CFFEA150BB6C132E93BA1A7 /* SessionListViewModelTests.swift in Sources */,
 				83EE05B5B7E9A3A0A8496A0D /* SessionListViewTests.swift in Sources */,
 				51A658B855BF4E5349B6940F /* SingleConfigurationChatConfigProviderTests.swift in Sources */,
+				7B8B9A6164DDB230C9EF1139 /* SingleWindowControllerMoveRefitTests.swift in Sources */,
 				697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */,
 				14BC4E01EF0E54BD7BC654B0 /* SystemWindowContextManagerTests.swift in Sources */,
 				F0619763C8A2EC2168010B87 /* SystemWindowMatcherTests.swift in Sources */,

@@ -188,10 +188,26 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
         let frameSize = window.frameRect(
             forContentRect: NSRect(origin: .zero, size: contentSize)
         ).size
-        // Common case on repeated content refits (poll ticks): the fitted size
-        // hasn't changed, so a top-left-anchored fit is a no-op. Bail before
-        // the screen scan + geometry math rather than after.
-        if frameSize == window.frame.size { return }
+        // Common case on repeated content refits (poll ticks): nothing the fit
+        // reads has changed since the last one, so it can only reproduce the
+        // frame it produced then. Bail before the screen scan + geometry math
+        // rather than after.
+        //
+        // All three inputs have to match, not just the size. The fit clamps
+        // the desired size to the room between the window's own top-left
+        // anchor and the screen's edges, so *where* the window sits is as much
+        // an input as how big its content wants to be: a window dragged toward
+        // an edge — or onto a smaller display — asks for exactly the size it
+        // asked for before and must still be told it can't have it. A
+        // size-only test would bail on precisely the moves this fit exists to
+        // answer.
+        let currentVisibleFrame = window.screen?.visibleFrame
+        if let currentVisibleFrame,
+           lastContentFit == ContentFit(desiredFrameSize: frameSize,
+                                        windowFrame: window.frame,
+                                        screenVisibleFrame: currentVisibleFrame) {
+            return
+        }
         let frames = WindowManager.shared.frames
         guard let screen = WindowFrameManager.bestScreen(
             for: window, among: frames.screenProvider.screens
@@ -204,9 +220,41 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
             policy: spec?.overflowPolicy ?? .scrollContent,
             minSize: spec?.minSize ?? window.minSize
         )
+        // Recorded for the bail above *after* the fit, so it describes what the
+        // fit settled on: the frame it produced, on the screen it ended up on
+        // (the `.moveToDisclose` policy can move it onto another one).
+        defer {
+            lastContentFit = window.screen.map {
+                ContentFit(desiredFrameSize: frameSize,
+                           windowFrame: window.frame,
+                           screenVisibleFrame: $0.visibleFrame)
+            }
+        }
         guard target != window.frame else { return }
+        isApplyingContentFit = true
         window.setFrame(target, display: true, animate: false)
+        isApplyingContentFit = false
     }
+
+    /// Everything the last fit read, so an identical re-fit can bail before
+    /// doing the work again. Recomputed on every fit, so a screen whose visible
+    /// area changes underneath a stationary window (a display swap, the Dock
+    /// hiding) re-fits too.
+    private struct ContentFit: Equatable {
+        var desiredFrameSize: NSSize
+        var windowFrame: NSRect
+        var screenVisibleFrame: NSRect
+    }
+
+    /// `nil` until the first fit, and whenever the window is on no screen at
+    /// all (which reads as "unknown", never as "unchanged").
+    private var lastContentFit: ContentFit?
+
+    /// True only for the instant `fitWindow` spends applying its own frame.
+    /// A content-hugging fit is top-left anchored, so it changes the window's
+    /// origin and AppKit posts `windowDidMove` for it; without this the fit
+    /// would schedule a follow-up move refit against itself every time.
+    private var isApplyingContentFit = false
 
     // MARK: - Content refit seam
 
@@ -233,6 +281,57 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     public func performContentRefit() {
         guard !isContentRefitSuppressed, let size = contentSizeProvider?() else { return }
         fitWindow(toContentSize: size)
+    }
+
+    /// How long a move waits for further moves before the refit runs. A drag
+    /// posts a move notification per event; fitting on each one would resize
+    /// the window under the pointer that is holding it, so the moves are
+    /// coalesced into one fit at the end.
+    static let moveRefitSettleDelay: Duration = .milliseconds(200)
+
+    /// The in-flight settle timer. Cancelled and restarted by every move, so a
+    /// drag of any length produces exactly one fit.
+    private var moveRefitSettleTask: Task<Void, Never>?
+
+    /// Whether a move should re-fit this window at all: only a content-hugging
+    /// window owns its own size (a resizable window's size is the user's), and
+    /// not while a config popover has it frozen. Overridden by windows that hug
+    /// their content through some other mechanism than `contentSizeProvider` —
+    /// a list window that owns only its height, say.
+    open var wantsRefitAfterMove: Bool {
+        contentSizeProvider != nil && !isContentRefitSuppressed && !isApplyingContentFit
+    }
+
+    /// The fit a settled move applies. The default is the whole-size content
+    /// refit; a window that hugs only one dimension overrides this with its own
+    /// fit, and inherits the settle timing rather than re-deriving it.
+    open func refitContentAfterMove() {
+        performContentRefit()
+    }
+
+    /// Re-fits a content-hugging window once its move has settled. The window
+    /// was sized for the screen it was on: moved to a roomier display it can
+    /// grow back to the size its content wanted all along, moved to a smaller
+    /// one it has to shrink to what fits there — `fitWindow(toContentSize:)`
+    /// recomputes both against the screen the window now sits on.
+    ///
+    /// The fit is deliberately not applied *during* the drag: it is top-left
+    /// anchored, so resizing mid-drag would slide the window's edges around
+    /// the pointer that is still holding it. A held mouse button (a drag
+    /// paused, not finished) keeps waiting rather than firing early.
+    func scheduleContentRefitAfterMove() {
+        guard wantsRefitAfterMove else { return }
+        moveRefitSettleTask?.cancel()
+        moveRefitSettleTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: Self.moveRefitSettleDelay)
+                guard !Task.isCancelled, let self else { return }
+                guard NSEvent.pressedMouseButtons == 0 else { continue }
+                self.moveRefitSettleTask = nil
+                self.refitContentAfterMove()
+                return
+            }
+        }
     }
 
     /// Freezes the window at its current size while a config popover is open, so a
@@ -330,6 +429,7 @@ open class SingleWindowController: NSWindowController, NSWindowDelegate {
     open func windowDidMove(_ notification: Notification) {
         guard let window = notification.object as? NSWindow else { return }
         WindowManager.shared.frames.saveFrame(for: window, id: windowID)
+        scheduleContentRefitAfterMove()
     }
 
     open func windowDidResize(_ notification: Notification) {
