@@ -62,7 +62,7 @@ public class NestedSplitViewDocument: NSDocument {
             let active = pendingActive ?? pending[0].id
             return (pending, active, pendingEdges ?? [.top])
         }
-        let tab = TabRecord(title: "Tab 1", root: defaultLayout())
+        let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
         return ([tab], tab.id, [.top])
     }
 
@@ -121,13 +121,10 @@ public class NestedSplitViewDocument: NSDocument {
             let pendingActive = pendingActiveTabIDForLoad
             let pendingEdges = pendingEnabledEdgesForLoad
             stateLock.unlock()
-            // `NestedContentRegistry.placeholderIdentifier` is MainActor-
-            // isolated; this writer can run off-main, so use the literal.
-            let tabs = pending ?? [TabRecord(title: "Tab 1", root: LayoutNode.split(
-                orientation: "horizontal",
-                first: LayoutNode.leaf(contentType: "placeholder"),
-                second: LayoutNode.leaf(contentType: "placeholder")
-            ))]
+            // `DocumentLayoutBlueprint` is nonisolated and lock-guarded
+            // precisely so this writer, which can run off-main, seeds the same
+            // layout every other entry point does.
+            let tabs = pending ?? [TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())]
             let active = pendingActive ?? tabs.first?.id
             try newStore.saveTabs(tabs, activeTabID: active, enabledEdges: pendingEdges ?? [.top])
         }
@@ -142,14 +139,6 @@ public class NestedSplitViewDocument: NSDocument {
         try write(to: url, ofType: typeName)
     }
 
-    @MainActor private func defaultLayout() -> LayoutNode {
-        LayoutNode.split(
-            orientation: "horizontal",
-            first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
-            second: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
-        )
-    }
-
     // MARK: - Window controllers
 
     @MainActor
@@ -161,7 +150,7 @@ public class NestedSplitViewDocument: NSDocument {
             try? FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
             let dbPath = tmpURL.appendingPathComponent(Self.databaseFilename).path
             if let store = try? DocumentLayoutStore(path: dbPath) {
-                let tab = TabRecord(title: "Tab 1", root: defaultLayout())
+                let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
                 try? store.saveTabs([tab], activeTabID: tab.id)
                 setLayoutStore(store)
             }

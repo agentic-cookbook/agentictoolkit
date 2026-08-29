@@ -28,18 +28,26 @@ public final class NestedViewController: NSViewController {
         fatalError("init(coder:) is not supported")
     }
 
+    /// The registry-vended content, held as a child view controller so AppKit
+    /// keeps it alive, routes appearance callbacks to it, and puts it in the
+    /// responder chain. `nil` only if the document went away first.
+    public private(set) var contentViewController: NSViewController?
+
     public override func loadView() {
         let container = ThemedBackgroundView(role: .windowBackground)
         container.frame = NSRect(x: 0, y: 0, width: 300, height: 200)
 
         let content: NSView
         if let document = splitDocument {
-            content = NestedContentRegistry.makeView(
+            let contentVC = NestedContentRegistry.makeContentViewController(
                 for: contentTypeIdentifier,
                 nodeID: nodeID,
                 document: document,
                 paneNumber: paneNumber
             )
+            addChild(contentVC)
+            contentViewController = contentVC
+            content = contentVC.view
         } else {
             content = NSView(frame: container.bounds)
         }
@@ -61,6 +69,14 @@ public final class NestedViewController: NSViewController {
         ])
 
         self.view = container
+    }
+
+    /// Called by the enclosing split when this pane leaves the tree for good.
+    /// The pane's content may be holding shells or file-system watchers, and
+    /// "released at some point after the last reference drops" is not good
+    /// enough for a child process.
+    public func paneWillBeRemoved() {
+        (contentViewController as? PaneContentTeardown)?.paneContentWillBeDiscarded()
     }
 
     private func makeSplitButton() -> NSPopUpButton {

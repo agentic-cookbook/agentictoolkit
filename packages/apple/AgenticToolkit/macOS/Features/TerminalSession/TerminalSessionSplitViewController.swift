@@ -10,8 +10,15 @@ public final class TerminalSessionSplitViewController: ThemedSplitViewController
     public let sessionListVC: TerminalSessionListViewController
     public let terminalContentVC: TerminalSessionContentViewController
 
-    public init(sessionManager: TerminalSessionManager) {
+    /// Divider-position autosave key. AppKit keys these globally, so two split
+    /// views alive at once under one name fight over the same stored position —
+    /// which is exactly what happens once a document holds several terminal
+    /// panes. Callers that can have more than one pass a distinct name.
+    private let splitAutosaveName: String
+
+    public init(sessionManager: TerminalSessionManager, autosaveName: String = "terminal-split") {
         self.sessionManager = sessionManager
+        self.splitAutosaveName = autosaveName
         self.sessionListVC = TerminalSessionListViewController(sessionManager: sessionManager)
         self.terminalContentVC = TerminalSessionContentViewController(sessionManager: sessionManager)
         super.init(nibName: nil, bundle: nil)
@@ -36,12 +43,20 @@ public final class TerminalSessionSplitViewController: ThemedSplitViewController
         addSplitViewItem(contentItem)
 
         splitView.dividerStyle = .thin
-        splitView.autosaveName = "terminal-split"
+        splitView.autosaveName = NSSplitView.AutosaveName(splitAutosaveName)
     }
 
     public func toggleSidebar() {
         if let sidebarItem = splitViewItems.first {
             sidebarItem.animator().isCollapsed = !sidebarItem.isCollapsed
         }
+    }
+}
+
+extension TerminalSessionSplitViewController: PaneContentTeardown {
+    /// A closed pane's shells go with it — they are child processes of the app,
+    /// so nothing else would ever reap them.
+    public func paneContentWillBeDiscarded() {
+        sessionManager.terminateAll()
     }
 }

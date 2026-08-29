@@ -11,8 +11,8 @@ public enum DocumentLayoutStoreError: Error {
     case invalidSchema(String)
 }
 
-public struct LayoutNode {
-    public indirect enum Kind {
+public struct LayoutNode: Sendable {
+    public indirect enum Kind: Sendable {
         case split(orientation: String, first: LayoutNode, second: LayoutNode)
         case leaf(contentType: String, paneLabel: String?)
     }

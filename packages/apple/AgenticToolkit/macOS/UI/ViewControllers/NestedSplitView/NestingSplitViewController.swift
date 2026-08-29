@@ -152,6 +152,10 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         if isViewLoaded, let item = splitViewItems.first(where: { $0.viewController === child }) {
             removeSplitViewItem(item)
         }
+        // The pane is gone from the tree for good, so its content releases what
+        // it holds now — otherwise a closed pane's shells and file watchers run
+        // on until the last reference happens to drop.
+        child.paneWillBeRemoved()
 
         if layoutChildren.count == 1, !isRoot, let parentSplit = parent as? NestingSplitViewController {
             let survivor = layoutChildren[0]
@@ -250,9 +254,18 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         return LayoutNode.leaf(id: UUID(), contentType: NestedContentRegistry.placeholderIdentifier)
     }
 
+    /// Sizing comes from whatever the leaf's content type registered. A nested
+    /// split has no content type of its own and takes the defaults — its own
+    /// leaves size themselves one level down.
     private static func makeItem(for viewController: NSViewController) -> NSSplitViewItem {
         let item = NSSplitViewItem(viewController: viewController)
-        item.minimumThickness = 120
+        let metrics = (viewController as? NestedViewController)
+            .map { NestedContentRegistry.metrics(for: $0.contentTypeIdentifier) }
+            ?? .default
+        item.minimumThickness = metrics.minimumThickness
+        if let fraction = metrics.preferredThicknessFraction {
+            item.preferredThicknessFraction = fraction
+        }
         item.holdingPriority = .defaultLow
         return item
     }

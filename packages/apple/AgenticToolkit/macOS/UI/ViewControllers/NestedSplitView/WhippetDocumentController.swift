@@ -16,7 +16,9 @@ public protocol ProjectURLPrompting {
 public final class WhippetDocumentController: NSDocumentController {
 
     private static let projectUTI = "com.mikefullerton.whippet.project"
-    private static let projectExtension = "whiproj"
+    /// Public because pane content has to recognise the project package too —
+    /// the file browser shows it as one opaque item rather than a folder.
+    public static let projectExtension = "whiproj"
 
     /// Override in tests to avoid running AppKit modal panels.
     public var urlPrompter: ProjectURLPrompting = DefaultProjectURLPrompter()
@@ -129,9 +131,9 @@ public final class WhippetDocumentController: NSDocumentController {
         return doc
     }
 
-    /// Creates an empty `.whiproj` package at `url` seeded with an initial
-    /// two-pane horizontal layout. Returns the canonical URL (with extension
-    /// appended if missing). Exposed for integration tests.
+    /// Creates an empty `.whiproj` package at `url` seeded with the app's
+    /// default tab layout. Returns the canonical URL (with extension appended
+    /// if missing). Exposed for integration tests.
     public static func writeEmptyPackage(at url: URL) throws -> URL {
         let finalURL = url.pathExtension.lowercased() == Self.projectExtension
             ? url
@@ -144,12 +146,7 @@ public final class WhippetDocumentController: NSDocumentController {
         try fileManager.createDirectory(at: finalURL, withIntermediateDirectories: true)
         let dbURL = finalURL.appendingPathComponent(NestedSplitViewDocument.databaseFilename)
         let store = try DocumentLayoutStore(path: dbURL.path)
-        let initialLayout = LayoutNode.split(
-            orientation: "horizontal",
-            first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
-            second: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
-        )
-        let tab = TabRecord(title: "Tab 1", root: initialLayout)
+        let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
         try store.saveTabs([tab], activeTabID: tab.id)
         return finalURL
     }

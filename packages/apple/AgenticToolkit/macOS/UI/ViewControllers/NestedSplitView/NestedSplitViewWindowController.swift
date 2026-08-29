@@ -187,7 +187,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
     private func makeSplitController(for tabID: UUID) -> NestingSplitViewController {
         let split = NestingSplitViewController.make(
-            from: Self.defaultTabLayout(),
+            from: DocumentLayoutBlueprint.makeTabLayout(),
             document: splitDocument,
             isRoot: true
         )
@@ -368,13 +368,6 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         )
     }
 
-    private static func defaultTabLayout() -> LayoutNode {
-        LayoutNode.split(
-            orientation: "horizontal",
-            first: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier),
-            second: LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
-        )
-    }
 }
 
 // MARK: - MultiTabbedViewControllerDelegate
