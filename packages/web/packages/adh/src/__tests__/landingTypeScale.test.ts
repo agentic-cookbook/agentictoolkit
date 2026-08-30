@@ -406,11 +406,24 @@ describe('every fallback literal is the value the default theme sets', () => {
       }
     }
     // A scan that found nothing to check is the failure this whole describe exists for, so
-    // the floor moves with the root rather than being one number that has to hold for both:
-    // a single low floor would let the adh run silently lose two thirds of its coverage and
-    // still pass. Measured at the time of writing — 109 checked from frontend/src, 40 from
-    // packages/web alone — and set below each so a real consumer going missing trips it.
-    expect(checked).toBeGreaterThan(ADH_SRC ? 50 : 30)
+    // the floor moves with the root rather than being one number that has to hold for both,
+    // and each is set just below the measured count so a real consumer going missing trips
+    // it.
+    //
+    // RE-MEASURED after adh's mono-repo split. The old pair (50 / 30) was taken when
+    // frontend/src held every site in the fleet and the adh root therefore checked 109
+    // against the workspace's 40 — which is what the old comment's "two thirds of its
+    // coverage" was about. Those sites are their own repositories now, so almost every
+    // consumer of this scale lives inside THIS package: 44 of the 47 an adh checkout sees
+    // come from SiteLanding.tsx (12), adh-concepts.css (25) and adh-legal.css (7), and the
+    // remaining 3 from the one site adh still holds, agenticdeveloperteam/src/site.css.
+    //
+    // So the gap between the two roots is 3 rather than 69, and the floors are picked to
+    // catch the smallest real loss on each side: 44 fails the moment adh's last in-repo
+    // consumer goes (47 -> 44), and 40 fails if any one of the three files above does. Do
+    // not "fix" a future failure here by lowering a floor — the count falling is the
+    // finding, and the number to move is the one the consumer went to.
+    expect(checked).toBeGreaterThan(ADH_SRC ? 44 : 40)
     expect(offenders).toEqual([])
   })
 })
