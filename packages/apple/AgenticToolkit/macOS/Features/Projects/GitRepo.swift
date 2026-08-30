@@ -79,16 +79,27 @@ public struct ProjectScanSummary: Sendable, Equatable {
 
     public init() {}
 
-    public var total: Int { added + moved + missing + restored + unchanged }
+    /// The projects the scan actually found on disk. Missing rows are not
+    /// among them: they are what the registry remembers and the disk no longer
+    /// has, which is the opposite of a project that is there.
+    public var found: Int { added + moved + restored + unchanged }
+
+    /// Every row in the registry afterwards, found or not.
+    public var total: Int { found + missing }
 
     /// One line for the log, and for the progress window before it closes.
+    ///
+    /// The headline is `found`, never `total`: "406 projects — 281 missing"
+    /// reads as four hundred projects, when the honest number is a hundred and
+    /// twenty-five (`principle-of-least-astonishment`).
     public var summaryText: String {
         var parts: [String] = []
         if added > 0 { parts.append("\(added) new") }
         if moved > 0 { parts.append("\(moved) moved") }
-        if missing > 0 { parts.append("\(missing) missing") }
         if restored > 0 { parts.append("\(restored) restored") }
-        if parts.isEmpty { return "\(total) projects, no changes" }
-        return "\(total) projects — " + parts.joined(separator: ", ")
+        if missing > 0 { parts.append("\(missing) missing") }
+        let headline = "\(found) project\(found == 1 ? "" : "s")"
+        if parts.isEmpty { return headline + ", no changes" }
+        return headline + " — " + parts.joined(separator: ", ")
     }
 }

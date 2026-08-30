@@ -207,7 +207,10 @@ final class ProjectReconcilerTests: XCTestCase {
         XCTAssertEqual(plan.summary.missing, 1)
         XCTAssertEqual(plan.summary.added, 1)
         XCTAssertEqual(plan.summary.total, 4)
-        XCTAssertEqual(plan.summary.summaryText, "4 projects — 1 new, 1 moved, 1 missing")
+        // Three of the four are on disk; the fourth is a row the scan did not
+        // see. Counting it as a project found would be a lie the user notices.
+        XCTAssertEqual(plan.summary.found, 3)
+        XCTAssertEqual(plan.summary.summaryText, "3 projects — 1 new, 1 moved, 1 missing")
     }
 
     func testAQuietScanSaysSo() {
@@ -216,7 +219,7 @@ final class ProjectReconcilerTests: XCTestCase {
             scanned: [scan("/tmp/alpha")],
             now: now
         )
-        XCTAssertEqual(plan.summary.summaryText, "1 projects, no changes")
+        XCTAssertEqual(plan.summary.summaryText, "1 project, no changes")
     }
 
     // MARK: - Helpers
