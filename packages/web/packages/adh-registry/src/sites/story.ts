@@ -198,8 +198,7 @@ export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
   docs: 'toolkit',
   toolkit: 'community',
   community: 'registry',
-  registry: 'devteam',
-  devteam: 'cookbook',
+  registry: 'cookbook',
   cookbook: 'personaregistry',
   // </gen:tour-main>
 }

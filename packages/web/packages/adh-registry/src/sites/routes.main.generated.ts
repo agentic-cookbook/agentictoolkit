@@ -62,17 +62,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/terms',
     '/tour',
   ],
-  devteam: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/details/[[...path]]',
-    '/home',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   docs: [
     '/',
     '/[workspace]/[[...path]]',
