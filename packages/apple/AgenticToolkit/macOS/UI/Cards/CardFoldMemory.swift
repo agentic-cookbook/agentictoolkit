@@ -86,7 +86,6 @@ public final class CardFoldMemory {
         subtitle: String? = nil,
         summary: [DisclosureCardView.SummaryPart] = [],
         status: DisclosureCardView.StatusSymbol? = nil,
-        statusVocabulary: [String] = [],
         isDimmed: Bool = false,
         scaledSize: CGFloat
     ) -> DisclosureCardView {
@@ -96,7 +95,6 @@ public final class CardFoldMemory {
             subtitle: subtitle,
             summary: summary,
             status: status,
-            statusVocabulary: statusVocabulary,
             isCollapsed: isCollapsed(key),
             isDimmed: isDimmed,
             scaledSize: scaledSize

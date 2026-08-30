@@ -68,4 +68,38 @@ struct SemanticPaletteTests {
         let palette = SemanticPalette(theme: degenerate)
         #expect(!palette.chartSeriesColors.contains(palette.color(.windowBackground)))
     }
+
+    @Test("identitySeriesColors tell members apart without claiming a state")
+    func identitySeriesAvoidsSpokenRoles() {
+        let identity = palette.identitySeriesColors
+        #expect(identity.count >= 2)  // enough to tell a nested gauge's rings apart
+        let surface = palette.color(.surface)
+        for color in identity {
+            #expect(color.contrastRatio(against: surface) >= 1.5)
+            // The whole point: a ring that means "the second one" must not be
+            // wearing the color the same view uses to mean "in trouble".
+            #expect(color != palette.color(.accent))
+            #expect(color != palette.color(.success))
+            #expect(color != palette.color(.warning))
+            #expect(color != palette.color(.danger))
+        }
+        #expect(Set(identity.map(\.hexString)).count == identity.count)
+    }
+
+    @Test("identitySeriesColors fall back rather than come back empty")
+    func identitySeriesNeverEmpty() {
+        // A theme whose magenta and cyan slots are all the surface itself: two
+        // members in one color still beat two members in no color at all.
+        let surface = RGBAColor(hexString: "#1e1e2eff")!
+        var ansi = Array(repeating: RGBAColor(hexString: "#268bd2ff")!, count: 16)
+        for slot in [5, 6, 13, 14] { ansi[slot] = surface }
+        let flattened = ColorTheme(
+            name: "T", appearance: .dark,
+            foreground: RGBAColor(hexString: "#cdd6f4ff")!,
+            background: surface,
+            cursor: .white, selection: RGBAColor(hexString: "#445566ff")!, ansi: ansi
+        )
+        let palette = SemanticPalette(theme: flattened)
+        #expect(palette.identitySeriesColors == palette.chartSeriesColors)
+    }
 }

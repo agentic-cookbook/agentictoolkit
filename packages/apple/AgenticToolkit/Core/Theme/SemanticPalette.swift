@@ -163,6 +163,40 @@ public struct SemanticPalette: Equatable, Sendable {
         let visible = (semantic + brights).filter { $0.contrastRatio(against: surface) >= 1.5 }
         return visible.isEmpty ? semantic : visible
     }
+
+    /// An ordered list of hues for telling the MEMBERS of a set apart — the
+    /// rings of a nested gauge, the series of a legend — in a view that ALSO
+    /// colors by state.
+    ///
+    /// Distinct from `chartSeriesColors`, which leads with accent, success,
+    /// warning and danger. Those four are exactly what such a view spends on
+    /// meaning: a member painted `success` claims to be healthy and one painted
+    /// `warning` claims to be in trouble, neither of which is what "this is the
+    /// second one" means. So this list is drawn from the hues those four have
+    /// not taken — magenta and cyan first, then their bright variants — and any
+    /// candidate equal to one of them is dropped rather than merely
+    /// deprioritized, so an identity color can never be read as a state.
+    /// `info` is not excluded: it is a color for a NOTICE, which is a thing a
+    /// view either draws or does not, never a standing a member is in.
+    ///
+    /// Filtered for contrast against `surface` so no member collapses into the
+    /// card it is drawn on, and guaranteed non-empty: a theme whose ANSI table
+    /// offers none of these falls back to `chartSeriesColors`, because two
+    /// members in the same color still beat two members in no color at all.
+    public var identitySeriesColors: [RGBAColor] {
+        let surface = color(.surface)
+        let spoken = [color(.accent), color(.success), color(.warning), color(.danger)]
+        var hues: [RGBAColor] = []
+        for slot in [5, 6, 13, 14] {
+            guard let hue = theme.ansiColor(at: slot),
+                  hue.contrastRatio(against: surface) >= 1.5,
+                  !spoken.contains(hue),
+                  !hues.contains(hue)
+            else { continue }
+            hues.append(hue)
+        }
+        return hues.isEmpty ? chartSeriesColors : hues
+    }
 }
 
 extension SemanticPalette {

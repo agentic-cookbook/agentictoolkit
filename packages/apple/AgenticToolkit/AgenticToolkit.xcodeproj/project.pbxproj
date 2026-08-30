@@ -506,6 +506,7 @@
 		CA4C1BB936969AA1622CB99E /* ChatTranscriptReducer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D8AF051E35975AF66D86F3E /* ChatTranscriptReducer.swift */; };
 		CAB03677DDBF67B944CAA779 /* AIProviderConfigSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B96CF5B3737039A880292A4F /* AIProviderConfigSyncTests.swift */; };
 		CAC99FDFADD265984765C3EC /* GRDBSyncStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 916EE798B464361B030150D4 /* GRDBSyncStoreTests.swift */; };
+		CB3A1A87C58D4D8EA1BB2A7A /* NSFont+TabularFigures.swift in Sources */ = {isa = PBXBuildFile; fileRef = DEC1699BDA1A015CB677274D /* NSFont+TabularFigures.swift */; };
 		CB53A899C846C84BC57368A2 /* Loggable.swift in Sources */ = {isa = PBXBuildFile; fileRef = E44C16FF5550600D6EF44C65 /* Loggable.swift */; };
 		CBC6109FDD5DB04850614941 /* ModelCapability.swift in Sources */ = {isa = PBXBuildFile; fileRef = D8C2D2F51BD87927C2D3FAD4 /* ModelCapability.swift */; };
 		CCD06F69BA7D6A0DD1B0585C /* AgenticToolkitCoreMacOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 61310A916E242BA60A9FE8C1 /* AgenticToolkitCoreMacOS.framework */; };
@@ -1655,6 +1656,7 @@
 		DBF568C4E57FFEE3670544C8 /* FileTypesSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTypesSettingsView.swift; sourceTree = "<group>"; };
 		DD4ED71A3B2B4EAEBE0483F9 /* NotesSplitViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesSplitViewController.swift; sourceTree = "<group>"; };
 		DD7610008818461A7BFD0669 /* AIRequestBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequestBuilderTests.swift; sourceTree = "<group>"; };
+		DEC1699BDA1A015CB677274D /* NSFont+TabularFigures.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "NSFont+TabularFigures.swift"; sourceTree = "<group>"; };
 		DEEB54E6901DA73B3B6FC1C6 /* HelpDrawerController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpDrawerController.swift; sourceTree = "<group>"; };
 		DFBA4A0CF10115E47B07547E /* GRDBSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GRDBSyncStore.swift; sourceTree = "<group>"; };
 		DFCFE99C5DF2E3BA41DA561E /* MockScreenProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockScreenProvider.swift; sourceTree = "<group>"; };
@@ -2037,6 +2039,7 @@
 		1DEA082A99F50D1B52F25FA0 /* Theme */ = {
 			isa = PBXGroup;
 			children = (
+				DEC1699BDA1A015CB677274D /* NSFont+TabularFigures.swift */,
 				3ED3EAE0DC19C68ED4E091A0 /* SemanticPalette+NSColor.swift */,
 				8538B5AC2EE46C8506D9449C /* ThemeTypography+NSFont.swift */,
 			);
@@ -4882,6 +4885,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB3A1A87C58D4D8EA1BB2A7A /* NSFont+TabularFigures.swift in Sources */,
 				2574598DAD92C7B1127E0465 /* Placeholder.swift in Sources */,
 				9B04CDC955CED31768F4E7FE /* RGBAColor+NSColor.swift in Sources */,
 				F103A7103A86DCCAD65C9BE2 /* SemanticPalette+NSColor.swift in Sources */,

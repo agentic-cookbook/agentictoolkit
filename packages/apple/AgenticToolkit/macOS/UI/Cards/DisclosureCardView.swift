@@ -5,13 +5,13 @@ import AppKit
 /// A titled card that folds: a rounded surface, a one-line masthead, and
 /// whatever content is added to it.
 ///
-///     ┌──────────────────────────────────────────────┐
-///     │ mike@example.com                       👍  ▾ │
+///     ┌───────────────────────────────────────────🛑─┐
+///     │ mike@example.com                           ▾ │
 ///     │ …content…                                    │
 ///     └──────────────────────────────────────────────┘
 ///
-///     ┌──────────────────────────────────────────────┐
-///     │ me@example.com       5H: 23% | 7D: 12%  👍  ▸ │
+///     ┌───────────────────────────────────────────🛑─┐
+///     │ me@example.com        5H: 23% | 7D: 12%    ▸ │
 ///     └──────────────────────────────────────────────┘
 ///
 /// A card that folds is what makes a list of five sections readable on a laptop
@@ -23,13 +23,34 @@ import AppKit
 ///
 /// The folded summary is pinned to the right, not parked after the title:
 /// stacked cards then read as a column of readings under one right edge instead
-/// of each line starting wherever its own title happened to stop. The status
-/// slot is reserved on every card whether or not that card has a standing to
-/// show — otherwise the summaries on the cards WITH an icon sit one icon further
-/// left than the rest, and the column the alignment exists to make is broken by
-/// the cards that most need reading. What symbols the slot must hold is the
-/// host's to say (`statusVocabulary`): the card measures the widest of them
-/// rather than knowing any of them.
+/// of each line starting wherever its own title happened to stop.
+///
+/// ## The standing is a corner badge, not a masthead item
+///
+/// A card's status sits ON its top-right corner, in the card's own padding
+/// gutter, rather than in the masthead beside the toggle. On the line it cost
+/// every card a reserved slot — a card with nothing to report still had to hold
+/// the width of the widest symbol the host could draw, or the summaries either
+/// side of it stopped lining up — and it spent that width on the cards that had
+/// the least to say. On the corner it costs no card anything, it is found
+/// without reading the line it is on, and the gutter it sits in bounds it, which
+/// is what keeps it clear of the disclosure triangle without either knowing
+/// about the other.
+///
+/// ## The title gets whatever the masthead is not using
+///
+/// The title is the one thing on that line that yields, so it is the one thing
+/// that goes short when the line is full. An open card's summary is not drawn,
+/// so its well leaves the layout and the title has the whole line; what the
+/// summary WILL need when the card folds is reserved on the card's width floor
+/// (`mastheadWidthFloor`) instead, where it does not eat a line nothing is
+/// written on. That is what keeps a long address whole while folding still moves
+/// nothing sideways.
+///
+/// The floor counts the title itself as well, so a card with a summary is wide
+/// enough to write both: yielding is what the title does when the window is too
+/// narrow for it, not something a card should ask of it while there is a window
+/// still willing to grow.
 ///
 /// ## Folding never changes the card's width
 ///
@@ -57,19 +78,32 @@ public final class DisclosureCardView: NSView, Themeable {
     public struct SummaryPart {
         public let name: String
         public let value: String
-        public let colorName: String?
+        /// How the value is coloured, asked of the live palette rather than
+        /// resolved once when the part is built — so a card already on screen
+        /// recolours with everything else when the theme changes. A closure
+        /// rather than a colour name because a host may colour by something the
+        /// palette's name table cannot say (a position in a series, say), and
+        /// the card has no business knowing which.
+        public let color: (SemanticPalette) -> NSColor?
 
-        public init(name: String, value: String, colorName: String?) {
+        public init(
+            name: String, value: String, color: @escaping (SemanticPalette) -> NSColor?
+        ) {
             self.name = name
             self.value = value
-            self.colorName = colorName
+            self.color = color
+        }
+
+        /// The common case: a colour the palette already knows by name.
+        public init(name: String, value: String, colorName: String?) {
+            self.init(name: name, value: value, color: { $0.color(named: colorName) })
         }
     }
 
-    /// What a card says about its own standing, drawn immediately before the
-    /// disclosure toggle. `accessibilityLabel` is also the tooltip: a symbol is
-    /// compact, not self-explaining, and the word it replaced has to stay
-    /// reachable somewhere.
+    /// What a card says about its own standing, drawn on the card's top-right
+    /// corner. `accessibilityLabel` is also the tooltip: a symbol is compact,
+    /// not self-explaining, and the word it replaced has to stay reachable
+    /// somewhere.
     public struct StatusSymbol {
         public let symbolName: String
         public let colorName: String?
@@ -99,7 +133,6 @@ public final class DisclosureCardView: NSView, Themeable {
     private let titleIsAccent: Bool
     private let summary: [SummaryPart]
     private let status: StatusSymbol?
-    private let statusVocabulary: [String]
     private let scaledSize: CGFloat
     private let onToggle: ((Bool) -> Void)?
 
@@ -111,6 +144,11 @@ public final class DisclosureCardView: NSView, Themeable {
     /// The card's fold-independent width floor: as wide as its content wants to
     /// be, whether or not the content is currently drawn.
     private var contentWidthFloor: NSLayoutConstraint?
+    /// What the masthead needs when this card is FOLDED — its title, its
+    /// summary, the toggle, and the gaps between them. Held on the width floor
+    /// instead of in the open card's layout, so folding cannot change the card's
+    /// width and an open title still gets the room the summary is not using.
+    private var mastheadWidthFloor: CGFloat = 0
 
     private static let cornerRadius: CGFloat = 10
     private static let borderWidth: CGFloat = 1
@@ -119,6 +157,10 @@ public final class DisclosureCardView: NSView, Themeable {
     /// How far a dimmed card recedes. Far enough to sort one card out of a list
     /// at a glance, not so far that the dimmed cards stop being readable.
     private static let dimmedAlpha: CGFloat = 0.55
+    /// The masthead's own spacings, named once because the folded width floor
+    /// has to add up the same line the layout builds.
+    private static let mastheadGap: CGFloat = 8
+    private static let trailingSpacing: CGFloat = 6
 
     private let padX: CGFloat
     private let padY: CGFloat
@@ -129,7 +171,6 @@ public final class DisclosureCardView: NSView, Themeable {
         subtitle: String? = nil,
         summary: [SummaryPart] = [],
         status: StatusSymbol? = nil,
-        statusVocabulary: [String] = [],
         isCollapsed: Bool = false,
         isDimmed: Bool = false,
         scaledSize: CGFloat,
@@ -138,7 +179,6 @@ public final class DisclosureCardView: NSView, Themeable {
         self.titleIsAccent = titleIsAccent
         self.summary = summary
         self.status = status
-        self.statusVocabulary = statusVocabulary
         self.scaledSize = scaledSize
         self.onToggle = onToggle
         self.padX = ceil(Self.horizontalInset * scaledSize / CGFloat(NSFont.systemFontSize))
@@ -171,7 +211,7 @@ public final class DisclosureCardView: NSView, Themeable {
         subtitleField.isHidden = subtitle == nil || isCollapsed
 
         configureSummarySlot(isCollapsed: isCollapsed)
-        configureStatusIcon()
+        configureStatusBadge()
         configureDisclosure(isCollapsed: isCollapsed)
 
         content.orientation = .vertical
@@ -180,20 +220,20 @@ public final class DisclosureCardView: NSView, Themeable {
         content.translatesAutoresizingMaskIntoConstraints = false
         content.isHidden = isCollapsed
 
-        // The title at the left edge; the collapsed summary, the status slot and
-        // the toggle at the right, in that order. All three right-hand pieces are
-        // on the same rail on every card — the status slot keeps its width
-        // whether or not this card has a standing, and the summary well keeps its
-        // width whether or not this card is folded — so the summaries line up as
-        // a column and the toggle is always in the same place.
-        let trailing = NSStackView(views: [summarySlot, statusIcon, disclosure])
+        // The title at the left edge, the folded card's summary and the toggle
+        // at the right. The toggle is the one piece every card has, so it lands
+        // in the same place on all of them; the summary sits just inside it, in
+        // a well of its own width, so folded cards read as a column of readings
+        // under one right edge.
+        let trailing = NSStackView(views: [summarySlot, disclosure])
         trailing.orientation = .horizontal
         trailing.alignment = .centerY
-        trailing.spacing = 6
+        trailing.spacing = Self.trailingSpacing
         trailing.translatesAutoresizingMaskIntoConstraints = false
 
         let header = PinnedEndsLine.make(
-            leading: titleField, trailing: trailing, alignment: .centerY
+            leading: titleField, trailing: trailing,
+            minimumGap: Self.mastheadGap, alignment: .centerY
         )
 
         // Title and subtitle are one masthead, tight together, so the card's own
@@ -218,6 +258,7 @@ public final class DisclosureCardView: NSView, Themeable {
         // can still be measured at the width it will want when it opens.
         stack.addFullWidthArrangedSubview(content)
         addSubview(stack)
+        addSubview(statusIcon)
 
         let floor = widthAnchor.constraint(greaterThanOrEqualToConstant: 0)
         // Just under required: on a screen too narrow for the content the window
@@ -225,11 +266,20 @@ public final class DisclosureCardView: NSView, Themeable {
         floor.priority = NSLayoutConstraint.Priority(999)
         contentWidthFloor = floor
 
+        // The badge is bounded by the same gutter the masthead is already held
+        // off the edge by, so it cannot reach the toggle inside it however large
+        // a text size asks for: no wider and no taller than that inset, and
+        // scaled down into the box rather than overflowing it.
+        let corner = Self.cornerBadgeInset(scaledSize: scaledSize)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor, constant: padY),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padY),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padX),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padX),
+            statusIcon.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -corner),
+            statusIcon.topAnchor.constraint(equalTo: topAnchor, constant: corner),
+            statusIcon.widthAnchor.constraint(lessThanOrEqualToConstant: padX - corner),
+            statusIcon.heightAnchor.constraint(lessThanOrEqualToConstant: padY - corner),
             floor
         ])
 
@@ -239,21 +289,20 @@ public final class DisclosureCardView: NSView, Themeable {
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
-    /// The summary's well: present on every card, in both states, so folding
-    /// moves nothing sideways. The field inside it is what appears and
-    /// disappears; the well keeps the width.
+    /// The summary's well, at the summary's own width. Present only when there
+    /// is a summary AND the card is folded — what keeps the fold from moving
+    /// anything sideways is the width floor (`mastheadWidthFloor`), not a well
+    /// standing empty on a line the title needs.
     private func configureSummarySlot(isCollapsed: Bool) {
         summaryField.translatesAutoresizingMaskIntoConstraints = false
         summaryField.alignment = .right
         summaryField.lineBreakMode = .byClipping
         summaryField.setContentCompressionResistancePriority(.required, for: .horizontal)
         summaryField.setContentHuggingPriority(.required, for: .horizontal)
-        summaryField.isHidden = !(isCollapsed && !summary.isEmpty)
-
         summarySlot.translatesAutoresizingMaskIntoConstraints = false
-        // A card that has no summary at all reserves nothing — that is not a
-        // fold-dependent difference, so it cannot move anything sideways.
-        summarySlot.isHidden = summary.isEmpty
+        // An `NSStackView` detaches a hidden arranged view completely, which is
+        // the point: an open card's title gets the whole line.
+        summarySlot.isHidden = summary.isEmpty || !isCollapsed
         summarySlot.addSubview(summaryField)
         let width = summarySlot.widthAnchor.constraint(equalToConstant: 0)
         summarySlotWidth = width
@@ -266,20 +315,14 @@ public final class DisclosureCardView: NSView, Themeable {
         ])
     }
 
-    /// The status slot: a fixed-width well that holds this card's symbol, or
-    /// nothing. Not hidden when empty — a hidden view leaves an `NSStackView`'s
-    /// layout entirely, which is exactly the shift the reserved slot exists to
-    /// prevent.
-    private func configureStatusIcon() {
+    /// The corner badge: this card's standing, on its top-right corner, or
+    /// nothing at all. A card with nothing to report draws nothing and pays
+    /// nothing — there is no slot to keep open, because the badge shares its
+    /// line with nothing.
+    private func configureStatusBadge() {
         statusIcon.translatesAutoresizingMaskIntoConstraints = false
         statusIcon.imageScaling = .scaleProportionallyDown
-        statusIcon.setContentCompressionResistancePriority(.required, for: .horizontal)
-        statusIcon.widthAnchor.constraint(
-            equalToConstant: Self.statusSlotWidth(
-                symbolNames: statusVocabulary + [status?.symbolName].compactMap { $0 },
-                scaledSize: scaledSize
-            )
-        ).isActive = true
+        statusIcon.isHidden = status == nil
         guard let status else { return }
         statusIcon.image = NSImage(
             systemSymbolName: status.symbolName,
@@ -287,28 +330,24 @@ public final class DisclosureCardView: NSView, Themeable {
         )
         statusIcon.symbolConfiguration = Self.statusSymbolConfiguration(scaledSize: scaledSize)
         statusIcon.toolTip = status.accessibilityLabel
+        // Its own element, because it is no longer inside a line a reader is
+        // handed anyway: unspoken, a corner mark is invisible rather than terse.
+        statusIcon.setAccessibilityElement(true)
+        statusIcon.setAccessibilityRole(.image)
+        statusIcon.setAccessibilityLabel(status.accessibilityLabel)
     }
 
-    /// The reserved width of the status slot at this text size: the widest
-    /// symbol the host says a card in this stack can draw, as it will actually
-    /// be drawn. Measured rather than guessed at a multiple of the font size —
-    /// the guess is wrong the moment a symbol with a different aspect is chosen,
-    /// and it is wrong invisibly. Zero when there are no symbols at all, so a
-    /// stack with no standings to show reserves nothing.
-    public static func statusSlotWidth(symbolNames: [String], scaledSize: CGFloat) -> CGFloat {
-        guard !symbolNames.isEmpty else { return 0 }
-        let configuration = statusSymbolConfiguration(scaledSize: scaledSize)
-        let widths = symbolNames.compactMap {
-            NSImage(systemSymbolName: $0, accessibilityDescription: nil)?
-                .withSymbolConfiguration(configuration)?.size.width
-        }
-        return ceil(widths.max() ?? scaledSize)
+    /// How far the badge's corner sits inside the card's. Small: it is meant to
+    /// read as sitting ON the corner, and every point of it is a point of gutter
+    /// the badge itself then has to do without.
+    static func cornerBadgeInset(scaledSize: CGFloat) -> CGFloat {
+        max(1, floor(scaledSize * 0.15))
     }
 
     private static func statusSymbolConfiguration(
         scaledSize: CGFloat
     ) -> NSImage.SymbolConfiguration {
-        NSImage.SymbolConfiguration(pointSize: ceil(scaledSize * 0.95), weight: .semibold)
+        NSImage.SymbolConfiguration(pointSize: ceil(scaledSize * 0.8), weight: .semibold)
     }
 
     /// The system disclosure triangle rather than a drawn chevron: it is the
@@ -364,7 +403,11 @@ public final class DisclosureCardView: NSView, Themeable {
 
     private func updateContentWidthFloor() {
         guard let contentWidthFloor else { return }
-        let wanted = ceil(content.fittingSize.width) + padX * 2
+        // The wider of the two things a fold swaps between: the content the open
+        // card draws, and the masthead the folded one draws instead. Both are
+        // measured in whichever state the card is in, which is what makes the
+        // floor fold-independent.
+        let wanted = max(ceil(content.fittingSize.width), mastheadWidthFloor) + padX * 2
         guard abs(wanted - contentWidthFloor.constant) > 0.5 else { return }
         contentWidthFloor.constant = wanted
     }
@@ -390,7 +433,16 @@ public final class DisclosureCardView: NSView, Themeable {
 
         let line = Self.summaryString(summary, palette: palette, scaledSize: scaledSize)
         summaryField.attributedStringValue = line
-        summarySlotWidth?.constant = ceil(line.size().width)
+        let summaryWidth = ceil(line.size().width)
+        summarySlotWidth?.constant = summaryWidth
+        // The title is measured at its full length, not at whatever the line
+        // currently affords it: a card that carries a summary is as wide as the
+        // two of them plus the toggle, so the address is truncated only by a
+        // window that cannot be any wider.
+        mastheadWidthFloor = summary.isEmpty ? 0 : ceil(titleField.fittingSize.width)
+            + Self.mastheadGap + summaryWidth
+            + Self.trailingSpacing + ceil(disclosure.fittingSize.width)
+        updateContentWidthFloor()
     }
 
     /// `5H: 23% | 7D: 12%` — each name in the quietest text tier, each value in
@@ -419,8 +471,7 @@ public final class DisclosureCardView: NSView, Themeable {
                 string: part.value,
                 attributes: [
                     .font: valueFont,
-                    .foregroundColor: palette.color(named: part.colorName)
-                        ?? palette.secondaryTextColor
+                    .foregroundColor: part.color(palette) ?? palette.secondaryTextColor
                 ]
             ))
         }

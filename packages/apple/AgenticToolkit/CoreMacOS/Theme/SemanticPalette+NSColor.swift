@@ -37,6 +37,12 @@ extension SemanticPalette {
         theme.ansi.map { NSColor($0) }
     }
 
+    /// `identitySeriesColors` as `NSColor`s — the hues for telling members of a
+    /// set apart in a view that also colors by state.
+    public var identitySeriesNSColors: [NSColor] {
+        identitySeriesColors.map { NSColor($0) }
+    }
+
     /// Maps a server-supplied color *name* (e.g. `"red"`, `"orange"`, `"gray"`)
     /// onto a themed semantic color. Single source of truth shared by the Usage
     /// views so the name→role mapping cannot drift between them. (`"orange"` and
