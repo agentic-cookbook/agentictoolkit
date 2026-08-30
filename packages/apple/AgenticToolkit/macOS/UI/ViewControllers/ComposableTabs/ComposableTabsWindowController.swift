@@ -1,4 +1,6 @@
 import AppKit
+import Combine
+
 import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
@@ -18,7 +20,7 @@ import AgenticToolkitCoreMacOS
 /// member closes its whole group, and a newly enabled edge is topped up
 /// to one member per group.
 @MainActor
-public final class ComposableTabsWindowController: WindowController<NSViewController> {
+public final class ComposableTabsWindowController: WindowController<NSViewController>, NSMenuItemValidation {
 
     public static let sharedWindowID = "whiprojDocumentWindow"
 
@@ -49,7 +51,9 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     private var pendingFocusPersist: DispatchWorkItem?
     private static let focusPersistDelay: DispatchTimeInterval = .milliseconds(250)
 
-    private var edgesAccessory: NSTitlebarAccessoryViewController?
+    private var titlebarAccessory: NSTitlebarAccessoryViewController?
+    private var arrangeButton: NSButton?
+    private var cancellables = Set<AnyCancellable>()
 
     public init(document: ComposableTabsDocument) {
         self.splitDocument = document
@@ -84,67 +88,118 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         if window == nil { loadWindow() }
         super.showWindow(sender)
         installFirstResponderObserverIfNeeded()
-        installEdgesAccessoryIfNeeded()
+        installTitlebarAccessoryIfNeeded()
         restoreFocusedLeafForActiveTab()
     }
 
-    // MARK: - Tab-edge toggle (titlebar accessory)
+    // MARK: - Titlebar accessories
 
-    private func installEdgesAccessoryIfNeeded() {
-        guard edgesAccessory == nil, let window else { return }
+    /// Two buttons, right-aligned: the arrange toggle, then the project's
+    /// settings. Which tab bars a window shows moved into those settings — it
+    /// is a property of the project, not a thing to flick on and off from the
+    /// titlebar while working.
+    private func installTitlebarAccessoryIfNeeded() {
+        guard titlebarAccessory == nil, let window else { return }
 
-        let symbol = NSImage(
-            systemSymbolName: "rectangle.3.group",
-            accessibilityDescription: "Tab Edges"
-        )?.withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
+        let arrange = Self.titlebarButton(
+            symbolName: "rectangle.3.group",
+            description: "Arrange Panes",
+            toolTip: "Arrange panes",
+            target: self,
+            action: #selector(toggleArrangeMode(_:))
+        )
+        arrange.accessibilityID("document-window.arrange-button")
+        arrangeButton = arrange
 
-        let button = NSButton(image: symbol ?? NSImage(), target: self, action: #selector(showEdgesMenu(_:)))
-        button.bezelStyle = .texturedRounded
-        button.imagePosition = .imageOnly
-        button.toolTip = "Show / hide tab bars"
-        button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
-        button.accessibilityID("document-window.tab-edges-button")
+        let settings = Self.titlebarButton(
+            symbolName: "gearshape",
+            description: "Project Settings",
+            toolTip: "Project settings",
+            target: self,
+            action: #selector(showProjectSettings(_:))
+        )
+        settings.accessibilityID("document-window.project-settings-button")
+
+        let stack = NSStackView(views: [arrange, settings])
+        stack.orientation = .horizontal
+        stack.spacing = 4
+        stack.frame = NSRect(x: 0, y: 0, width: 80, height: 24)
 
         let accessory = NSTitlebarAccessoryViewController()
-        accessory.view = button
+        accessory.view = stack
         accessory.layoutAttribute = .right
         window.addTitlebarAccessoryViewController(accessory)
-        edgesAccessory = accessory
+        titlebarAccessory = accessory
+
+        // The mode can also be turned on from the Project menu, so the button's
+        // tint follows the mode rather than the click.
+        NotificationCenter.default.publisher(for: ComposableTabsArrangeMode.didChangeNotification)
+            .sink { [weak self] notification in
+                guard let self, let changed = notification.object as? NSWindow,
+                      changed === self.window else { return }
+                self.refreshArrangeButton()
+            }
+            .store(in: &cancellables)
+        refreshArrangeButton()
     }
 
+    private static func titlebarButton(
+        symbolName: String,
+        description: String,
+        toolTip: String,
+        target: AnyObject,
+        action: Selector
+    ) -> NSButton {
+        let symbol = NSImage(systemSymbolName: symbolName, accessibilityDescription: description)?
+            .withSymbolConfiguration(.init(pointSize: 14, weight: .regular))
+        let button = NSButton(image: symbol ?? NSImage(), target: target, action: action)
+        button.bezelStyle = .texturedRounded
+        button.imagePosition = .imageOnly
+        button.toolTip = toolTip
+        button.frame = NSRect(x: 0, y: 0, width: 36, height: 24)
+        return button
+    }
+
+    private func refreshArrangeButton() {
+        let enabled = ComposableTabsArrangeMode.shared.isEnabled(in: window)
+        arrangeButton?.contentTintColor =
+            enabled ? ThemePaletteObserver.currentPalette.nsColor(.accent) : nil
+        arrangeButton?.state = enabled ? .on : .off
+    }
+
+    // MARK: - Arrange mode and project settings
+
+    /// Also the target of the Project ▸ Arrange menu item, reached down the
+    /// responder chain — one action for both, so the checkmark and the button
+    /// tint can never disagree.
     @objc
-    private func showEdgesMenu(_ sender: NSButton) {
-        let menu = NSMenu()
-        for edge in [Edge.top, .right, .bottom, .left] {
-            let item = NSMenuItem(
-                title: Self.title(for: edge),
-                action: #selector(toggleEdgeAction(_:)),
-                keyEquivalent: ""
-            )
-            item.target = self
-            item.representedObject = edge
-            item.state = tabbed.isEdgeEnabled(edge) ? .on : .off
-            item.accessibilityID("document-window.tab-edges.\(AccessibilityID.slug(Self.title(for: edge)))")
-            menu.addItem(item)
+    public func toggleArrangeMode(_ sender: Any?) {
+        guard let window else { return }
+        ComposableTabsArrangeMode.shared.toggle(in: window)
+    }
+
+    public func validateMenuItem(_ menuItem: NSMenuItem) -> Bool {
+        if menuItem.action == #selector(toggleArrangeMode(_:)) {
+            menuItem.state = ComposableTabsArrangeMode.shared.isEnabled(in: window) ? .on : .off
         }
-        menu.popUp(
-            positioning: nil,
-            at: NSPoint(x: 0, y: sender.bounds.maxY + 4),
-            in: sender
-        )
+        return true
     }
 
     @objc
-    private func toggleEdgeAction(_ sender: NSMenuItem) {
-        guard let edge = sender.representedObject as? Edge else { return }
-        setEdgeEnabled(edge, !tabbed.isEdgeEnabled(edge))
+    public func showProjectSettings(_ sender: Any?) {
+        guard let contentViewController = window?.contentViewController else { return }
+        let settings = ComposableTabsSettingsViewController(
+            isEdgeEnabled: { [weak self] edge in self?.tabbed.isEdgeEnabled(edge) ?? false },
+            setEdgeEnabled: { [weak self] edge, enabled in self?.setEdgeEnabled(edge, enabled) }
+        )
+        contentViewController.presentAsSheet(settings)
     }
 
-    /// Single entry point for edge toggling (titlebar menu and Cocoa
+    /// Single entry point for edge toggling (project settings and Cocoa
     /// Scripting alike) so a freshly enabled edge is always topped up to
     /// the global tab count and the edge set is persisted. Disabling keeps
     /// the edge's members so re-enabling restores them.
-    private func setEdgeEnabled(_ edge: Edge, _ enabled: Bool) {
+    public func setEdgeEnabled(_ edge: Edge, _ enabled: Bool) {
         guard tabbed.isEdgeEnabled(edge) != enabled else { return }
         tabbed.setEdgeEnabled(edge, enabled)
         if enabled {
@@ -194,15 +249,6 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         wireLayoutCallback(on: split, tabID: tabID)
         splitControllersByTabID[tabID] = split
         return split
-    }
-
-    private static func title(for edge: Edge) -> String {
-        switch edge {
-        case .top: return "Top"
-        case .right: return "Right"
-        case .bottom: return "Bottom"
-        case .left: return "Left"
-        }
     }
 
     // MARK: - Tab-edge accessors (used by Cocoa Scripting bridges)

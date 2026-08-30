@@ -12,6 +12,18 @@ public protocol PaneContentTeardown: AnyObject {
     func paneContentWillBeDiscarded()
 }
 
+/// Adopted by pane content that would lose something if its pane were closed —
+/// a running shell, an edit that is not on disk. The content is the only thing
+/// that knows, so it is asked rather than guessed at; returning `nil` means
+/// "nothing would be lost", which is why content with nothing at stake simply
+/// doesn't adopt this.
+@MainActor
+public protocol PaneContentRemovalConfirmation: AnyObject {
+    /// What the user is about to lose, phrased for an alert body — or `nil` to
+    /// remove the pane without asking.
+    var removalConfirmationMessage: String? { get }
+}
+
 /// What a factory is told about the pane it is filling.
 ///
 /// A struct rather than a parameter list so a new fact can be added without

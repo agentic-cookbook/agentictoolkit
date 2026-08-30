@@ -5,13 +5,54 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class ComposableTabsViewController: ThemedSplitViewController {
 
-    public enum Direction {
+    public enum Direction: Hashable, CaseIterable {
         case left, right, above, below
 
         public var axis: ComposableTabsAxis {
             switch self {
             case .left, .right: return .horizontal
             case .above, .below: return .vertical
+            }
+        }
+
+        /// How a *placement* reads: where the new pane goes relative to this one.
+        public var placementName: String {
+            switch self {
+            case .left: return "Left"
+            case .right: return "Right"
+            case .above: return "Above"
+            case .below: return "Below"
+            }
+        }
+
+        /// How a *movement* reads. Same four directions, but "move this pane
+        /// above" is the arrow key the user pressed, so it is called Up.
+        public var movementName: String {
+            switch self {
+            case .left: return "Left"
+            case .right: return "Right"
+            case .above: return "Up"
+            case .below: return "Down"
+            }
+        }
+
+        /// The SF Symbol for the arrow that performs this move.
+        public var arrowSymbolName: String {
+            switch self {
+            case .left: return "arrow.left"
+            case .right: return "arrow.right"
+            case .above: return "arrow.up"
+            case .below: return "arrow.down"
+            }
+        }
+
+        /// The arrow key that performs this move, as a `keyCode`.
+        public var arrowKeyCode: UInt16 {
+            switch self {
+            case .left: return 123
+            case .right: return 124
+            case .below: return 125
+            case .above: return 126
             }
         }
 
@@ -26,8 +67,17 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         }
     }
 
+    /// Posted after any change to a tab's tree, with the *root*
+    /// `ComposableTabsViewController` as the object. Arrange mode's toolbars
+    /// listen: one pane moving changes which moves every other pane has.
+    public static let layoutDidChangeNotification =
+        Notification.Name("AgenticToolkit.ComposableTabsViewController.layoutDidChange")
+
     public let nodeID: UUID
-    public let axis: ComposableTabsAxis
+    /// Mutable because `rebuild(from:)` may re-lay the root along the other
+    /// axis: moving the only pane in a row to the right of a column turns the
+    /// row into a column, and the controller stays the same object.
+    public private(set) var axis: ComposableTabsAxis
     /// The live child list, and the single source of truth for the tree —
     /// `splitViewItems` only exists once the view has loaded, and a restored
     /// but never-displayed tab never loads its view.
@@ -243,6 +293,127 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         insertSplitViewItem(makeItem(for: replacement.viewController), at: index)
     }
 
+    // MARK: - Moving a pane
+
+    /// The directions `leaf` may travel. Asked of the root, since a move is a
+    /// fact about the whole tab, not about one split.
+    public func availableMoveDirections(
+        for leaf: ComposableTabsPaneViewController
+    ) -> Set<Direction> {
+        guard let root = rootSplit() else { return [] }
+        return ComposableTabsMove.availableDirections(for: leaf.nodeID, in: root.snapshotNode())
+    }
+
+    /// Moves `leaf` one step in `direction`, or reports that it could not.
+    ///
+    /// The move itself is arithmetic on the snapshot — see `ComposableTabsMove`
+    /// — and the controller tree is then rebuilt to match. Doing it that way
+    /// round means the enabled arrows and the move they perform are the same
+    /// code, so a live arrow can never turn out to be a no-op.
+    @discardableResult
+    public func move(_ leaf: ComposableTabsPaneViewController, _ direction: Direction) -> Bool {
+        guard let root = rootSplit(),
+              let moved = ComposableTabsMove.moving(
+                leaf.nodeID, direction, in: root.snapshotNode()) else { return false }
+        root.rebuild(from: moved)
+        return true
+    }
+
+    /// Re-hosts this tree so it matches `node`, reusing the panes it already
+    /// has: a moved terminal keeps its shell and a moved editor keeps its
+    /// undo stack, because the pane controller is carried across rather than
+    /// rebuilt from the persisted view ID.
+    public func rebuild(from node: LayoutNode) {
+        guard let document = splitDocument else { return }
+
+        var reusable: [UUID: ComposableTabsPaneViewController] = [:]
+        collectLeaves(into: &reusable)
+        // Un-parent everything first: AppKit will not adopt a view controller
+        // that still belongs to another parent, and the old inner splits are
+        // about to be discarded anyway.
+        detachSubtree()
+
+        let newAxis: ComposableTabsAxis
+        let children: [any ComposableTabsChild]
+        switch node.kind {
+        case .split(let axis, let first, let second):
+            newAxis = axis
+            children = [
+                rebuildChild(first, reusing: reusable, document: document),
+                rebuildChild(second, reusing: reusable, document: document)
+            ]
+        case .leaf:
+            // A tab reduced to one pane; the root hosts it full-size, and the
+            // axis of a single-child split is not observable.
+            newAxis = axis
+            children = [rebuildChild(node, reusing: reusable, document: document)]
+        }
+
+        axis = newAxis
+        layoutChildren = children
+
+        if isViewLoaded {
+            splitView.isVertical = (newAxis == .horizontal)
+            // The divider positions described the old arrangement; let the
+            // preferred fractions speak once more for the new one.
+            hasAppliedPreferredThicknesses = false
+            for child in children {
+                addSplitViewItem(makeItem(for: child.viewController))
+            }
+        }
+
+        rootSplit()?.persistTreeToDocument()
+    }
+
+    private func collectLeaves(into leaves: inout [UUID: ComposableTabsPaneViewController]) {
+        for child in layoutChildren {
+            if let leaf = child as? ComposableTabsPaneViewController {
+                leaves[leaf.nodeID] = leaf
+            } else if let split = child as? ComposableTabsViewController {
+                split.collectLeaves(into: &leaves)
+            }
+        }
+    }
+
+    /// Empties this subtree without telling any pane it is going away — every
+    /// pane here is about to be re-hosted, not closed.
+    private func detachSubtree() {
+        for child in layoutChildren {
+            (child as? ComposableTabsViewController)?.detachSubtree()
+        }
+        if isViewLoaded {
+            for item in splitViewItems {
+                removeSplitViewItem(item)
+            }
+        }
+        layoutChildren = []
+    }
+
+    private func rebuildChild(
+        _ node: LayoutNode,
+        reusing leaves: [UUID: ComposableTabsPaneViewController],
+        document: ComposableTabsDocument
+    ) -> any ComposableTabsChild {
+        switch node.kind {
+        case .split(let axis, let first, let second):
+            return ComposableTabsViewController(
+                nodeID: node.id,
+                axis: axis,
+                first: rebuildChild(first, reusing: leaves, document: document),
+                second: rebuildChild(second, reusing: leaves, document: document),
+                document: document,
+                isRoot: false
+            )
+        case .leaf(let viewID, _):
+            return leaves[node.id] ?? ComposableTabsPaneViewController(
+                nodeID: node.id,
+                paneNumber: document.allocatePaneNumber(),
+                viewID: viewID,
+                document: document
+            )
+        }
+    }
+
     // MARK: - Spec-driven legal moves
 
     /// Views that may be added beside `leaf`, with the direction to offer each
@@ -299,6 +470,7 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     fileprivate func persistTreeToDocument() {
         guard isRoot else { return }
         onLayoutDidChange?(snapshotNode())
+        NotificationCenter.default.post(name: Self.layoutDidChangeNotification, object: self)
     }
 
     /// Value-type snapshot of the live controller tree.

@@ -7,4 +7,16 @@ public enum Edge: String, CaseIterable, Sendable {
     case right
     case bottom
     case left
+
+    /// What to call the edge in menus and settings. Separate from `rawValue`
+    /// because that one is a persisted key — it may not change when the words
+    /// on screen do.
+    public var displayName: String {
+        switch self {
+        case .top: return "Top"
+        case .right: return "Right"
+        case .bottom: return "Bottom"
+        case .left: return "Left"
+        }
+    }
 }

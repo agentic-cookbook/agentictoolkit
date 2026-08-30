@@ -128,3 +128,15 @@ extension TerminalSessionContentViewController: PaneContentTeardown {
         sessionManager.terminateAll()
     }
 }
+
+extension TerminalSessionContentViewController: PaneContentRemovalConfirmation {
+    /// Closing the pane kills its shells, and a shell can be halfway through
+    /// something the user would rather not lose.
+    public var removalConfirmationMessage: String? {
+        let count = sessionManager.sessions.count
+        guard count > 0 else { return nil }
+        return count == 1
+            ? "This pane has a running terminal session. Removing the pane ends it."
+            : "This pane has \(count) running terminal sessions. Removing the pane ends them."
+    }
+}

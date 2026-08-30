@@ -1,9 +1,15 @@
 import AppKit
+import Combine
+
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// One leaf of a tab: registry-vended content, plus the pull-down that changes
-/// the layout around it.
+/// One leaf of a tab: registry-vended content, plus — while arrange mode is on
+/// — the scrim and toolbar that change the layout around it.
+///
+/// Nothing rearranges the layout while the user is working in it. Arrange mode
+/// is a mode precisely so that the affordance can be big and central instead of
+/// a small pull-down permanently in the corner of every pane.
 @MainActor
 public final class ComposableTabsPaneViewController: NSViewController {
 
@@ -11,6 +17,10 @@ public final class ComposableTabsPaneViewController: NSViewController {
     public let paneNumber: Int
     public let viewID: ComposableTabsViewID
     private weak var splitDocument: ComposableTabsDocument?
+
+    private var arrangeOverlay: ComposableTabsArrangeOverlayView?
+    private var arrowKeyMonitor: Any?
+    private var cancellables = Set<AnyCancellable>()
 
     public init(
         nodeID: UUID,
@@ -56,21 +66,51 @@ public final class ComposableTabsPaneViewController: NSViewController {
         content.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(content)
 
-        let splitButton = makeSplitButton()
-        splitButton.translatesAutoresizingMaskIntoConstraints = false
-        container.addSubview(splitButton)
-
         NSLayoutConstraint.activate([
             content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: Self.borderInset),
             container.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: Self.borderInset),
             content.topAnchor.constraint(equalTo: container.topAnchor, constant: Self.borderInset),
-            container.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: Self.borderInset),
-
-            splitButton.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
-            splitButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)
+            container.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: Self.borderInset)
         ])
 
         self.view = container
+    }
+
+    public override func viewDidLoad() {
+        super.viewDidLoad()
+
+        NotificationCenter.default.publisher(for: ComposableTabsArrangeMode.didChangeNotification)
+            .sink { [weak self] notification in
+                guard let self, let window = notification.object as? NSWindow,
+                      window === self.view.window else { return }
+                self.updateArrangeOverlay()
+            }
+            .store(in: &cancellables)
+
+        // Any pane moving changes what every *other* pane may do — the last
+        // pane in a column loses its `Up`, the last pane in the tab loses its
+        // `Remove` — so availability is refreshed from the tree, not from the
+        // pane that happened to act.
+        NotificationCenter.default.publisher(for: ComposableTabsViewController.layoutDidChangeNotification)
+            .sink { [weak self] _ in self?.arrangeOverlay?.refreshAvailability() }
+            .store(in: &cancellables)
+
+        // A closing window takes its panes with it without ever leaving arrange
+        // mode, and `deinit` cannot touch the monitor — it is nonisolated.
+        NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)
+            .sink { [weak self] notification in
+                guard let self, let window = notification.object as? NSWindow,
+                      window === self.view.window else { return }
+                self.removeArrangeOverlay()
+            }
+            .store(in: &cancellables)
+    }
+
+    public override func viewDidAppear() {
+        super.viewDidAppear()
+        // Also the re-entry point after a move: `rebuild(from:)` re-hosts this
+        // controller, and the pane has to come back with the scrim it left with.
+        updateArrangeOverlay()
     }
 
     /// The active-pane border is drawn on the backdrop's own layer, so the
@@ -82,102 +122,167 @@ public final class ComposableTabsPaneViewController: NSViewController {
     /// "released at some point after the last reference drops" is not good
     /// enough for a child process.
     public func paneWillBeRemoved() {
+        removeArrangeOverlay()
         (contentViewController as? PaneContentTeardown)?.paneContentWillBeDiscarded()
     }
 
-    // MARK: - The Split menu
+    // MARK: - Arrange mode
 
-    private func makeSplitButton() -> NSPopUpButton {
-        let button = NSPopUpButton(frame: .zero, pullsDown: true)
-        button.bezelStyle = .rounded
-        button.addItem(withTitle: "Split")
-        button.accessibilityID("composable-tabs.pane.split-menu")
-        // Contents change with the tree, so the menu is rebuilt each time it
-        // opens rather than assembled once here.
-        button.menu?.autoenablesItems = false
-        button.menu?.delegate = self
-        return button
+    private var enclosingSplit: ComposableTabsViewController? {
+        parent as? ComposableTabsViewController
     }
 
-    /// One "Add <View> <Direction>" per legal insertion, in the direction the
-    /// spec (or the view's own descriptor) prefers, plus the other axis after
-    /// it — a preferred axis picks what is offered first, it does not forbid
-    /// the other one. Then `Remove`.
+    private func updateArrangeOverlay() {
+        if ComposableTabsArrangeMode.shared.isEnabled(in: view.window) {
+            installArrangeOverlay()
+        } else {
+            removeArrangeOverlay()
+        }
+    }
+
+    private func installArrangeOverlay() {
+        guard arrangeOverlay == nil else {
+            arrangeOverlay?.refreshAvailability()
+            return
+        }
+
+        let overlay = ComposableTabsArrangeOverlayView(frame: view.bounds)
+        overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.canAdd = { [weak self] in self?.addChoices().isEmpty == false }
+        overlay.canRemove = { [weak self] in
+            guard let self else { return false }
+            return self.enclosingSplit?.canRemoveLeaf(self) ?? false
+        }
+        overlay.availableDirections = { [weak self] in
+            guard let self else { return [] }
+            return self.enclosingSplit?.availableMoveDirections(for: self) ?? []
+        }
+        overlay.onAdd = { [weak self] in self?.presentAddSheet() }
+        overlay.onRemove = { [weak self] in self?.confirmAndRemove() }
+        overlay.onMove = { [weak self] direction in self?.move(direction) }
+
+        // Above the content, inside the active-pane border.
+        view.addSubview(overlay)
+        NSLayoutConstraint.activate([
+            overlay.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: Self.borderInset),
+            view.trailingAnchor.constraint(equalTo: overlay.trailingAnchor, constant: Self.borderInset),
+            overlay.topAnchor.constraint(equalTo: view.topAnchor, constant: Self.borderInset),
+            view.bottomAnchor.constraint(equalTo: overlay.bottomAnchor, constant: Self.borderInset)
+        ])
+        arrangeOverlay = overlay
+        overlay.refreshAvailability()
+
+        installArrowKeyMonitor()
+    }
+
+    private func removeArrangeOverlay() {
+        arrangeOverlay?.removeFromSuperview()
+        arrangeOverlay = nil
+        if let arrowKeyMonitor {
+            NSEvent.removeMonitor(arrowKeyMonitor)
+            self.arrowKeyMonitor = nil
+        }
+    }
+
+    /// While arranging, an arrow key moves the selected pane — the fastest way
+    /// to push a pane where you want it is to keep pressing the direction.
     ///
-    /// This is the payoff of the whole abstraction: the menu is not four fixed
-    /// directions duplicating the current pane's content, it is what the spec
-    /// says may go here.
-    fileprivate func rebuildSplitMenu(_ menu: NSMenu) {
-        // Item 0 is the pull-down's own title, which never appears in the list.
-        let title = menu.items.first
-        menu.removeAllItems()
-        if let title { menu.addItem(title) }
+    /// A local monitor rather than `keyDown`: the pane's content owns the first
+    /// responder (a terminal, an editor), and it would eat the arrow long
+    /// before this controller saw it.
+    private func installArrowKeyMonitor() {
+        guard arrowKeyMonitor == nil else { return }
+        arrowKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self else { return event }
+            // Only the Bool crosses back out: `assumeIsolated` hands its result
+            // across an isolation boundary, and NSEvent is not `Sendable`.
+            let consumed = MainActor.assumeIsolated { self.handleArrowKey(event) }
+            return consumed ? nil : event
+        }
+    }
 
-        guard let parent = parent as? ComposableTabsViewController else { return }
-        let registry = parent.layout.registry
+    /// Whether the arrow was ours to act on, and did.
+    private func handleArrowKey(_ event: NSEvent) -> Bool {
+        guard let window = view.window,
+              event.window === window,
+              ComposableTabsArrangeMode.shared.isEnabled(in: window),
+              // One monitor per pane, but only the pane the user selected moves.
+              ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID,
+              let direction = ComposableTabsViewController.Direction.allCases.first(
+                where: { $0.arrowKeyCode == event.keyCode }) else { return false }
+        move(direction)
+        return true
+    }
 
-        for insertion in parent.allowedInsertions(beside: self) {
+    private func move(_ direction: ComposableTabsViewController.Direction) {
+        guard let split = enclosingSplit, split.move(self, direction) else {
+            NSSound.beep()
+            return
+        }
+    }
+
+    /// The distinct views the spec will let this pane sit beside, named for the
+    /// popup. Distinct, because the same view offered on two axes is one thing
+    /// to add — the axis is the sheet's *other* question.
+    private func addChoices() -> [ComposableTabsAddPaneViewController.Choice] {
+        guard let split = enclosingSplit else { return [] }
+        let registry = split.layout.registry
+        var seen = Set<ComposableTabsViewID>()
+        return split.allowedInsertions(beside: self).compactMap { insertion in
+            guard seen.insert(insertion.viewID).inserted else { return nil }
             let descriptor = registry.descriptor(for: insertion.viewID)
-            let axes = [insertion.preferredAxis, insertion.preferredAxis.perpendicular]
-            for direction in axes.flatMap({ ComposableTabsViewController.Direction.directions(along: $0) }) {
-                let item = NSMenuItem(
-                    title: "Add \(descriptor.displayName) \(Self.word(for: direction))",
-                    action: #selector(insertSelected(_:)),
-                    keyEquivalent: ""
-                )
-                item.target = self
-                item.representedObject = Insertion(viewID: insertion.viewID, direction: direction)
-                item.isEnabled = true
-                if let symbolName = descriptor.symbolName {
-                    item.image = NSImage(
-                        systemSymbolName: symbolName, accessibilityDescription: descriptor.displayName)
-                }
-                menu.addItem(item)
+            return ComposableTabsAddPaneViewController.Choice(
+                viewID: insertion.viewID,
+                displayName: descriptor.displayName,
+                symbolName: descriptor.symbolName
+            )
+        }
+    }
+
+    private func presentAddSheet() {
+        let choices = addChoices()
+        guard !choices.isEmpty else {
+            NSSound.beep()
+            return
+        }
+        let sheet = ComposableTabsAddPaneViewController(choices: choices) { [weak self] viewID, direction in
+            guard let self else { return }
+            self.enclosingSplit?.split(self, adding: viewID, direction: direction)
+        }
+        presentAsSheet(sheet)
+    }
+
+    /// Removing a pane can throw work away — a running shell, an unsaved edit —
+    /// and the pane's content is the only thing that knows whether it would.
+    private func confirmAndRemove() {
+        guard let split = enclosingSplit, split.canRemoveLeaf(self) else {
+            NSSound.beep()
+            return
+        }
+        guard let warning = (contentViewController as? PaneContentRemovalConfirmation)?
+            .removalConfirmationMessage else {
+            split.remove(self)
+            return
+        }
+
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "Remove this pane?"
+        alert.informativeText = warning
+        alert.addButton(withTitle: "Remove")
+        alert.addButton(withTitle: "Cancel")
+
+        guard let window = view.window else {
+            if alert.runModal() == .alertFirstButtonReturn { split.remove(self) }
+            return
+        }
+        alert.beginSheetModal(for: window) { response in
+            MainActor.assumeIsolated {
+                guard response == .alertFirstButtonReturn else { return }
+                // Re-resolved: the sheet was up while the tree could change.
+                self.enclosingSplit?.remove(self)
             }
         }
-
-        menu.addItem(.separator())
-        let remove = NSMenuItem(
-            title: "Remove",
-            action: #selector(removeSelected(_:)),
-            keyEquivalent: ""
-        )
-        remove.target = self
-        // Enablement comes from the *tab's* tree, which AppKit's automatic
-        // validation cannot see.
-        remove.isEnabled = parent.canRemoveLeaf(self)
-        menu.addItem(remove)
-    }
-
-    /// What one menu item does, carried on the item itself.
-    private final class Insertion: NSObject {
-        let viewID: ComposableTabsViewID
-        let direction: ComposableTabsViewController.Direction
-
-        init(viewID: ComposableTabsViewID, direction: ComposableTabsViewController.Direction) {
-            self.viewID = viewID
-            self.direction = direction
-        }
-    }
-
-    private static func word(for direction: ComposableTabsViewController.Direction) -> String {
-        switch direction {
-        case .left: return "Left"
-        case .right: return "Right"
-        case .above: return "Above"
-        case .below: return "Below"
-        }
-    }
-
-    @objc private func insertSelected(_ sender: NSMenuItem) {
-        guard let insertion = sender.representedObject as? Insertion,
-              let parent = parent as? ComposableTabsViewController else { return }
-        parent.split(self, adding: insertion.viewID, direction: insertion.direction)
-    }
-
-    @objc private func removeSelected(_ sender: NSMenuItem) {
-        guard let parent = parent as? ComposableTabsViewController else { return }
-        parent.remove(self)
     }
 
     /// Whether the window's first responder lives inside this pane, so a
@@ -190,12 +295,5 @@ public final class ComposableTabsPaneViewController: NSViewController {
             current = candidate.superview
         }
         return false
-    }
-}
-
-extension ComposableTabsPaneViewController: NSMenuDelegate {
-
-    public func menuNeedsUpdate(_ menu: NSMenu) {
-        rebuildSplitMenu(menu)
     }
 }
