@@ -13,6 +13,18 @@ import Foundation
 @MainActor
 public final class UserSettingsThemeStorage: ThemeStorage {
 
+    public var onExternalChange: (() -> Void)? {
+        didSet { updateObservers() }
+    }
+
+    /// Fire `onExternalChange` on any change to either setting: a different
+    /// theme selected, or the active theme's own definition edited in place.
+    /// Only allocated once someone actually sets `onExternalChange` — a
+    /// `UserSettingsThemeStorage` nobody hooks (e.g. a `ThemeStore()` used
+    /// without a `ThemeManager`) stays observer-free.
+    private var activeObserver: UserSettingObserver<String>?
+    private var customObserver: UserSettingObserver<[ColorTheme]>?
+
     public init() {}
 
     public var customThemes: [ColorTheme] {
@@ -28,6 +40,20 @@ public final class UserSettingsThemeStorage: ThemeStorage {
     public var activeThemeID: String? {
         get { UserSettings.activeThemeID.value }
         set { UserSettings.activeThemeID.value = newValue ?? BuiltInThemes.defaultID }
+    }
+
+    private func updateObservers() {
+        guard onExternalChange != nil else {
+            activeObserver = nil
+            customObserver = nil
+            return
+        }
+        activeObserver = UserSettingObserver(UserSettings.activeThemeID) { [weak self] _ in
+            self?.onExternalChange?()
+        }
+        customObserver = UserSettingObserver(UserSettings.customThemes) { [weak self] _ in
+            self?.onExternalChange?()
+        }
     }
 }
 
