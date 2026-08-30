@@ -3,6 +3,11 @@ import Foundation
 import AppKit
 @testable import AgenticToolkitCore
 @testable import AgenticToolkitMacOS
+// `ThemeManager` itself lives in AgenticDeveloperToolkitUI now (re-exported
+// through AgenticToolkitMacOS for ordinary call sites) — this file exercises
+// this repo's UserSettings-backed `ThemeManager()` convenience init end to
+// end, including `shouldThemeBackground(of:)`, which is `internal` there.
+@testable import AgenticDeveloperToolkitUI
 
 @MainActor
 @Suite(.serialized)

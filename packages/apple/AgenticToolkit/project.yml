@@ -168,6 +168,7 @@ targets:
       - target: AgenticToolkitPermissions
       - target: AgenticToolkitPermissionsUI
       - target: AIPluginKit
+      - target: AgenticDeveloperToolkit/AgenticDeveloperToolkitUI-macOS
       - package: SwiftTerm
       - package: CodeEditSourceEditor
       - package: CodeEditLanguages

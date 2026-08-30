@@ -19,6 +19,16 @@ public final class UserSettingsThemeStorage: ThemeStorage {
         get { UserSettings.customThemes.value }
         set { UserSettings.customThemes.value = newValue }
     }
+
+    /// Same rule as `customThemes`: the identical accessor `ThemeManager` used
+    /// before the seam existed — `UserSettings.activeThemeID`, key
+    /// `theme.active_theme_id`, a plain `String` defaulting to
+    /// `BuiltInThemes.defaultID`. `UserSetting<String>` is non-optional, so a
+    /// `nil` write falls back to that same default rather than storing `nil`.
+    public var activeThemeID: String? {
+        get { UserSettings.activeThemeID.value }
+        set { UserSettings.activeThemeID.value = newValue ?? BuiltInThemes.defaultID }
+    }
 }
 
 extension ThemeStore {
