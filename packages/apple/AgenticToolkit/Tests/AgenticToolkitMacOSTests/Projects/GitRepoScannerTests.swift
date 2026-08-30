@@ -59,20 +59,69 @@ final class GitRepoScannerTests: XCTestCase {
         XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()), [path("dev/alpha")])
     }
 
-    /// `~/Library` is full of vendored checkouts belonging to other tools.
-    func testLibraryDirectlyUnderARootIsSkipped() throws {
-        try makeRepo("Library/Caches/somebody-elses-checkout")
+    /// `~/Library` holds other tools' vendored checkouts; `~/Music`,
+    /// `~/Pictures` and `~/Movies` are media libraries big enough to dominate
+    /// the walk; the cloud-sync folders are mirrors of a machine elsewhere.
+    func testTheDefaultSkipPatternsKeepTheHomeFoldersOutOfTheWalk() throws {
+        for skipped in ["Library", "Music", "Pictures", "Movies", "Dropbox", "Google Drive"] {
+            try makeRepo("\(skipped)/somebody-elses-checkout")
+        }
         try makeRepo("dev/alpha")
 
         XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()), [path("dev/alpha")])
     }
 
-    /// Only *directly* under a root: a `Library` folder further down is just a
-    /// folder someone named that.
-    func testALibraryFolderFurtherDownIsStillScanned() throws {
-        try makeRepo("dev/Library/gamma")
+    /// A team Dropbox is named after the company, so the default that covers
+    /// it has to be a glob.
+    func testAPatternWithAWildcardMatchesATeamFolder() throws {
+        try makeRepo("Acme Dropbox/shared/checkout")
+        try makeRepo("dev/alpha")
 
-        XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()), [path("dev/Library/gamma")])
+        XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()), [path("dev/alpha")])
+    }
+
+    /// Case is not something anyone should have to get right in a settings
+    /// field, and the filesystem is case-insensitive anyway.
+    func testPatternsMatchWithoutRegardToCase() throws {
+        try makeRepo("google drive/checkout")
+
+        XCTAssertTrue(GitRepoScanner(roots: [root]).scan().isEmpty)
+    }
+
+    /// The list is the user's: whatever they put in the settings panel is
+    /// what the scan honours, and nothing else is skipped by name.
+    func testTheSkipListIsWhateverTheCallerPassesIn() throws {
+        try makeRepo("Music/somebody-elses-checkout")
+        try makeRepo("Archive/beta")
+        try makeRepo("dev/alpha")
+
+        let scanner = GitRepoScanner(roots: [root], rootSkipPatterns: ["Arch*"])
+
+        XCTAssertEqual(paths(scanner.scan()),
+                       [path("Music/somebody-elses-checkout"), path("dev/alpha")])
+    }
+
+    /// An empty list is a legitimate answer — someone who wants everything
+    /// scanned should be able to say so.
+    func testAnEmptySkipListSkipsNothing() throws {
+        try makeRepo("Library/somebody-elses-checkout")
+
+        let scanner = GitRepoScanner(roots: [root], rootSkipPatterns: [])
+
+        XCTAssertEqual(paths(scanner.scan()), [path("Library/somebody-elses-checkout")])
+    }
+
+    /// Only *directly* under a root: further down, `Library` or `Pictures` is
+    /// just a folder someone named that — quite possibly inside a project.
+    func testThoseSameNamesFurtherDownAreStillScanned() throws {
+        try makeRepo("dev/Library/gamma")
+        try makeRepo("dev/Pictures/delta")
+        try makeRepo("dev/Acme Dropbox/epsilon")
+
+        XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()),
+                       [path("dev/Acme Dropbox/epsilon"),
+                        path("dev/Library/gamma"),
+                        path("dev/Pictures/delta")])
     }
 
     func testBuildAndDependencyDirectoriesArePruned() throws {

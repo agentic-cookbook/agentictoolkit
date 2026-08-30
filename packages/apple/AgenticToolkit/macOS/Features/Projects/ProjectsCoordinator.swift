@@ -31,18 +31,21 @@ public final class ProjectsCoordinator: AppFeature {
     /// after the progress panel has gone.
     public private(set) var lastScanSummary: ProjectScanSummary?
 
-    private let scanner: GitRepoScanner
+    /// Set only by a test or a host that wants a particular walk. Left `nil`,
+    /// each scan builds its own scanner from the current setting, so editing
+    /// the skip list takes effect on the next scan rather than the next launch.
+    private let injectedScanner: GitRepoScanner?
     private weak var opener: ProjectOpening?
     private var progressWindow: ProjectScanProgressWindow?
     private var progressTimer: Timer?
 
     public init(
         database: ProjectDatabase,
-        scanner: GitRepoScanner = GitRepoScanner(),
+        scanner: GitRepoScanner? = nil,
         opener: ProjectOpening? = nil
     ) throws {
         self.database = database
-        self.scanner = scanner
+        self.injectedScanner = scanner
         self.opener = opener
         super.init()
 
@@ -141,7 +144,8 @@ public final class ProjectsCoordinator: AppFeature {
             startProgressPolling(box: box)
         }
 
-        let scanner = self.scanner
+        let scanner = injectedScanner
+            ?? GitRepoScanner(rootSkipPatterns: UserSettings.projectScanSkipPatterns.currentValue)
         Task.detached(priority: .utility) {
             let found = scanner.scan(onProgress: { progress in box.record(progress) })
             await MainActor.run { self.finishScan(found: found) }

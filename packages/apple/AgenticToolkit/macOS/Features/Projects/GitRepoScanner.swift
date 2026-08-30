@@ -7,8 +7,11 @@ import Foundation
 /// - **Hidden directories are never descended into.** One rule covers `.git`,
 ///   `.venv`, `.build`, `.claude/worktrees` and every other dot-directory that
 ///   holds checkouts nobody means by "my projects".
-/// - **`Library` under a scan root is skipped.** It is not hidden, and it is
-///   full of vendored checkouts belonging to other tools.
+/// - **Folders matching a skip pattern are skipped directly under a scan root**
+///   — `Library`, the media libraries, and the cloud-sync folders. None is
+///   hidden, and each is either someone else's vendored checkouts or a
+///   synced mirror big enough to dominate the walk. The list is the user's:
+///   `rootSkipPatterns` is injected, and the app feeds it from a setting.
 /// - **A directory holding `.git` is a repository, and is not descended into.**
 ///   That is also what excludes submodules: they live inside a repository.
 /// - **A directory whose `.git` is a *file* is skipped entirely** — that is an
@@ -28,11 +31,44 @@ public struct GitRepoScanner: Sendable {
         "Pods", "Carthage"
     ]
 
+    /// The starting skip list, offered to the user rather than imposed on them.
+    ///
+    /// Dropbox appears twice because it names its folder two ways: `Dropbox`
+    /// for a personal account, `<Company> Dropbox` for a team one. A glob is
+    /// the only way to cover the second, and the first is not a glob.
+    public static let defaultRootSkipPatterns: [String] = [
+        "Library",
+        "Music",
+        "Pictures",
+        "Movies",
+        "Dropbox",
+        "* Dropbox",
+        "Google Drive"
+    ]
+
     public let roots: [URL]
 
+    /// Matched — as `fnmatch` globs, case-insensitively — against the name of
+    /// every folder found *directly* under a scan root. Further down, `Music`
+    /// is just a folder someone named that, and may well be inside a project.
+    public let rootSkipPatterns: [String]
+
     /// Defaults to the user's home directory, which is what the app scans.
-    public init(roots: [URL]? = nil) {
+    public init(
+        roots: [URL]? = nil,
+        rootSkipPatterns: [String] = GitRepoScanner.defaultRootSkipPatterns
+    ) {
         self.roots = roots ?? [FileManager.default.homeDirectoryForCurrentUser]
+        self.rootSkipPatterns = rootSkipPatterns
+    }
+
+    /// One folder name against one pattern, the way the scanner matches it.
+    ///
+    /// Public because the settings panel says out loud which of the user's
+    /// folders a pattern currently excludes, and a second implementation of
+    /// this would be a second answer to the same question (`dry`).
+    public static func name(_ name: String, matches pattern: String) -> Bool {
+        fnmatch(pattern, name, FNM_CASEFOLD) == 0
     }
 
     /// Reported as the walk goes, so the progress window has something truthful
@@ -104,13 +140,15 @@ public struct GitRepoScanner: Sendable {
         return found.sorted { $0.path < $1.path }
     }
 
-    /// `Library` is only skipped directly under a scan root: `~/Library` is a
-    /// system directory, whereas a `Library` folder eight levels down is just a
-    /// folder someone named that.
+    /// The skip patterns apply only at depth 1: `~/Music` is a media library,
+    /// whereas a `Music` folder eight levels down is just a folder someone
+    /// named that — quite possibly a project's asset directory.
     private func shouldDescend(into url: URL, atDepth depth: Int) -> Bool {
         let name = url.lastPathComponent
         guard !name.hasPrefix("."), !Self.prunedDirectoryNames.contains(name) else { return false }
-        guard !(depth == 1 && name == "Library") else { return false }
+        if depth == 1, rootSkipPatterns.contains(where: { Self.name(name, matches: $0) }) {
+            return false
+        }
         guard !isSymbolicLink(url) else { return false }
         return isDirectory(url)
     }
