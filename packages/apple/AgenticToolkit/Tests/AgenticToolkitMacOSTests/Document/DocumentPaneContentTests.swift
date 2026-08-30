@@ -2,112 +2,101 @@ import XCTest
 import AppKit
 import AgenticToolkitMacOS
 
-/// What an app gets to say about a document's panes: which content types exist,
-/// how wide each one wants to be, and what a fresh tab starts out holding.
+/// What an app gets to say about a document's panes: which views exist, how
+/// wide each one wants to be, and what a fresh tab starts out holding.
 ///
-/// The registry and the blueprint are process-global, so every test here uses
-/// identifiers unique to itself and puts the blueprint back in `tearDown`.
+/// A registry is per-layout rather than process-global now, so each test builds
+/// its own and hands it to the document. Only `ComposableTabsLayout.install` is
+/// still global, so only that is undone in `tearDown`.
 @MainActor
 final class DocumentPaneContentTests: XCTestCase {
 
-    private lazy var document = NestedSplitViewDocument()
+    private let sidebar = ComposableTabsViewID("test.sidebar")
+    private let notes = ComposableTabsViewID("test.notes")
+    private let terminal = ComposableTabsViewID("test.terminal")
+
+    private lazy var document = ComposableTabsDocument()
 
     nonisolated override func tearDown() {
-        // `tearDown` is nonisolated; the blueprint's setter is not isolated
-        // either, which is the whole point of it.
-        DocumentLayoutBlueprint.setProvider(nil)
+        // `install` is nonisolated, which is the whole point of it: the
+        // document's writer reads the installed layout off the main actor.
+        ComposableTabsLayout.install(nil)
         super.tearDown()
     }
 
-    private func leafContentTypes(in node: LayoutNode) -> [String] {
+    private func leafViewIDs(in node: LayoutNode) -> [ComposableTabsViewID] {
         switch node.kind {
-        case .leaf(let contentType, _):
-            return [contentType]
+        case .leaf(let viewID, _):
+            return [viewID]
         case .split(_, let first, let second):
-            return leafContentTypes(in: first) + leafContentTypes(in: second)
+            return leafViewIDs(in: first) + leafViewIDs(in: second)
         }
     }
 
-    private func orientation(of node: LayoutNode) -> String? {
-        if case .split(let orientation, _, _) = node.kind { return orientation }
+    private func axis(of node: LayoutNode) -> ComposableTabsAxis? {
+        if case .split(let axis, _, _) = node.kind { return axis }
         return nil
     }
 
     // MARK: - Blueprint
 
     func testDefaultBlueprintIsTwoPlaceholdersSideBySide() {
-        let layout = DocumentLayoutBlueprint.makeTabLayout()
-        XCTAssertEqual(orientation(of: layout), "horizontal")
-        XCTAssertEqual(
-            leafContentTypes(in: layout),
-            [NestedContentRegistry.placeholderIdentifier, NestedContentRegistry.placeholderIdentifier]
-        )
+        let layout = ComposableTabsLayout.makeTabLayout()
+        XCTAssertEqual(axis(of: layout), .horizontal)
+        XCTAssertEqual(leafViewIDs(in: layout), [.placeholder, .placeholder])
     }
 
-    func testInstalledProviderReplacesTheDefaultLayout() {
-        DocumentLayoutBlueprint.setProvider {
-            LayoutNode.split(
-                orientation: "vertical",
-                first: LayoutNode.leaf(contentType: "test.blueprint.top"),
-                second: LayoutNode.leaf(contentType: "test.blueprint.bottom")
-            )
-        }
-        let layout = DocumentLayoutBlueprint.makeTabLayout()
-        XCTAssertEqual(orientation(of: layout), "vertical")
-        XCTAssertEqual(
-            leafContentTypes(in: layout),
-            ["test.blueprint.top", "test.blueprint.bottom"]
-        )
+    func testInstalledLayoutReplacesTheDefaultBlueprint() throws {
+        ComposableTabsLayout.install(try makeLayout(spec: .split(
+            axis: .vertical,
+            children: [.pane(notes), .pane(terminal)],
+            allows: [.init(notes), .unbounded(terminal)]
+        )))
+        let layout = ComposableTabsLayout.makeTabLayout()
+        XCTAssertEqual(axis(of: layout), .vertical)
+        XCTAssertEqual(leafViewIDs(in: layout), [notes, terminal])
     }
 
-    func testClearingTheProviderRestoresTheDefaultLayout() {
-        DocumentLayoutBlueprint.setProvider {
-            LayoutNode.leaf(contentType: "test.blueprint.only")
-        }
-        DocumentLayoutBlueprint.setProvider(nil)
+    func testClearingTheInstalledLayoutRestoresTheDefaultBlueprint() throws {
+        ComposableTabsLayout.install(try makeLayout(spec: .pane(notes, allows: [.init(notes)])))
+        ComposableTabsLayout.install(nil)
         XCTAssertEqual(
-            leafContentTypes(in: DocumentLayoutBlueprint.makeTabLayout()),
-            [NestedContentRegistry.placeholderIdentifier, NestedContentRegistry.placeholderIdentifier]
+            leafViewIDs(in: ComposableTabsLayout.makeTabLayout()),
+            [.placeholder, .placeholder]
         )
     }
 
     /// The document's writer can run off the main actor, and it seeds new
     /// packages from the blueprint — so reading it from another thread has to
     /// work, not just happen to.
-    func testBlueprintIsReadableOffTheMainActor() async {
-        DocumentLayoutBlueprint.setProvider {
-            LayoutNode.leaf(contentType: "test.blueprint.offmain")
-        }
-        let types = await Task.detached {
-            DocumentLayoutBlueprint.makeTabLayout()
+    func testBlueprintIsReadableOffTheMainActor() async throws {
+        ComposableTabsLayout.install(try makeLayout(spec: .pane(notes, allows: [.init(notes)])))
+        let tree = await Task.detached {
+            ComposableTabsLayout.makeTabLayout()
         }.value
-        XCTAssertEqual(leafContentTypes(in: types), ["test.blueprint.offmain"])
+        XCTAssertEqual(leafViewIDs(in: tree), [notes])
     }
 
-    // MARK: - Pane metrics
+    // MARK: - Pane descriptors
 
-    func testUnregisteredIdentifierGetsDefaultMetrics() {
-        let metrics = NestedContentRegistry.metrics(for: "test.metrics.never-registered")
-        XCTAssertEqual(metrics.minimumThickness, NestedContentRegistry.PaneMetrics.default.minimumThickness)
-        XCTAssertNil(metrics.preferredThicknessFraction)
+    func testUnregisteredViewGetsTheUnknownDescriptor() {
+        let registry = ComposableTabsViewRegistry()
+        let descriptor = registry.descriptor(for: "test.never-registered")
+        XCTAssertEqual(
+            descriptor.minimumThickness,
+            ComposableTabsViewDescriptor.unknown.minimumThickness
+        )
+        XCTAssertNil(descriptor.preferredThicknessFraction)
     }
 
-    func testRegisteredMetricsReachTheSplitViewItem() {
-        let identifier = "test.metrics.sidebar"
-        NestedContentRegistry.register(
-            identifier,
-            metrics: .init(minimumThickness: 175, preferredThicknessFraction: 0.2)
-        ) { _, _, paneNumber in
-            PlaceholderPaneViewController(paneNumber: paneNumber)
-        }
+    func testRegisteredDescriptorReachesTheSplitViewItem() throws {
+        try installTestLayout()
 
-        let sidebar = makeLeaf(UUID(), identifier)
-        let other = makeLeaf(UUID(), "test.metrics.plain")
-        let root = NestingSplitViewController(
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
-            first: sidebar,
-            second: other,
+            axis: .horizontal,
+            first: makeLeaf(sidebar),
+            second: makeLeaf(.placeholder),
             document: document,
             isRoot: true
         )
@@ -116,29 +105,28 @@ final class DocumentPaneContentTests: XCTestCase {
         XCTAssertEqual(root.splitViewItems.first?.minimumThickness, 175)
         XCTAssertEqual(root.splitViewItems.first?.preferredThicknessFraction, 0.2)
 
-        // An identifier with no registration keeps the defaults rather than
-        // inheriting its neighbour's.
+        // The placeholder keeps the default thickness rather than inheriting
+        // its neighbour's.
         XCTAssertEqual(root.splitViewItems.last?.minimumThickness, 120)
     }
 
     /// A nested split is not "some view controller with default metrics" — it is
     /// as wide as what it holds. Stacked children are as wide as the widest one.
-    func testANestedSplitReportsTheWidestOfItsStackedChildren() {
-        registerLeaf("test.metrics.nested.notes", minimumThickness: 320)
-        registerLeaf("test.metrics.nested.terminal", minimumThickness: 400)
+    func testANestedSplitReportsTheWidestOfItsStackedChildren() throws {
+        try installTestLayout()
 
-        let inner = NestingSplitViewController(
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .vertical,
-            first: makeLeaf(UUID(), "test.metrics.nested.notes"),
-            second: makeLeaf(UUID(), "test.metrics.nested.terminal"),
+            axis: .vertical,
+            first: makeLeaf(notes),        // 320
+            second: makeLeaf(terminal),    // 400
             document: document,
             isRoot: false
         )
-        let root = NestingSplitViewController(
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
-            first: makeLeaf(UUID(), "test.metrics.nested.sidebar"),
+            axis: .horizontal,
+            first: makeLeaf(sidebar),
             second: inner,
             document: document,
             isRoot: true
@@ -150,22 +138,21 @@ final class DocumentPaneContentTests: XCTestCase {
 
     /// Children arranged along the same axis as the parent stack up, so the
     /// split needs room for all of them at once.
-    func testANestedSplitSumsChildrenLaidOutAlongTheSameAxis() {
-        registerLeaf("test.metrics.sidebyside.left", minimumThickness: 320)
-        registerLeaf("test.metrics.sidebyside.right", minimumThickness: 400)
+    func testANestedSplitSumsChildrenLaidOutAlongTheSameAxis() throws {
+        try installTestLayout()
 
-        let inner = NestingSplitViewController(
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
-            first: makeLeaf(UUID(), "test.metrics.sidebyside.left"),
-            second: makeLeaf(UUID(), "test.metrics.sidebyside.right"),
+            axis: .horizontal,
+            first: makeLeaf(notes),        // 320
+            second: makeLeaf(terminal),    // 400
             document: document,
             isRoot: false
         )
-        let root = NestingSplitViewController(
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
-            first: makeLeaf(UUID(), "test.metrics.sidebyside.other"),
+            axis: .horizontal,
+            first: makeLeaf(.placeholder),
             second: inner,
             document: document,
             isRoot: true
@@ -178,37 +165,29 @@ final class DocumentPaneContentTests: XCTestCase {
     /// A pane that named a fraction holds the width it was given when the window
     /// grows; without a higher holding priority AppKit spreads the growth evenly
     /// and a 22% sidebar ends up owning half the window.
-    func testAPaneWithAPreferredFractionResistsResizeMoreThanItsNeighbours() {
-        NestedContentRegistry.register(
-            "test.metrics.holding.sidebar",
-            metrics: .init(minimumThickness: 175, preferredThicknessFraction: 0.2)
-        ) { _, _, paneNumber in
-            PlaceholderPaneViewController(paneNumber: paneNumber)
-        }
+    func testAPaneWithAPreferredFractionResistsResizeMoreThanItsNeighbours() throws {
+        try installTestLayout()
 
-        let root = NestingSplitViewController(
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
-            first: makeLeaf(UUID(), "test.metrics.holding.sidebar"),
-            second: makeLeaf(UUID(), "test.metrics.holding.content"),
+            axis: .horizontal,
+            first: makeLeaf(sidebar),
+            second: makeLeaf(notes),
             document: document,
             isRoot: true
         )
         _ = root.view
 
-        let sidebar = root.splitViewItems.first?.holdingPriority.rawValue ?? 0
-        let content = root.splitViewItems.last?.holdingPriority.rawValue ?? 0
-        XCTAssertGreaterThan(sidebar, content)
+        let sidebarPriority = root.splitViewItems.first?.holdingPriority.rawValue ?? 0
+        let contentPriority = root.splitViewItems.last?.holdingPriority.rawValue ?? 0
+        XCTAssertGreaterThan(sidebarPriority, contentPriority)
     }
 
     // MARK: - Content lifecycle
 
-    func testContentIsAdoptedAsAChildViewController() {
-        let identifier = "test.content.child"
-        NestedContentRegistry.register(identifier) { _, _, _ in
-            TeardownSpyViewController()
-        }
-        let leaf = makeLeaf(UUID(), identifier)
+    func testContentIsAdoptedAsAChildViewController() throws {
+        try installTeardownSpyLayout()
+        let leaf = makeLeaf(notes)
         _ = leaf.view
 
         let content = leaf.contentViewController
@@ -219,16 +198,13 @@ final class DocumentPaneContentTests: XCTestCase {
         XCTAssertEqual(leaf.children.count, 1)
     }
 
-    func testRemovingAPaneTearsDownItsContent() {
-        let identifier = "test.content.teardown"
-        NestedContentRegistry.register(identifier) { _, _, _ in
-            TeardownSpyViewController()
-        }
-        let doomed = makeLeaf(UUID(), identifier)
-        let survivor = makeLeaf(UUID(), identifier)
-        let root = NestingSplitViewController(
+    func testRemovingAPaneTearsDownItsContent() throws {
+        try installTeardownSpyLayout()
+        let doomed = makeLeaf(terminal)
+        let survivor = makeLeaf(terminal)
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
+            axis: .horizontal,
             first: doomed,
             second: survivor,
             document: document,
@@ -246,15 +222,12 @@ final class DocumentPaneContentTests: XCTestCase {
         XCTAssertEqual(survivorSpy?.teardownCount, 0)
     }
 
-    func testTheLastPaneIsNotTornDownBecauseItIsNotRemoved() {
-        let identifier = "test.content.lastpane"
-        NestedContentRegistry.register(identifier) { _, _, _ in
-            TeardownSpyViewController()
-        }
-        let only = makeLeaf(UUID(), identifier)
-        let root = NestingSplitViewController(
+    func testTheLastPaneIsNotTornDownBecauseItIsNotRemoved() throws {
+        try installTeardownSpyLayout()
+        let only = makeLeaf(terminal)
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
+            axis: .horizontal,
             children: [only],
             document: document,
             isRoot: true
@@ -268,20 +241,66 @@ final class DocumentPaneContentTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func registerLeaf(_ identifier: String, minimumThickness: CGFloat) {
-        NestedContentRegistry.register(
-            identifier,
-            metrics: .init(minimumThickness: minimumThickness)
-        ) { _, _, paneNumber in
-            PlaceholderPaneViewController(paneNumber: paneNumber)
+    /// A sidebar that names a fraction, plus two views with distinct minimums —
+    /// the three shapes the metrics tests need.
+    private func makeTestRegistry(
+        content: ComposableTabsViewRegistry.Factory? = nil
+    ) -> ComposableTabsViewRegistry {
+        let factory: ComposableTabsViewRegistry.Factory = content ?? { context in
+            PlaceholderPaneViewController(paneNumber: context.paneNumber)
         }
+        let registry = ComposableTabsViewRegistry()
+        registry.register(sidebar, descriptor: .init(
+            displayName: "Sidebar",
+            preferredAxis: .horizontal,
+            minimumThickness: 175,
+            preferredThicknessFraction: 0.2
+        ), factory: factory)
+        registry.register(notes, descriptor: .init(
+            displayName: "Notes", preferredAxis: .vertical, minimumThickness: 320
+        ), factory: factory)
+        registry.register(terminal, descriptor: .init(
+            displayName: "Terminal", preferredAxis: .vertical, minimumThickness: 400
+        ), factory: factory)
+        return registry
     }
 
-    private func makeLeaf(_ id: UUID, _ contentType: String) -> NestedViewController {
-        NestedViewController(
-            nodeID: id,
+    private func makeLayout(
+        spec: ComposableTabLayoutSpec,
+        registry: ComposableTabsViewRegistry? = nil
+    ) throws -> ComposableTabsLayout {
+        try ComposableTabsLayout(registry: registry ?? makeTestRegistry(), spec: spec)
+    }
+
+    private var testSpec: ComposableTabLayoutSpec {
+        .split(
+            axis: .horizontal,
+            children: [
+                .pane(sidebar),
+                .split(axis: .vertical, children: [.pane(notes), .pane(terminal)])
+            ],
+            allows: [
+                .init(sidebar), .init(notes), .unbounded(terminal), .unbounded(.placeholder)
+            ]
+        )
+    }
+
+    private func installTestLayout() throws {
+        document.layout = try makeLayout(spec: testSpec)
+    }
+
+    private func installTeardownSpyLayout() throws {
+        document.layout = try makeLayout(
+            spec: testSpec,
+            registry: makeTestRegistry { _ in TeardownSpyViewController() }
+        )
+    }
+
+    private func makeLeaf(_ viewID: ComposableTabsViewID) -> ComposableTabsPaneViewController {
+        ComposableTabsPaneViewController(
+            nodeID: UUID(),
             paneNumber: document.allocatePaneNumber(),
-            contentTypeIdentifier: contentType,
+            viewID: viewID,
             document: document
         )
     }

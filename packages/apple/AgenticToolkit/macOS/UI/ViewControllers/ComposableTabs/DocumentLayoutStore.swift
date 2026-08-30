@@ -11,22 +11,31 @@ public enum DocumentLayoutStoreError: Error {
     case invalidSchema(String)
 }
 
+/// A persisted layout tree. Storage vocabulary — it outlives any one view
+/// registry — but its two payloads are typed rather than free strings so a
+/// spec, a registry and a stored tree can be compared without stringly
+/// guesswork. Both types are `RawRepresentable` over exactly the strings the
+/// schema already holds, so no stored package changes meaning.
 public struct LayoutNode: Sendable {
     public indirect enum Kind: Sendable {
-        case split(orientation: String, first: LayoutNode, second: LayoutNode)
-        case leaf(contentType: String, paneLabel: String?)
+        case split(orientation: ComposableTabsAxis, first: LayoutNode, second: LayoutNode)
+        case leaf(contentType: ComposableTabsViewID, paneLabel: String?)
     }
 
     public let id: UUID
     public let kind: Kind
 
-    public static func leaf(id: UUID = UUID(), contentType: String, paneLabel: String? = nil) -> LayoutNode {
+    public static func leaf(
+        id: UUID = UUID(),
+        contentType: ComposableTabsViewID,
+        paneLabel: String? = nil
+    ) -> LayoutNode {
         LayoutNode(id: id, kind: .leaf(contentType: contentType, paneLabel: paneLabel))
     }
 
     public static func split(
         id: UUID = UUID(),
-        orientation: String,
+        orientation: ComposableTabsAxis,
         first: LayoutNode,
         second: LayoutNode
     ) -> LayoutNode {
@@ -348,13 +357,13 @@ public final class DocumentLayoutStore {
         switch node.kind {
         case .split(let orientation, _, _):
             sqlite3_bind_text(stmt, 4, ("split" as NSString).utf8String, -1, nil)
-            sqlite3_bind_text(stmt, 5, (orientation as NSString).utf8String, -1, nil)
+            sqlite3_bind_text(stmt, 5, (orientation.rawValue as NSString).utf8String, -1, nil)
             sqlite3_bind_null(stmt, 6)
             sqlite3_bind_null(stmt, 7)
         case .leaf(let contentType, let paneLabel):
             sqlite3_bind_text(stmt, 4, ("leaf" as NSString).utf8String, -1, nil)
             sqlite3_bind_null(stmt, 5)
-            sqlite3_bind_text(stmt, 6, (contentType as NSString).utf8String, -1, nil)
+            sqlite3_bind_text(stmt, 6, (contentType.rawValue as NSString).utf8String, -1, nil)
             if let paneLabel {
                 sqlite3_bind_text(stmt, 7, (paneLabel as NSString).utf8String, -1, nil)
             } else {
@@ -420,7 +429,7 @@ public final class DocumentLayoutStore {
         }
         switch row.kind {
         case "leaf":
-            let contentType = row.contentType ?? "whippet.placeholder"
+            let contentType = row.contentType.map { ComposableTabsViewID($0) } ?? .placeholder
             return LayoutNode(id: row.id, kind: .leaf(contentType: contentType, paneLabel: row.paneLabel))
         case "split":
             let children = rows.values
@@ -431,7 +440,7 @@ public final class DocumentLayoutStore {
             }
             let first = try buildTree(id: children[0].id, rows: rows)
             let second = try buildTree(id: children[1].id, rows: rows)
-            let orientation = row.orientation ?? "horizontal"
+            let orientation = row.orientation.flatMap(ComposableTabsAxis.init(rawValue:)) ?? .horizontal
             return LayoutNode(id: row.id, kind: .split(orientation: orientation, first: first, second: second))
         default:
             throw DocumentLayoutStoreError.invalidSchema("unknown kind \(row.kind)")

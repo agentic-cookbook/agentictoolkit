@@ -4,7 +4,7 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 import os
 
-public class NestedSplitViewDocument: NSDocument {
+public class ComposableTabsDocument: NSDocument {
 
     public nonisolated static let databaseFilename = "project.sqlite"
 
@@ -16,6 +16,15 @@ public class NestedSplitViewDocument: NSDocument {
     private let stateLock = NSLock()
 
     public override class var autosavesInPlace: Bool { true }
+
+    /// The views this document may show and the arrangements it may show them
+    /// in. Defaults to whatever the app installed; a document controller can
+    /// hand a different one to the documents it opens, which is how the demo
+    /// and a real app document coexist in one process
+    /// (`dependency-injection`).
+    @MainActor
+    public lazy var layout: ComposableTabsLayout = ComposableTabsLayout.current
+        ?? ComposableTabsLayout.placeholderOnly()
 
     // MARK: - Thread-safe state access
 
@@ -60,9 +69,17 @@ public class NestedSplitViewDocument: NSDocument {
         stateLock.unlock()
         if let pending, !pending.isEmpty {
             let active = pendingActive ?? pending[0].id
-            return (pending, active, pendingEdges ?? [.top])
+            // A stored tree can outlive the spec that made it, so it is
+            // repaired on the way in rather than allowed to contradict the
+            // rules the split menu enforces from here on.
+            let repaired = pending.map { record -> TabRecord in
+                var record = record
+                record.root = layout.spec.reconcile(record.root)
+                return record
+            }
+            return (repaired, active, pendingEdges ?? [.top])
         }
-        let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
+        let tab = TabRecord(title: "Tab 1", root: layout.blueprint())
         return ([tab], tab.id, [.top])
     }
 
@@ -121,10 +138,10 @@ public class NestedSplitViewDocument: NSDocument {
             let pendingActive = pendingActiveTabIDForLoad
             let pendingEdges = pendingEnabledEdgesForLoad
             stateLock.unlock()
-            // `DocumentLayoutBlueprint` is nonisolated and lock-guarded
-            // precisely so this writer, which can run off-main, seeds the same
-            // layout every other entry point does.
-            let tabs = pending ?? [TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())]
+            // `ComposableTabsLayout.makeTabLayout()` is nonisolated and
+            // lock-guarded precisely so this writer, which can run off-main,
+            // seeds the same layout every other entry point does.
+            let tabs = pending ?? [TabRecord(title: "Tab 1", root: ComposableTabsLayout.makeTabLayout())]
             let active = pendingActive ?? tabs.first?.id
             try newStore.saveTabs(tabs, activeTabID: active, enabledEdges: pendingEdges ?? [.top])
         }
@@ -150,16 +167,16 @@ public class NestedSplitViewDocument: NSDocument {
             try? FileManager.default.createDirectory(at: tmpURL, withIntermediateDirectories: true)
             let dbPath = tmpURL.appendingPathComponent(Self.databaseFilename).path
             if let store = try? DocumentLayoutStore(path: dbPath) {
-                let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
+                let tab = TabRecord(title: "Tab 1", root: layout.blueprint())
                 try? store.saveTabs([tab], activeTabID: tab.id)
                 setLayoutStore(store)
             }
         }
-        let controller = NestedSplitViewWindowController(document: self)
+        let controller = ComposableTabsWindowController(document: self)
         addWindowController(controller)
     }
 }
 
-extension NestedSplitViewDocument: Loggable {
+extension ComposableTabsDocument: Loggable {
     public static nonisolated let logger = makeLogger()
 }

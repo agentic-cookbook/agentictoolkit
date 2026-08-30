@@ -7,17 +7,21 @@ import AgenticToolkitMacOS
 /// collapses into its parent; the *root* may hold one child, which is a tab
 /// reduced to a single full-size pane.
 @MainActor
-final class NestingSplitViewControllerTests: XCTestCase {
+final class ComposableTabsViewControllerTests: XCTestCase {
 
     // `setUp`/`tearDown` are nonisolated, so the document is built lazily on
     // first use from the main-actor-isolated test body instead.
-    private lazy var document = NestedSplitViewDocument()
+    private lazy var document = ComposableTabsDocument()
 
-    private func makeLeaf(_ id: UUID, _ contentType: String) -> NestedViewController {
-        NestedViewController(
+    /// Every leaf holds the placeholder view: these tests are about tree
+    /// surgery, and panes are told apart by `nodeID`. The document's default
+    /// layout allows the placeholder anywhere and unboundedly, so nothing here
+    /// is refused for a reason the test did not ask about.
+    private func makeLeaf(_ id: UUID) -> ComposableTabsPaneViewController {
+        ComposableTabsPaneViewController(
             nodeID: id,
             paneNumber: document.allocatePaneNumber(),
-            contentTypeIdentifier: contentType,
+            viewID: .placeholder,
             document: document
         )
     }
@@ -25,12 +29,12 @@ final class NestingSplitViewControllerTests: XCTestCase {
     /// Loads the root's view so children are really parented — collapse walks
     /// `parent`, which only exists once the split view items are installed.
     private func makeLoadedRoot(
-        first: any NestedChild,
-        second: any NestedChild
-    ) -> NestingSplitViewController {
-        let root = NestingSplitViewController(
+        first: any ComposableTabsChild,
+        second: any ComposableTabsChild
+    ) -> ComposableTabsViewController {
+        let root = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .horizontal,
+            axis: .horizontal,
             first: first,
             second: second,
             document: document,
@@ -53,12 +57,12 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testRemovingAPaneCollapsesTheDegenerateSplitIntoItsParent() {
         let idA = UUID(), idB = UUID(), idC = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
-        let leafC = makeLeaf(idC, "test.c")
-        let inner = NestingSplitViewController(
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
+        let leafC = makeLeaf(idC)
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .vertical,
+            axis: .vertical,
             first: leafB,
             second: leafC,
             document: document,
@@ -79,13 +83,13 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testCollapseKeepsTheSurvivorAtTheRemovedSplitsPosition() {
         let idA = UUID(), idB = UUID(), idC = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
-        let leafC = makeLeaf(idC, "test.c")
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
+        let leafC = makeLeaf(idC)
         // The nested split is the *first* child this time.
-        let inner = NestingSplitViewController(
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .vertical,
+            axis: .vertical,
             first: leafB,
             second: leafC,
             document: document,
@@ -103,8 +107,8 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testRemovingDownToOnePaneLeavesTheRootHoldingThatPane() {
         let idA = UUID(), idB = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
         let root = makeLoadedRoot(first: leafA, second: leafB)
 
         root.remove(leafB)
@@ -119,8 +123,8 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testMakeFromALeafHostsASinglePaneInsteadOfPaddingWithAPlaceholder() {
         let idA = UUID()
-        let root = NestingSplitViewController.make(
-            from: LayoutNode.leaf(id: idA, contentType: "test.a"),
+        let root = ComposableTabsViewController.make(
+            from: LayoutNode.leaf(id: idA, contentType: .placeholder),
             document: document,
             isRoot: true
         )
@@ -132,12 +136,12 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testASinglePaneTabRoundTripsThroughSnapshotAndMake() {
         let idA = UUID(), idB = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
         let root = makeLoadedRoot(first: leafA, second: leafB)
         root.remove(leafB)
 
-        let restored = NestingSplitViewController.make(
+        let restored = ComposableTabsViewController.make(
             from: root.snapshotNode(),
             document: document,
             isRoot: true
@@ -151,8 +155,8 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testRemovingTheLastPaneIsRefused() {
         let idA = UUID(), idB = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
         let root = makeLoadedRoot(first: leafA, second: leafB)
         root.remove(leafB)
 
@@ -163,9 +167,9 @@ final class NestingSplitViewControllerTests: XCTestCase {
     }
 
     func testRemovingAPaneNotInThisSplitIsANoOp() {
-        let leafA = makeLeaf(UUID(), "test.a")
-        let leafB = makeLeaf(UUID(), "test.b")
-        let stranger = makeLeaf(UUID(), "test.stranger")
+        let leafA = makeLeaf(UUID())
+        let leafB = makeLeaf(UUID())
+        let stranger = makeLeaf(UUID())
         let root = makeLoadedRoot(first: leafA, second: leafB)
 
         root.remove(stranger)
@@ -175,12 +179,12 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testRemovalNotifiesTheRootWithTheFreshSnapshot() {
         let idA = UUID(), idB = UUID(), idC = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
-        let leafC = makeLeaf(idC, "test.c")
-        let inner = NestingSplitViewController(
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
+        let leafC = makeLeaf(idC)
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: .vertical,
+            axis: .vertical,
             first: leafB,
             second: leafC,
             document: document,
@@ -202,18 +206,18 @@ final class NestingSplitViewControllerTests: XCTestCase {
 
     func testSplitThenRemoveReturnsTheOriginalLayout() {
         let idA = UUID(), idB = UUID()
-        let leafA = makeLeaf(idA, "test.a")
-        let leafB = makeLeaf(idB, "test.b")
+        let leafA = makeLeaf(idA)
+        let leafB = makeLeaf(idB)
         let root = makeLoadedRoot(first: leafA, second: leafB)
         let before = leafIDs(in: root.snapshotNode())
 
-        root.split(leafB, direction: .below)
+        root.split(leafB, adding: .placeholder, direction: .below)
         XCTAssertEqual(root.leafCount(), 3)
 
         // The pane the split created is the one that is neither A nor B.
         guard let addedID = leafIDs(in: root.snapshotNode()).first(where: { $0 != idA && $0 != idB }),
               let addedLeaf = findLeaf(addedID, under: root),
-              let owner = addedLeaf.parent as? NestingSplitViewController else {
+              let owner = addedLeaf.parent as? ComposableTabsViewController else {
             return XCTFail("splitting must introduce exactly one new, locatable leaf")
         }
 
@@ -226,10 +230,10 @@ final class NestingSplitViewControllerTests: XCTestCase {
     /// Depth-first search of the live controller containment tree. Touching
     /// `view` forces a split that was only just inserted to install its items,
     /// so its children exist before we look for them.
-    private func findLeaf(_ id: UUID, under controller: NSViewController) -> NestedViewController? {
+    private func findLeaf(_ id: UUID, under controller: NSViewController) -> ComposableTabsPaneViewController? {
         _ = controller.view
         for child in controller.children {
-            if let leaf = child as? NestedViewController, leaf.nodeID == id { return leaf }
+            if let leaf = child as? ComposableTabsPaneViewController, leaf.nodeID == id { return leaf }
             if let found = findLeaf(id, under: child) { return found }
         }
         return nil

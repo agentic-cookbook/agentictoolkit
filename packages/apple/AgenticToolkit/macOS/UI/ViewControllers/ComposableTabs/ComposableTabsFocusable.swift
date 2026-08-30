@@ -1,13 +1,13 @@
 import AppKit
 import Foundation
 
-/// Lets a host (e.g. a window controller) ask a `NestingSplitViewController`
+/// Lets a host (e.g. a window controller) ask a `ComposableTabsViewController`
 /// which leaf is currently focused and request that a particular leaf
 /// become first responder. Stays out of `MultiTabbedViewController` so the tab
 /// container doesn't need to know about the split-view internals.
 @MainActor
-public protocol NestedSplitFocusable: AnyObject {
-    /// The `nodeID` of the deepest `NestedViewController` whose view tree
+public protocol ComposableTabsFocusable: AnyObject {
+    /// The `nodeID` of the deepest `ComposableTabsPaneViewController` whose view tree
     /// currently contains the window's first responder, or `nil` if no
     /// leaf in this controller's tree is focused.
     var focusedLeafNodeID: UUID? { get }
@@ -18,7 +18,7 @@ public protocol NestedSplitFocusable: AnyObject {
     func makeLeafFirstResponder(nodeID: UUID)
 }
 
-extension NestingSplitViewController: NestedSplitFocusable {
+extension ComposableTabsViewController: ComposableTabsFocusable {
 
     public var focusedLeafNodeID: UUID? {
         guard let firstResponder = view.window?.firstResponder as? NSView else {
@@ -34,13 +34,13 @@ extension NestingSplitViewController: NestedSplitFocusable {
 
     /// Recursive walk: tries each child split's tree, then checks if a
     /// direct leaf child contains `firstResponder`.
-    private func findFocusedLeaf(under split: NestingSplitViewController, firstResponder: NSView) -> UUID? {
+    private func findFocusedLeaf(under split: ComposableTabsViewController, firstResponder: NSView) -> UUID? {
         for item in split.splitViewItems {
-            if let childSplit = item.viewController as? NestingSplitViewController,
+            if let childSplit = item.viewController as? ComposableTabsViewController,
                let nested = findFocusedLeaf(under: childSplit, firstResponder: firstResponder) {
                 return nested
             }
-            if let leaf = item.viewController as? NestedViewController,
+            if let leaf = item.viewController as? ComposableTabsPaneViewController,
                isView(firstResponder, descendantOf: leaf.view) {
                 return leaf.nodeID
             }
@@ -48,12 +48,15 @@ extension NestingSplitViewController: NestedSplitFocusable {
         return nil
     }
 
-    private func findLeaf(under split: NestingSplitViewController, nodeID: UUID) -> NestedViewController? {
+    private func findLeaf(
+        under split: ComposableTabsViewController,
+        nodeID: UUID
+    ) -> ComposableTabsPaneViewController? {
         for item in split.splitViewItems {
-            if let leaf = item.viewController as? NestedViewController, leaf.nodeID == nodeID {
+            if let leaf = item.viewController as? ComposableTabsPaneViewController, leaf.nodeID == nodeID {
                 return leaf
             }
-            if let childSplit = item.viewController as? NestingSplitViewController,
+            if let childSplit = item.viewController as? ComposableTabsViewController,
                let leaf = findLeaf(under: childSplit, nodeID: nodeID) {
                 return leaf
             }

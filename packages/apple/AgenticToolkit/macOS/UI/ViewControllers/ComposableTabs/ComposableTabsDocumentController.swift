@@ -13,12 +13,24 @@ public protocol ProjectURLPrompting {
     func promptForExistingProjectURLs() -> [URL]
 }
 
-public final class WhippetDocumentController: NSDocumentController {
+/// The `NSDocumentController` behind `.whiproj` packages.
+///
+/// Not `final`: `ComposableLayoutDocumentControllerDemo` subclasses it to hand
+/// its documents a different `ComposableTabsLayout`, which is the whole of the
+/// difference between the demo and a real app document.
+public class ComposableTabsDocumentController: NSDocumentController {
 
     private static let projectUTI = "com.mikefullerton.whippet.project"
     /// Public because pane content has to recognise the project package too —
     /// the file browser shows it as one opaque item rather than a folder.
     public static let projectExtension = "whiproj"
+
+    /// The layout given to every document this controller creates or opens.
+    /// The base answers with whatever the app installed; a subclass can vend
+    /// its own view set without touching a global (`dependency-injection`).
+    public var documentLayout: ComposableTabsLayout {
+        ComposableTabsLayout.current ?? ComposableTabsLayout.placeholderOnly()
+    }
 
     /// Override in tests to avoid running AppKit modal panels.
     public var urlPrompter: ProjectURLPrompting = DefaultProjectURLPrompter()
@@ -35,7 +47,7 @@ public final class WhippetDocumentController: NSDocumentController {
     public var didFinishOpeningDocument: ((NSDocument?, Error?) -> Void)?
 
     @IBAction public override func newDocument(_ sender: Any?) {
-        logger.info("WhippetDocumentController.newDocument(_:) invoked")
+        logger.info("ComposableTabsDocumentController.newDocument(_:) invoked")
         NSApp.activate(ignoringOtherApps: true)
         guard let url = urlPrompter.promptForNewProjectURL() else {
             logger.info("newDocument: prompter returned nil — user cancelled")
@@ -45,7 +57,7 @@ public final class WhippetDocumentController: NSDocumentController {
     }
 
     @IBAction public override func openDocument(_ sender: Any?) {
-        logger.info("WhippetDocumentController.openDocument(_:) invoked")
+        logger.info("ComposableTabsDocumentController.openDocument(_:) invoked")
         NSApp.activate(ignoringOtherApps: true)
         let urls = urlPrompter.promptForExistingProjectURLs()
         guard !urls.isEmpty else {
@@ -71,7 +83,7 @@ public final class WhippetDocumentController: NSDocumentController {
 
         let finalURL: URL
         do {
-            finalURL = try Self.writeEmptyPackage(at: url)
+            finalURL = try Self.writeEmptyPackage(at: url, root: documentLayout.blueprint())
         } catch {
             // swiftlint:disable:next line_length
             logger.error("Failed to create Whippet project at \(url.path, privacy: .public): \(error.localizedDescription, privacy: .public)")
@@ -108,6 +120,7 @@ public final class WhippetDocumentController: NSDocumentController {
             return nil
         }
 
+        (doc as? ComposableTabsDocument)?.layout = documentLayout
         addDocument(doc)
         // swiftlint:disable:next line_length
         logger.info("openProject: registered \(String(describing: Swift.type(of: doc)), privacy: .public) for \(url.path, privacy: .public)")
@@ -134,7 +147,7 @@ public final class WhippetDocumentController: NSDocumentController {
     /// Creates an empty `.whiproj` package at `url` seeded with the app's
     /// default tab layout. Returns the canonical URL (with extension appended
     /// if missing). Exposed for integration tests.
-    public static func writeEmptyPackage(at url: URL) throws -> URL {
+    public static func writeEmptyPackage(at url: URL, root: LayoutNode? = nil) throws -> URL {
         let finalURL = url.pathExtension.lowercased() == Self.projectExtension
             ? url
             : url.appendingPathExtension(Self.projectExtension)
@@ -144,9 +157,9 @@ public final class WhippetDocumentController: NSDocumentController {
             try fileManager.removeItem(at: finalURL)
         }
         try fileManager.createDirectory(at: finalURL, withIntermediateDirectories: true)
-        let dbURL = finalURL.appendingPathComponent(NestedSplitViewDocument.databaseFilename)
+        let dbURL = finalURL.appendingPathComponent(ComposableTabsDocument.databaseFilename)
         let store = try DocumentLayoutStore(path: dbURL.path)
-        let tab = TabRecord(title: "Tab 1", root: DocumentLayoutBlueprint.makeTabLayout())
+        let tab = TabRecord(title: "Tab 1", root: root ?? ComposableTabsLayout.makeTabLayout())
         try store.saveTabs([tab], activeTabID: tab.id)
         return finalURL
     }
@@ -190,7 +203,7 @@ public final class DefaultProjectURLPrompter: ProjectURLPrompting {
     }
 }
 
-extension WhippetDocumentController: Loggable {
+extension ComposableTabsDocumentController: Loggable {
     public static nonisolated let logger = makeLogger()
 }
 

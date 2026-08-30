@@ -9,7 +9,7 @@ import AgenticToolkitCoreMacOS
 /// split tree, tab arrangement, active tab) lives in the package's SQLite.
 ///
 /// The window's content view is a generic `MultiTabbedViewController` from the
-/// toolkit. Each tab hosts its own `NestingSplitViewController` rooted at
+/// toolkit. Each tab hosts its own `ComposableTabsViewController` rooted at
 /// the layout tree persisted for that tab.
 ///
 /// The tab count is global across edges: one document-level "tab" is a
@@ -18,7 +18,7 @@ import AgenticToolkitCoreMacOS
 /// member closes its whole group, and a newly enabled edge is topped up
 /// to one member per group.
 @MainActor
-public final class NestedSplitViewWindowController: WindowController<NSViewController> {
+public final class ComposableTabsWindowController: WindowController<NSViewController> {
 
     public static let sharedWindowID = "whiprojDocumentWindow"
 
@@ -28,17 +28,17 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         var members: [Edge: UUID]
     }
 
-    private let splitDocument: NestedSplitViewDocument
+    private let splitDocument: ComposableTabsDocument
     private let tabbed: MultiTabbedViewController
 
     /// Document-level tabs, in creation order. Only top-edge members are
     /// persisted (the layout store predates the other edges).
     private var tabGroups: [TabGroup] = []
 
-    /// Live mapping from a tab's UUID to the tab's root `NestingSplitViewController`.
+    /// Live mapping from a tab's UUID to the tab's root `ComposableTabsViewController`.
     /// Used by the layout-change callback to rebuild a tab's `TabRecord`
     /// when the user splits / closes panes inside a tab.
-    private var splitControllersByTabID: [UUID: NestingSplitViewController] = [:]
+    private var splitControllersByTabID: [UUID: ComposableTabsViewController] = [:]
 
     /// Last focused leaf nodeID per tab — written through every time the
     /// window's first responder changes inside the active tab. Persisted
@@ -51,7 +51,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
     private var edgesAccessory: NSTitlebarAccessoryViewController?
 
-    public init(document: NestedSplitViewDocument) {
+    public init(document: ComposableTabsDocument) {
         self.splitDocument = document
         self.tabbed = MultiTabbedViewController()
         super.init(windowID: Self.sharedWindowID, contentViewController: tabbed)
@@ -185,9 +185,9 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         persistAllTabs()
     }
 
-    private func makeSplitController(for tabID: UUID) -> NestingSplitViewController {
-        let split = NestingSplitViewController.make(
-            from: DocumentLayoutBlueprint.makeTabLayout(),
+    private func makeSplitController(for tabID: UUID) -> ComposableTabsViewController {
+        let split = ComposableTabsViewController.make(
+            from: splitDocument.layout.blueprint(),
             document: splitDocument,
             isRoot: true
         )
@@ -284,7 +284,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         // order, per-edge member order is record order.
         var groupIndexByID: [UUID: Int] = [:]
         for record in initial.tabs {
-            let split = NestingSplitViewController.make(
+            let split = ComposableTabsViewController.make(
                 from: record.root,
                 document: splitDocument,
                 isRoot: true
@@ -318,7 +318,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
         }
     }
 
-    private func wireLayoutCallback(on split: NestingSplitViewController, tabID: UUID) {
+    private func wireLayoutCallback(on split: ComposableTabsViewController, tabID: UUID) {
         split.onLayoutDidChange = { [weak self] node in
             guard let self else { return }
             // A removed pane must not leave a focus record behind, or
@@ -372,7 +372,7 @@ public final class NestedSplitViewWindowController: WindowController<NSViewContr
 
 // MARK: - MultiTabbedViewControllerDelegate
 
-extension NestedSplitViewWindowController: MultiTabbedViewControllerDelegate {
+extension ComposableTabsWindowController: MultiTabbedViewControllerDelegate {
 
     public func multiTabbedViewControllerNeedsNewTab(_ controller: MultiTabbedViewController) {
         addTabGroup()

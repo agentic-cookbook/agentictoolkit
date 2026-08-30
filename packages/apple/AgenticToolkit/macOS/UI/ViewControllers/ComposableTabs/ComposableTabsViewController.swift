@@ -3,19 +3,36 @@ import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
 @MainActor
-public final class NestingSplitViewController: ThemedSplitViewController {
+public final class ComposableTabsViewController: ThemedSplitViewController {
 
     public enum Direction {
         case left, right, above, below
+
+        public var axis: ComposableTabsAxis {
+            switch self {
+            case .left, .right: return .horizontal
+            case .above, .below: return .vertical
+            }
+        }
+
+        /// Where the *new* pane goes relative to the one being split.
+        public var placesNewPaneFirst: Bool {
+            self == .left || self == .above
+        }
+
+        /// The two directions that offer `axis`, near side first.
+        public static func directions(along axis: ComposableTabsAxis) -> [Direction] {
+            axis == .horizontal ? [.right, .left] : [.below, .above]
+        }
     }
 
     public let nodeID: UUID
-    private let orientation: NSUserInterfaceLayoutOrientation
+    public let axis: ComposableTabsAxis
     /// The live child list, and the single source of truth for the tree —
     /// `splitViewItems` only exists once the view has loaded, and a restored
     /// but never-displayed tab never loads its view.
-    private var layoutChildren: [any NestedChild]
-    private weak var splitDocument: NestedSplitViewDocument?
+    private var layoutChildren: [any ComposableTabsChild]
+    private weak var splitDocument: ComposableTabsDocument?
     private let isRoot: Bool
 
     /// One-shot: after the first real layout the user owns the dividers, and
@@ -23,7 +40,7 @@ public final class NestingSplitViewController: ThemedSplitViewController {
     private var hasAppliedPreferredThicknesses = false
 
     /// Callback the host (e.g. window controller) installs on the *root*
-    /// `NestingSplitViewController` of each tab. Fires whenever a layout
+    /// `ComposableTabsViewController` of each tab. Fires whenever a layout
     /// change happens that should be persisted, with a fresh snapshot of
     /// the tree. The host is responsible for routing this snapshot into
     /// the document's tab list.
@@ -31,13 +48,13 @@ public final class NestingSplitViewController: ThemedSplitViewController {
 
     public init(
         nodeID: UUID,
-        orientation: NSUserInterfaceLayoutOrientation,
-        children: [any NestedChild],
-        document: NestedSplitViewDocument?,
+        axis: ComposableTabsAxis,
+        children: [any ComposableTabsChild],
+        document: ComposableTabsDocument?,
         isRoot: Bool
     ) {
         self.nodeID = nodeID
-        self.orientation = orientation
+        self.axis = axis
         self.layoutChildren = children
         self.splitDocument = document
         self.isRoot = isRoot
@@ -46,15 +63,15 @@ public final class NestingSplitViewController: ThemedSplitViewController {
 
     public convenience init(
         nodeID: UUID,
-        orientation: NSUserInterfaceLayoutOrientation,
-        first: any NestedChild,
-        second: any NestedChild,
-        document: NestedSplitViewDocument?,
+        axis: ComposableTabsAxis,
+        first: any ComposableTabsChild,
+        second: any ComposableTabsChild,
+        document: ComposableTabsDocument?,
         isRoot: Bool
     ) {
         self.init(
             nodeID: nodeID,
-            orientation: orientation,
+            axis: axis,
             children: [first, second],
             document: document,
             isRoot: isRoot
@@ -66,10 +83,16 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         fatalError("init(coder:) is not supported")
     }
 
+    /// The layout governing this tree — the document's, or the placeholder-only
+    /// fallback if the document has gone away.
+    var layout: ComposableTabsLayout {
+        splitDocument?.layout ?? ComposableTabsLayout.placeholderOnly()
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        splitView.isVertical = (orientation == .horizontal)
+        splitView.isVertical = (axis == .horizontal)
         splitView.dividerStyle = .thin
 
         for child in layoutChildren {
@@ -113,37 +136,34 @@ public final class NestingSplitViewController: ThemedSplitViewController {
 
     // MARK: - Mutation
 
-    public func split(_ child: NestedViewController, direction: Direction) {
+    /// Splits `child`, putting a pane showing `viewID` beside it.
+    ///
+    /// The view to add is a parameter rather than a copy of what the pane
+    /// already shows: which views may go here is the spec's answer, and a pane
+    /// that duplicated its own content would walk straight through a `max: 1`.
+    public func split(
+        _ child: ComposableTabsPaneViewController,
+        adding viewID: ComposableTabsViewID,
+        direction: Direction
+    ) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === child }),
               let document = splitDocument else { return }
 
-        let sibling = NestedViewController(
+        let sibling = ComposableTabsPaneViewController(
             nodeID: UUID(),
             paneNumber: document.allocatePaneNumber(),
-            contentTypeIdentifier: child.contentTypeIdentifier,
+            viewID: viewID,
             document: document
         )
 
-        let newOrientation: NSUserInterfaceLayoutOrientation
-        let firstChildVC: NestedViewController
-        let secondChildVC: NestedViewController
-        switch direction {
-        case .right:
-            newOrientation = .horizontal
-            firstChildVC = child
-            secondChildVC = sibling
-        case .left:
-            newOrientation = .horizontal
+        let firstChildVC: ComposableTabsPaneViewController
+        let secondChildVC: ComposableTabsPaneViewController
+        if direction.placesNewPaneFirst {
             firstChildVC = sibling
             secondChildVC = child
-        case .below:
-            newOrientation = .vertical
+        } else {
             firstChildVC = child
             secondChildVC = sibling
-        case .above:
-            newOrientation = .vertical
-            firstChildVC = sibling
-            secondChildVC = child
         }
 
         // The child moves *into* the new inner split, so detach it from this
@@ -152,9 +172,9 @@ public final class NestingSplitViewController: ThemedSplitViewController {
             removeSplitViewItem(item)
         }
 
-        let inner = NestingSplitViewController(
+        let inner = ComposableTabsViewController(
             nodeID: UUID(),
-            orientation: newOrientation,
+            axis: direction.axis,
             first: firstChildVC,
             second: secondChildVC,
             document: document,
@@ -174,16 +194,16 @@ public final class NestingSplitViewController: ThemedSplitViewController {
     /// one child is a degenerate split, so it collapses into its parent, which
     /// adopts the survivor at the same position. The *root* may legitimately
     /// hold a single child — that is a tab reduced to one full-size pane.
-    public func remove(_ child: NestedViewController) {
+    public func remove(_ child: ComposableTabsPaneViewController) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === child }) else { return }
 
         // `rootSplit()` walks up through `parent`, so it has to be resolved
         // before a collapse detaches this controller from the tree.
         let root = rootSplit()
-        // A tab always keeps at least one pane — there is nothing else to fill
-        // the space. The menu greys "Remove" out at that point, but the rule
-        // belongs to the tree, not to whichever UI happens to call in.
-        guard (root ?? self).leafCount() > 1 else { return }
+        // Every removal rule — the tab's last pane, a fixed region, a view the
+        // spec requires — lives in the spec, so the tree asks it rather than
+        // trusting whichever UI happened to call in.
+        guard (root ?? self).canRemoveLeaf(child) else { return }
         let hadFocus = child.containsFirstResponder
 
         layoutChildren.remove(at: index)
@@ -195,7 +215,7 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         // on until the last reference happens to drop.
         child.paneWillBeRemoved()
 
-        if layoutChildren.count == 1, !isRoot, let parentSplit = parent as? NestingSplitViewController {
+        if layoutChildren.count == 1, !isRoot, let parentSplit = parent as? ComposableTabsViewController {
             let survivor = layoutChildren[0]
             if isViewLoaded,
                let item = splitViewItems.first(where: { $0.viewController === survivor.viewController }) {
@@ -211,7 +231,10 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         root?.persistTreeToDocument()
     }
 
-    private func replaceChild(_ old: NestingSplitViewController, with replacement: any NestedChild) {
+    private func replaceChild(
+        _ old: ComposableTabsViewController,
+        with replacement: any ComposableTabsChild
+    ) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === old }) else { return }
         layoutChildren[index] = replacement
         guard isViewLoaded,
@@ -220,21 +243,41 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         insertSplitViewItem(makeItem(for: replacement.viewController), at: index)
     }
 
+    // MARK: - Spec-driven legal moves
+
+    /// Views that may be added beside `leaf`, with the direction to offer each
+    /// one first. Asked of the root, because a `max` declared at the top of the
+    /// spec counts across the whole tab.
+    public func allowedInsertions(
+        beside leaf: ComposableTabsPaneViewController
+    ) -> [ComposableTabLayoutSpec.Insertion] {
+        guard let root = rootSplit() else { return [] }
+        return layout.spec.allowedInsertions(
+            at: leaf.nodeID,
+            in: root.snapshotNode(),
+            registry: layout.registry
+        )
+    }
+
+    public func canRemoveLeaf(_ leaf: ComposableTabsPaneViewController) -> Bool {
+        guard let root = rootSplit() else { return false }
+        return layout.spec.canRemove(leaf.nodeID, from: root.snapshotNode())
+    }
+
     // MARK: - Tree walking
 
-    func rootSplit() -> NestingSplitViewController? {
-        var current: NestingSplitViewController? = self
-        while let parent = current?.parent as? NestingSplitViewController {
+    func rootSplit() -> ComposableTabsViewController? {
+        var current: ComposableTabsViewController? = self
+        while let parent = current?.parent as? ComposableTabsViewController {
             current = parent
         }
         return current
     }
 
-    /// Number of leaf panes in this subtree. Drives the "Remove" menu item's
-    /// enablement — the last pane in a tab cannot be removed.
+    /// Number of leaf panes in this subtree.
     public func leafCount() -> Int {
         layoutChildren.reduce(0) { total, child in
-            if let split = child as? NestingSplitViewController {
+            if let split = child as? ComposableTabsViewController {
                 return total + split.leafCount()
             }
             return total + 1
@@ -243,10 +286,10 @@ public final class NestingSplitViewController: ThemedSplitViewController {
 
     /// First leaf in depth-first order, used to re-home first responder after
     /// the focused pane is removed.
-    public func firstLeaf() -> NestedViewController? {
+    public func firstLeaf() -> ComposableTabsPaneViewController? {
         for child in layoutChildren {
-            if let leaf = child as? NestedViewController { return leaf }
-            if let split = child as? NestingSplitViewController, let leaf = split.firstLeaf() {
+            if let leaf = child as? ComposableTabsPaneViewController { return leaf }
+            if let split = child as? ComposableTabsViewController, let leaf = split.firstLeaf() {
                 return leaf
             }
         }
@@ -267,50 +310,48 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         let snapshots = layoutChildren.map { snapshotChild($0) }
         switch snapshots.count {
         case 0:
-            return LayoutNode.leaf(contentType: NestedContentRegistry.placeholderIdentifier)
+            return LayoutNode.leaf(contentType: .placeholder)
         case 1:
             return snapshots[0]
         default:
-            let orientationString = (orientation == .horizontal) ? "horizontal" : "vertical"
             return LayoutNode.split(
                 id: nodeID,
-                orientation: orientationString,
+                orientation: axis,
                 first: snapshots[0],
                 second: snapshots[1]
             )
         }
     }
 
-    private func snapshotChild(_ child: any NestedChild) -> LayoutNode {
-        if let split = child as? NestingSplitViewController {
+    private func snapshotChild(_ child: any ComposableTabsChild) -> LayoutNode {
+        if let split = child as? ComposableTabsViewController {
             return split.snapshotNode()
         }
-        if let leaf = child as? NestedViewController {
-            return LayoutNode.leaf(id: leaf.nodeID, contentType: leaf.contentTypeIdentifier)
+        if let leaf = child as? ComposableTabsPaneViewController {
+            return LayoutNode.leaf(id: leaf.nodeID, contentType: leaf.viewID)
         }
         // Fallback — should not occur under the current class hierarchy.
-        return LayoutNode.leaf(id: UUID(), contentType: NestedContentRegistry.placeholderIdentifier)
+        return LayoutNode.leaf(id: UUID(), contentType: .placeholder)
     }
 
-    /// Sizing comes from whatever the leaf's content type registered — or, for a
+    /// Sizing comes from whatever the leaf's view registered — or, for a
     /// nested split, from everything underneath it.
     private func makeItem(for viewController: NSViewController) -> NSSplitViewItem {
         let item = NSSplitViewItem(viewController: viewController)
-        let metrics = (viewController as? NestedViewController)
-            .map { NestedContentRegistry.metrics(for: $0.contentTypeIdentifier) }
-        item.minimumThickness = Self.minimumThickness(of: viewController, along: orientation)
-        if let fraction = metrics?.preferredThicknessFraction {
+        let registry = layout.registry
+        let descriptor = (viewController as? ComposableTabsPaneViewController)
+            .map { registry.descriptor(for: $0.viewID) }
+        item.minimumThickness = Self.minimumThickness(
+            of: viewController, along: axis, registry: registry)
+        item.canCollapse = descriptor?.isCollapsible ?? false
+        if let fraction = descriptor?.preferredThicknessFraction {
             item.preferredThicknessFraction = fraction
-            // A pane that asked for a share of the window keeps the width it
-            // gets; a higher holding priority makes AppKit take a window resize
-            // out of its neighbours instead of spreading it around. A sidebar
-            // that grew with the window would be a third of a wide display.
-            item.holdingPriority = NSLayoutConstraint.Priority(
-                rawValue: NSLayoutConstraint.Priority.defaultLow.rawValue + 10
-            )
-        } else {
-            item.holdingPriority = .defaultLow
         }
+        // A pane that asked for a share of the window keeps the width it gets;
+        // a higher holding priority makes AppKit take a window resize out of
+        // its neighbours instead of spreading it around. A sidebar that grew
+        // with the window would be a third of a wide display.
+        item.holdingPriority = descriptor?.resolvedHoldingPriority ?? .defaultLow
         return item
     }
 
@@ -323,41 +364,42 @@ public final class NestingSplitViewController: ThemedSplitViewController {
     /// beside a 400pt terminal can be squeezed to 120.
     private static func minimumThickness(
         of viewController: NSViewController,
-        along axis: NSUserInterfaceLayoutOrientation
+        along axis: ComposableTabsAxis,
+        registry: ComposableTabsViewRegistry
     ) -> CGFloat {
-        if let leaf = viewController as? NestedViewController {
-            return NestedContentRegistry.metrics(for: leaf.contentTypeIdentifier).minimumThickness
+        if let leaf = viewController as? ComposableTabsPaneViewController {
+            return registry.descriptor(for: leaf.viewID).minimumThickness
         }
-        guard let split = viewController as? NestingSplitViewController,
+        guard let split = viewController as? ComposableTabsViewController,
               !split.layoutChildren.isEmpty else {
-            return NestedContentRegistry.PaneMetrics.default.minimumThickness
+            return ComposableTabsViewDescriptor.placeholder.minimumThickness
         }
         let thicknesses = split.layoutChildren.map {
-            minimumThickness(of: $0.viewController, along: axis)
+            minimumThickness(of: $0.viewController, along: axis, registry: registry)
         }
-        return split.orientation == axis
+        return split.axis == axis
             ? thicknesses.reduce(0, +)
-            : (thicknesses.max() ?? NestedContentRegistry.PaneMetrics.default.minimumThickness)
+            : (thicknesses.max() ?? ComposableTabsViewDescriptor.placeholder.minimumThickness)
     }
 
     // MARK: - Construction from persisted layout
 
-    /// Builds a root or nested `NestingSplitViewController` + `NestedViewController` tree
-    /// from a value-type `LayoutNode`. A leaf at the top level is a tab that was reduced
-    /// to a single pane; it is hosted in a root split holding that one child, which fills
-    /// the tab.
+    /// Builds a root or nested `ComposableTabsViewController` +
+    /// `ComposableTabsPaneViewController` tree from a value-type `LayoutNode`.
+    /// A leaf at the top level is a tab that was reduced to a single pane; it is
+    /// hosted in a root split holding that one child, which fills the tab.
     public static func make(
         from node: LayoutNode,
-        document: NestedSplitViewDocument,
+        document: ComposableTabsDocument,
         isRoot: Bool
-    ) -> NestingSplitViewController {
+    ) -> ComposableTabsViewController {
         switch node.kind {
         case .split:
             return buildSplit(node, document: document, isRoot: isRoot)
         case .leaf:
-            return NestingSplitViewController(
+            return ComposableTabsViewController(
                 nodeID: UUID(),
-                orientation: .horizontal,
+                axis: .horizontal,
                 children: [buildChild(node, document: document)],
                 document: document,
                 isRoot: isRoot
@@ -367,53 +409,52 @@ public final class NestingSplitViewController: ThemedSplitViewController {
 
     private static func buildSplit(
         _ node: LayoutNode,
-        document: NestedSplitViewDocument,
+        document: ComposableTabsDocument,
         isRoot: Bool
-    ) -> NestingSplitViewController {
-        guard case .split(let orientationString, let first, let second) = node.kind else {
+    ) -> ComposableTabsViewController {
+        guard case .split(let axis, let first, let second) = node.kind else {
             // Unreachable given `make(from:)` routes leaves elsewhere — fail loudly if violated.
             fatalError("buildSplit called with non-split node")
         }
-        let orientation: NSUserInterfaceLayoutOrientation =
-            (orientationString == "horizontal") ? .horizontal : .vertical
-        let firstChild = buildChild(first, document: document)
-        let secondChild = buildChild(second, document: document)
-        return NestingSplitViewController(
+        return ComposableTabsViewController(
             nodeID: node.id,
-            orientation: orientation,
-            first: firstChild,
-            second: secondChild,
+            axis: axis,
+            first: buildChild(first, document: document),
+            second: buildChild(second, document: document),
             document: document,
             isRoot: isRoot
         )
     }
 
-    private static func buildChild(_ node: LayoutNode, document: NestedSplitViewDocument) -> any NestedChild {
+    private static func buildChild(
+        _ node: LayoutNode,
+        document: ComposableTabsDocument
+    ) -> any ComposableTabsChild {
         switch node.kind {
         case .split:
             return buildSplit(node, document: document, isRoot: false)
-        case .leaf(let contentType, _):
-            let paneNumber = document.allocatePaneNumber()
-            return NestedViewController(
+        case .leaf(let viewID, _):
+            return ComposableTabsPaneViewController(
                 nodeID: node.id,
-                paneNumber: paneNumber,
-                contentTypeIdentifier: contentType,
+                paneNumber: document.allocatePaneNumber(),
+                viewID: viewID,
                 document: document
             )
         }
     }
 }
 
-/// Type-erasing protocol so `NestingSplitViewController` can hold either a leaf or a nested split.
+/// Type-erasing protocol so `ComposableTabsViewController` can hold either a
+/// leaf or a nested split.
 @MainActor
-public protocol NestedChild: AnyObject {
+public protocol ComposableTabsChild: AnyObject {
     var viewController: NSViewController { get }
 }
 
-extension NestedViewController: NestedChild {
+extension ComposableTabsPaneViewController: ComposableTabsChild {
     public var viewController: NSViewController { self }
 }
 
-extension NestingSplitViewController: NestedChild {
+extension ComposableTabsViewController: ComposableTabsChild {
     public var viewController: NSViewController { self }
 }
