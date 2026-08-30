@@ -23,14 +23,19 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     /// What the tree selects and the viewer shows.
     public let selection: FileBrowserSelection
 
+    /// The roots the tree shows. Forwarded so a host does not have to reach
+    /// through `browserViewController` to add or remove one.
+    public var directories: FileBrowserDirectories { browserViewController.directories }
+
     /// Divider-position autosave key. AppKit keys these globally, so two split
     /// views alive at once under one name fight over the same stored position.
     /// Callers that can have more than one pass a distinct name.
     private let splitAutosaveName: String
 
     /// - Parameters:
-    ///   - rootURL: The directory to show.
-    ///   - cacheURL: Where the scan cache is written, and a directory excluded
+    ///   - directories: The roots to show — the project itself, plus whatever
+    ///     the user has added with the tree's `+`.
+    ///   - cacheURL: Where scan caches are written, and a directory excluded
     ///     from the scan.
     ///   - config: Which directory extensions are opaque packages, and the
     ///     `UserDefaults` keys backing the browser's settings.
@@ -38,7 +43,7 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     ///   - autosaveName: Divider-position key; distinct per pane when a host can
     ///     open more than one.
     public init(
-        rootURL: URL,
+        directories: FileBrowserDirectories,
         cacheURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
@@ -47,7 +52,7 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         let selection = FileBrowserSelection()
         self.selection = selection
         self.browserViewController = FileBrowserViewController(
-            rootURL: rootURL,
+            directories: directories,
             cacheURL: cacheURL,
             config: config,
             ignorePatterns: ignorePatterns,
@@ -56,6 +61,23 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         self.viewerViewController = FileViewerViewController(selection: selection)
         self.splitAutosaveName = autosaveName
         super.init(nibName: nil, bundle: nil)
+    }
+
+    /// A browser over a single directory, with nothing to add or remove.
+    public convenience init(
+        rootURL: URL,
+        cacheURL: URL,
+        config: FileTreeConfig = .default,
+        ignorePatterns: [String] = [],
+        autosaveName: String = "file-browser-split"
+    ) {
+        self.init(
+            directories: FileBrowserDirectories(primary: rootURL),
+            cacheURL: cacheURL,
+            config: config,
+            ignorePatterns: ignorePatterns,
+            autosaveName: autosaveName
+        )
     }
 
     @available(*, unavailable)

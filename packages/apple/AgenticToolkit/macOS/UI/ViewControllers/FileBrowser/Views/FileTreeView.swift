@@ -46,6 +46,101 @@ public struct FileTreeView: View {
     }
 }
 
+/// A file tree browser over several root directories at once, one collapsible
+/// section per root.
+///
+/// Separate from `FileTreeView` rather than a mode of it: a single-root tree
+/// shows its contents flat, with no header to explain what they are, and that
+/// is still the right view for a sidebar over one folder
+/// (`principle-of-least-astonishment`).
+public struct FileTreeRootsView: View {
+
+    /// One manager per root, in display order.
+    public let managers: [FileTreeManager]
+
+    /// The root the `+`/`−` controls act on.
+    @Binding public var selectedRoot: URL?
+
+    /// The currently selected file tree node, bound to the parent view.
+    @Binding public var selectedNode: FileTreeNode?
+
+    @Environment(\.theme) private var theme
+
+    public init(
+        managers: [FileTreeManager],
+        selectedRoot: Binding<URL?>,
+        selectedNode: Binding<FileTreeNode?>
+    ) {
+        self.managers = managers
+        self._selectedRoot = selectedRoot
+        self._selectedNode = selectedNode
+    }
+
+    public var body: some View {
+        List(selection: $selectedNode) {
+            ForEach(managers, id: \.repoRootURL) { manager in
+                Section {
+                    FileTreeRootSection(manager: manager)
+                } header: {
+                    header(for: manager.repoRootURL)
+                }
+            }
+        }
+        .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+        .background(theme.windowBackground)
+        .tint(theme.accent)
+    }
+
+    /// Clicking a header is how a root with nothing selected inside it becomes
+    /// the target of `−`; without it, removing an empty directory would mean
+    /// first finding a file in it to click.
+    private func header(for url: URL) -> some View {
+        HStack(spacing: 4) {
+            Text(url.lastPathComponent)
+                .font(theme.font(.caption))
+                .foregroundStyle(selectedRoot == url ? theme.primaryText : theme.secondaryText)
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .help(url.path)
+        .onTapGesture { selectedRoot = url }
+    }
+}
+
+/// The rows under one root. Its own view so each root's manager is observed
+/// individually — a scan finishing in one directory redraws that section, not
+/// every section.
+public struct FileTreeRootSection: View {
+
+    @ObservedObject public var manager: FileTreeManager
+
+    @Environment(\.theme) private var theme
+
+    public init(manager: FileTreeManager) {
+        self.manager = manager
+    }
+
+    public var body: some View {
+        if let children = manager.rootNode?.children {
+            OutlineGroup(children, children: \.children) { node in
+                FileTreeRow(node: node)
+                    .tag(node)
+                    .listRowBackground(Color.clear)
+            }
+        } else if manager.isSyncing {
+            ProgressView()
+                .controlSize(.small)
+                .listRowBackground(Color.clear)
+        } else {
+            Text("Empty")
+                .font(theme.font(.caption))
+                .foregroundStyle(theme.tertiaryText)
+                .listRowBackground(Color.clear)
+        }
+    }
+}
+
 /// A single row in the file tree, showing an icon, file/folder name, and git status badge.
 public struct FileTreeRow: View {
     @ObservedObject public var node: FileTreeNode

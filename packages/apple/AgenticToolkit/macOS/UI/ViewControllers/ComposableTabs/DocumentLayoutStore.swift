@@ -75,7 +75,7 @@ public final class DocumentLayoutStore {
     private var database: OpaquePointer?
     public let databasePath: String
 
-    public static let currentSchemaVersion = 3
+    public static let currentSchemaVersion = 4
 
     public init(path: String) throws {
         self.databasePath = path
@@ -121,6 +121,9 @@ public final class DocumentLayoutStore {
         }
         if current < 3 {
             try migration003_addEdgesAndGroups()
+        }
+        if current < 4 {
+            try migration004_addProjectDirectories()
         }
     }
 
@@ -209,6 +212,23 @@ public final class DocumentLayoutStore {
         try execute("UPDATE document_tabs SET group_id = id WHERE group_id IS NULL")
         try execute("ALTER TABLE document_state ADD COLUMN enabled_edges TEXT NOT NULL DEFAULT 'top'")
         try execute("INSERT INTO schema_migrations (version) VALUES (3)")
+    }
+
+    /// Adds the extra directories the file browser shows alongside the
+    /// document's own folder.
+    ///
+    /// Only the *additional* ones are stored: the document folder is derived
+    /// from the document's URL, so it cannot go stale or be removed — and an
+    /// empty table then means "no extras", never "not seeded yet"
+    /// (`explicit-over-implicit`).
+    private func migration004_addProjectDirectories() throws {
+        try execute("""
+            CREATE TABLE project_directories (
+                position INTEGER PRIMARY KEY,
+                path TEXT NOT NULL
+            )
+        """)
+        try execute("INSERT INTO schema_migrations (version) VALUES (4)")
     }
 
     /// Flushes the WAL into the main database file so a file-level copy of
@@ -444,6 +464,45 @@ public final class DocumentLayoutStore {
             return LayoutNode(id: row.id, kind: .split(orientation: orientation, first: first, second: second))
         default:
             throw DocumentLayoutStoreError.invalidSchema("unknown kind \(row.kind)")
+        }
+    }
+
+    // MARK: - Project directories (v4)
+
+    /// The extra directories the file browser shows, in display order.
+    public func loadProjectDirectories() throws -> [String] {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        let sql = "SELECT path FROM project_directories ORDER BY position"
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw DocumentLayoutStoreError.prepareFailed(lastErrorMessage)
+        }
+        var paths: [String] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            guard let cstring = sqlite3_column_text(stmt, 0) else { continue }
+            paths.append(String(cString: cstring))
+        }
+        return paths
+    }
+
+    /// Replaces the stored list wholesale — the caller always holds the whole
+    /// list, so a diff would be a second representation of one fact (`dry`).
+    public func saveProjectDirectories(_ paths: [String]) throws {
+        try execute("BEGIN IMMEDIATE TRANSACTION")
+        do {
+            try execute("DELETE FROM project_directories")
+            for (index, path) in paths.enumerated() {
+                try executeBound(
+                    "INSERT INTO project_directories (position, path) VALUES (?, ?)"
+                ) { stmt in
+                    sqlite3_bind_int(stmt, 1, Int32(index))
+                    sqlite3_bind_text(stmt, 2, (path as NSString).utf8String, -1, nil)
+                }
+            }
+            try execute("COMMIT")
+        } catch {
+            _ = try? execute("ROLLBACK")
+            throw error
         }
     }
 

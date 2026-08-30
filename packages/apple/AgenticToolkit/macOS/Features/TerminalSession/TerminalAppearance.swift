@@ -4,29 +4,41 @@ import SwiftTerm
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// The caret's shape. Blinking is a separate setting rather than three more
-/// cases, because "block, blinking" is how the user thinks about it and
-/// SwiftTerm's six-case `CursorStyle` is an encoding detail (`srp`).
+/// The caret's shape. Blinking is a separate setting rather than more cases,
+/// because "block, blinking" is how the user thinks about it and SwiftTerm's
+/// six-case `CursorStyle` is an encoding detail (`srp`).
 public enum TerminalCursorShape: String, Codable, CaseIterable, Sendable, Equatable {
     case block
+    case hollowBlock
     case underline
     case bar
 
     public var label: String {
         switch self {
-        case .block:     return "Block  ▉"
-        case .underline: return "Underline  _"
-        case .bar:       return "Bar  |"
+        case .block:       return "Block  ▉"
+        case .hollowBlock: return "Hollow Block  ▢"
+        case .underline:   return "Underline  _"
+        case .bar:         return "Bar  |"
         }
     }
 
+    /// Both block shapes map to SwiftTerm's block: the difference between them
+    /// is fill, which `ThemedTerminalView` draws, not a different style.
     public func cursorStyle(blinking: Bool) -> CursorStyle {
         switch self {
-        case .block:     return blinking ? .blinkBlock : .steadyBlock
-        case .underline: return blinking ? .blinkUnderline : .steadyUnderline
-        case .bar:       return blinking ? .blinkBar : .steadyBar
+        case .block, .hollowBlock: return blinking ? .blinkBlock : .steadyBlock
+        case .underline:           return blinking ? .blinkUnderline : .steadyUnderline
+        case .bar:                 return blinking ? .blinkBar : .steadyBar
         }
     }
+}
+
+/// The four sides a terminal's padding is set on.
+public struct TerminalPadding: Equatable, Sendable {
+    public var top: CGFloat
+    public var leading: CGFloat
+    public var bottom: CGFloat
+    public var trailing: CGFloat
 }
 
 /// What a terminal looks like: colors from the app theme, everything else from
@@ -41,9 +53,12 @@ public enum TerminalCursorShape: String, Codable, CaseIterable, Sendable, Equata
 public enum TerminalAppearance {
 
     /// Every `terminal_*` key, so a change to any of them can be recognized
-    /// from `UserSettings.shared.changes` without five separate observers.
+    /// from `UserSettings.shared.changes` without one observer per setting.
     public static let settingKeys: Set<String> = [
-        UserSettings.terminalPadding.name,
+        UserSettings.terminalPaddingTop.name,
+        UserSettings.terminalPaddingLeading.name,
+        UserSettings.terminalPaddingBottom.name,
+        UserSettings.terminalPaddingTrailing.name,
         UserSettings.terminalUsesThemeFont.name,
         UserSettings.terminalFontName.name,
         UserSettings.terminalFontSize.name,
@@ -51,16 +66,11 @@ public enum TerminalAppearance {
         UserSettings.terminalCursorBlinks.name
     ]
 
-    /// Font families that can render a terminal grid. A proportional font in a
-    /// terminal is not a preference, it's a broken layout, so the picker never
-    /// offers one.
-    public static func monospacedFontFamilies() -> [String] {
-        NSFontManager.shared.availableFontFamilies
-            .filter { NSFont(name: $0, size: 12)?.isFixedPitch == true }
-            .sorted()
-    }
-
     /// The theme's code font unless the user has opted out of it.
+    ///
+    /// The stored name is a PostScript font name rather than a family, because
+    /// the whole point of the picker is telling `FiraCode Nerd Font Mono` from
+    /// `FiraCode Nerd Font Propo` — a family name cannot.
     public static func resolvedFont(palette: SemanticPalette) -> NSFont {
         if UserSettings.terminalUsesThemeFont.value {
             return palette.font(.code)
@@ -71,8 +81,13 @@ public enum TerminalAppearance {
     }
 
     /// How far the terminal grid is held off its container's edges.
-    public static func resolvedPadding() -> CGFloat {
-        CGFloat(UserSettings.terminalPadding.value)
+    public static func resolvedPadding() -> TerminalPadding {
+        TerminalPadding(
+            top: CGFloat(UserSettings.terminalPaddingTop.value),
+            leading: CGFloat(UserSettings.terminalPaddingLeading.value),
+            bottom: CGFloat(UserSettings.terminalPaddingBottom.value),
+            trailing: CGFloat(UserSettings.terminalPaddingTrailing.value)
+        )
     }
 
     /// Paints `terminalView` with the theme's colors and the user's font and
@@ -80,7 +95,6 @@ public enum TerminalAppearance {
     public static func apply(to terminalView: TerminalView, palette: SemanticPalette) {
         terminalView.nativeForegroundColor = palette.nsColor(.primaryText)
         terminalView.nativeBackgroundColor = palette.nsColor(.windowBackground)
-        terminalView.caretColor = palette.nsColor(.cursor)
         terminalView.selectedTextBackgroundColor = palette.nsColor(.selection)
 
         let ansi = palette.theme.ansi.map(Self.swiftTermColor)
@@ -90,12 +104,35 @@ public enum TerminalAppearance {
 
         terminalView.font = resolvedFont(palette: palette)
 
-        terminalView.getTerminal().setCursorStyle(
-            UserSettings.terminalCursorShape.value
-                .cursorStyle(blinking: UserSettings.terminalCursorBlinks.value)
-        )
+        applyCaret(to: terminalView, palette: palette)
 
         terminalView.needsDisplay = true
+    }
+
+    /// `setCursorStyle` only moves the `Terminal`'s own state; the AppKit caret
+    /// is repainted by the view's `cursorStyleChanged`. Calling just the first
+    /// is why changing the shape used to do nothing visible.
+    private static func applyCaret(to terminalView: TerminalView, palette: SemanticPalette) {
+        let shape = UserSettings.terminalCursorShape.value
+        let style = shape.cursorStyle(blinking: UserSettings.terminalCursorBlinks.value)
+
+        let terminal = terminalView.getTerminal()
+        terminal.setCursorStyle(style)
+        terminalView.cursorStyleChanged(source: terminal, newStyle: style)
+
+        let cursorColor = palette.nsColor(.cursor)
+        let hollow = shape == .hollowBlock
+
+        // In hollow mode SwiftTerm's own fill has to disappear, and the glyph
+        // under the caret has to keep reading as ordinary text rather than as
+        // reversed-out caret text.
+        terminalView.caretColor = hollow ? .clear : cursorColor
+        terminalView.caretTextColor = hollow ? palette.nsColor(.primaryText) : nil
+
+        if let themed = terminalView as? ThemedTerminalView {
+            themed.hollowCaretColor = cursorColor
+            themed.usesHollowCaret = hollow
+        }
     }
 
     /// `RGBAColor` is normalized [0, 1]; SwiftTerm wants 16-bit channels.
@@ -110,20 +147,25 @@ public enum TerminalAppearance {
 
 extension UserSettings {
 
-    /// Inset between the terminal grid and its container, in points.
-    static public var terminalPadding = UserSetting<Double>("terminal_padding", default: 10)
+    /// Inset between the terminal grid and its container, per side, in points.
+    /// Four settings rather than one because a terminal under a tab bar wants
+    /// more room at the top than at the bottom, and that is not derivable.
+    static public var terminalPaddingTop = UserSetting<Int>("terminal_padding_top", default: 10)
+    static public var terminalPaddingLeading = UserSetting<Int>("terminal_padding_leading", default: 10)
+    static public var terminalPaddingBottom = UserSetting<Int>("terminal_padding_bottom", default: 10)
+    static public var terminalPaddingTrailing = UserSetting<Int>("terminal_padding_trailing", default: 10)
 
     /// Whether the terminal uses the theme's code font rather than the two
     /// settings below.
     static public var terminalUsesThemeFont = UserSetting<Bool>("terminal_uses_theme_font", default: true)
 
-    /// Font family used when `terminalUsesThemeFont` is off.
-    static public var terminalFontName = UserSetting<String>("terminal_font_name", default: "Menlo")
+    /// PostScript font name used when `terminalUsesThemeFont` is off.
+    static public var terminalFontName = UserSetting<String>("terminal_font_name", default: "Menlo-Regular")
 
     /// Font size used when `terminalUsesThemeFont` is off.
     static public var terminalFontSize = UserSetting<Double>("terminal_font_size", default: 13)
 
-    /// Caret shape: block, underline or bar.
+    /// Caret shape: block, hollow block, underline or bar.
     static public var terminalCursorShape =
         UserSetting<TerminalCursorShape>("terminal_cursor_shape", default: .block)
 

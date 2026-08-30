@@ -97,6 +97,33 @@ public class ComposableTabsDocument: NSDocument {
         }
     }
 
+    // MARK: - Project directories
+
+    /// The extra directories this project's file browser shows, beyond the
+    /// folder the document itself lives in.
+    @MainActor
+    public func projectDirectories() -> [URL] {
+        guard let store = layoutStore else { return [] }
+        do {
+            return try store.loadProjectDirectories().map { URL(fileURLWithPath: $0) }
+        } catch {
+            logger.error("Failed to load project directories: \(error.localizedDescription, privacy: .public)")
+            return []
+        }
+    }
+
+    /// Persist the extra directories. Called whenever the browser's `+`/`−`
+    /// changes the list.
+    @MainActor
+    public func persistProjectDirectories(_ urls: [URL]) {
+        guard let store = layoutStore else { return }
+        do {
+            try store.saveProjectDirectories(urls.map(\.path))
+        } catch {
+            logger.error("Failed to save project directories: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
     // MARK: - NSDocument reading
 
     public override func read(from url: URL, ofType typeName: String) throws {

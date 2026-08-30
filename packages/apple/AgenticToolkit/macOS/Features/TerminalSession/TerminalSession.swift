@@ -72,7 +72,7 @@ public final class TerminalSession: ObservableObject, Identifiable {
     }
 
     public private(set) lazy var terminalView: LocalProcessTerminalView = {
-        let view = LocalProcessTerminalView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
+        let view = ThemedTerminalView(frame: CGRect(x: 0, y: 0, width: 800, height: 600))
         view.processDelegate = processHandler
         startShellProcess(in: view)
         return view

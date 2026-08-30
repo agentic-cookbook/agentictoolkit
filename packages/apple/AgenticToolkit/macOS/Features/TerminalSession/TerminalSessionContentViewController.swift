@@ -20,8 +20,14 @@ public final class TerminalSessionContentViewController: NSViewController {
     private var currentSessionID: UUID?
 
     /// The four insets holding the terminal off the container's edges, kept so
-    /// the padding setting can move them without rebuilding the view.
-    private var paddingConstraints: [NSLayoutConstraint] = []
+    /// the padding settings can move them without rebuilding the view. Named
+    /// individually because each side is its own setting.
+    private var paddingConstraints: (
+        top: NSLayoutConstraint,
+        leading: NSLayoutConstraint,
+        bottom: NSLayoutConstraint,
+        trailing: NSLayoutConstraint
+    )?
 
     public init(sessionManager: TerminalSessionManager) {
         self.sessionManager = sessionManager
@@ -67,23 +73,27 @@ public final class TerminalSessionContentViewController: NSViewController {
         guard newID != currentSessionID else { return }
 
         for subview in view.subviews { subview.removeFromSuperview() }
-        paddingConstraints = []
+        paddingConstraints = nil
 
         if let session {
             let terminalView = session.terminalView
             terminalView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(terminalView)
 
-            let padding = TerminalAppearance.resolvedPadding()
-            paddingConstraints = [
-                terminalView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: padding),
-                terminalView.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
-                view.trailingAnchor.constraint(equalTo: terminalView.trailingAnchor, constant: padding),
-                view.bottomAnchor.constraint(equalTo: terminalView.bottomAnchor, constant: padding)
-            ]
-            NSLayoutConstraint.activate(paddingConstraints)
+            let constraints = (
+                top: terminalView.topAnchor.constraint(equalTo: view.topAnchor),
+                leading: terminalView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+                bottom: view.bottomAnchor.constraint(equalTo: terminalView.bottomAnchor),
+                trailing: view.trailingAnchor.constraint(equalTo: terminalView.trailingAnchor)
+            )
+            paddingConstraints = constraints
+            NSLayoutConstraint.activate([
+                constraints.top, constraints.leading, constraints.bottom, constraints.trailing
+            ])
 
-            TerminalAppearance.apply(to: terminalView, palette: ThemePaletteObserver.currentPalette)
+            // Goes through the same path as a later settings change, so the
+            // constraints get their constants from one place (`dry`).
+            applyAppearance(palette: ThemePaletteObserver.currentPalette)
 
             DispatchQueue.main.async { [weak terminalView] in
                 terminalView?.window?.makeFirstResponder(terminalView)
@@ -98,12 +108,15 @@ public final class TerminalSessionContentViewController: NSViewController {
     }
 
     private func applyAppearance(palette: SemanticPalette) {
-        let padding = TerminalAppearance.resolvedPadding()
-        for constraint in paddingConstraints {
-            constraint.constant = padding
+        if let paddingConstraints {
+            let padding = TerminalAppearance.resolvedPadding()
+            paddingConstraints.top.constant = padding.top
+            paddingConstraints.leading.constant = padding.leading
+            paddingConstraints.bottom.constant = padding.bottom
+            paddingConstraints.trailing.constant = padding.trailing
         }
 
-        guard let terminalView = view.subviews.first as? LocalProcessTerminalView else { return }
+        guard let terminalView = view.subviews.first as? TerminalView else { return }
         TerminalAppearance.apply(to: terminalView, palette: palette)
     }
 }

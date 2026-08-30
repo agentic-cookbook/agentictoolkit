@@ -10,6 +10,12 @@ import AgenticToolkitCore
 @MainActor
 public final class TerminalSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
+    /// `CheckboxView` claims its view model's `onChange` for itself, so the
+    /// font row's enablement needs an observer of its own rather than a second
+    /// consumer of that one.
+    private var usesThemeFontObserver: UserSettingObserver<Bool>?
+    private var fontPicker: ComposableSettings.FontPickerView?
+
     public init() {
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Terminal",
@@ -29,18 +35,30 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     }
 
     private func createLayoutGroup() -> ComposableSettings.GroupView {
-        let group = ComposableSettings.GroupView(withTitle: "Layout")
+        let group = ComposableSettings.GroupView(withTitle: "Padding")
 
-        let padding = ComposableSettings.RangeViewModel<Double>(
-            title: "Padding",
-            setting: UserSettings.terminalPadding,
-            minValue: 0,
-            maxValue: 40,
-            explanation: "Space between the terminal text and the edge of its pane."
-        )
-        group.addSettingSubview(
-            ComposableSettings.CaptionedSliderView(viewModel: padding) { "\(Int($0.rounded())) pt" }
-        )
+        group.addSettingSubview(ComposableSettings.ExplanationView(
+            withText: "Space between the terminal text and the edge of its pane, in points."
+        ))
+
+        let sides: [(String, UserSetting<Int>)] = [
+            ("Top", UserSettings.terminalPaddingTop),
+            ("Left", UserSettings.terminalPaddingLeading),
+            ("Bottom", UserSettings.terminalPaddingBottom),
+            ("Right", UserSettings.terminalPaddingTrailing)
+        ]
+
+        let row = ComposableSettings.HorizontalStackView()
+        for (title, setting) in sides {
+            let viewModel = ComposableSettings.RangeViewModel<Int>(
+                title: title,
+                setting: setting,
+                minValue: 0,
+                maxValue: 80
+            )
+            row.addArrangedSubview(ComposableSettings.IntegerFieldView(viewModel: viewModel))
+        }
+        group.addSettingSubview(row)
 
         return group
     }
@@ -55,32 +73,19 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
         )
         group.addSettingSubview(ComposableSettings.CheckboxView(with: usesTheme))
 
-        // Only fixed-pitch families are offered — a proportional font in a
-        // terminal is a broken grid, not a preference. The stored family may
-        // not be installed on this machine, so it is added rather than
-        // silently reset to something the user did not choose.
-        var families = TerminalAppearance.monospacedFontFamilies()
-        let stored = UserSettings.terminalFontName.value
-        if !families.contains(stored) {
-            families.insert(stored, at: 0)
+        let fontViewModel = ComposableSettings.FontViewModel(
+            title: "Terminal font",
+            nameSetting: UserSettings.terminalFontName,
+            sizeSetting: UserSettings.terminalFontSize
+        )
+        let picker = ComposableSettings.FontPickerView(viewModel: fontViewModel)
+        picker.isEnabled = !UserSettings.terminalUsesThemeFont.value
+        group.addSettingSubview(picker)
+        fontPicker = picker
+
+        usesThemeFontObserver = UserSettingObserver(UserSettings.terminalUsesThemeFont) { [weak self] usesTheme in
+            self?.fontPicker?.isEnabled = !usesTheme
         }
-
-        let family = ComposableSettings.ChoiceViewModel<String>(
-            title: "Font",
-            setting: UserSettings.terminalFontName,
-            choices: families.map { .init(label: $0, value: $0) }
-        )
-        group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: family))
-
-        let size = ComposableSettings.RangeViewModel<Double>(
-            title: "Size",
-            setting: UserSettings.terminalFontSize,
-            minValue: 9,
-            maxValue: 24
-        )
-        group.addSettingSubview(
-            ComposableSettings.CaptionedSliderView(viewModel: size) { "\(Int($0.rounded())) pt" }
-        )
 
         return group
     }
