@@ -186,14 +186,15 @@ final class DisclosureCardTests: XCTestCase {
             return XCTFail("a card with a standing draws a badge, and every card has a toggle")
         }
         XCTAssertFalse(badge.isHidden)
-        // Top-right corner: hard against both edges, bar the hairline inset.
-        // Measured on the ALIGNMENT rect, which is what the constraints place:
-        // an SF Symbol carries alignment insets, so its frame spills a point or
-        // two past the box the layout engine positioned.
-        let inset = DisclosureCardView.cornerBadgeInset(scaledSize: 13)
+        // Centred ON the top-right corner: half the badge hangs off the card in
+        // each direction. Measured on the ALIGNMENT rect, which is what the
+        // constraints place — an SF Symbol carries alignment insets, so its
+        // frame spills a point or two past the box the engine positioned.
         let box = badge.alignmentRect(forFrame: badge.frame)
-        XCTAssertEqual(box.maxX, card.bounds.maxX - inset, accuracy: 0.5)
-        XCTAssertEqual(box.maxY, card.bounds.maxY - inset, accuracy: 0.5)
+        XCTAssertEqual(box.midX, card.bounds.maxX, accuracy: 0.5)
+        XCTAssertEqual(box.midY, card.bounds.maxY, accuracy: 0.5)
+        XCTAssertEqual(box.width, DisclosureCardView.cornerBadgeDiameter(scaledSize: 13),
+                       accuracy: 0.5)
         // …and clear of the triangle, which is the whole constraint on where the
         // corner may be: the badge lives in the gutter to the RIGHT of it.
         let triangle = toggle.convert(toggle.bounds, to: card)

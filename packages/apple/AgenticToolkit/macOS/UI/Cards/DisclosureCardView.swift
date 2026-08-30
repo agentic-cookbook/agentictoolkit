@@ -27,15 +27,17 @@ import AppKit
 ///
 /// ## The standing is a corner badge, not a masthead item
 ///
-/// A card's status sits ON its top-right corner, in the card's own padding
-/// gutter, rather than in the masthead beside the toggle. On the line it cost
-/// every card a reserved slot — a card with nothing to report still had to hold
-/// the width of the widest symbol the host could draw, or the summaries either
-/// side of it stopped lining up — and it spent that width on the cards that had
-/// the least to say. On the corner it costs no card anything, it is found
-/// without reading the line it is on, and the gutter it sits in bounds it, which
-/// is what keeps it clear of the disclosure triangle without either knowing
-/// about the other.
+/// A card's status is stamped on its top-right corner — centred on it, half of
+/// it hanging off the card — rather than set in the masthead beside the toggle.
+/// On the line it cost every card a reserved slot — a card with nothing to
+/// report still had to hold the width of the widest symbol the host could draw,
+/// or the summaries either side of it stopped lining up — and it spent that
+/// width on the cards that had the least to say. On the corner it costs no card
+/// anything, it is found without reading the line it is on, and it can be drawn
+/// big enough to read across a list. It reaches no further into the card than
+/// its own radius, which is less than the gutter the masthead is already held
+/// off the edge by: that is what keeps it clear of the disclosure triangle
+/// without either knowing about the other.
 ///
 /// ## The title gets whatever the masthead is not using
 ///
@@ -181,7 +183,7 @@ public final class DisclosureCardView: NSView, Themeable {
         self.status = status
         self.scaledSize = scaledSize
         self.onToggle = onToggle
-        self.padX = ceil(Self.horizontalInset * scaledSize / CGFloat(NSFont.systemFontSize))
+        self.padX = Self.padXFor(scaledSize: scaledSize)
         self.padY = ceil(Self.verticalInset * scaledSize / CGFloat(NSFont.systemFontSize))
         super.init(frame: .zero)
         // Whole-card alpha rather than a second set of dimmed colours: the card
@@ -190,6 +192,8 @@ public final class DisclosureCardView: NSView, Themeable {
         alphaValue = isDimmed ? Self.dimmedAlpha : 1.0
         translatesAutoresizingMaskIntoConstraints = false
         wantsLayer = true
+        // The corner badge is drawn half outside the card on purpose.
+        clipsToBounds = false
 
         titleField.stringValue = title
         titleField.translatesAutoresizingMaskIntoConstraints = false
@@ -266,20 +270,22 @@ public final class DisclosureCardView: NSView, Themeable {
         floor.priority = NSLayoutConstraint.Priority(999)
         contentWidthFloor = floor
 
-        // The badge is bounded by the same gutter the masthead is already held
-        // off the edge by, so it cannot reach the toggle inside it however large
-        // a text size asks for: no wider and no taller than that inset, and
-        // scaled down into the box rather than overflowing it.
-        let corner = Self.cornerBadgeInset(scaledSize: scaledSize)
+        // Centred ON the corner rather than tucked inside it: half of the badge
+        // hangs off the card, which is what makes it read as a stamp on the card
+        // rather than as something the card is making room for. It reaches no
+        // further in than its own radius, and that is less than the gutter the
+        // masthead is already held off the edge by, so it cannot touch the
+        // toggle however large a text size asks for.
+        let badge = Self.cornerBadgeDiameter(scaledSize: scaledSize)
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: topAnchor, constant: padY),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padY),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padX),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padX),
-            statusIcon.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -corner),
-            statusIcon.topAnchor.constraint(equalTo: topAnchor, constant: corner),
-            statusIcon.widthAnchor.constraint(lessThanOrEqualToConstant: padX - corner),
-            statusIcon.heightAnchor.constraint(lessThanOrEqualToConstant: padY - corner),
+            statusIcon.centerXAnchor.constraint(equalTo: trailingAnchor),
+            statusIcon.centerYAnchor.constraint(equalTo: topAnchor),
+            statusIcon.widthAnchor.constraint(equalToConstant: badge),
+            statusIcon.heightAnchor.constraint(equalToConstant: badge),
             floor
         ])
 
@@ -337,17 +343,28 @@ public final class DisclosureCardView: NSView, Themeable {
         statusIcon.setAccessibilityLabel(status.accessibilityLabel)
     }
 
-    /// How far the badge's corner sits inside the card's. Small: it is meant to
-    /// read as sitting ON the corner, and every point of it is a point of gutter
-    /// the badge itself then has to do without.
-    static func cornerBadgeInset(scaledSize: CGFloat) -> CGFloat {
-        max(1, floor(scaledSize * 0.15))
+    /// How big the corner badge is drawn. Bigger than the text beside it: it is
+    /// the one mark on a card that has to be legible from across a list of them,
+    /// and it is not competing for room with anything — it sits in the corner's
+    /// own air. Bounded by the gutter all the same, since half of it hangs
+    /// inside the card and must stay clear of the toggle.
+    static func cornerBadgeDiameter(scaledSize: CGFloat) -> CGFloat {
+        min(ceil(scaledSize * 1.3), padXFor(scaledSize: scaledSize) * 1.5)
+    }
+
+    /// The card's horizontal gutter, as a function of the text size — the same
+    /// arithmetic `padX` is built from, available before there is an instance
+    /// to ask.
+    private static func padXFor(scaledSize: CGFloat) -> CGFloat {
+        ceil(Self.horizontalInset * scaledSize / CGFloat(NSFont.systemFontSize))
     }
 
     private static func statusSymbolConfiguration(
         scaledSize: CGFloat
     ) -> NSImage.SymbolConfiguration {
-        NSImage.SymbolConfiguration(pointSize: ceil(scaledSize * 0.8), weight: .semibold)
+        NSImage.SymbolConfiguration(
+            pointSize: Self.cornerBadgeDiameter(scaledSize: scaledSize), weight: .semibold
+        )
     }
 
     /// The system disclosure triangle rather than a drawn chevron: it is the
@@ -414,6 +431,9 @@ public final class DisclosureCardView: NSView, Themeable {
 
     public func applyTheme(_ palette: SemanticPalette) {
         layer?.cornerRadius = Self.cornerRadius
+        // Rounding the surface must not start clipping the corner badge, which
+        // is drawn half outside it.
+        layer?.masksToBounds = false
         layer?.borderWidth = Self.borderWidth
         layer?.backgroundColor = palette.surfaceColor.cgColor
         layer?.borderColor = palette.outlineColor.cgColor
