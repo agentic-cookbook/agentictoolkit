@@ -3,7 +3,21 @@
 import { type ReactElement } from 'react'
 import { useParams } from 'next/navigation'
 import { SiteHomeShell } from './SiteHomeShell'
-import type { SiteHomeModel } from './SiteHomeModel'
+import type { SiteHomeHostSeams, SiteHomeModel } from './SiteHomeModel'
+
+/**
+ * What a mount that supplies no host seams hands `render`.
+ *
+ * MODULE SCOPE, not an inline `{}`, because it reaches `render` on every render and a fresh
+ * object each time would break memoization inside any model that passes a seam straight through
+ * to a component's props. One frozen empty object for all 30-odd sites that fill nothing.
+ *
+ * The cast is the one place the seam's rule is taken on trust: `Host` is whatever the model
+ * declared, and `{}` satisfies it only because every field of a seam bag is optional (see
+ * SiteHomeHostSeams). A model that declared a REQUIRED seam field would compile here and be
+ * `undefined` at runtime — which is why that rule is written down rather than inferred.
+ */
+const EMPTY_HOST_SEAMS = Object.freeze({}) as never
 
 /**
  * The whole workspace route, for every site. A site's page.tsx renders this and nothing else.
@@ -35,11 +49,12 @@ import type { SiteHomeModel } from './SiteHomeModel'
  * that awaited `params` to pass them down would be a server→client crossing again, for data the
  * client can read directly.
  */
-export function SiteHomeRoute<View>({
+export function SiteHomeRoute<View, Host extends SiteHomeHostSeams = SiteHomeHostSeams>({
   model,
   path,
+  host,
 }: {
-  model: SiteHomeModel<View>
+  model: SiteHomeModel<View, Host>
   /**
    * The segments below the workspace, when the ROUTE knows them and the URL does not spell them
    * as a catch-all. A site whose editor lives at `[workspace]/edit/[paperUuid]` has no `path`
@@ -56,6 +71,21 @@ export function SiteHomeRoute<View>({
    * no segments below the workspace", which is a statement, not an absence.
    */
   path?: string[]
+  /**
+   * The HOST's seams for this model — chrome the model cannot build for itself and the host can.
+   * See SiteHomeModel.render.
+   *
+   * A fact about one MOUNT, not about the site, which is why it is here and not on the model:
+   * the whole point is that the same model renders with the hub's transfer section on
+   * agenticdeveloperhub.com and without it on the feature site, from one set of bytes. Contrast
+   * `workspaceHref`, which is a fact about the SITE and therefore lives on the model so its
+   * three mounts cannot disagree.
+   *
+   * A site mounting its OWN model omits this and the model sees `{}` — every seam absent, which
+   * is what a feature site renders today and must go on rendering. Nothing here is a default the
+   * site is missing out on.
+   */
+  host?: Host
 }): ReactElement {
   // Two params, from the route's two segments — `[workspace]` and the `[[...path]]` below it.
   // Both are absent at `/home`, which is what makes that mount a redirect.
@@ -99,7 +129,7 @@ export function SiteHomeRoute<View>({
       // add that key back with an `undefined` value and break that pin on 38 of the 39 sites.
       {...(model.workspaceHref !== undefined ? { workspaceHref: model.workspaceHref } : {})}
     >
-      {(scope) => model.render({ ...scope, view })}
+      {(scope) => model.render({ ...scope, view }, host ?? EMPTY_HOST_SEAMS)}
     </Shell>
   )
 }

@@ -28,6 +28,7 @@ export type {
   SiteHomeContext,
   SiteHomeScope,
   SiteHomeShellProps,
+  SiteHomeHostSeams,
 } from './SiteHomeModel'
 export { SiteHomeShell } from './SiteHomeShell'
 export { WorkspaceOrProfileGate } from './WorkspaceOrProfileGate'

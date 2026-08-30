@@ -1,5 +1,5 @@
 import { type ReactElement } from 'react';
-import type { SiteHomeModel } from './SiteHomeModel';
+import type { SiteHomeHostSeams, SiteHomeModel } from './SiteHomeModel';
 /**
  * The whole workspace route, for every site. A site's page.tsx renders this and nothing else.
  *
@@ -30,8 +30,8 @@ import type { SiteHomeModel } from './SiteHomeModel';
  * that awaited `params` to pass them down would be a server→client crossing again, for data the
  * client can read directly.
  */
-export declare function SiteHomeRoute<View>({ model, path, }: {
-    model: SiteHomeModel<View>;
+export declare function SiteHomeRoute<View, Host extends SiteHomeHostSeams = SiteHomeHostSeams>({ model, path, host, }: {
+    model: SiteHomeModel<View, Host>;
     /**
      * The segments below the workspace, when the ROUTE knows them and the URL does not spell them
      * as a catch-all. A site whose editor lives at `[workspace]/edit/[paperUuid]` has no `path`
@@ -48,5 +48,20 @@ export declare function SiteHomeRoute<View>({ model, path, }: {
      * no segments below the workspace", which is a statement, not an absence.
      */
     path?: string[];
+    /**
+     * The HOST's seams for this model — chrome the model cannot build for itself and the host can.
+     * See SiteHomeModel.render.
+     *
+     * A fact about one MOUNT, not about the site, which is why it is here and not on the model:
+     * the whole point is that the same model renders with the hub's transfer section on
+     * agenticdeveloperhub.com and without it on the feature site, from one set of bytes. Contrast
+     * `workspaceHref`, which is a fact about the SITE and therefore lives on the model so its
+     * three mounts cannot disagree.
+     *
+     * A site mounting its OWN model omits this and the model sees `{}` — every seam absent, which
+     * is what a feature site renders today and must go on rendering. Nothing here is a default the
+     * site is missing out on.
+     */
+    host?: Host;
 }): ReactElement;
 //# sourceMappingURL=SiteHomeRoute.d.ts.map

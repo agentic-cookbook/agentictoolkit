@@ -30,6 +30,21 @@ export interface SiteHomeContext<View> extends SiteHomeScope {
     view: View;
 }
 /**
+ * The bag of HOST-supplied seams a model's `render` accepts as its second argument.
+ *
+ * The constraint every seam bag must satisfy, and the reason it is `object` rather than a named
+ * shape: what the seams ARE is per-feature (storage wants a transfer renderer and an All Data
+ * variant; products wants a panel registry) and belongs beside that feature's model, not in a
+ * fleet-wide union that every site would compile against.
+ *
+ * **Every field of a seam bag must be OPTIONAL.** A mount that supplies none passes `{}` (see
+ * SiteHomeRoute), which is what keeps the seam free for the 30-odd sites that fill nothing — and
+ * what keeps a feature site from being broken by a seam the hub added for itself. The type
+ * system cannot express "all fields optional", so it is said here and enforced by the fact that
+ * a required field would fail at the `{}` default's assignment.
+ */
+export type SiteHomeHostSeams = object;
+/**
  * What a workspace shell is handed: the workspace as the URL spells it (absent at `/home`),
  * and the site's own view as a FUNCTION to call once a workspace has actually resolved.
  *
@@ -76,7 +91,7 @@ export interface SiteHomeShellProps {
  * FEATURE publishes into with `HomeBarPortal`, from inside `render`. That keeps a control in the
  * same React tree as the state it drives, which the model's own slot could never do.
  */
-export interface SiteHomeModel<View> {
+export interface SiteHomeModel<View, Host extends SiteHomeHostSeams = SiteHomeHostSeams> {
     /**
      * The path segments BELOW the workspace → this site's view state.
      *
@@ -98,9 +113,33 @@ export interface SiteHomeModel<View> {
      * Called on every render, so it must be pure and cheap; parsing a handful of segments is both.
      */
     parse: (segments: string[]) => View;
-    /** This site's workspace landing view. Called only once a workspace has resolved, so nothing
-     *  here has to cope with an absent one. */
-    render: (ctx: SiteHomeContext<View>) => ReactNode;
+    /**
+     * This site's workspace landing view. Called only once a workspace has resolved, so nothing
+     * here has to cope with an absent one.
+     *
+     * `host` is the SECOND argument, and it is what lets one model serve two hosts that are not
+     * equally capable. Before it existed, a feature the hub rendered with hub-only chrome — a
+     * Transfer Ownership section that has to name every workspace the caller belongs to, an All
+     * Data browser that publishes its rails into the hub's merged stack — could not be the shared
+     * model, because the model hardcoded those seams' ABSENCE. So the hub kept a second mount of
+     * the same feature component, and the two drifted: `/<ws>/billing` was a `ComingSoon` stub for
+     * months while the embedded pane beside it rendered the real thing.
+     *
+     * The seams themselves were never the problem. `StorageGroup` has accepted an optional
+     * `renderTransfer` and `renderAllData` all along, `ProductsFeature` its two transfer seams —
+     * every one of them optional, precisely so a host that cannot build one omits it. What was
+     * missing was any way for a host to REACH them from outside the package.
+     *
+     * Typed by inference, not by annotation: `Host` is inferred from this parameter's type, so a
+     * model that wants seams writes `render: (ctx, host: StorageHostSeams) => …` and a model that
+     * wants none writes one parameter and gets `Host = SiteHomeHostSeams` — no type argument, no
+     * change, on any of the sites that fill nothing.
+     *
+     * A mount that supplies no seams passes `{}`, so `render` must treat every field as absent.
+     * That is not a degraded path: it is what agenticdeveloperstorage.com renders, and the model's
+     * own docstring is where each omission is justified rather than merely noted.
+     */
+    render: (ctx: SiteHomeContext<View>, host: Host) => ReactNode;
     /**
      * This site's own shell around `render`, in place of the shared `<SiteHomeShell>`.
      *
@@ -164,8 +203,13 @@ export interface SiteHomeModel<View> {
  * return type, so a site writes neither a type parameter nor a type annotation and still gets
  * `ctx.view` fully typed inside `render`. Annotating the object as `SiteHomeModel<Something>`
  * instead forces the site to name the type its own parser already decides.
+ *
+ * `Host` infers the same way, from `render`'s second parameter — so a model that accepts host
+ * seams names only the SEAM type, at the one place it is used, and a model that accepts none
+ * names nothing and is unchanged. Writing both type arguments explicitly would cost every
+ * seam-bearing site the `View` inference this function exists for.
  */
-export declare function defineSiteHome<View>(model: SiteHomeModel<View>): SiteHomeModel<View>;
+export declare function defineSiteHome<View, Host extends SiteHomeHostSeams = SiteHomeHostSeams>(model: SiteHomeModel<View, Host>): SiteHomeModel<View, Host>;
 /**
  * The `parse` for a site with NO grammar below the workspace: `/<ws>` is the only address it has,
  * and anything deeper does not exist.

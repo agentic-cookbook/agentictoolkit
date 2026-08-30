@@ -543,9 +543,11 @@ function SiteHomeShell({
 
 // src/home/SiteHomeRoute.tsx
 import { jsx as jsx7 } from "react/jsx-runtime";
+var EMPTY_HOST_SEAMS = Object.freeze({});
 function SiteHomeRoute({
   model,
-  path
+  path,
+  host
 }) {
   const params = useParams();
   const raw = params?.path;
@@ -559,7 +561,7 @@ function SiteHomeRoute({
     {
       workspaceSlug,
       ...model.workspaceHref !== void 0 ? { workspaceHref: model.workspaceHref } : {},
-      children: (scope) => model.render({ ...scope, view })
+      children: (scope) => model.render({ ...scope, view }, host ?? EMPTY_HOST_SEAMS)
     }
   );
 }

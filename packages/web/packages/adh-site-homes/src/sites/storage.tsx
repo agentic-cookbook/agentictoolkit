@@ -1,9 +1,9 @@
 "use client";
 
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { defineSiteHome } from "@agentic-toolkit/adh/home";
-import { StorageGroup } from "@agentic-toolkit/adh-ecosystem-panes";
+import { StorageGroup, type RenderTransferSection } from "@agentic-toolkit/adh-ecosystem-panes";
 import { parseStoragePath, type StoragePathSelection } from "@agentic-toolkit/adh-ecosystem-panes/parse";
 import { useWorkspaceDefaultEcosystemId } from "@agentic-toolkit/data/ecosystems";
 // The panes fetch through the toolkit's react-query cache, which reads the toolkit's OWN
@@ -26,18 +26,21 @@ import { useBasePathRoute } from "@agentic-toolkit/resource";
  * where memberId is buckets | access | all-data | tokens. CLOSED at those forms — an unknown member
  * or a third segment is a 404, not this same pane served at every depth (see `parse`).
  *
- * Host seams supplied here:
- * - scope: the workspace's default (account-infrastructure) ecosystem, resolved from the slug the
- *   shell already settled on. The hub resolves the same thing from its workspace CONTEXT;
- *   injecting the resolution rather than the slug is what lets one gate serve both.
- * - renderTransfer is NOT supplied, so an open bucket shows no Transfer Ownership section. That
- *   is the honest result rather than an omission: building the destination list means naming
- *   every workspace the caller belongs to AND every ecosystem under each, which is the hub's own
- *   workspace API layer. The seam is optional for exactly this case — see the package's
- *   transfer-seam.ts.
- * - renderAllData is NOT supplied either, so All Data uses the package's own browser with the
- *   crud package's DefaultCrudShell. Correct here: the hub passes a variant only because it has
- *   rail chrome of its own to publish the schema ▸ table rails into, and this site has none.
+ * Host seams:
+ * - scope is resolved HERE, from the slug the shell already settled on — the same
+ *   `useWorkspaceDefaultEcosystemId` that the hub's own `useDefaultEcosystemId` is a two-line
+ *   adapter over, so both hosts reach one resolution and the gate below it stays one decision.
+ * - renderTransfer and renderAllData come from the MOUNT ({@link StorageHostSeams}), because
+ *   neither can be built here and both can be built by the hub. This site supplies neither, and
+ *   that is the honest result rather than a gap: a Transfer Ownership section has to name every
+ *   workspace the caller belongs to AND every ecosystem under each, which is the hub's own
+ *   workspace API layer; and All Data's package default is right for a site with no rail chrome
+ *   of its own to publish the schema ▸ table rails into.
+ *
+ *   Both were HARDCODED absent until 2026-08-30, and that is what kept the hub on a SECOND mount
+ *   of StorageGroup (`src/components/storage/StorageFeature.tsx`) rather than on this model — two
+ *   compositions of one rail, agreeing only by review. The seams were optional on StorageGroup
+ *   the whole time; what was missing was a way for a host to reach them. See SiteHomeModel.render.
  *
  * This file DECLARES the route; SiteHomeRoute assembles it — reading the `[workspace]` param and
  * the path below it, and mounting what `render` returns inside SiteHomeShell, which resolves the
@@ -63,12 +66,29 @@ export const storageHome = defineSiteHome({
   // Component that answers a refusal its own way; turning that null into this site's 404 is the
   // one line of it that belongs to a host.
   parse: (segments) => parseStoragePath(segments) ?? notFound(),
-  render: ({ scopedBase, workspaceSlug, view }) => (
+  render: ({ scopedBase, workspaceSlug, view }, host: StorageHostSeams) => (
     <ToolkitQueryProvider>
-      <StorageHome base={scopedBase} workspaceSlug={workspaceSlug} {...view} />
+      <StorageHome base={scopedBase} workspaceSlug={workspaceSlug} {...host} {...view} />
     </ToolkitQueryProvider>
   ),
 });
+
+/**
+ * What a HOST may add to this site's Storage rail. Both fields optional, both absent on
+ * agenticdeveloperstorage.com — the model's docstring above says why each is a host's to build
+ * and not this package's.
+ *
+ * The types are StorageGroup's own, re-exported rather than restated: a seam bag that described
+ * these props in its own words would be a second declaration of a signature that already exists,
+ * free to drift from the component it is handed to.
+ */
+export interface StorageHostSeams {
+  /** Transfer Ownership for an open bucket. Omitted ⇒ an open bucket shows no such section. */
+  renderTransfer?: RenderTransferSection;
+  /** A host's own All Data member, for a host with rail chrome to publish into. Omitted ⇒ the
+   *  package's own local-selection browser. */
+  renderAllData?: () => ReactNode;
+}
 
 // The default export is what `app/home/page.tsx` and the workspace route import, so
 // those two files can be the same bytes in every site. The named export above is the
@@ -84,10 +104,13 @@ function StorageHome({
   workspaceSlug,
   memberId,
   entityId,
+  renderTransfer,
+  renderAllData,
 }: {
   base: string;
   workspaceSlug: string;
-} & StoragePathSelection): ReactElement {
+} & StoragePathSelection &
+  StorageHostSeams): ReactElement {
   const scope = useWorkspaceDefaultEcosystemId(workspaceSlug);
   // The same push semantics the hub's useFeatureRoute delegates to, against this site's base
   // instead of `/<workspace>/storage`.
@@ -104,6 +127,11 @@ function StorageHome({
         leafId: entityId,
         onSelect: (eid) => pushNested(mid, eid),
       })}
+      // Undefined on this site, which is StorageGroup's own documented degrade — "no transfer
+      // section", "the package's own browser" — and not a missing prop. Forwarding them is the
+      // whole reason the hub can mount THIS model instead of composing StorageGroup a second time.
+      renderTransfer={renderTransfer}
+      renderAllData={renderAllData}
     />
   );
 }

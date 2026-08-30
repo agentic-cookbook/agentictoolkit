@@ -1,6 +1,6 @@
 export { SiteHomeRoute } from './SiteHomeRoute';
 export { defineSiteHome, noSubPath } from './SiteHomeModel';
-export type { SiteHomeModel, SiteHomeContext, SiteHomeScope, SiteHomeShellProps, } from './SiteHomeModel';
+export type { SiteHomeModel, SiteHomeContext, SiteHomeScope, SiteHomeShellProps, SiteHomeHostSeams, } from './SiteHomeModel';
 export { SiteHomeShell } from './SiteHomeShell';
 export { WorkspaceOrProfileGate } from './WorkspaceOrProfileGate';
 export { WorkspaceBar } from './WorkspaceBar';
