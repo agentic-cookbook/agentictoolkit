@@ -37248,6 +37248,15 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -37503,6 +37512,244 @@ export interface paths {
         };
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/platforms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * Which platform credentials watch this repository
+         * @description Addressed through a mirror, stored against its dev repo: every mirror of a repository shares one credential per platform, because the platform watches the deployment repository they all push to. `label` is null when the connection behind a row has been deleted — that pipeline falls back to 'the push is the deployment' on its next deploy.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description The attached platform credentials */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            platforms: {
+                                /** @enum {string} */
+                                kind: "vercel";
+                                connectionId: string;
+                                label: string | null;
+                            }[];
+                        };
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shipr/repos/{id}/platforms/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description A deploy repository (mirror) id. */
+                id: string;
+                /** @description The platform. Only `vercel` today: Railway builds from the push it watches and exposes nothing a token could ask, so a row for it would be data nothing reads and this route refuses to write one. */
+                kind: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Attach a stored platform credential to this repository
+         * @description WITHOUT THIS THE DEPLOY PIPELINE CANNOT CHECK ARRIVALS. The Vercel adapter is built from this row and from nowhere else; with no row the platform resolves to 'the push is the deployment', and a deploy whose build never ran passes. The connection must be the CALLER's own and its provider must equal `kind` — a credential for another provider would be handed to this platform's API on the next deploy. Idempotent: re-attaching replaces the id in place.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                    /** @description The platform. Only `vercel` today: Railway builds from the push it watches and exposes nothing a token could ask, so a row for it would be data nothing reads and this route refuses to write one. */
+                    kind: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        connectionId: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description The credential was re-pointed */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            kind: string;
+                            connectionId: string;
+                        };
+                    };
+                };
+                /** @description The credential was attached */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            kind: string;
+                            connectionId: string;
+                        };
+                    };
+                };
+                /** @description Error */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Detach the platform credential
+         * @description 204 whether or not a row was there — a repository with no such credential has already reached the state the caller asked for. Soft, like everything else in this schema, so a run log that mentions the platform stays legible.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description A deploy repository (mirror) id. */
+                    id: string;
+                    /** @description The platform. Only `vercel` today: Railway builds from the push it watches and exposes nothing a token could ask, so a row for it would be data nothing reads and this route refuses to write one. */
+                    kind: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Detached */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Error */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -37954,6 +38201,15 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -38103,6 +38359,15 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -38168,6 +38433,15 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -38202,6 +38476,8 @@ export interface paths {
                 query?: {
                     after?: string;
                     limit?: string;
+                    /** @description A deploy repository (mirror) id. Returns only the lines belonging to that repository's steps; omitted, the whole run. */
+                    repo?: string;
                 };
                 header?: never;
                 path: {
@@ -38228,6 +38504,15 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -38368,6 +38653,15 @@ export interface paths {
                     };
                 };
                 /** @description Error */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -38460,6 +38754,15 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -38620,6 +38923,8 @@ export interface paths {
                 query?: {
                     after?: string;
                     access_token?: string;
+                    /** @description A deploy repository (mirror) id. Returns only the lines belonging to that repository's steps; omitted, the whole run. */
+                    repo?: string;
                 };
                 header?: never;
                 path: {
@@ -38640,6 +38945,15 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -38701,6 +39015,15 @@ export interface paths {
                 };
                 /** @description Error */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["Error"];
+                    };
+                };
+                /** @description Error */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
