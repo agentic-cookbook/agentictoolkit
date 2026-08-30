@@ -16,7 +16,7 @@ public final class ComposableTabsPaneViewController: NSViewController {
     public let nodeID: UUID
     public let paneNumber: Int
     public let viewID: ComposableTabsViewID
-    private weak var splitDocument: ComposableTabsDocument?
+    private weak var project: ProjectWorkspace?
 
     private var arrangeOverlay: ComposableTabsArrangeOverlayView?
     private var arrowKeyMonitor: Any?
@@ -26,12 +26,12 @@ public final class ComposableTabsPaneViewController: NSViewController {
         nodeID: UUID,
         paneNumber: Int,
         viewID: ComposableTabsViewID,
-        document: ComposableTabsDocument
+        project: ProjectWorkspace
     ) {
         self.nodeID = nodeID
         self.paneNumber = paneNumber
         self.viewID = viewID
-        self.splitDocument = document
+        self.project = project
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -42,7 +42,7 @@ public final class ComposableTabsPaneViewController: NSViewController {
 
     /// The registry-vended content, held as a child view controller so AppKit
     /// keeps it alive, routes appearance callbacks to it, and puts it in the
-    /// responder chain. `nil` only if the document went away first.
+    /// responder chain. `nil` only if the project went away first.
     public private(set) var contentViewController: NSViewController?
 
     public override func loadView() {
@@ -50,11 +50,11 @@ public final class ComposableTabsPaneViewController: NSViewController {
         container.frame = NSRect(x: 0, y: 0, width: 300, height: 200)
 
         let content: NSView
-        if let document = splitDocument {
-            let contentVC = document.layout.registry.makeContentViewController(
+        if let project = project {
+            let contentVC = project.layout.registry.makeContentViewController(
                 for: viewID,
                 nodeID: nodeID,
-                document: document,
+                project: project,
                 paneNumber: paneNumber
             )
             addChild(contentVC)

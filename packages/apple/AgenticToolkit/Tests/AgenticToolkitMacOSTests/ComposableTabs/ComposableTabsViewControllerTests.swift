@@ -9,20 +9,36 @@ import AgenticToolkitMacOS
 @MainActor
 final class ComposableTabsViewControllerTests: XCTestCase {
 
-    // `setUp`/`tearDown` are nonisolated, so the document is built lazily on
+    // `setUp`/`tearDown` are nonisolated, so the project is built lazily on
     // first use from the main-actor-isolated test body instead.
-    private lazy var document = ComposableTabsDocument()
+    private lazy var project = Self.makeWorkspace()
+
+    /// A workspace backed by a throwaway database. The tests here never read a
+    /// row back — they need a project only because panes are built from one.
+    @MainActor
+    private static func makeWorkspace() -> ProjectWorkspace {
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ComposableTabsTests-\(UUID().uuidString)")
+            .appendingPathComponent("Test.db").path
+        // A failure here is a broken test environment, not a case to handle.
+        // swiftlint:disable:next force_try
+        let database = try! ProjectDatabase(path: path)
+        return ProjectWorkspace(
+            repo: GitRepo(path: NSTemporaryDirectory(), name: "Test"),
+            database: database
+        )
+    }
 
     /// Every leaf holds the placeholder view: these tests are about tree
-    /// surgery, and panes are told apart by `nodeID`. The document's default
+    /// surgery, and panes are told apart by `nodeID`. The project's default
     /// layout allows the placeholder anywhere and unboundedly, so nothing here
     /// is refused for a reason the test did not ask about.
     private func makeLeaf(_ id: UUID) -> ComposableTabsPaneViewController {
         ComposableTabsPaneViewController(
             nodeID: id,
-            paneNumber: document.allocatePaneNumber(),
+            paneNumber: project.allocatePaneNumber(),
             viewID: .placeholder,
-            document: document
+            project: project
         )
     }
 
@@ -37,7 +53,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
             axis: .horizontal,
             first: first,
             second: second,
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -65,7 +81,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
             axis: .vertical,
             first: leafB,
             second: leafC,
-            document: document,
+            project: project,
             isRoot: false
         )
         let root = makeLoadedRoot(first: leafA, second: inner)
@@ -92,7 +108,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
             axis: .vertical,
             first: leafB,
             second: leafC,
-            document: document,
+            project: project,
             isRoot: false
         )
         let root = makeLoadedRoot(first: inner, second: leafA)
@@ -125,7 +141,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
         let idA = UUID()
         let root = ComposableTabsViewController.make(
             from: LayoutNode.leaf(id: idA, contentType: .placeholder),
-            document: document,
+            project: project,
             isRoot: true
         )
 
@@ -143,7 +159,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
 
         let restored = ComposableTabsViewController.make(
             from: root.snapshotNode(),
-            document: document,
+            project: project,
             isRoot: true
         )
 
@@ -187,7 +203,7 @@ final class ComposableTabsViewControllerTests: XCTestCase {
             axis: .vertical,
             first: leafB,
             second: leafC,
-            document: document,
+            project: project,
             isRoot: false
         )
         let root = makeLoadedRoot(first: leafA, second: inner)

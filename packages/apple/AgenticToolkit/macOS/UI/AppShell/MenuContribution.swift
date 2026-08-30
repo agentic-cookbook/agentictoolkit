@@ -35,6 +35,16 @@ public struct MenuContribution {
     public let modifiers: NSEvent.ModifierFlags
     /// Optional dynamic enable check. Default always-enabled.
     public let isEnabled: () -> Bool
+    /// Optional dynamic visibility check, evaluated when the menu opens.
+    /// `nil` — the default — means always visible, and is distinct from a
+    /// closure returning `false`: only a contribution that actually asks for
+    /// dynamic visibility makes the host install a menu delegate.
+    ///
+    /// Use this only when the item is *meaningless* right now (a Scan item
+    /// during a scan); an item that is merely unavailable should stay visible
+    /// and disable itself, so the menu does not reshuffle under the pointer
+    /// (`principle-of-least-astonishment`).
+    public let isHidden: (() -> Bool)?
     /// What to do when the user activates the item.
     public let action: () -> Void
 
@@ -45,6 +55,7 @@ public struct MenuContribution {
         key: String = "",
         modifiers: NSEvent.ModifierFlags = .command,
         isEnabled: @escaping () -> Bool = { true },
+        isHidden: (() -> Bool)? = nil,
         action: @escaping () -> Void
     ) {
         self.slot = slot
@@ -53,6 +64,7 @@ public struct MenuContribution {
         self.key = key
         self.modifiers = modifiers
         self.isEnabled = isEnabled
+        self.isHidden = isHidden
         self.action = action
     }
 }

@@ -82,7 +82,7 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     /// `splitViewItems` only exists once the view has loaded, and a restored
     /// but never-displayed tab never loads its view.
     private var layoutChildren: [any ComposableTabsChild]
-    private weak var splitDocument: ComposableTabsDocument?
+    private weak var project: ProjectWorkspace?
     private let isRoot: Bool
 
     /// One-shot: after the first real layout the user owns the dividers, and
@@ -93,20 +93,20 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     /// `ComposableTabsViewController` of each tab. Fires whenever a layout
     /// change happens that should be persisted, with a fresh snapshot of
     /// the tree. The host is responsible for routing this snapshot into
-    /// the document's tab list.
+    /// the project's tab list.
     public var onLayoutDidChange: ((LayoutNode) -> Void)?
 
     public init(
         nodeID: UUID,
         axis: ComposableTabsAxis,
         children: [any ComposableTabsChild],
-        document: ComposableTabsDocument?,
+        project: ProjectWorkspace?,
         isRoot: Bool
     ) {
         self.nodeID = nodeID
         self.axis = axis
         self.layoutChildren = children
-        self.splitDocument = document
+        self.project = project
         self.isRoot = isRoot
         super.init(nibName: nil, bundle: nil)
     }
@@ -116,14 +116,14 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         axis: ComposableTabsAxis,
         first: any ComposableTabsChild,
         second: any ComposableTabsChild,
-        document: ComposableTabsDocument?,
+        project: ProjectWorkspace?,
         isRoot: Bool
     ) {
         self.init(
             nodeID: nodeID,
             axis: axis,
             children: [first, second],
-            document: document,
+            project: project,
             isRoot: isRoot
         )
     }
@@ -133,10 +133,10 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         fatalError("init(coder:) is not supported")
     }
 
-    /// The layout governing this tree — the document's, or the placeholder-only
-    /// fallback if the document has gone away.
+    /// The layout governing this tree — the project's, or the placeholder-only
+    /// fallback if the project has gone away.
     var layout: ComposableTabsLayout {
-        splitDocument?.layout ?? ComposableTabsLayout.placeholderOnly()
+        project?.layout ?? ComposableTabsLayout.placeholderOnly()
     }
 
     public override func viewDidLoad() {
@@ -197,13 +197,13 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         direction: Direction
     ) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === child }),
-              let document = splitDocument else { return }
+              let project = project else { return }
 
         let sibling = ComposableTabsPaneViewController(
             nodeID: UUID(),
-            paneNumber: document.allocatePaneNumber(),
+            paneNumber: project.allocatePaneNumber(),
             viewID: viewID,
-            document: document
+            project: project
         )
 
         let firstChildVC: ComposableTabsPaneViewController
@@ -227,7 +227,7 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             axis: direction.axis,
             first: firstChildVC,
             second: secondChildVC,
-            document: document,
+            project: project,
             isRoot: false
         )
         layoutChildren[index] = inner
@@ -324,7 +324,7 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     /// undo stack, because the pane controller is carried across rather than
     /// rebuilt from the persisted view ID.
     public func rebuild(from node: LayoutNode) {
-        guard let document = splitDocument else { return }
+        guard let project = project else { return }
 
         var reusable: [UUID: ComposableTabsPaneViewController] = [:]
         collectLeaves(into: &reusable)
@@ -339,14 +339,14 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         case .split(let axis, let first, let second):
             newAxis = axis
             children = [
-                rebuildChild(first, reusing: reusable, document: document),
-                rebuildChild(second, reusing: reusable, document: document)
+                rebuildChild(first, reusing: reusable, project: project),
+                rebuildChild(second, reusing: reusable, project: project)
             ]
         case .leaf:
             // A tab reduced to one pane; the root hosts it full-size, and the
             // axis of a single-child split is not observable.
             newAxis = axis
-            children = [rebuildChild(node, reusing: reusable, document: document)]
+            children = [rebuildChild(node, reusing: reusable, project: project)]
         }
 
         axis = newAxis
@@ -392,24 +392,24 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     private func rebuildChild(
         _ node: LayoutNode,
         reusing leaves: [UUID: ComposableTabsPaneViewController],
-        document: ComposableTabsDocument
+        project: ProjectWorkspace
     ) -> any ComposableTabsChild {
         switch node.kind {
         case .split(let axis, let first, let second):
             return ComposableTabsViewController(
                 nodeID: node.id,
                 axis: axis,
-                first: rebuildChild(first, reusing: leaves, document: document),
-                second: rebuildChild(second, reusing: leaves, document: document),
-                document: document,
+                first: rebuildChild(first, reusing: leaves, project: project),
+                second: rebuildChild(second, reusing: leaves, project: project),
+                project: project,
                 isRoot: false
             )
         case .leaf(let viewID, _):
             return leaves[node.id] ?? ComposableTabsPaneViewController(
                 nodeID: node.id,
-                paneNumber: document.allocatePaneNumber(),
+                paneNumber: project.allocatePaneNumber(),
                 viewID: viewID,
-                document: document
+                project: project
             )
         }
     }
@@ -562,18 +562,18 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     /// hosted in a root split holding that one child, which fills the tab.
     public static func make(
         from node: LayoutNode,
-        document: ComposableTabsDocument,
+        project: ProjectWorkspace,
         isRoot: Bool
     ) -> ComposableTabsViewController {
         switch node.kind {
         case .split:
-            return buildSplit(node, document: document, isRoot: isRoot)
+            return buildSplit(node, project: project, isRoot: isRoot)
         case .leaf:
             return ComposableTabsViewController(
                 nodeID: UUID(),
                 axis: .horizontal,
-                children: [buildChild(node, document: document)],
-                document: document,
+                children: [buildChild(node, project: project)],
+                project: project,
                 isRoot: isRoot
             )
         }
@@ -581,7 +581,7 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
 
     private static func buildSplit(
         _ node: LayoutNode,
-        document: ComposableTabsDocument,
+        project: ProjectWorkspace,
         isRoot: Bool
     ) -> ComposableTabsViewController {
         guard case .split(let axis, let first, let second) = node.kind else {
@@ -591,26 +591,26 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         return ComposableTabsViewController(
             nodeID: node.id,
             axis: axis,
-            first: buildChild(first, document: document),
-            second: buildChild(second, document: document),
-            document: document,
+            first: buildChild(first, project: project),
+            second: buildChild(second, project: project),
+            project: project,
             isRoot: isRoot
         )
     }
 
     private static func buildChild(
         _ node: LayoutNode,
-        document: ComposableTabsDocument
+        project: ProjectWorkspace
     ) -> any ComposableTabsChild {
         switch node.kind {
         case .split:
-            return buildSplit(node, document: document, isRoot: false)
+            return buildSplit(node, project: project, isRoot: false)
         case .leaf(let viewID, _):
             return ComposableTabsPaneViewController(
                 nodeID: node.id,
-                paneNumber: document.allocatePaneNumber(),
+                paneNumber: project.allocatePaneNumber(),
                 viewID: viewID,
-                document: document
+                project: project
             )
         }
     }

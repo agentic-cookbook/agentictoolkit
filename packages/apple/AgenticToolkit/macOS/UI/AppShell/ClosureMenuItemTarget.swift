@@ -23,3 +23,28 @@ public final class ClosureMenuItemTarget: NSObject {
         isEnabled()
     }
 }
+
+/// Applies `MenuContribution.isHidden` to the items of one menu.
+///
+/// Visibility deliberately does *not* ride along on `validateMenuItem(_:)`:
+/// AppKit's automatic validation is about enabling, and an item that has
+/// already hidden itself is not reliably asked again — which would make
+/// hiding a one-way trip. `menuNeedsUpdate(_:)` runs for the whole menu every
+/// time it opens, hidden items included.
+@MainActor
+public final class MenuVisibilityDelegate: NSObject, NSMenuDelegate {
+
+    private var rules: [(item: NSMenuItem, isHidden: () -> Bool)] = []
+
+    public func add(_ item: NSMenuItem, isHidden: @escaping () -> Bool) {
+        rules.append((item, isHidden))
+    }
+
+    public var isEmpty: Bool { rules.isEmpty }
+
+    public func menuNeedsUpdate(_ menu: NSMenu) {
+        for rule in rules {
+            rule.item.isHidden = rule.isHidden()
+        }
+    }
+}

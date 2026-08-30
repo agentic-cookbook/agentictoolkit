@@ -109,9 +109,16 @@ public final class NotesDatabaseManager: NoteStorage {
 
     // MARK: - Migrations
 
+    /// Notes now share a database file with the project registry in hosts that
+    /// keep one database per app, so the bookkeeping table is namespaced. The
+    /// rename costs nothing on an existing `notes.db`: migration 001 is
+    /// `IF NOT EXISTS` throughout, so re-running it against an already-migrated
+    /// file only re-records the version in the new table.
+    private static let migrationsTable = "notes_schema_migrations"
+
     private func runMigrations() throws {
         try execute("""
-        CREATE TABLE IF NOT EXISTS schema_migrations (
+        CREATE TABLE IF NOT EXISTS \(Self.migrationsTable) (
             version INTEGER PRIMARY KEY,
             applied_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
@@ -124,7 +131,7 @@ public final class NotesDatabaseManager: NoteStorage {
     }
 
     private func schemaVersion() throws -> Int {
-        let sql = "SELECT COALESCE(MAX(version), 0) FROM schema_migrations"
+        let sql = "SELECT COALESCE(MAX(version), 0) FROM \(Self.migrationsTable)"
         var stmt: OpaquePointer?
         defer { sqlite3_finalize(stmt) }
 
@@ -148,7 +155,7 @@ public final class NotesDatabaseManager: NoteStorage {
     """)
         try execute("CREATE INDEX IF NOT EXISTS idx_notes_modified ON notes(modified_date)")
         try execute("CREATE INDEX IF NOT EXISTS idx_notes_pinned ON notes(is_pinned)")
-        try execute("INSERT INTO schema_migrations (version) VALUES (1)")
+        try execute("INSERT INTO \(Self.migrationsTable) (version) VALUES (1)")
     }
 
     // MARK: - SQL Helpers

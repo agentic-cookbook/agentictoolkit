@@ -2,24 +2,40 @@ import XCTest
 import AppKit
 import AgenticToolkitMacOS
 
-/// What an app gets to say about a document's panes: which views exist, how
+/// What an app gets to say about a project's panes: which views exist, how
 /// wide each one wants to be, and what a fresh tab starts out holding.
 ///
 /// A registry is per-layout rather than process-global now, so each test builds
-/// its own and hands it to the document. Only `ComposableTabsLayout.install` is
+/// its own and hands it to the project. Only `ComposableTabsLayout.install` is
 /// still global, so only that is undone in `tearDown`.
 @MainActor
-final class DocumentPaneContentTests: XCTestCase {
+final class ProjectPaneContentTests: XCTestCase {
 
     private let sidebar = ComposableTabsViewID("test.sidebar")
     private let notes = ComposableTabsViewID("test.notes")
     private let terminal = ComposableTabsViewID("test.terminal")
 
-    private lazy var document = ComposableTabsDocument()
+    private lazy var project = Self.makeWorkspace()
+
+    /// A workspace backed by a throwaway database. The tests here never read a
+    /// row back — they need a project only because panes are built from one.
+    @MainActor
+    private static func makeWorkspace() -> ProjectWorkspace {
+        let path = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ComposableTabsTests-\(UUID().uuidString)")
+            .appendingPathComponent("Test.db").path
+        // A failure here is a broken test environment, not a case to handle.
+        // swiftlint:disable:next force_try
+        let database = try! ProjectDatabase(path: path)
+        return ProjectWorkspace(
+            repo: GitRepo(path: NSTemporaryDirectory(), name: "Test"),
+            database: database
+        )
+    }
 
     nonisolated override func tearDown() {
         // `install` is nonisolated, which is the whole point of it: the
-        // document's writer reads the installed layout off the main actor.
+        // project's writer reads the installed layout off the main actor.
         ComposableTabsLayout.install(nil)
         super.tearDown()
     }
@@ -66,7 +82,7 @@ final class DocumentPaneContentTests: XCTestCase {
         )
     }
 
-    /// The document's writer can run off the main actor, and it seeds new
+    /// The project's writer can run off the main actor, and it seeds new
     /// packages from the blueprint — so reading it from another thread has to
     /// work, not just happen to.
     func testBlueprintIsReadableOffTheMainActor() async throws {
@@ -97,7 +113,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: makeLeaf(sidebar),
             second: makeLeaf(.placeholder),
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -120,7 +136,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .vertical,
             first: makeLeaf(notes),        // 320
             second: makeLeaf(terminal),    // 400
-            document: document,
+            project: project,
             isRoot: false
         )
         let root = ComposableTabsViewController(
@@ -128,7 +144,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: makeLeaf(sidebar),
             second: inner,
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -146,7 +162,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: makeLeaf(notes),        // 320
             second: makeLeaf(terminal),    // 400
-            document: document,
+            project: project,
             isRoot: false
         )
         let root = ComposableTabsViewController(
@@ -154,7 +170,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: makeLeaf(.placeholder),
             second: inner,
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -173,7 +189,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: makeLeaf(sidebar),
             second: makeLeaf(notes),
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -207,7 +223,7 @@ final class DocumentPaneContentTests: XCTestCase {
             axis: .horizontal,
             first: doomed,
             second: survivor,
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -229,7 +245,7 @@ final class DocumentPaneContentTests: XCTestCase {
             nodeID: UUID(),
             axis: .horizontal,
             children: [only],
-            document: document,
+            project: project,
             isRoot: true
         )
         _ = root.view
@@ -286,11 +302,11 @@ final class DocumentPaneContentTests: XCTestCase {
     }
 
     private func installTestLayout() throws {
-        document.layout = try makeLayout(spec: testSpec)
+        project.layout = try makeLayout(spec: testSpec)
     }
 
     private func installTeardownSpyLayout() throws {
-        document.layout = try makeLayout(
+        project.layout = try makeLayout(
             spec: testSpec,
             registry: makeTestRegistry { _ in TeardownSpyViewController() }
         )
@@ -299,9 +315,9 @@ final class DocumentPaneContentTests: XCTestCase {
     private func makeLeaf(_ viewID: ComposableTabsViewID) -> ComposableTabsPaneViewController {
         ComposableTabsPaneViewController(
             nodeID: UUID(),
-            paneNumber: document.allocatePaneNumber(),
+            paneNumber: project.allocatePaneNumber(),
             viewID: viewID,
-            document: document
+            project: project
         )
     }
 }

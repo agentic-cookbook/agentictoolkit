@@ -5,16 +5,16 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-/// Document window for `.whiproj` packages. All document windows share a
-/// single `WindowManager` spec so frame geometry persists in the app
-/// preferences (not per-document) — content layout (the per-tab nested
-/// split tree, tab arrangement, active tab) lives in the package's SQLite.
+/// A project's window. All project windows share a single `WindowManager`
+/// spec so frame geometry persists in the app preferences (not per-project) —
+/// content layout (the per-tab nested split tree, tab arrangement, active tab)
+/// lives in the project database, keyed by the project's repo id.
 ///
 /// The window's content view is a generic `MultiTabbedViewController` from the
 /// toolkit. Each tab hosts its own `ComposableTabsViewController` rooted at
 /// the layout tree persisted for that tab.
 ///
-/// The tab count is global across edges: one document-level "tab" is a
+/// The tab count is global across edges: one project-level "tab" is a
 /// group with one member tab per enabled edge, all sharing a title.
 /// Creating a tab creates a member on every enabled edge, closing any
 /// member closes its whole group, and a newly enabled edge is topped up
@@ -22,7 +22,7 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class ComposableTabsWindowController: WindowController<NSViewController>, NSMenuItemValidation {
 
-    public static let sharedWindowID = "whiprojDocumentWindow"
+    public static let sharedWindowID = "projectWindow"
 
     private struct TabGroup {
         let id: UUID
@@ -30,11 +30,10 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         var members: [Edge: UUID]
     }
 
-    private let splitDocument: ComposableTabsDocument
+    public let project: ProjectWorkspace
     private let tabbed: MultiTabbedViewController
 
-    /// Document-level tabs, in creation order. Only top-edge members are
-    /// persisted (the layout store predates the other edges).
+    /// Project-level tabs, in creation order.
     private var tabGroups: [TabGroup] = []
 
     /// Live mapping from a tab's UUID to the tab's root `ComposableTabsViewController`.
@@ -55,8 +54,8 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     private var arrangeButton: NSButton?
     private var cancellables = Set<AnyCancellable>()
 
-    public init(document: ComposableTabsDocument) {
-        self.splitDocument = document
+    public init(project: ProjectWorkspace) {
+        self.project = project
         self.tabbed = MultiTabbedViewController()
         super.init(windowID: Self.sharedWindowID, contentViewController: tabbed)
 
@@ -66,7 +65,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
             defaultPosition: .center,
             persistsFrame: true
         )
-        self.windowTitle = document.displayName ?? "Untitled"
+        self.windowTitle = project.displayName
         self.windowStyleMask = [.titled, .closable, .resizable, .miniaturizable]
         self.minSize = NSSize(width: 400, height: 300)
 
@@ -83,8 +82,8 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     public override func showWindow(_ sender: Any?) {
         // `NSWindowController.init(window: nil)` (which SingleWindowController
         // chains into) leaves `isWindowLoaded = true`, so the default
-        // `showWindow(_:)` never calls `loadWindow()`. Force it here so
-        // `NSDocument.showWindows()` actually produces a visible window.
+        // `showWindow(_:)` never calls `loadWindow()`. Force it here so the
+        // first `showWindow(_:)` actually produces a visible window.
         if window == nil { loadWindow() }
         super.showWindow(sender)
         installFirstResponderObserverIfNeeded()
@@ -108,7 +107,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
             target: self,
             action: #selector(toggleArrangeMode(_:))
         )
-        arrange.accessibilityID("document-window.arrange-button")
+        arrange.accessibilityID("project-window.arrange-button")
         arrangeButton = arrange
 
         let settings = Self.titlebarButton(
@@ -118,7 +117,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
             target: self,
             action: #selector(showProjectSettings(_:))
         )
-        settings.accessibilityID("document-window.project-settings-button")
+        settings.accessibilityID("project-window.project-settings-button")
 
         let stack = NSStackView(views: [arrange, settings])
         stack.orientation = .horizontal
@@ -131,7 +130,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         window.addTitlebarAccessoryViewController(accessory)
         titlebarAccessory = accessory
 
-        // The mode can also be turned on from the Project menu, so the button's
+        // The mode can also be turned on from the Window menu, so the button's
         // tint follows the mode rather than the click.
         NotificationCenter.default.publisher(for: ComposableTabsArrangeMode.didChangeNotification)
             .sink { [weak self] notification in
@@ -169,7 +168,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
 
     // MARK: - Arrange mode and project settings
 
-    /// Also the target of the Project ▸ Arrange menu item, reached down the
+    /// Also the target of the Window ▸ Arrange menu item, reached down the
     /// responder chain — one action for both, so the checkmark and the button
     /// tint can never disagree.
     @objc
@@ -219,7 +218,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         }
     }
 
-    /// Creates a document-level tab: one member per enabled edge, all
+    /// Creates a project-level tab: one member per enabled edge, all
     /// sharing a title, and activates the first member.
     private func addTabGroup() {
         let title = "Tab \(tabGroups.count + 1)"
@@ -242,8 +241,8 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
 
     private func makeSplitController(for tabID: UUID) -> ComposableTabsViewController {
         let split = ComposableTabsViewController.make(
-            from: splitDocument.layout.blueprint(),
-            document: splitDocument,
+            from: project.layout.blueprint(),
+            project: project,
             isRoot: true
         )
         wireLayoutCallback(on: split, tabID: tabID)
@@ -321,7 +320,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     // MARK: - Tab installation
 
     private func installInitialTabs() {
-        let initial = splitDocument.initialTabs()
+        let initial = project.initialTabs()
         // Enable edges before adding tabs so members land on live bars.
         for edge in Edge.allCases {
             tabbed.setEdgeEnabled(edge, initial.enabledEdges.contains(edge))
@@ -332,7 +331,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         for record in initial.tabs {
             let split = ComposableTabsViewController.make(
                 from: record.root,
-                document: splitDocument,
+                project: project,
                 isRoot: true
             )
             wireLayoutCallback(on: split, tabID: record.id)
@@ -352,7 +351,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
                 ))
             }
         }
-        // Documents saved while an edge was disabled may lack members on a
+        // A project saved while an edge was disabled may lack members on a
         // now-enabled edge — restore the global-count invariant.
         for edge in Edge.allCases where tabbed.isEdgeEnabled(edge) {
             topUpTabs(on: edge)
@@ -388,7 +387,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     }
 
     /// Snapshots every tab's split tree (on every edge, enabled or not)
-    /// and writes the full set back to the document. Called whenever the
+    /// and writes the full set back to the project. Called whenever the
     /// user touches the layout (split, close, tab add/remove/reorder/
     /// select, edge toggle).
     private func persistAllTabs() {
@@ -407,7 +406,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
                 ))
             }
         }
-        splitDocument.persistTabs(
+        project.persistTabs(
             records,
             activeTabID: tabbed.activeTabID,
             enabledEdges: Edge.allCases.filter { tabbed.isEdgeEnabled($0) }

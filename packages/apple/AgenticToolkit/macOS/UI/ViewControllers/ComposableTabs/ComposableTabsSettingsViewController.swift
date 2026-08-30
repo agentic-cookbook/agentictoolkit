@@ -32,7 +32,7 @@ public final class ComposableTabsSettingsViewController: NSViewController {
 
     public override func loadView() {
         let container = ThemedBackgroundView(role: .windowBackground)
-        container.accessibilityID("document-window.project-settings")
+        container.accessibilityID("project-window.project-settings")
 
         addChild(panels)
         let panelsView = panels.view
@@ -45,7 +45,7 @@ public final class ComposableTabsSettingsViewController: NSViewController {
         done.bezelStyle = .rounded
         done.keyEquivalent = "\r"
         done.translatesAutoresizingMaskIntoConstraints = false
-        done.accessibilityID("document-window.project-settings.done")
+        done.accessibilityID("project-window.project-settings.done")
         container.addSubview(done)
 
         NSLayoutConstraint.activate([

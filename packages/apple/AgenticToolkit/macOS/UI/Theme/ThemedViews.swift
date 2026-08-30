@@ -94,6 +94,34 @@ public final class ThemedTextField: NSTextField, Themeable {
     }
 }
 
+/// A search field whose text, placeholder and fill follow the palette.
+/// `NSSearchField` draws its own bezel and magnifier, so only the parts the
+/// theme actually owns are overridden (`native-controls`).
+@MainActor
+public final class ThemedSearchField: NSSearchField, Themeable {
+    private var observer: ThemePaletteObserver?
+
+    public init(placeholder: String = "") {
+        super.init(frame: .zero)
+        self.placeholderString = placeholder
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        textColor = palette.primaryTextColor
+        font = palette.font(.body)
+        if let placeholder = placeholderString {
+            placeholderAttributedString = NSAttributedString(string: placeholder, attributes: [
+                .foregroundColor: palette.placeholderTextColor,
+                .font: palette.font(.body)
+            ])
+        }
+    }
+}
+
 /// A flat, layer-backed button filled with the accent color and an automatically
 /// contrasting title. Avoids fighting AppKit's bezel styles so the theme fully
 /// controls its appearance.

@@ -33,8 +33,8 @@ public struct ComposableTabsViewContext {
     public let viewID: ComposableTabsViewID
     public let descriptor: ComposableTabsViewDescriptor
     public let nodeID: UUID
-    public let document: ComposableTabsDocument
-    /// 1-based, allocated per document, and what the placeholder shows.
+    public let project: ProjectWorkspace
+    /// 1-based, allocated per project, and what the placeholder shows.
     public let paneNumber: Int
 }
 
@@ -83,7 +83,7 @@ public struct ComposableTabsViewDescriptor: Sendable {
     public static let placeholder = ComposableTabsViewDescriptor(displayName: "Placeholder")
 
     /// What an unregistered identifier resolves to. Same shape as the
-    /// placeholder, so a document naming content this app lacks still lays out.
+    /// placeholder, so a project naming content this app lacks still lays out.
     public static let unknown = ComposableTabsViewDescriptor(displayName: "Unknown")
 
     /// The priority `ComposableTabsViewController` actually installs.
@@ -98,10 +98,10 @@ public struct ComposableTabsViewDescriptor: Sendable {
 
 /// Vends the views a `ComposableTabsViewController` displays.
 ///
-/// An **instance**, not a namespace of statics: the demo document and a real
-/// app document need different view sets in the same process, and with global
+/// An **instance**, not a namespace of statics: the demo project and a real
+/// app project need different view sets in the same process, and with global
 /// registration the last registrant wins (`dependency-injection`). Each
-/// document reaches its own registry through `ComposableTabsLayout`.
+/// project reaches its own registry through `ComposableTabsLayout`.
 @MainActor
 public final class ComposableTabsViewRegistry {
 
@@ -123,7 +123,7 @@ public final class ComposableTabsViewRegistry {
         registerPlaceholder()
     }
 
-    /// Every registry knows the placeholder, because a document is always
+    /// Every registry knows the placeholder, because a project is always
     /// allowed to name content this app doesn't have and losing the pane would
     /// lose the layout with it.
     private func registerPlaceholder() {
@@ -155,14 +155,14 @@ public final class ComposableTabsViewRegistry {
     }
 
     /// An unregistered identifier gets the placeholder rather than an error —
-    /// a document can legitimately name content the running app doesn't have.
+    /// a project can legitimately name content the running app doesn't have.
     /// It is logged at `.error` all the same, because the other way to arrive
     /// here is spec/registry drift, and that should be visible rather than
     /// silently rendering "Pane N" (`fail-fast`).
     public func makeContentViewController(
         for viewID: ComposableTabsViewID,
         nodeID: UUID,
-        document: ComposableTabsDocument,
+        project: ProjectWorkspace,
         paneNumber: Int
     ) -> NSViewController {
         guard let entry = entries[viewID] else {
@@ -174,7 +174,7 @@ public final class ComposableTabsViewRegistry {
             viewID: viewID,
             descriptor: entry.descriptor,
             nodeID: nodeID,
-            document: document,
+            project: project,
             paneNumber: paneNumber
         ))
     }
@@ -187,7 +187,7 @@ extension ComposableTabsViewRegistry: Loggable {
 // MARK: - Placeholder
 
 /// The numbered, tinted rectangle a pane shows when its content type is the
-/// placeholder — or when the document names content this app doesn't register.
+/// placeholder — or when the project names content this app doesn't register.
 @MainActor
 public final class PlaceholderPaneViewController: NSViewController {
 
