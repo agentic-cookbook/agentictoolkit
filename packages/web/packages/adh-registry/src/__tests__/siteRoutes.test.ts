@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   SITE_ROUTES,
+  SITE_ROUTES_HUB,
   SITE_ROUTES_MAIN,
   SITE_ROUTES_MARKETING,
   SITE_ROUTES_PLACEHOLDER,
@@ -11,10 +12,11 @@ import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 // package can own: the map's keys must be real registry site ids, and its values must
 // be the absolute, sorted, deduplicated paths the site menu assumes.
 //
-// The map arrives in three shares — `routes.main.generated.ts` from adh,
+// The map arrives in four shares — `routes.main.generated.ts` from adh,
 // `routes.marketing.generated.ts` from adhmarketing, `routes.placeholder.generated.ts`
-// from adhplaceholders — because this package is a submodule of all three, each owns
-// part of the fleet, and no generator can see the others' site trees.
+// from adhplaceholders, `routes.hub.generated.ts` from agenticdeveloperhubwebsite —
+// because this package is a submodule of all four, each owns part of the fleet, and no
+// generator can see the others' site trees.
 // `routes.generated.ts` merges them and is hand-written. The two assertions about that
 // arrangement are below; they exist because both of its failure modes are silent, and
 // both look like a perfectly valid smaller map.
@@ -24,8 +26,9 @@ import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 // `<toolkit>/packages/web` — a directory with no site families in it. Nor could any
 // anchor have worked, because this package is a submodule of adh: in a standalone
 // toolkit clone the sites are simply absent. The generator owns that check instead
-// (`python3 frontend/tools/gen-site-routes.py --check`, run by adh's CI), which also
-// leaves exactly one copy of the App Router segment semantics rather than two.
+// (`python3 <websites-root>/tools/gen-site-routes.py --region <share> --check`, run by
+// each repo's own CI over its own share), which also leaves exactly one copy of the App
+// Router segment semantics rather than two.
 
 describe('SITE_ROUTES (generated per-site route map)', () => {
   it('keys only registry family sites, so the SiteId typing stays honest', () => {
@@ -39,6 +42,7 @@ describe('SITE_ROUTES (generated per-site route map)', () => {
     // and does not fail: the file nobody claimed is simply never rewritten again,
     // and it keeps whatever it was committed with — so an empty share is the only
     // symptom that mistake ever produces.
+    expect(Object.keys(SITE_ROUTES_HUB).length, 'routes.hub.generated.ts').toBeGreaterThan(0)
     expect(Object.keys(SITE_ROUTES_MAIN).length, 'routes.main.generated.ts').toBeGreaterThan(0)
     expect(
       Object.keys(SITE_ROUTES_MARKETING).length,
@@ -55,10 +59,15 @@ describe('SITE_ROUTES (generated per-site route map)', () => {
     // so one repo's route list for it disappears with no diagnostic. It means a site
     // directory exists in two repos, which is the split itself having gone wrong.
     //
-    // Pairwise, not just against main: adhmarketing and adhplaceholders never see
-    // each other at all — neither repo's CI checks out the other — so a site
-    // duplicated between THEM is the pair no other guard in the fleet looks at.
+    // Pairwise, not just against main: the satellites never see each other at all —
+    // hub-and-spoke means no satellite's CI ever checks another one out — so a site
+    // duplicated between TWO SATELLITES is the pair no other guard in the fleet looks
+    // at. That is three such pairs now that `hub` is a share rather than part of
+    // `main`, and the newest of them is the likeliest: `main` and `hub` were one file
+    // until 2026-08-30, so a hub site left behind in `main` is a stale line rather
+    // than a mistake anyone had to make.
     const shares = [
+      ['hub', SITE_ROUTES_HUB],
       ['main', SITE_ROUTES_MAIN],
       ['marketing', SITE_ROUTES_MARKETING],
       ['placeholder', SITE_ROUTES_PLACEHOLDER],

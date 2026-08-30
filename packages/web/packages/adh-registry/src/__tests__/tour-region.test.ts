@@ -10,11 +10,14 @@ import { SITE_TOUR_NEXT, TOUR_MAIN, TOUR_MARKETING, TOUR_PLACEHOLDER } from '../
  * `story.ts` carries THREE generated regions — one per repo that owns a ring of
  * the tour (`<gen:tour-main>` from adh, `<gen:tour-marketing>` from
  * adhmarketing, `<gen:tour-placeholder>` from adhplaceholders), merged into
- * `SITE_TOUR_NEXT`. The splice assertions below exercise the main one; they are
- * about the emitter, which is the same emitter for all three. What is specific
- * to there being several is the disjointness assertion, which exists because the
- * compiler's duplicate-key error stops at the edge of a single object literal
- * and a spread silently resolves a collision instead.
+ * `SITE_TOUR_NEXT`. Three rings, four repos: agenticdeveloperhubwebsite holds
+ * the hub and owns no ring, so it splices nothing here — see the note on
+ * `SITE_TOUR_NEXT` for the edge that left with it. The splice assertions below
+ * exercise the main one; they are about the emitter, which is the same emitter
+ * for all three. What is specific to there being several is the disjointness
+ * assertion, which exists because the compiler's duplicate-key error stops at
+ * the edge of a single object literal and a spread silently resolves a
+ * collision instead.
  *
  * The generator lives in another repo
  * (`adh-tools/landing`) and cannot run TypeScript; this package can, and owns

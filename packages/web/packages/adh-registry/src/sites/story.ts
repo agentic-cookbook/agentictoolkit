@@ -162,6 +162,16 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
  *  repo's markdown, not this file. The declarations, this comment, and the
  *  merge below are hand-written and sit outside all three regions.
  *
+ *  Three rings, FOUR repos: agenticdeveloperhubwebsite took the hub, hub-help,
+ *  admin and status on 2026-08-30 and owns no ring at all. Its manifest names a
+ *  one-entry `tour_map` — a walk with nowhere to walk to — so it emits nothing
+ *  here, and the `hub: 'research'` edge that used to head the main ring is gone
+ *  from this file for good. That is not an omission to repair: `buildr` reads
+ *  every edge off ADJACENT entries in one manifest's `tour_map`, and the two
+ *  ends of that edge are now in different repos, so no generator anywhere can
+ *  state it. Restoring it means teaching `buildr` that a ring can span repos,
+ *  or hand-writing the edge here and accepting that nothing checks it.
+ *
  *  One region per owner is the whole point, and the split is not cosmetic.
  *  With a single region, whichever repo generated last would write the map
  *  and DELETE the other repos' entries — and nothing would say so, because a
@@ -184,7 +194,6 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
  *  that is a state to render, not an error. */
 export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour-main> managed by landing — do not edit by hand
-  hub: 'research',
   research: 'docs',
   docs: 'toolkit',
   toolkit: 'community',
@@ -196,9 +205,9 @@ export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
 }
 
 /** The marketing fleet's ring, owned by the adhmarketing repo's manifest. This
- *  package is a submodule of ALL THREE repos, so a checkout whose sibling
- *  generator has not run yet reads an empty region here — a real state to
- *  render, not a broken one. */
+ *  package is a submodule of all FOUR fleet repos — the fourth, the hub's, owns
+ *  no ring — so a checkout whose sibling generator has not run yet reads an
+ *  empty region here, which is a real state to render, not a broken one. */
 export const TOUR_MARKETING: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour-marketing> managed by landing — do not edit by hand
   narratives: 'education',
