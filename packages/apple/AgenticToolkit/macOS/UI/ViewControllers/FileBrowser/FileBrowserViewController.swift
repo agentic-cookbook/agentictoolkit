@@ -16,6 +16,10 @@ public final class FileBrowserViewController: NSViewController {
     /// Exposed so a host can force a resync or read the detected IDE.
     public let manager: FileTreeManager
 
+    /// What the user has clicked. Shared rather than private so a host can put
+    /// a viewer next to the tree — see `FileBrowserSplitViewController`.
+    public let selection: FileBrowserSelection
+
     private var isWatching = false
     private var hasLoaded = false
 
@@ -28,11 +32,14 @@ public final class FileBrowserViewController: NSViewController {
     ///   - config: Which directory extensions are opaque packages, and the
     ///     `UserDefaults` keys backing the browser's settings.
     ///   - ignorePatterns: Wildcard filename patterns to leave out of the tree.
+    ///   - selection: The selection this tree drives. Defaults to one of its
+    ///     own, so a browser used alone needs to know nothing about it.
     public init(
         rootURL: URL,
         cacheURL: URL,
         config: FileTreeConfig = .default,
-        ignorePatterns: [String] = []
+        ignorePatterns: [String] = [],
+        selection: FileBrowserSelection = FileBrowserSelection()
     ) {
         self.manager = FileTreeManager(
             repoRootURL: rootURL,
@@ -40,6 +47,7 @@ public final class FileBrowserViewController: NSViewController {
             config: config,
             ignorePatterns: ignorePatterns
         )
+        self.selection = selection
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -49,7 +57,9 @@ public final class FileBrowserViewController: NSViewController {
     }
 
     public override func loadView() {
-        let hosting = NSHostingView(rootView: FileBrowserPaneView(manager: manager).themedRoot())
+        let hosting = NSHostingView(
+            rootView: FileBrowserPaneView(manager: manager, selection: selection).themedRoot()
+        )
         hosting.frame = NSRect(x: 0, y: 0, width: 260, height: 400)
         view = hosting
     }
@@ -96,12 +106,12 @@ extension FileBrowserViewController: PaneContentTeardown {
 private struct FileBrowserPaneView: View {
 
     @ObservedObject var manager: FileTreeManager
-    @State private var selectedNode: FileTreeNode?
+    @ObservedObject var selection: FileBrowserSelection
 
     var body: some View {
         Group {
             if let root = manager.rootNode {
-                FileTreeView(rootNode: root, selectedNode: $selectedNode)
+                FileTreeView(rootNode: root, selectedNode: $selection.selectedNode)
             } else if manager.isSyncing {
                 ProgressView()
                     .controlSize(.small)

@@ -6,28 +6,22 @@ import CodeEditSourceEditor
 import CodeEditLanguages
 import os
 
-/// A text editor view for displaying and editing file contents.
+/// Shows whatever the file tree has selected.
 ///
-/// When a file is selected in the file tree, this view reads the file as UTF-8
-/// text and presents it in an editable, monospace `NSTextView` wrapped in a
-/// scroll view. Supports Cmd+S to save, tracks dirty state, and gracefully
-/// handles binary or unreadable files.
+/// Text files open in an editable, syntax-highlighted source editor (Cmd+S to
+/// save, dirty state tracked). Everything else — images, PDFs, movies — goes to
+/// QuickLook, so clicking a file shows the file rather than an apology
+/// (`principle-of-least-astonishment`).
 ///
-/// Themes for light and dark appearance are injected at initialization.
+/// Colors and font come from the app theme in the environment, so the editor
+/// follows a theme switch like the rest of the UI and there is no second
+/// palette to keep in step (see `SemanticPalette.editorTheme`).
 public struct FileEditorView: View {
     /// The currently selected file tree node, or `nil` if nothing is selected.
     public let selectedNode: FileTreeNode?
 
-    /// Theme used when the system color scheme is light.
-    public let lightTheme: EditorTheme
-
-    /// Theme used when the system color scheme is dark.
-    public let darkTheme: EditorTheme
-
-    public init(selectedNode: FileTreeNode?, lightTheme: EditorTheme, darkTheme: EditorTheme) {
+    public init(selectedNode: FileTreeNode?) {
         self.selectedNode = selectedNode
-        self.lightTheme = lightTheme
-        self.darkTheme = darkTheme
     }
 
     public var body: some View {
@@ -36,7 +30,7 @@ public struct FileEditorView: View {
                 if node.isDirectory || node.isPackage {
                     EditorPlaceholderView(message: "Select a file to view its contents")
                 } else {
-                    FileEditorContentView(node: node, lightTheme: lightTheme, darkTheme: darkTheme)
+                    FileEditorContentView(node: node)
                 }
             } else {
                 EditorPlaceholderView(message: "Select a file to view its contents")
@@ -70,22 +64,15 @@ private struct EditorPlaceholderView: View {
 
 // MARK: - File Editor Content
 
-/// Loads the file and shows either the text editor or a "cannot display" message.
+/// Loads the file and shows it the way `FilePreviewLoader` classified it.
 private struct FileEditorContentView: View {
     public let node: FileTreeNode
-    public let lightTheme: EditorTheme
-    public let darkTheme: EditorTheme
 
-    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.themePalette) private var appPalette
     @StateObject private var editorState = EditorState()
-    @State private var theme: EditorTheme
 
-    public init(node: FileTreeNode, lightTheme: EditorTheme, darkTheme: EditorTheme) {
+    public init(node: FileTreeNode) {
         self.node = node
-        self.lightTheme = lightTheme
-        self.darkTheme = darkTheme
-        _theme = State(initialValue: lightTheme)
     }
 
     private var language: CodeLanguage {
@@ -94,22 +81,21 @@ private struct FileEditorContentView: View {
 
     public var body: some View {
         VStack(spacing: 0) {
-            // Editor or error
-            if !editorState.isLoaded {
+            switch editorState.display {
+            case .loading:
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if editorState.loadError {
-                EditorPlaceholderView(message: "Cannot display this file type")
-            } else {
+
+            case .text:
                 SourceEditor(
                     $editorState.content,
                     language: language,
                     configuration: SourceEditorConfiguration(
                         appearance: .init(
-                            theme: theme,
-                            // Was a hardcoded Menlo/monospaced-system fallback; now tracks
-                            // the app theme's `code` role so the editor's font follows a
-                            // theme switch like everything else.
+                            // Both derived from the one palette in the
+                            // environment, so a theme switch repaints the
+                            // editor's chrome, syntax and font together.
+                            theme: appPalette.editorTheme,
                             font: appPalette.font(.code),
                             wrapLines: false
                         ),
@@ -121,10 +107,16 @@ private struct FileEditorContentView: View {
                     state: $editorState.sourceEditorState
                 )
                 .id(editorState.loadGeneration)
+
+            case .quickLook(let url):
+                QuickLookPreview(url: url)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            case .unavailable:
+                EditorPlaceholderView(message: "Cannot open this file")
             }
         }
         .onAppear {
-            theme = colorScheme == .dark ? darkTheme : lightTheme
             editorState.load(from: node.url)
         }
         .onChange(of: node) {
@@ -134,27 +126,37 @@ private struct FileEditorContentView: View {
             }
             editorState.load(from: node.url)
         }
-        .onChange(of: colorScheme) {
-            theme = colorScheme == .dark ? darkTheme : lightTheme
-        }
     }
 }
 
 // MARK: - Editor State
 
-/// Observable state for the file editor, managing content, dirty tracking, and file I/O.
+/// Observable state for the file viewer: what to show, the text if there is
+/// text, dirty tracking, and file I/O.
+@MainActor
 private final class EditorState: ObservableObject {
+
+    /// What the viewer is showing for the current file.
+    enum Display: Equatable {
+        /// Still reading.
+        case loading
+        /// UTF-8 text, live in the source editor.
+        case text
+        /// Handed to QuickLook — an image, a PDF, a movie, or a file too large
+        /// for the editor.
+        case quickLook(URL)
+        /// Unreadable.
+        case unavailable
+    }
+
+    /// How the current file is being shown.
+    @Published public var display: Display = .loading
+
     /// The current text content displayed in the editor.
     @Published public var content: String = ""
 
     /// Whether the content has been modified since the last save or load.
     @Published public var isModified: Bool = false
-
-    /// Whether the file could not be read as UTF-8 text.
-    @Published public var loadError: Bool = false
-
-    /// Whether the initial file load has completed (gates SourceEditor creation).
-    @Published public var isLoaded: Bool = false
 
     /// Monotonic counter incremented on each load, used as `.id()` to force SourceEditor recreation.
     @Published public var loadGeneration: Int = 0
@@ -167,6 +169,10 @@ private final class EditorState: ObservableObject {
 
     /// The content as it was at the last save/load, for dirty-checking.
     private var savedContent: String = ""
+
+    /// The in-flight read. Cancelled when a new selection arrives so a slow
+    /// file can't land on top of a newer one.
+    private var loadTask: Task<Void, Never>?
 
     /// Combine subscription for dirty tracking.
     private var cancellables = Set<AnyCancellable>()
@@ -182,35 +188,41 @@ private final class EditorState: ObservableObject {
             .store(in: &cancellables)
     }
 
-    /// Attempts to load a file as UTF-8 text.
+    deinit {
+        loadTask?.cancel()
+    }
+
+    /// Reads `url` off the main thread and shows it however it classifies.
     public func load(from url: URL) {
+        loadTask?.cancel()
+
         currentURL = url
         isModified = false
-        loadError = false
-        isLoaded = false
+        display = .loading
         sourceEditorState = SourceEditorState()
 
-        do {
-            let data = try Data(contentsOf: url)
-            guard let text = String(data: data, encoding: .utf8) else {
-                logger.warning("File is not valid UTF-8: \(url.lastPathComponent, privacy: .public)")
-                loadError = true
-                content = ""
-                savedContent = ""
-                isLoaded = true
-                return
+        loadTask = Task { [weak self] in
+            let content = await FilePreviewLoader.read(url)
+            guard let self, !Task.isCancelled, self.currentURL == url else { return }
+
+            switch content {
+            case .text(let text):
+                self.content = text
+                self.savedContent = text
+                self.loadGeneration += 1
+                self.display = .text
+                logger.info("Loaded file: \(url.lastPathComponent, privacy: .public)")
+
+            case .quickLook:
+                self.content = ""
+                self.savedContent = ""
+                self.display = .quickLook(url)
+
+            case .unavailable:
+                self.content = ""
+                self.savedContent = ""
+                self.display = .unavailable
             }
-            content = text
-            savedContent = text
-            loadGeneration += 1
-            isLoaded = true
-            logger.info("Loaded file: \(url.lastPathComponent, privacy: .public) (\(data.count) bytes)")
-        } catch {
-            logger.error("Failed to read file: \(error.localizedDescription, privacy: .public)")
-            loadError = true
-            content = ""
-            savedContent = ""
-            isLoaded = true
         }
     }
 
