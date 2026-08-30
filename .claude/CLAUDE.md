@@ -141,12 +141,35 @@ vendoring stops reading adh's copy, not before.
 
 | Target                       | Source dir   | Depends on                                                       |
 |------------------------------|--------------|------------------------------------------------------------------|
-| `AgenticToolkitCore`         | `Core/`      | —                                                                |
+| `AgenticToolkitCore`         | `Core/`      | `AgenticDeveloperToolkit` (cross-project)                        |
 | `AgenticToolkitCoreUI`       | `CoreUI/`    | `AgenticToolkitCore`                                             |
 | `AgenticToolkitCoreMacOS`    | `CoreMacOS/` | `AgenticToolkitCore`, `AgenticToolkitCoreUI`                     |
 | `AgenticToolkitMacOS`        | `macOS/`     | `AgenticToolkitCore`, `AgenticToolkitCoreUI`, `AgenticToolkitCoreMacOS`, SwiftTerm, CodeEditSourceEditor, CodeEditLanguages |
 
 `AgenticToolkitCore` is Foundation-only; `AgenticToolkitCoreUI` holds cross-cutting AppKit utilities; `AgenticToolkitCoreMacOS` adds macOS-only foundations; `AgenticToolkitMacOS` is the feature-rich macOS framework consumed by the host app, plugins, Whippet, and Stenographer.
+
+#### The theme model is not here any more
+
+`RGBAColor`, `ColorTheme`, `SemanticPalette`, `ThemeTypography`,
+`BuiltInThemes` and `ITermColorsParser` live in **AgenticDeveloperToolkit**,
+which builds for five platforms and ships to customers on its own.
+`Core/Theme/ThemeReExports.swift` `@_exported import`s it, so every existing
+call site still resolves them through `AgenticToolkitCore` and nothing had to
+change an import. Only `ThemeStore` stayed: it persists through
+`UserSettings`, and following it down would have dragged the whole
+`Core/SettingStorage/` subsystem across a dependency edge that runs one way.
+
+Two consequences worth knowing before you debug them:
+
+- The re-export publishes **all** of ADT, not just the theme model. `Permission`
+  and `ChatViewModel` are declared in both toolkits; `Permission` genuinely
+  collides and its references are module-qualified as
+  `AgenticToolkitPermissions.Permission`. A new name added to ADT can make an
+  unrelated file here ambiguous.
+- The cross-project reference climbs out of this repo to a *sibling* checkout
+  of agenticdevelopertoolkit, not to this repo's own submodule copy. The
+  reason, and what it costs a standalone clone, is in the comment on
+  `projectReferences` in `packages/apple/AgenticToolkit/project.yml`.
 
 Aggregate targets defined in `packages/apple/AgenticToolkit/project.yml`:
 - `AgenticToolkitMacOSAll` — builds the four frameworks

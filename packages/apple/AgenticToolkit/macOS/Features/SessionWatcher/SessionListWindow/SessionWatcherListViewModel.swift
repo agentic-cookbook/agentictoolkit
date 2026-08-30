@@ -64,7 +64,7 @@ extension SessionWatcher {
         @Published public var lastActionError: String?
 
         /// If the last error was a permission issue, the permission the user must grant.
-        @Published public var lastRequiredPermission: Permission?
+        @Published public var lastRequiredPermission: AgenticToolkitPermissions.Permission?
 
         /// The session summarizer for manual AI summarization.
         public var sessionSummarizer: SessionSummarizing?

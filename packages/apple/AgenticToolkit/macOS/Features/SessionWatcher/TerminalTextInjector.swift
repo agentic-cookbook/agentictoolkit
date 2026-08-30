@@ -26,7 +26,7 @@ public enum TerminalTextInjector {
         case paneNotFound
         /// Automation permission is needed to control the terminal; carries the
         /// `Permission` the host should route its grant UI to.
-        case permissionDenied(String, requiredPermission: Permission)
+        case permissionDenied(String, requiredPermission: AgenticToolkitPermissions.Permission)
         /// AppleScript failed for another reason.
         case scriptFailed(String)
 

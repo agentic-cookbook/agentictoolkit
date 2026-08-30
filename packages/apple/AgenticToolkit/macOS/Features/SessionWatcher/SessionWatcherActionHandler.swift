@@ -18,7 +18,7 @@ extension SessionWatcher {
         case commandFailed(String)
         case notificationFailed(String)
         case noActionConfigured
-        case permissionDenied(String, requiredPermission: Permission)
+        case permissionDenied(String, requiredPermission: AgenticToolkitPermissions.Permission)
 
         public var errorDescription: String? {
             switch self {
@@ -38,7 +38,7 @@ extension SessionWatcher {
         }
 
         /// If this is a permission error, the permission the user needs to grant.
-        public var requiredPermission: Permission? {
+        public var requiredPermission: AgenticToolkitPermissions.Permission? {
             if case .permissionDenied(_, let permission) = self { return permission }
             return nil
         }

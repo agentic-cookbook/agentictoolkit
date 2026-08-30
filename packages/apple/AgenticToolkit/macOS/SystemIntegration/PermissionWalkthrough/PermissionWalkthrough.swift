@@ -29,7 +29,7 @@ public final class PermissionWalkthrough: AppFeature {
         UserDefaults.standard.removeObject(forKey: walkthroughCompleteKey)
     }
 
-    private let permissions: [Permission]
+    private let permissions: [AgenticToolkitPermissions.Permission]
     private let checker: any PermissionChecking
     private let windowController = PermissionWalkthroughWindowController()
     private var completion: (() -> Void)?
@@ -55,7 +55,7 @@ public final class PermissionWalkthrough: AppFeature {
         self.completion = completion
 
         Task { @MainActor in
-            var pending: [Permission] = []
+            var pending: [AgenticToolkitPermissions.Permission] = []
             for permission in permissions where await checker.status(permission) != .granted {
                 pending.append(permission)
             }
@@ -68,7 +68,7 @@ public final class PermissionWalkthrough: AppFeature {
         }
     }
 
-    private func present(pending: [Permission]) {
+    private func present(pending: [AgenticToolkitPermissions.Permission]) {
         let container = windowController.contentContainer
         container.subviews.forEach { $0.removeFromSuperview() }
 

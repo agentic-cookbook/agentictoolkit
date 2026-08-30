@@ -135,7 +135,7 @@ extension SessionWatcher {
             }
         }
 
-        private func updateErrorBanner(error: String?, requiredPermission: Permission?) {
+        private func updateErrorBanner(error: String?, requiredPermission: AgenticToolkitPermissions.Permission?) {
             errorBanner?.removeFromSuperview()
             errorBanner = nil
 

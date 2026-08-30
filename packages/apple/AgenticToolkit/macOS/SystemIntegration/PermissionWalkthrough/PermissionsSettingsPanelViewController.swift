@@ -13,16 +13,19 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
 
     /// Permissions the panel surfaces. Automation is per target app; the default
     /// uses iTerm2, the common terminal for Claude Code sessions.
-    public static let defaultPermissions: [Permission] = [
+    public static let defaultPermissions: [AgenticToolkitPermissions.Permission] = [
         .accessibility,
         .notifications,
         .automation(targetBundleID: "com.googlecode.iterm2")
     ]
 
-    private let permissions: [Permission]
+    private let permissions: [AgenticToolkitPermissions.Permission]
     private weak var panel: PermissionsPanelView?
 
-    public init(permissions: [Permission] = PermissionsSettingsPanelViewController.defaultPermissions) {
+    public init(
+        permissions: [AgenticToolkitPermissions.Permission] =
+            PermissionsSettingsPanelViewController.defaultPermissions
+    ) {
         self.permissions = permissions
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Permissions",
