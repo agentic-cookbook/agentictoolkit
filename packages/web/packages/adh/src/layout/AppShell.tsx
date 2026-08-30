@@ -14,13 +14,21 @@ import { HelpProvider } from '@agentic-toolkit/adh/help'
 // fork SettingsOverlayContext from the copy SiteHeader.tsx's useSettingsOverlay() reads.
 import { SettingsOverlayProvider } from '@agentic-toolkit/adh/settings'
 import { AdhAppShell } from '@agentic-toolkit/adh/layout'
-// The `./server` entry, not `./layout`, and that placement is load-bearing: the module
-// behind it imports `node:fs` and `node:child_process`, and `./layout` is a barrel client
-// components import. This component is a Server Component (sync, hook-free — see the doc
-// below), so it is the one seam that can resolve a per-render value and hand it to the
-// client footer as a prop, giving all 45 sites an honest dev-mode footer with no per-site
-// plumbing. Returns `undefined` outside development.
-import { liveBuildIdentity } from '@agentic-toolkit/adh/server'
+// Its OWN subpath — not `./server`, and not a relative import. The module behind it imports
+// `node:fs` and `node:child_process`, and this file lives in the `./layout` barrel, which
+// `'use client'` code imports (every site's app/global-error.tsx pulls `GlobalError` from
+// it). Reaching the builtins through `./server` was thought to be enough because the emitted
+// specifier stays external — but external is not absent: the consumer's bundler follows the
+// edge, and Turbopack walked it into `Can't resolve 'child_process' / 'fs'` on every site.
+// `./live-build-identity` exists so the subpath can carry a `browser` condition, which sends
+// a client graph to a stub and keeps the builtins on the server side of the resolver. See
+// live-build-identity-browser.ts.
+//
+// This component is a Server Component (sync, hook-free — see the doc below), so it is the
+// one seam that can resolve a per-render value and hand it to the client footer as a prop,
+// giving all 45 sites an honest dev-mode footer with no per-site plumbing. Returns
+// `undefined` outside development.
+import { liveBuildIdentity } from '@agentic-toolkit/adh/live-build-identity'
 // Same rule, different package: deployment-env lives in adh-registry (the leaf this package
 // depends on) so that the registry's own seo/metadata.ts can read the identical allowlist
 // without a cycle. `@agentic-toolkit/adh-registry/*` is in tsup's `external` too, so the

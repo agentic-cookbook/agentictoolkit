@@ -228,7 +228,7 @@ import { FeatureFlagsProvider } from "@agentic-toolkit/adh/flags";
 import { HelpProvider } from "@agentic-toolkit/adh/help";
 import { SettingsOverlayProvider } from "@agentic-toolkit/adh/settings";
 import { AdhAppShell as AdhAppShell2 } from "@agentic-toolkit/adh/layout";
-import { liveBuildIdentity } from "@agentic-toolkit/adh/server";
+import { liveBuildIdentity } from "@agentic-toolkit/adh/live-build-identity";
 import { DEV_BUILD } from "@agentic-toolkit/adh-registry/deployment-env";
 import { jsx as jsx9 } from "react/jsx-runtime";
 var DEV_TOOLS_BUILD_ENABLED = DEV_BUILD;

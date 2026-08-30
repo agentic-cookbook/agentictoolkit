@@ -45,11 +45,19 @@ const SEMVER_RE = /^\d+\.\d+\.\d+$/
  * a malformed file yields `undefined` and the baked value shows through unchanged.
  * The strict answer stays in one place; this is a refinement layer over it.
  *
- * WHY IT IS SERVER-ONLY, AND WHY IT IS REACHED THROUGH `@agentic-toolkit/adh/server`.
- * `node:fs` and `node:child_process` must never enter a client chunk. This module
- * is published from the `./server` entry and imported by that package path, so the
- * `./layout` barrel — which client components do import — carries an external
- * specifier and not these builtins.
+ * WHY IT IS SERVER-ONLY, AND HOW THAT IS ENFORCED.
+ * `node:fs` and `node:child_process` must never enter a client chunk. This used to say
+ * the `./server` entry achieved that, because the `./layout` barrel then "carries an
+ * external specifier and not these builtins". That was wrong, and it broke every site's
+ * build: an external specifier is an EDGE, and the consumer's bundler follows it.
+ * `app/global-error.tsx` is `'use client'` and imports the `./layout` barrel, which holds
+ * AppShell, which imported `./server` — so Turbopack walked straight here and failed with
+ * `Can't resolve 'child_process' / 'fs'`.
+ *
+ * The enforcement is now in RESOLUTION, not placement: this module is published from its
+ * own `./live-build-identity` subpath, whose `browser` condition points at
+ * live-build-identity-browser.ts. A client graph resolves the stub; only a server graph
+ * ever reaches this file. `./server` still re-exports it for callers that want it there.
  *
  * @returns the live pair in development; `undefined` in every other mode, where
  *   the baked values are correct by construction.

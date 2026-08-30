@@ -38,6 +38,16 @@ export default defineConfig({
     // HomePlaceholder/SiteNotFound take as props here) merged into this same entry when
     // the app tier came across — see the vocabulary-tier block below.
     'layout/index': 'src/layout/index.ts',
+    // The dev-only build identity, and its `browser`-condition twin. Two entries rather
+    // than a re-export from `./server`, because `./server` is where the `node:fs` /
+    // `node:child_process` imports live and AppShell — which the `layout` barrel above
+    // contains — is what reaches them. A `'use client'` global-error.tsx imports that
+    // barrel, so the consumer's bundler walked the edge into the builtins and the build
+    // died. Splitting the pair out gives the subpath somewhere to hang its `browser`
+    // condition, which is what actually keeps the builtins out of a client graph; see
+    // live-build-identity-browser.ts for the full argument.
+    'layout/live-build-identity': 'src/layout/live-build-identity.ts',
+    'layout/live-build-identity-browser': 'src/layout/live-build-identity-browser.ts',
     // The fleet-wide profile page: the shared view, the not-found page with its union search,
     // the client fallback, and the viewer-upgrade hook. Its own entry because every site's
     // `/<slug>/profile` route imports it, and because the SERVER half below must not be
@@ -542,6 +552,12 @@ export default defineConfig({
     '@agentic-toolkit/adh/theme-editor',
     '@agentic-toolkit/adh/auth',
     '@agentic-toolkit/adh/server',
+    // AppShell reaches the build identity by THIS path, not through '@agentic-toolkit/adh/server'
+    // any more. Externalising it is what keeps the specifier bare in dist/layout/index.js, so the
+    // consumer's resolver — not esbuild — decides the target, and can therefore apply the `browser`
+    // condition. Inlined, the real module's `node:fs`/`node:child_process` would land INSIDE the
+    // layout barrel, which is strictly worse than the bug this replaced.
+    '@agentic-toolkit/adh/live-build-identity',
     // The telemetry BARREL (not just the two leaves above): layout/AppShell imports
     // SiteTelemetryProvider from it, and the provider's `setErrorReporter` writes the
     // same module-level `reporter` the leaves read. Inlined, AppShell would install the

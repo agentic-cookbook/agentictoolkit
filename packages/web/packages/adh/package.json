@@ -26,6 +26,15 @@
       "development": "./src/server.ts",
       "import": "./dist/server.js"
     },
+    "./live-build-identity": {
+      "types": "./dist/layout/live-build-identity.d.ts",
+      "browser": {
+        "development": "./src/layout/live-build-identity-browser.ts",
+        "import": "./dist/layout/live-build-identity-browser.js"
+      },
+      "development": "./src/layout/live-build-identity.ts",
+      "import": "./dist/layout/live-build-identity.js"
+    },
     "./header": {
       "types": "./dist/header/index.d.ts",
       "development": "./src/header/index.ts",
