@@ -16,8 +16,18 @@
 # verify_dist_completeness.py in adh's CI: it walks the exports map, fails on any
 # reached-but-untracked file, and names the on-disk path to `git add -f`.
 #
-# So: after rebuilding, run that guard and force-add what it names. Do not "fix" this
-# by deleting the rule, and do not untrack dist to make the diffs smaller.
+# So: after rebuilding, run that guard and force-add EXACTLY what it names, one path
+# at a time. Never `git add -f dist` — the `-f` defeats the rule above wholesale, and
+# it sweeps in precisely the internal byproducts the rule exists to keep out. That is
+# how 28 of them got committed, and it is not a harmless surplus: the guard's other
+# direction requires every tracked dist file to be REACHED from the exports map, so
+# each one held that check red until they were untracked again. A dist file no export
+# subpath resolves has no consumer — no `exports` wildcard and no `./dist/*` entry, and
+# every site resolves with `moduleResolution: bundler`, which honours `exports` — so it
+# is not shipped, it is only carried.
+#
+# Do not "fix" this by deleting the rule, and do not untrack a REACHED file to make the
+# diffs smaller.
 dist/
 .turbo/
 *.tsbuildinfo
