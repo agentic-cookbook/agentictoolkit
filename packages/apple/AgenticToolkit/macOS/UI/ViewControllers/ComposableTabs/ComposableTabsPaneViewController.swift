@@ -196,18 +196,33 @@ public final class ComposableTabsPaneViewController: NSViewController {
             guard let self else { return event }
             // Only the Bool crosses back out: `assumeIsolated` hands its result
             // across an isolation boundary, and NSEvent is not `Sendable`.
-            let consumed = MainActor.assumeIsolated { self.handleArrowKey(event) }
+            let consumed = MainActor.assumeIsolated { self.handleKeyDown(event) }
             return consumed ? nil : event
         }
     }
 
-    /// Whether the arrow was ours to act on, and did.
-    private func handleArrowKey(_ event: NSEvent) -> Bool {
+    /// Return, Enter and Escape all mean "done arranging" — the mode is what
+    /// they dismiss, and which of the three a person reaches for is a habit,
+    /// not a distinction worth honouring.
+    private static let exitKeyCodes: Set<UInt16> = [36, 76, 53]
+
+    /// Whether the key was ours to act on, and was.
+    private func handleKeyDown(_ event: NSEvent) -> Bool {
         guard let window = view.window,
+              // Not the pane's own window means a sheet is up, and Escape
+              // there cancels the sheet rather than the mode behind it.
               event.window === window,
-              ComposableTabsArrangeMode.shared.isEnabled(in: window),
-              // One monitor per pane, but only the pane the user selected moves.
-              ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID,
+              ComposableTabsArrangeMode.shared.isEnabled(in: window) else { return false }
+
+        if Self.exitKeyCodes.contains(event.keyCode) {
+            // Every pane in the window has a monitor, so this runs more than
+            // once; turning the mode off twice is a no-op.
+            ComposableTabsArrangeMode.shared.setEnabled(false, in: window)
+            return true
+        }
+
+        // One monitor per pane, but only the pane the user selected moves.
+        guard ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID,
               let direction = ComposableTabsViewController.Direction.allCases.first(
                 where: { $0.arrowKeyCode == event.keyCode }) else { return false }
         move(direction)

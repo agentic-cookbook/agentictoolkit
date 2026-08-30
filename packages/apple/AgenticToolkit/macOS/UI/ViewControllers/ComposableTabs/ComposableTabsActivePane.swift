@@ -100,6 +100,18 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
             }
             .store(in: &cancellables)
 
+        // Two windows both drawing "the pane you are working in" is a lie —
+        // only one of them is. Unfiltered because a key change moves focus
+        // *between* windows: the one losing it has to redraw too.
+        Publishers.Merge(
+            NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification),
+            NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
+        )
+        .sink { [weak self] _ in
+            self?.applyTheme(ThemePaletteObserver.currentPalette)
+        }
+        .store(in: &cancellables)
+
         UserSettings.shared.changes
             .filter { $0 == UserSettings.highlightActivePane.name }
             .receive(on: RunLoop.main)
@@ -122,10 +134,19 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
         applyTheme(ThemePaletteObserver.currentPalette)
     }
 
+    /// A sheet takes key from the window it is attached to, and the pane
+    /// underneath is still the one the user is working in — so the document
+    /// window counts as focused while it holds one.
+    private var isWindowFocused: Bool {
+        guard let window else { return false }
+        return window.isKeyWindow || window.attachedSheet?.isKeyWindow == true
+    }
+
     public func applyTheme(_ palette: SemanticPalette) {
         layer?.backgroundColor = palette.nsColor(.windowBackground).cgColor
 
         let isActive = UserSettings.highlightActivePane.value
+            && isWindowFocused
             && ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID
         layer?.borderWidth = isActive ? 2 : 0
         layer?.borderColor = isActive ? palette.nsColor(.accent).cgColor : nil
