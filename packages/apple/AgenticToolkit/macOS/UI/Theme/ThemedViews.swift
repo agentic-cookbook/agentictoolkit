@@ -304,6 +304,12 @@ public final class ThemedSplitView: NSSplitView, Themeable {
 
     public override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
+        // `NSSplitView` is born stacked, but `NSSplitViewController` hands out a
+        // side-by-side one — so a controller that swapped in a themed split view
+        // and never said otherwise silently turned its sidebar into a header.
+        // Match what is being replaced: this subclass exists to recolour a
+        // divider, not to reorient a window.
+        self.isVertical = true
         self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
     }
 
