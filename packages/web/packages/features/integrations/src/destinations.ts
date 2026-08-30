@@ -60,6 +60,24 @@ export interface IntegrationDestination {
    * two carry their answer in the row that produced them.
    */
   ecosystemId: string | null | undefined;
+  /**
+   * False ONLY when the resolution definitively says the caller can view this destination but not
+   * manage it — a plain organization member opening the workspace's own row. The feature shows
+   * `WorkspaceNotManageable` in place of the pane, which is the answer the hub's own
+   * `/…/integrations` route gave before it mounted this feature (`useDefaultEcosystemId`'s
+   * `ecosystemId && !canManage` gate); without it every read and write in the pane 403s one at a
+   * time and the reader is left to infer why from a wall of failures.
+   *
+   * Per-DESTINATION rather than over the whole feature, which is where this improves on the gate
+   * it replaces: the flag answers for the workspace's infrastructure ecosystem only, and a persona's
+   * realm or a product is a different ecosystem with its own grants. Gating the feature on it would
+   * hide destinations the member can genuinely manage.
+   *
+   * True while loading and true for the persona/product rows — the same default-to-permitted rule
+   * `useWorkspaceDefaultEcosystemId.canManage` follows. It is the absence of a definitive NO, not
+   * a claim of permission; the backend is still the authority on every write.
+   */
+  manageable: boolean;
 }
 
 /** What {@link useIntegrationDestinations} returns. */
@@ -119,6 +137,7 @@ export function useIntegrationDestinations(workspace: Workspace): IntegrationDes
     ecosystemId: workspaceEcosystemId,
     isPending: workspacePending,
     isError: workspaceFailed,
+    canManage: workspaceManageable,
   } = useWorkspaceDefaultEcosystemId(slug);
 
   const personaRows = personas.items;
@@ -141,6 +160,7 @@ export function useIntegrationDestinations(workspace: Workspace): IntegrationDes
         // `isPending` is what separates "still asking" from the definitive "this account has no
         // infrastructure ecosystem"; both read as an absent id, and they are not the same answer.
         ecosystemId: workspacePending ? undefined : (workspaceEcosystemId ?? null),
+        manageable: workspaceManageable,
       },
     ];
     // Sorted here because the personas endpoint does not promise an order (the ecosystems client
@@ -157,6 +177,9 @@ export function useIntegrationDestinations(workspace: Workspace): IntegrationDes
         // missing. An absent field is treated as "no realm" rather than "unknown" because this row
         // has already resolved — there is nothing further to wait for.
         ecosystemId: p.ownedEcosystemId ?? null,
+        // A persona's realm is not the workspace's infrastructure ecosystem, so the workspace
+        // flag says nothing about it and nothing else here does either — see `manageable`.
+        manageable: true,
       });
     }
     for (const e of productRows ?? []) {
@@ -167,6 +190,7 @@ export function useIntegrationDestinations(workspace: Workspace): IntegrationDes
         kind: "product",
         // A product IS an ecosystem — no second hop.
         ecosystemId: e.id,
+        manageable: true,
       });
     }
     return rows;
@@ -178,6 +202,7 @@ export function useIntegrationDestinations(workspace: Workspace): IntegrationDes
     workspace.name,
     workspacePending,
     workspaceEcosystemId,
+    workspaceManageable,
   ]);
 
   return {

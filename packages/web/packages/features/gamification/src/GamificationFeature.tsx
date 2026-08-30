@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useMemo, type ReactNode } from "react";
 import { EcosystemsFeature, type RenderTopicPaneCtx } from "@agentic-toolkit/ecosystems";
 
 import { GamificationSettingsTopicPane } from "./RealmSettingsPane";
@@ -22,32 +22,76 @@ import type { GamificationPathSelection } from "./parse-path";
  * `renderTopicPane` claims all four ids, including `settings` — EcosystemsFeature gives the host
  * first refusal on every topic, so "Settings" here is the realm config rather than the ecosystem
  * record. See {@link GAMIFICATION_TOPICS}.
+ *
+ * The hub mounts this too, as of 2026-08-30, at `/<workspace>/gamification`. That route used to
+ * render {@link GamificationPane} against the workspace's own INFRASTRUCTURE ecosystem — one
+ * stacked pane, one realm, no list. Its scope is the workspace's PRODUCTS now, which is a change
+ * of surface and worth stating plainly: the infra realm's gamification config is no longer at
+ * that URL. It is the hub's own rail that says so first — `workspace-features.ts` demoted
+ * gamification out of the workspace rail and under Products with the reason "a workspace does not
+ * have 'an Auth' or 'a Storage', one of its products does", and a workspace does not have a
+ * Gamification either. The route scoped to the infra realm was what that demotion left behind.
+ * The hub's /home launcher still embeds the combined pane (EcosystemTopicPanel), so the
+ * single-realm arrangement is not gone, only no longer the thing this URL means.
+ *
+ * The one thing the old route had that this lacked was the help blurb over the realm settings,
+ * which is now {@link GamificationFeatureProps.helpFor}.
  */
 export interface GamificationFeatureProps extends GamificationPathSelection {
   basePath: string;
   /** The workspace whose products the root list shows. REQUIRED in practice: `listFirst` reads
    *  the workspace-OWNED ecosystems, so without it there is no list to be first. */
   workspaceSlug?: string;
+  /**
+   * Contextual help lookup, keyed the way the rest of the platform keys it (`ecosystems/<topic>`).
+   * Passed down rather than reached for: the sentences are adh's product vocabulary and a portable
+   * feature package may not import them, which is why every host that mounts one supplies this.
+   *
+   * NOT forwarded to EcosystemsFeature, deliberately — that prop is only consulted for its OWN
+   * Settings pane, and this feature claims `settings` for the realm config, so the forward would
+   * be dead. It is consumed here, by the pane that actually renders a blurb.
+   */
+  helpFor?: (key: string) => string | undefined;
 }
 
-function renderGamificationTopicPane(topicId: string, ctx: RenderTopicPaneCtx): ReactNode {
-  switch (topicId) {
-    case "catalog":
-      return <CatalogTopicPane ecosystemId={ctx.ecosystemId} />;
-    case "levels":
-      return <LevelsTopicPane ecosystemId={ctx.ecosystemId} />;
-    case "custom-events":
-      return <EventTypesTopicPane ecosystemId={ctx.ecosystemId} />;
-    case "settings":
-      return <GamificationSettingsTopicPane ecosystemId={ctx.ecosystemId} />;
-    default:
-      // Nothing else is on this rail. Declining (rather than rendering a placeholder) hands the
-      // id back to EcosystemsFeature, so a topic added upstream still gets its own pane.
-      return null;
-  }
+/** Curried on `helpFor` so the identity is stable per lookup rather than per render — the same
+ *  shape the Products site's feature-panel renderer uses. */
+function gamificationTopicPaneRenderer(
+  helpFor: ((key: string) => string | undefined) | undefined,
+): (topicId: string, ctx: RenderTopicPaneCtx) => ReactNode {
+  return (topicId, ctx) => {
+    switch (topicId) {
+      case "catalog":
+        return <CatalogTopicPane ecosystemId={ctx.ecosystemId} />;
+      case "levels":
+        return <LevelsTopicPane ecosystemId={ctx.ecosystemId} />;
+      case "custom-events":
+        return <EventTypesTopicPane ecosystemId={ctx.ecosystemId} />;
+      case "settings":
+        return (
+          <GamificationSettingsTopicPane
+            ecosystemId={ctx.ecosystemId}
+            // The realm-settings blurb — the one help key the hub's own `/…/gamification` route
+            // passed (via GamificationPane) and the one this feature renders. `RealmSettingsPane`
+            // shows it under the heading; the other three panes have no place for one.
+            help={helpFor?.("ecosystems/gamification")}
+          />
+        );
+      default:
+        // Nothing else is on this rail. Declining (rather than rendering a placeholder) hands the
+        // id back to EcosystemsFeature, so a topic added upstream still gets its own pane.
+        return null;
+    }
+  };
 }
 
-export function GamificationFeature({ basePath, workspaceSlug, ...selection }: GamificationFeatureProps) {
+export function GamificationFeature({
+  basePath,
+  workspaceSlug,
+  helpFor,
+  ...selection
+}: GamificationFeatureProps) {
+  const renderTopicPane = useMemo(() => gamificationTopicPaneRenderer(helpFor), [helpFor]);
   return (
     <EcosystemsFeature
       basePath={basePath}
@@ -55,7 +99,7 @@ export function GamificationFeature({ basePath, workspaceSlug, ...selection }: G
       listFirst
       labels={{ singular: "Product", plural: "Products" }}
       topics={GAMIFICATION_TOPICS}
-      renderTopicPane={renderGamificationTopicPane}
+      renderTopicPane={renderTopicPane}
       {...selection}
     />
   );

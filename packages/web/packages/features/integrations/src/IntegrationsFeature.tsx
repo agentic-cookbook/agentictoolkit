@@ -3,7 +3,12 @@
 import type { ReactNode } from "react";
 import { Boxes, Building2, UserCircle, UserRound } from "lucide-react";
 import type { Workspace } from "@agentic-toolkit/data";
-import { RailHostBoundary, StackLevels, useBasePathRoute } from "@agentic-toolkit/resource";
+import {
+  RailHostBoundary,
+  StackLevels,
+  WorkspaceNotManageable,
+  useBasePathRoute,
+} from "@agentic-toolkit/resource";
 import type { TopicDetailItem, TopicLevel } from "@agenticdevelopertoolkit/ui/blocks";
 import { TopicSelectHint } from "@agenticdevelopertoolkit/ui/blocks";
 import { EmptyState } from "@agenticdevelopertoolkit/ui/components/empty-state";
@@ -81,6 +86,19 @@ export interface IntegrationsFeatureProps extends IntegrationsPathSelection {
  * Nesting works because `StackLevels` advances `LevelDepthContext` by the number of levels it
  * publishes: the pane's own `useMasterDetailLevel` therefore registers at depth 1, below the
  * destinations, without either side knowing the other's depth.
+ *
+ * The hub mounts this too, as of 2026-08-30, in place of the single default-ecosystem pane its
+ * `/…/integrations` route rendered before. That route carried ONE thing this feature lacked — the
+ * `canManage` gate — and it is now `IntegrationDestination.manageable`, checked per destination
+ * rather than over the whole feature. The route's other two differences turned out not to be
+ * differences: its `WorkspaceResolutionError` is answered here by `error`, which reports the failed
+ * workspace resolution ALONGSIDE the personas and products that loaded fine instead of blanking
+ * them, and the `help` blurb it passed was inert (`IntegrationsPane.help` is accepted for the
+ * ScopedPane prop shape and rendered nowhere), so there was nothing to carry across. The hub kept
+ * only its `/home` launcher panel, which is a different surface.
+ *
+ * That leaves NO host seam here — hence no `Host` type parameter on the site model, and hence a
+ * hub route the generator can write.
  */
 export function IntegrationsFeature({
   basePath,
@@ -185,6 +203,13 @@ function Body({
       </div>
     );
   }
+
+  // Last, because it is the narrowest answer: the destination resolved, there IS an ecosystem, and
+  // the caller can see it but not administer it. Ordered after the tri-state so a plain org member
+  // waiting on the workspace row reads "Loading…" rather than being told about permissions on a
+  // resolution that hasn't happened yet — `manageable` defaults to true while pending anyway, so
+  // this branch can only be reached by a definitive NO.
+  if (!selected.manageable) return <WorkspaceNotManageable feature="Integrations" />;
 
   return (
     <IntegrationsPane

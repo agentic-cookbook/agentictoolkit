@@ -1,6 +1,7 @@
 "use client";
 
 import { defineSiteHome } from "@agentic-toolkit/adh/home";
+import { helpFor } from "@agentic-toolkit/adh/help/store";
 import { ToolkitQueryProvider } from "@agentic-toolkit/data/query";
 import { GamificationFeature } from "@agentic-toolkit/gamification";
 import { parseGamificationPath } from "@agentic-toolkit/gamification/parse";
@@ -33,7 +34,16 @@ export const gamificationHome = defineSiteHome({
     // itself. A host-constructed QueryClientProvider cannot serve toolkit hooks: `link:` gives the
     // package its own physical copy of react-query, so the client has to come from the toolkit.
     <ToolkitQueryProvider>
-      <GamificationFeature basePath={scopedBase} workspaceSlug={workspaceSlug} {...view} />
+      {/* `helpFor` is passed IN rather than reached for: a pane's blurb is adh's product
+          vocabulary, which a portable feature package may not import. It comes from the site
+          rather than from a host seam because there is one store and both hosts want it — the
+          hub's own route passed the same key before it mounted this model. */}
+      <GamificationFeature
+        basePath={scopedBase}
+        workspaceSlug={workspaceSlug}
+        helpFor={helpFor}
+        {...view}
+      />
     </ToolkitQueryProvider>
   ),
 });
