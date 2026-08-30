@@ -11,7 +11,8 @@ import AppKit
 ///     └──────────────────────────────────────────────┘
 ///
 ///     ┌───────────────────────────────────────────🛑─┐
-///     │ me@example.com        5H: 23% | 7D: 12%    ▸ │
+///     │ me@example.com                             ▸ │
+///     │                        5H: 23% | 7D: 12%     │
 ///     └──────────────────────────────────────────────┘
 ///
 /// A card that folds is what makes a list of five sections readable on a laptop
@@ -21,9 +22,13 @@ import AppKit
 /// it keeps a summary of what it is hiding — a fold that hides the numbers is
 /// just a card you have to open again.
 ///
-/// The folded summary is pinned to the right, not parked after the title:
-/// stacked cards then read as a column of readings under one right edge instead
-/// of each line starting wherever its own title happened to stop.
+/// The folded summary is on its own row under the title, pinned to the right.
+/// Beside the title it made every folded card at least as wide as an address
+/// plus its readings plus the toggle, which is a width nothing else in the
+/// window needed — and the two competed, so a long address went short on a card
+/// that had a whole second line free. Under it they each get the full width, and
+/// stacked cards still read as a column of readings under one right edge rather
+/// than starting wherever each title happened to stop.
 ///
 /// ## The standing is a corner badge, not a masthead item
 ///
@@ -56,17 +61,16 @@ import AppKit
 /// ## The title gets whatever the masthead is not using
 ///
 /// The title is the one thing on that line that yields, so it is the one thing
-/// that goes short when the line is full. An open card's summary is not drawn,
-/// so its well leaves the layout and the title has the whole line; what the
-/// summary WILL need when the card folds is reserved on the card's width floor
-/// (`mastheadWidthFloor`) instead, where it does not eat a line nothing is
-/// written on. That is what keeps a long address whole while folding still moves
-/// nothing sideways.
+/// that goes short when the line is full. An open card draws no summary at all,
+/// so what the summary WILL need when the card folds is reserved on the card's
+/// width floor (`mastheadWidthFloor`) instead of on a row that is not there.
+/// That is what keeps folding from moving anything sideways.
 ///
-/// The floor counts the title itself as well, so a card with a summary is wide
-/// enough to write both: yielding is what the title does when the window is too
-/// narrow for it, not something a card should ask of it while there is a window
-/// still willing to grow.
+/// The floor is the WIDER of the two rows, not their sum — the title's line and
+/// the summary's line are each entitled to the whole card, which is the point of
+/// stacking them. It counts the title's line so that yielding is what the title
+/// does when the window is too narrow for it, not something a card asks of it
+/// while there is a window still willing to grow.
 ///
 /// ## Folding never changes the card's width
 ///
@@ -135,12 +139,10 @@ public final class DisclosureCardView: NSView, Themeable {
     private let titleField = NSTextField(labelWithString: "")
     /// One quiet line under the masthead saying what the card's content means.
     private let subtitleField = NSTextField(labelWithString: "")
-    /// The collapsed card's one-line stand-in for its content.
+    /// The collapsed card's one-line stand-in for its content, on its own row
+    /// under the title. Not drawn at all while the card is open — what it will
+    /// need on folding is held on the width floor instead.
     private let summaryField = NSTextField(labelWithString: "")
-    /// The well the summary sits in, kept at the summary's width in BOTH states
-    /// so the masthead is the same width folded and open (see the width note in
-    /// the type's documentation). Empty and invisible when the card is open.
-    private let summarySlot = NSView()
     /// The card's surface and border, drawn by a view of its own so the corner
     /// badge can sit above them — see the note in the type's documentation.
     private let surface = NSView()
@@ -157,16 +159,13 @@ public final class DisclosureCardView: NSView, Themeable {
 
     private var observer: ThemePaletteObserver?
 
-    /// Width of the reserved summary well, re-measured whenever the palette
-    /// (and so the summary's fonts) changes.
-    private var summarySlotWidth: NSLayoutConstraint?
     /// The card's fold-independent width floor: as wide as its content wants to
     /// be, whether or not the content is currently drawn.
     private var contentWidthFloor: NSLayoutConstraint?
-    /// What the masthead needs when this card is FOLDED — its title, its
-    /// summary, the toggle, and the gaps between them. Held on the width floor
-    /// instead of in the open card's layout, so folding cannot change the card's
-    /// width and an open title still gets the room the summary is not using.
+    /// What the masthead needs when this card is FOLDED — the wider of its two
+    /// rows: the title beside the toggle, or the summary under them. Held on the
+    /// width floor instead of in the open card's layout, so folding cannot
+    /// change the card's width.
     private var mastheadWidthFloor: CGFloat = 0
 
     private static let cornerRadius: CGFloat = 10
@@ -176,10 +175,9 @@ public final class DisclosureCardView: NSView, Themeable {
     /// How far a dimmed card recedes. Far enough to sort one card out of a list
     /// at a glance, not so far that the dimmed cards stop being readable.
     private static let dimmedAlpha: CGFloat = 0.55
-    /// The masthead's own spacings, named once because the folded width floor
+    /// The masthead's own spacing, named once because the folded width floor
     /// has to add up the same line the layout builds.
     private static let mastheadGap: CGFloat = 8
-    private static let trailingSpacing: CGFloat = 6
 
     private let padX: CGFloat
     private let padY: CGFloat
@@ -232,7 +230,7 @@ public final class DisclosureCardView: NSView, Themeable {
         // the height the fold was asked to reclaim.
         subtitleField.isHidden = subtitle == nil || isCollapsed
 
-        configureSummarySlot(isCollapsed: isCollapsed)
+        configureSummary(isCollapsed: isCollapsed)
         configureStatusBadge()
         configureDisclosure(isCollapsed: isCollapsed)
 
@@ -242,19 +240,10 @@ public final class DisclosureCardView: NSView, Themeable {
         content.translatesAutoresizingMaskIntoConstraints = false
         content.isHidden = isCollapsed
 
-        // The title at the left edge, the folded card's summary and the toggle
-        // at the right. The toggle is the one piece every card has, so it lands
-        // in the same place on all of them; the summary sits just inside it, in
-        // a well of its own width, so folded cards read as a column of readings
-        // under one right edge.
-        let trailing = NSStackView(views: [summarySlot, disclosure])
-        trailing.orientation = .horizontal
-        trailing.alignment = .centerY
-        trailing.spacing = Self.trailingSpacing
-        trailing.translatesAutoresizingMaskIntoConstraints = false
-
+        // The title at the left edge, the toggle at the right — the one piece
+        // every card has, so it lands in the same place on all of them.
         let header = PinnedEndsLine.make(
-            leading: titleField, trailing: trailing,
+            leading: titleField, trailing: disclosure,
             minimumGap: Self.mastheadGap, alignment: .centerY
         )
 
@@ -266,6 +255,7 @@ public final class DisclosureCardView: NSView, Themeable {
         masthead.spacing = 2
         masthead.translatesAutoresizingMaskIntoConstraints = false
         masthead.addFullWidthArrangedSubview(header)
+        masthead.addFullWidthArrangedSubview(summaryField)
         masthead.addFullWidthArrangedSubview(subtitleField)
 
         let stack = NSStackView()
@@ -321,30 +311,19 @@ public final class DisclosureCardView: NSView, Themeable {
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
-    /// The summary's well, at the summary's own width. Present only when there
-    /// is a summary AND the card is folded — what keeps the fold from moving
-    /// anything sideways is the width floor (`mastheadWidthFloor`), not a well
-    /// standing empty on a line the title needs.
-    private func configureSummarySlot(isCollapsed: Bool) {
+    /// The summary's row, right-aligned across the whole masthead. Present only
+    /// when there is a summary AND the card is folded — what keeps the fold from
+    /// moving anything sideways is the width floor (`mastheadWidthFloor`), not a
+    /// row standing empty under an open card's title.
+    private func configureSummary(isCollapsed: Bool) {
         summaryField.translatesAutoresizingMaskIntoConstraints = false
         summaryField.alignment = .right
         summaryField.lineBreakMode = .byClipping
         summaryField.setContentCompressionResistancePriority(.required, for: .horizontal)
-        summaryField.setContentHuggingPriority(.required, for: .horizontal)
-        summarySlot.translatesAutoresizingMaskIntoConstraints = false
         // An `NSStackView` detaches a hidden arranged view completely, which is
-        // the point: an open card's title gets the whole line.
-        summarySlot.isHidden = summary.isEmpty || !isCollapsed
-        summarySlot.addSubview(summaryField)
-        let width = summarySlot.widthAnchor.constraint(equalToConstant: 0)
-        summarySlotWidth = width
-        NSLayoutConstraint.activate([
-            summaryField.trailingAnchor.constraint(equalTo: summarySlot.trailingAnchor),
-            summaryField.leadingAnchor.constraint(greaterThanOrEqualTo: summarySlot.leadingAnchor),
-            summaryField.topAnchor.constraint(equalTo: summarySlot.topAnchor),
-            summaryField.bottomAnchor.constraint(equalTo: summarySlot.bottomAnchor),
-            width
-        ])
+        // the point: an open card is exactly as tall as it was before the
+        // summary had a row of its own.
+        summaryField.isHidden = summary.isEmpty || !isCollapsed
     }
 
     /// The corner badge: this card's standing, on its top-right corner, or
@@ -482,15 +461,16 @@ public final class DisclosureCardView: NSView, Themeable {
 
         let line = Self.summaryString(summary, palette: palette, scaledSize: scaledSize)
         summaryField.attributedStringValue = line
-        let summaryWidth = ceil(line.size().width)
-        summarySlotWidth?.constant = summaryWidth
         // The title is measured at its full length, not at whatever the line
-        // currently affords it: a card that carries a summary is as wide as the
-        // two of them plus the toggle, so the address is truncated only by a
-        // window that cannot be any wider.
-        mastheadWidthFloor = summary.isEmpty ? 0 : ceil(titleField.fittingSize.width)
-            + Self.mastheadGap + summaryWidth
-            + Self.trailingSpacing + ceil(disclosure.fittingSize.width)
+        // currently affords it, so the address is truncated only by a window
+        // that cannot be any wider. Against it, not added to it: the summary has
+        // a row to itself, and the wider of the two rows is what the masthead
+        // needs.
+        mastheadWidthFloor = summary.isEmpty ? 0 : max(
+            ceil(titleField.fittingSize.width)
+                + Self.mastheadGap + ceil(disclosure.fittingSize.width),
+            ceil(line.size().width)
+        )
         updateContentWidthFloor()
     }
 

@@ -77,6 +77,11 @@ final class DisclosureCardTests: XCTestCase {
         )
         let wide = NSView(frame: NSRect(x: 0, y: 0, width: 600, height: 60))
         wide.widthAnchor.constraint(equalToConstant: 600).isActive = true
+        // A height as well as a width: the folded card writes its summary on a
+        // row of its own, so a card whose content measures zero points tall is
+        // TALLER shut than open, and correctly so. What the fold is for is
+        // putting away content, and content has a size.
+        wide.heightAnchor.constraint(equalToConstant: 60).isActive = true
         card.addContent(wide)
         // Hosted rather than merely measured: a card that was never given a
         // size lays its subviews out against a frame nothing set, so anything
@@ -123,7 +128,7 @@ final class DisclosureCardTests: XCTestCase {
 
     func testAFoldedCardIsAsWideAsAnOpenOneEvenWhenItsSummaryIsWiderThanItsContent() {
         // The other half of the same rule, and the one the masthead floor is
-        // for: with the summary's well out of the OPEN card's layout, the width
+        // for: with the summary's row out of the OPEN card's layout, the width
         // it will want on folding has to be reserved somewhere that does not
         // depend on which state the card is in.
         func narrow(isCollapsed: Bool) -> DisclosureCardView {
@@ -273,11 +278,11 @@ final class DisclosureCardTests: XCTestCase {
         XCTAssertGreaterThan(label.frame.width, 0)
     }
 
-    func testACardAsksForTheRoomToWriteItsTitleWholeBesideItsSummary() {
-        // The other half: a folded card DOES carry both on one line, so the
-        // width it asks for has to fit both. Truncation is what a title does
-        // when the window can be no wider — not what it does while the card is
-        // free to ask for another forty points.
+    func testACardAsksForTheRoomToWriteItsTitleWhole() {
+        // The other half: the width a folded card asks for counts its title at
+        // full length. Truncation is what a title does when the window can be
+        // no wider — not what it does while the card is free to ask for another
+        // forty points.
         let title = "a-very-long-address@some-organisation.example.com"
         let card = DisclosureCardView(
             title: title,
@@ -301,5 +306,70 @@ final class DisclosureCardTests: XCTestCase {
         guard let label = field(title, in: card) else { return XCTFail("no title") }
         XCTAssertGreaterThanOrEqual(label.frame.width, label.fittingSize.width - 0.5,
                                     "the address was squeezed by a card that could have grown")
+    }
+
+    // MARK: - The summary is a row of its own
+
+    /// A folded card carrying the long address and the two readings.
+    private func stacked(summary: [DisclosureCardView.SummaryPart]) -> DisclosureCardView {
+        let card = DisclosureCardView(
+            title: Self.longAddress,
+            titleIsAccent: true,
+            summary: summary,
+            isCollapsed: true,
+            scaledSize: 13
+        )
+        let tiny = NSView()
+        tiny.translatesAutoresizingMaskIntoConstraints = false
+        tiny.widthAnchor.constraint(equalToConstant: 40).isActive = true
+        tiny.heightAnchor.constraint(equalToConstant: 20).isActive = true
+        card.addContent(tiny)
+        return card
+    }
+
+    private static let longAddress = "a-very-long-address@some-organisation.example.com"
+
+    private static let readings: [DisclosureCardView.SummaryPart] = [
+        .init(name: "5H", value: "23%", colorName: "blue"),
+        .init(name: "7D", value: "12%", colorName: "green")
+    ]
+
+    func testTheSummaryIsWrittenUnderTheTitleRatherThanBesideIt() {
+        let card = stacked(summary: Self.readings)
+        host(card, width: card.fittingSize.width)
+
+        guard let title = field(Self.longAddress, in: card) else { return XCTFail("no title") }
+        guard let summary = field("5H: 23%  |  7D: 12%", in: card) else {
+            return XCTFail("no summary")
+        }
+        guard let toggle = toggle(of: card) else { return XCTFail("no toggle") }
+        let titleRect = card.convert(title.bounds, from: title)
+        let summaryRect = card.convert(summary.bounds, from: summary)
+        // The toggle's ALIGNMENT rect, not its frame: it draws an SF Symbol,
+        // which carries insets, so the edge the engine lined the summary up
+        // with is a point or two inside the image's box.
+        let triangle = card.convert(toggle.alignmentRect(forFrame: toggle.bounds), from: toggle)
+        XCTAssertLessThanOrEqual(summaryRect.maxY, titleRect.minY + 0.5,
+                                 "the summary shares no line with the title")
+        // And it is right-aligned across the WHOLE masthead — past where the
+        // title's line stops to leave the toggle its corner, out to the same
+        // edge the toggle ends on. That is what makes a stack of folded cards
+        // read as a column of readings under one right edge.
+        XCTAssertGreaterThan(summaryRect.maxX, titleRect.maxX)
+        XCTAssertGreaterThanOrEqual(summaryRect.maxX, triangle.maxX,
+                                    "out to the same edge the toggle ends on")
+        XCTAssertLessThan(summaryRect.maxX, card.bounds.maxX,
+                          "and inside the card's own padding")
+    }
+
+    func testALongerSummaryDoesNotWidenACardWhoseTitleIsWider() {
+        // What stacking is FOR. Beside the title, every reading added its own
+        // width plus a gap to a card that was already as wide as an address; on
+        // a row of its own it costs nothing until it is wider than the address
+        // itself, because the masthead needs the WIDER of its two rows and not
+        // their sum. Two readings and one, against a title longer than either.
+        XCTAssertEqual(stacked(summary: Self.readings).fittingSize.width,
+                       stacked(summary: [Self.readings[0]]).fittingSize.width,
+                       accuracy: 0.5)
     }
 }
