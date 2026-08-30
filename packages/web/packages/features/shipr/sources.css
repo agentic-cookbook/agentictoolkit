@@ -20,5 +20,15 @@
  * package can resolve the specifier. */
 @import "@agenticdevelopertoolkit/ui/styles/components.css";
 
+/* Same rule, two more deps — both reached from the configure dialogs. ConfigureDialog and
+ * ConnectionsDialog both mount `resource`'s <StandaloneRailHost> (and ConfigureDialog its
+ * <StackLevels>), and ConnectionsDialog's body IS `integrations`' <IntegrationsPane>. So a
+ * host that registers `shipr` alone opens either dialog to unstyled markup — silently,
+ * because an unregistered utility is never written and nothing errors. Both are already
+ * `dependencies` here, which is what lets these specifiers resolve under pnpm's isolated
+ * node_modules. */
+@import "@agentic-toolkit/resource/sources.css";
+@import "@agentic-toolkit/integrations/sources.css";
+
 @source "./src/**/*.{ts,tsx}";
 @source "./dist/**/*.js";
