@@ -151,13 +151,23 @@ vendoring stops reading adh's copy, not before.
 #### The theme model is not here any more
 
 `RGBAColor`, `ColorTheme`, `SemanticPalette`, `ThemeTypography`,
-`BuiltInThemes` and `ITermColorsParser` live in **AgenticDeveloperToolkit**,
-which builds for five platforms and ships to customers on its own.
-`Core/Theme/ThemeReExports.swift` `@_exported import`s it, so every existing
-call site still resolves them through `AgenticToolkitCore` and nothing had to
-change an import. Only `ThemeStore` stayed: it persists through
-`UserSettings`, and following it down would have dragged the whole
-`Core/SettingStorage/` subsystem across a dependency edge that runs one way.
+`BuiltInThemes`, `ITermColorsParser` and `ThemeStore` live in
+**AgenticDeveloperToolkit**, which builds for five platforms and ships to
+customers on its own. `Core/Theme/ThemeReExports.swift` `@_exported import`s
+it, so every existing call site still resolves them through
+`AgenticToolkitCore` and nothing had to change an import.
+
+`ThemeStore` could not simply follow the rest down — it persisted through
+`UserSettings`, and dragging `Core/SettingStorage/` (15 files, extended by
+eight others here) across a one-way dependency edge was not an option. So it
+moved onto a seam instead: ADT declares `protocol ThemeStorage` with the one
+property the store actually uses (`customThemes`), and this repo supplies
+`Core/Theme/UserSettingsThemeStorage.swift`, which reads and writes
+`UserSettings.customThemes` exactly as before. A `ThemeStore()` convenience
+initialiser in that same file picks it up, so every call site here is
+unchanged. **The storage key (`theme.custom_themes`) and its JSON encoding are
+load-bearing:** they are what already-saved user themes are stored under, and
+changing either orphans them silently.
 
 Two consequences worth knowing before you debug them:
 
