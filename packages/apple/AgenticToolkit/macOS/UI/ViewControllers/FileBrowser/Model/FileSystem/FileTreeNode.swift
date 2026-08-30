@@ -28,8 +28,24 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
     /// `packageExtensions` on construction.
     public let isPackage: Bool
 
-    /// The child nodes for directories. `nil` for files and packages.
+    /// The child nodes for directories. `nil` for files and packages, and an
+    /// empty array for a directory nobody has looked inside yet — which is how
+    /// the outline knows it is expandable before it has been read.
     @Published public var children: [FileTreeNode]?
+
+    /// Whether this directory's children have been read from disk.
+    ///
+    /// The distinction matters because an empty array means two different
+    /// things: a directory that is genuinely empty, and one that has not been
+    /// opened yet.
+    @Published public private(set) var childrenLoaded: Bool = false
+
+    /// What this node's children are read with, kept so a directory can
+    /// materialise its own children the first time it is shown — the view
+    /// would otherwise have to carry the scan's configuration down the tree
+    /// alongside every node (`dry`).
+    private let ignorePatterns: [String]
+    private let packageExtensions: Set<String>
 
     /// File size in bytes, if available. Only populated for files.
     public let fileSize: Int?
@@ -47,8 +63,9 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
     /// - Parameters:
     ///   - url: The file system URL for this file or directory.
     ///   - isDirectory: Whether this URL points to a directory.
-    ///   - loadChildren: Whether to recursively load children for directories.
-    ///     Pass `false` for lazy loading.
+    ///   - loadChildren: Whether to read this directory's children now. One
+    ///     level only — the children themselves are left unread until they are
+    ///     shown. Pass `false` to read nothing at all.
     ///   - ignorePatterns: Wildcard patterns for filenames to exclude.
     ///   - packageExtensions: Extensions that identify directories as opaque
     ///     packages (e.g. `catnip-proj`). Packages appear as single items.
@@ -63,6 +80,8 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
         self.url = url
         self.name = url.lastPathComponent
         self.isDirectory = isDirectory
+        self.ignorePatterns = ignorePatterns
+        self.packageExtensions = packageExtensions
 
         let isPkg = packageExtensions.contains(url.pathExtension)
         self.isPackage = isPkg
@@ -80,6 +99,7 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
                     ignorePatterns: ignorePatterns,
                     packageExtensions: packageExtensions
                 )
+                self.childrenLoaded = true
             } else {
                 // Empty array signals "expandable but not yet loaded"
                 self.children = []
@@ -89,27 +109,49 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
         }
     }
 
-    /// Creates a file tree node from cached data without hitting the filesystem.
-    public init(
-        cachedPath: String,
-        name: String,
-        isDirectory: Bool,
-        isPackage: Bool,
-        fileSize: Int?,
-        modificationDate: Date?
-    ) {
-        self.id = cachedPath
-        self.url = URL(fileURLWithPath: cachedPath)
-        self.name = name
-        self.isDirectory = isDirectory
-        self.isPackage = isPackage
-        self.fileSize = fileSize
-        self.modificationDate = modificationDate
-        if isDirectory && !isPackage {
-            self.children = []
-        } else {
-            self.children = nil
+    // MARK: - Lazy loading
+
+    /// Reads this directory's children, once, the first time something needs
+    /// to show them.
+    ///
+    /// One level at a time is the whole point: a browser that walked an entire
+    /// checkout before drawing anything spent minutes and gigabytes on
+    /// directories the user never opened — `node_modules` and `.git` are most
+    /// of any repository, and a big monorepo has dozens of each. The tree the
+    /// user can see is the tree worth reading
+    /// (`make-it-work-make-it-right-make-it-fast`).
+    @MainActor
+    public func loadChildrenIfNeeded() {
+        guard isDirectory, !isPackage, !childrenLoaded else { return }
+        // Set before the read, not after: two rows appearing in the same frame
+        // must not both start the same enumeration.
+        childrenLoaded = true
+        let url = self.url
+        let patterns = ignorePatterns
+        let extensions = packageExtensions
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            let loaded = FileTreeNode.loadChildren(
+                for: url,
+                ignorePatterns: patterns,
+                packageExtensions: extensions
+            )
+            // `nil`, not an empty array, for a directory that turned out to
+            // have nothing in it: the outline reads an empty array as
+            // "expandable, not yet read", so keeping it would leave a
+            // disclosure triangle that opens onto nothing.
+            DispatchQueue.main.async { self?.children = loaded.isEmpty ? nil : loaded }
         }
+    }
+
+    /// Replaces this directory's children with a freshly read list, keeping the
+    /// node objects for paths that are still there.
+    ///
+    /// Re-using them is what keeps an expanded subdirectory expanded — and
+    /// read — when a sibling file changes underneath it.
+    public func merge(children fresh: [FileTreeNode]) {
+        var existing: [String: FileTreeNode] = [:]
+        for child in children ?? [] { existing[child.id] = child }
+        children = fresh.map { existing[$0.id] ?? $0 }
     }
 
     // MARK: - Ignore Patterns
@@ -124,11 +166,12 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
 
     // MARK: - Child Loading
 
-    /// Loads and sorts children for a directory URL.
+    /// Loads and sorts one directory's immediate children.
     ///
     /// Directories are listed first (sorted alphabetically), followed by files
     /// (sorted alphabetically). Hidden files (starting with `.`) are included
-    /// so that `.claude` and other dotfiles are visible.
+    /// so that `.claude` and other dotfiles are visible. The children come back
+    /// unread — see `loadChildrenIfNeeded()`.
     public static func loadChildren(
         for url: URL,
         ignorePatterns: [String] = [],
@@ -161,7 +204,7 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
             return FileTreeNode(
                 url: childURL,
                 isDirectory: isDir,
-                loadChildren: true,
+                loadChildren: false,
                 ignorePatterns: ignorePatterns,
                 packageExtensions: packageExtensions
             )
@@ -174,105 +217,6 @@ public final class FileTreeNode: Identifiable, ObservableObject, Hashable, @unch
             }
             return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
         }
-    }
-
-    /// Builds a complete file tree sequentially from a root directory URL.
-    public static func buildTree(
-        from rootURL: URL,
-        ignorePatterns: [String] = [],
-        packageExtensions: Set<String> = []
-    ) -> FileTreeNode {
-        return FileTreeNode(
-            url: rootURL,
-            isDirectory: true,
-            loadChildren: true,
-            ignorePatterns: ignorePatterns,
-            packageExtensions: packageExtensions
-        )
-    }
-
-    /// Builds a file tree with parallel scanning of top-level directories.
-    public static func buildTreeParallel(
-        from rootURL: URL,
-        ignorePatterns: [String],
-        packageExtensions: Set<String>,
-        operationQueue: OperationQueue
-    ) -> FileTreeNode {
-        let rootNode = FileTreeNode(
-            url: rootURL,
-            isDirectory: true,
-            loadChildren: false,
-            packageExtensions: packageExtensions
-        )
-
-        let fileManager = FileManager.default
-        guard let contents = try? fileManager.contentsOfDirectory(
-            at: rootURL,
-            includingPropertiesForKeys: [.isDirectoryKey],
-            options: []
-        ) else {
-            rootNode.children = []
-            return rootNode
-        }
-
-        // Separate directories from files, filtering by ignore patterns
-        var topLevelDirs: [(index: Int, url: URL)] = []
-        var fileNodes: [FileTreeNode] = []
-        var sortIndex = 0
-
-        for childURL in contents {
-            let filename = childURL.lastPathComponent
-            if filename == ".DS_Store" { continue }
-            if shouldIgnore(filename, patterns: ignorePatterns) { continue }
-
-            let resourceValues = try? childURL.resourceValues(forKeys: [.isDirectoryKey])
-            let isDir = resourceValues?.isDirectory ?? false
-
-            if isDir {
-                topLevelDirs.append((index: sortIndex, url: childURL))
-            } else {
-                fileNodes.append(FileTreeNode(
-                    url: childURL,
-                    isDirectory: false,
-                    packageExtensions: packageExtensions
-                ))
-            }
-            sortIndex += 1
-        }
-
-        // Dispatch each top-level directory to the operation queue
-        let lock = NSLock()
-        nonisolated(unsafe) var dirResults: [(url: URL, node: FileTreeNode)] = []
-
-        for (_, dirURL) in topLevelDirs {
-            let operation = BlockOperation {
-                let node = FileTreeNode(
-                    url: dirURL,
-                    isDirectory: true,
-                    loadChildren: true,
-                    ignorePatterns: ignorePatterns,
-                    packageExtensions: packageExtensions
-                )
-                lock.lock()
-                dirResults.append((url: dirURL, node: node))
-                lock.unlock()
-            }
-            operationQueue.addOperation(operation)
-        }
-
-        operationQueue.waitUntilAllOperationsAreFinished()
-
-        // Combine directory and file nodes, sort: directories first, then alphabetically
-        var allNodes: [FileTreeNode] = dirResults.map(\.node) + fileNodes
-        allNodes.sort { lhs, rhs in
-            if lhs.isDirectory != rhs.isDirectory {
-                return lhs.isDirectory
-            }
-            return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
-        }
-
-        rootNode.children = allNodes
-        return rootNode
     }
 
     // MARK: - SF Symbol Icons

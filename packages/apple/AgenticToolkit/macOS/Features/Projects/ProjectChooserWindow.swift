@@ -78,7 +78,11 @@ private final class ProjectChooserContentViewController: NSViewController {
     var onFinish: ((GitRepo?) -> Void)?
 
     private let browser: ProjectBrowserViewController
-    private let openButton = ThemedButton(title: "Open")
+    /// Stock push buttons, deliberately. This is the Open dialog of a Mac app:
+    /// the pair at the bottom right is a shape people have known for thirty
+    /// years, and a hand-drawn substitute is a worse version of it
+    /// (`native-controls`).
+    private let openButton = NSButton(title: "Open", target: nil, action: nil)
 
     init(coordinator: ProjectsCoordinator) {
         self.browser = ProjectBrowserViewController(coordinator: coordinator, mode: .chooser)
@@ -93,10 +97,15 @@ private final class ProjectChooserContentViewController: NSViewController {
     override func loadView() {
         let container = ThemedBackgroundView(role: .windowBackground)
 
-        let cancel = ThemedButton(title: "Cancel", target: self, action: #selector(cancelChoosing(_:)))
+        let cancel = NSButton(title: "Cancel", target: self, action: #selector(cancelChoosing(_:)))
+        cancel.bezelStyle = .push
         cancel.keyEquivalent = "\u{1b}"
         cancel.accessibilityID("project-chooser.cancel")
 
+        openButton.bezelStyle = .push
+        // Return opens the selection, which also makes this the default button
+        // AppKit tints — the one thing that tells the pair apart at a glance.
+        openButton.keyEquivalent = "\r"
         openButton.target = self
         openButton.action = #selector(openChosen(_:))
         openButton.isEnabled = false
@@ -104,7 +113,7 @@ private final class ProjectChooserContentViewController: NSViewController {
 
         let buttons = NSStackView(views: [cancel, openButton])
         buttons.orientation = .horizontal
-        buttons.spacing = 10
+        buttons.spacing = 12
         buttons.translatesAutoresizingMaskIntoConstraints = false
 
         addChild(browser)
@@ -118,11 +127,15 @@ private final class ProjectChooserContentViewController: NSViewController {
             browserView.topAnchor.constraint(equalTo: container.topAnchor),
             browserView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             browserView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            browserView.bottomAnchor.constraint(equalTo: buttons.topAnchor, constant: -10),
+            browserView.bottomAnchor.constraint(equalTo: buttons.topAnchor, constant: -16),
 
-            buttons.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -14),
-            buttons.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -14),
-            buttons.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 14)
+            // 20pt margins and a 72pt minimum button: the dialog metrics every
+            // other Mac app uses, so this one does not read as homemade.
+            buttons.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            buttons.bottomAnchor.constraint(equalTo: container.bottomAnchor, constant: -20),
+            buttons.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor, constant: 20),
+            cancel.widthAnchor.constraint(greaterThanOrEqualToConstant: 72),
+            openButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 72)
         ])
 
         self.view = container

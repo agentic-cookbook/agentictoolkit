@@ -3,7 +3,7 @@ import Foundation
 /// Configuration for the AgenticFileBrowser framework.
 ///
 /// Passed into `FileTreeNode`, `DirectoryWatchCoordinator`, `FileTreeManager`,
-/// `WorkspaceDirectoryManager`, `ContentViewerView`, and `FileTypesSettingsView`.
+/// `ContentViewerView`, and `FileTypesSettingsView`.
 /// Lets host applications declare which directory extensions represent opaque
 /// packages, their human-readable display names, and which `UserDefaults` keys
 /// back the framework's settings.
@@ -19,20 +19,14 @@ public struct FileTreeConfig: Sendable {
     /// `UserDefaults` key backing `CustomFileTypeMappings` serialization.
     public let customMappingsDefaultsKey: String
 
-    /// `UserDefaults` key read by `DirectoryWatchCoordinator` for the maximum
-    /// concurrent file-tree scan worker count. Default is 3 when unset.
-    public let maxScanWorkersDefaultsKey: String
-
     public init(
         packageExtensions: Set<String> = [],
         packageDisplayNames: [String: String] = [:],
-        customMappingsDefaultsKey: String = "AgenticFileBrowser.customMappings",
-        maxScanWorkersDefaultsKey: String = "AgenticFileBrowser.maxScanWorkers"
+        customMappingsDefaultsKey: String = "AgenticFileBrowser.customMappings"
     ) {
         self.packageExtensions = packageExtensions
         self.packageDisplayNames = packageDisplayNames
         self.customMappingsDefaultsKey = customMappingsDefaultsKey
-        self.maxScanWorkersDefaultsKey = maxScanWorkersDefaultsKey
     }
 
     /// Default configuration with empty package sets and framework-prefixed defaults keys.

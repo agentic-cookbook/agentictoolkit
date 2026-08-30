@@ -26,12 +26,8 @@ public struct FileTreeView: View {
 
     public var body: some View {
         List(selection: $selectedNode) {
-            if let children = rootNode.children {
-                OutlineGroup(children, children: \.children) { node in
-                    FileTreeRow(node: node)
-                        .tag(node)
-                        .listRowBackground(Color.clear)
-                }
+            ForEach(rootNode.children ?? []) { node in
+                FileTreeNodeView(node: node)
             }
         }
         .listStyle(.sidebar)
@@ -122,11 +118,9 @@ public struct FileTreeRootSection: View {
     }
 
     public var body: some View {
-        if let children = manager.rootNode?.children {
-            OutlineGroup(children, children: \.children) { node in
-                FileTreeRow(node: node)
-                    .tag(node)
-                    .listRowBackground(Color.clear)
+        if let children = manager.rootNode?.children, !children.isEmpty {
+            ForEach(children) { node in
+                FileTreeNodeView(node: node)
             }
         } else if manager.isSyncing {
             ProgressView()
@@ -138,6 +132,51 @@ public struct FileTreeRootSection: View {
                 .foregroundStyle(theme.tertiaryText)
                 .listRowBackground(Color.clear)
         }
+    }
+}
+
+/// One node, and — when it is an expanded directory — the nodes under it.
+///
+/// Recursive rather than an `OutlineGroup` because each level has to *observe*
+/// its own node. A directory reads its contents after its row is already on
+/// screen, and an outline walks `\.children` once, when the view that owns it
+/// is built: children arriving a moment later never reach it, so the directory
+/// opens onto nothing. Here the view that reads a node's children is the view
+/// that observes that node, so the two cannot drift apart.
+public struct FileTreeNodeView: View {
+
+    @ObservedObject public var node: FileTreeNode
+
+    @State private var isExpanded = false
+
+    public init(node: FileTreeNode) {
+        self.node = node
+    }
+
+    public var body: some View {
+        if node.children == nil {
+            row
+        } else {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                ForEach(node.children ?? []) { child in
+                    FileTreeNodeView(node: child)
+                }
+            } label: {
+                row
+            }
+            // Belt and braces against the row-appearance prefetch: a directory
+            // opened before its read finished still gets one here, and a second
+            // call is a no-op.
+            .onChange(of: isExpanded) { _, expanded in
+                if expanded { node.loadChildrenIfNeeded() }
+            }
+        }
+    }
+
+    private var row: some View {
+        FileTreeRow(node: node)
+            .tag(node)
+            .listRowBackground(Color.clear)
     }
 }
 
@@ -174,6 +213,12 @@ public struct FileTreeRow: View {
         }
         .contentShape(Rectangle())
         .help(node.url.path)
+        // A directory reads its contents when its own row appears, one level
+        // ahead of the disclosure triangle the user is about to click. Reading
+        // it on expansion instead would show an empty directory for as long as
+        // the enumeration took, and reading the whole checkout up front is what
+        // this replaced.
+        .onAppear { node.loadChildrenIfNeeded() }
         // `simultaneousGesture`, not `onTapGesture`: a tap gesture attached the
         // ordinary way *replaces* the row's built-in click handling, so the
         // List never sees the single click and selecting a file silently stops

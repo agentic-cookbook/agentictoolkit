@@ -62,6 +62,61 @@ public final class ThemedLabel: NSTextField, Themeable {
     }
 }
 
+/// A label that emphasises the characters a filter matched.
+///
+/// The ranges are handed in rather than worked out here: what counts as a match
+/// belongs to whoever is doing the filtering, and a label that decided for
+/// itself would be a second answer to the same question (`dry`). The attributed
+/// string is rebuilt on every palette change, because the emphasis is a colour
+/// and a weight and both of those are the theme's to say.
+@MainActor
+public final class ThemedHighlightLabel: NSTextField, Themeable {
+    public var role: ThemeRole { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
+    public var textRole: TextRole { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
+    public var text: String { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
+    public var highlightedRanges: [NSRange] { didSet { applyTheme(ThemePaletteObserver.currentPalette) } }
+    private var observer: ThemePaletteObserver?
+
+    public init(
+        string: String = "",
+        highlighting ranges: [NSRange] = [],
+        role: ThemeRole = .primaryText,
+        textRole: TextRole = .body
+    ) {
+        self.role = role
+        self.textRole = textRole
+        self.text = string
+        self.highlightedRanges = ranges
+        super.init(frame: .zero)
+        self.isEditable = false
+        self.isBordered = false
+        self.isBezeled = false
+        self.drawsBackground = false
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        applyTheme(ThemePaletteObserver.currentPalette)
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        let base = palette.font(textRole)
+        let string = NSMutableAttributedString(string: text, attributes: [
+            .font: base,
+            .foregroundColor: palette.nsColor(role)
+        ])
+        let bold = NSFontManager.shared.convert(base, toHaveTrait: .boldFontMask)
+        let whole = NSRange(location: 0, length: (text as NSString).length)
+        for range in highlightedRanges where NSIntersectionRange(range, whole) == range {
+            string.addAttributes([
+                .font: bold,
+                .foregroundColor: palette.nsColor(.accent)
+            ], range: range)
+        }
+        attributedStringValue = string
+    }
+}
+
 /// An editable text field themed from the palette: control-background fill,
 /// primary text, body font, and a placeholder in the placeholder-text role.
 @MainActor
@@ -411,6 +466,30 @@ public final class ThemedScrollView: NSScrollView, Themeable {
 /// palette has no say in; a themed list gets its banding, if any, from row views.
 @MainActor
 public final class ThemedTableView: NSTableView, Themeable {
+    public let role: ThemeRole
+    private var observer: ThemePaletteObserver?
+
+    public init(role: ThemeRole = .surface) {
+        self.role = role
+        super.init(frame: .zero)
+        self.usesAlternatingRowBackgroundColors = false
+        self.observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+    }
+
+    @available(*, unavailable)
+    public required init?(coder: NSCoder) { fatalError() }
+
+    public func applyTheme(_ palette: SemanticPalette) {
+        backgroundColor = palette.nsColor(role)
+        gridColor = palette.nsColor(.divider)
+    }
+}
+
+/// The outline counterpart of `ThemedTableView`, for the same reason it exists:
+/// an untinted outline paints the system's table background through whatever
+/// the theme put behind it.
+@MainActor
+public final class ThemedOutlineView: NSOutlineView, Themeable {
     public let role: ThemeRole
     private var observer: ThemePaletteObserver?
 

@@ -27,7 +27,18 @@ final class ComposableTabsArrangeOverlayView: NSView {
     var canRemove: () -> Bool = { true }
     var availableDirections: () -> Set<Direction> = { [] }
 
+    /// What this pane is, named above the toolbar. In arrange mode the content
+    /// is dimmed to the point of being unreadable, which is exactly when the
+    /// user needs to know which pane they are about to move.
+    var paneName: String = "" {
+        didSet { nameLabel.stringValue = paneName }
+    }
+
+    /// The button the add popover anchors to.
+    var addButtonView: NSView { addButton }
+
     private let toolbar = NSView()
+    private let nameLabel = ThemedLabel(string: "", role: .primaryText, textRole: .heading)
     private let addButton: NSButton
     private let removeButton: NSButton
     private let moveButton = NSPopUpButton(frame: .zero, pullsDown: true)
@@ -73,13 +84,23 @@ final class ComposableTabsArrangeOverlayView: NSView {
         toolbar.layer?.cornerRadius = 8
         toolbar.layer?.borderWidth = 1
         toolbar.translatesAutoresizingMaskIntoConstraints = false
-        addSubview(toolbar)
 
         let stack = NSStackView(views: [addButton, removeButton, moveButton])
         stack.orientation = .horizontal
         stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
         toolbar.addSubview(stack)
+
+        nameLabel.alignment = .center
+        nameLabel.lineBreakMode = .byTruncatingTail
+        nameLabel.accessibilityID("composable-tabs.arrange.pane-name")
+
+        let column = NSStackView(views: [nameLabel, toolbar])
+        column.orientation = .vertical
+        column.alignment = .centerX
+        column.spacing = 10
+        column.translatesAutoresizingMaskIntoConstraints = false
+        addSubview(column)
 
         NSLayoutConstraint.activate([
             stack.topAnchor.constraint(equalTo: toolbar.topAnchor, constant: 8),
@@ -89,8 +110,9 @@ final class ComposableTabsArrangeOverlayView: NSView {
 
             // Centred, and allowed to overhang a pane too narrow to hold it —
             // the alternative is forcing the split wider than the user sized it.
-            toolbar.centerXAnchor.constraint(equalTo: centerXAnchor),
-            toolbar.centerYAnchor.constraint(equalTo: centerYAnchor)
+            column.centerXAnchor.constraint(equalTo: centerXAnchor),
+            column.centerYAnchor.constraint(equalTo: centerYAnchor),
+            nameLabel.widthAnchor.constraint(lessThanOrEqualTo: widthAnchor, constant: -16)
         ])
     }
 

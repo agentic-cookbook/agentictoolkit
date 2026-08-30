@@ -5,7 +5,7 @@ import os
 
 /// Manages the file tree for a project window, including git status overlay.
 ///
-/// Delegates directory scanning, caching, and watching to a `DirectoryWatchCoordinator`.
+/// Delegates directory scanning and watching to a `DirectoryWatchCoordinator`.
 /// Adds git status detection on top of the shared infrastructure.
 /// Also manages IDE detection, triggering re-detection when the file tree syncs.
 @MainActor
@@ -37,7 +37,6 @@ public final class FileTreeManager: ObservableObject {
         self.gitStatusProvider = GitStatusProvider(repoRoot: repoRootURL)
         self.coordinator = DirectoryWatchCoordinator(
             rootURL: repoRootURL,
-            cacheStorageURL: packageURL,
             config: config,
             excludedPrefixes: [
                 packageURL.path,
@@ -70,7 +69,7 @@ public final class FileTreeManager: ObservableObject {
     }
 
     public func loadInitial() {
-        coordinator.loadInitial()
+        coordinator.fullSync()
         refreshGitStatus()
         ideDetector.detect()
     }

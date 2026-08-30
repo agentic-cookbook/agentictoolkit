@@ -132,6 +132,13 @@ public final class ComposableTabsPaneViewController: NSViewController {
         parent as? ComposableTabsViewController
     }
 
+    /// What this pane is called, as the registry names it. The same string the
+    /// Add popup offers, so a pane and the choice that made it match.
+    private var paneName: String {
+        let registry = (project?.layout ?? ComposableTabsLayout.placeholderOnly()).registry
+        return registry.descriptor(for: viewID).displayName
+    }
+
     private func updateArrangeOverlay() {
         if ComposableTabsArrangeMode.shared.isEnabled(in: view.window) {
             installArrangeOverlay()
@@ -148,6 +155,7 @@ public final class ComposableTabsPaneViewController: NSViewController {
 
         let overlay = ComposableTabsArrangeOverlayView(frame: view.bounds)
         overlay.translatesAutoresizingMaskIntoConstraints = false
+        overlay.paneName = paneName
         overlay.canAdd = { [weak self] in self?.addChoices().isEmpty == false }
         overlay.canRemove = { [weak self] in
             guard let self else { return false }
@@ -244,6 +252,10 @@ public final class ComposableTabsPaneViewController: NSViewController {
         let registry = split.layout.registry
         var seen = Set<ComposableTabsViewID>()
         return split.allowedInsertions(beside: self).compactMap { insertion in
+            // The placeholder is the fallback for content this build does not
+            // have, not something anyone means to add. Offering it puts an
+            // empty pane one click away in a menu of real ones.
+            guard insertion.viewID != .placeholder else { return nil }
             guard seen.insert(insertion.viewID).inserted else { return nil }
             let descriptor = registry.descriptor(for: insertion.viewID)
             return ComposableTabsAddPaneViewController.Choice(
@@ -260,11 +272,18 @@ public final class ComposableTabsPaneViewController: NSViewController {
             NSSound.beep()
             return
         }
-        let sheet = ComposableTabsAddPaneViewController(choices: choices) { [weak self] viewID, direction in
+        let picker = ComposableTabsAddPaneViewController(choices: choices) { [weak self] viewID, direction in
             guard let self else { return }
             self.enclosingSplit?.split(self, adding: viewID, direction: direction)
         }
-        presentAsSheet(sheet)
+        // A popover over the button that opened it, not a sheet off the title
+        // bar: the question is about *this* pane, and a sheet drops it at the
+        // top of a window that may hold five others.
+        guard let anchor = arrangeOverlay?.addButtonView else {
+            presentAsSheet(picker)
+            return
+        }
+        present(picker, asPopoverRelativeTo: anchor.bounds, of: anchor, preferredEdge: .maxY, behavior: .transient)
     }
 
     /// Removing a pane can throw work away — a running shell, an unsaved edit —

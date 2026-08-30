@@ -5,16 +5,15 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-/// Shared coordinator for directory tree scanning, caching, and filesystem watching.
+/// Shared coordinator for directory tree scanning and filesystem watching.
 ///
-/// Encapsulates the cache-load -> full-sync -> watch -> surgical-update lifecycle.
-/// All filesystem I/O runs on background queues to avoid blocking the UI.
-/// Top-level directories are scanned in parallel via an `OperationQueue` whose
-/// concurrency is controlled by `config.maxScanWorkersDefaultsKey`.
+/// Encapsulates the sync -> watch -> surgical-update lifecycle. All filesystem
+/// I/O runs on background queues to avoid blocking the UI, and a sync reads one
+/// level: the root's own entries. Everything below that is read when it is
+/// shown — see `FileTreeNode.loadChildrenIfNeeded()`.
 @MainActor
 public final class DirectoryWatchCoordinator: ObservableObject {
     public let rootURL: URL
-    public let cacheStorageURL: URL
     public let excludedPrefixes: [String]
     public let config: FileTreeConfig
 
@@ -27,66 +26,34 @@ public final class DirectoryWatchCoordinator: ObservableObject {
     private var watcher: FileSystemWatcher?
     private var onChangeCallback: (() -> Void)?
 
-    /// Operation queue for parallel directory scanning.
-    /// Concurrency is updated from `config.maxScanWorkersDefaultsKey` at each sync.
-    private lazy var scanQueue: OperationQueue = {
-        let queue = OperationQueue()
-        queue.name = "com.agentictoolkit.filebrowser.scan"
-        queue.qualityOfService = .userInitiated
-        return queue
-    }()
-
     public init(
         rootURL: URL,
-        cacheStorageURL: URL,
         config: FileTreeConfig,
         excludedPrefixes: [String]
     ) {
         self.rootURL = rootURL
-        self.cacheStorageURL = cacheStorageURL
         self.config = config
         self.excludedPrefixes = excludedPrefixes
     }
 
-    /// Loads cached tree for instant display, then full syncs in background.
-    public func loadInitial() {
-        isSyncing = true
-
-        // Load cache on background queue to avoid blocking UI
-        let storageURL = cacheStorageURL
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let cached = FileTreeCache.load(from: storageURL)
-            DispatchQueue.main.async {
-                guard let self = self else { return }
-                if let cached = cached {
-                    self.rootNode = cached
-                    self.logger.info("Loaded cached tree for \(self.rootURL.lastPathComponent)")
-                }
-                self.fullSync()
-            }
-        }
-    }
-
-    /// Rebuilds the entire tree from filesystem in the background.
-    /// Top-level directories are scanned in parallel.
+    /// Reads the root directory and publishes it.
+    ///
+    /// Only the root's own entries: a directory's contents are read when the
+    /// user opens it, so this is one `contentsOfDirectory` however big the
+    /// checkout is.
     public func fullSync() {
         isSyncing = true
         let patterns = ignorePatterns
         let pkgExts = config.packageExtensions
         let rootURL = self.rootURL
-        let storageURL = self.cacheStorageURL
-        let queue = self.scanQueue
-
-        // Update concurrency from config-driven setting
-        let maxWorkers = UserDefaults.standard.integer(forKey: config.maxScanWorkersDefaultsKey)
-        queue.maxConcurrentOperationCount = maxWorkers > 0 ? maxWorkers : 3
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            let tree = FileTreeNode.buildTreeParallel(
-                from: rootURL,
+            let tree = FileTreeNode(
+                url: rootURL,
+                isDirectory: true,
+                loadChildren: true,
                 ignorePatterns: patterns,
-                packageExtensions: pkgExts,
-                operationQueue: queue
+                packageExtensions: pkgExts
             )
 
             DispatchQueue.main.async {
@@ -94,11 +61,8 @@ public final class DirectoryWatchCoordinator: ObservableObject {
                 self.rootNode = tree
                 self.isSyncing = false
                 self.onChangeCallback?()
-                self.logger.info("Full sync complete for \(self.rootURL.lastPathComponent)")
+                self.logger.info("Sync complete for \(self.rootURL.lastPathComponent)")
             }
-
-            // Save cache on background queue (fire-and-forget)
-            FileTreeCache.save(rootNode: tree, to: storageURL)
         }
     }
 
@@ -114,26 +78,20 @@ public final class DirectoryWatchCoordinator: ObservableObject {
     }
 
     public func stopWatching() {
-        scanQueue.cancelAllOperations()
         watcher?.stop()
         watcher = nil
-        if let root = rootNode {
-            let storageURL = cacheStorageURL
-            DispatchQueue.global(qos: .utility).async {
-                FileTreeCache.save(rootNode: root, to: storageURL)
-            }
-        }
     }
 
     /// Handles filesystem change events. Runs surgical updates on a background queue.
     private func handleChanges(_ paths: [String]) {
         logger.debug("FS changes: \(paths.count) path(s) in \(self.rootURL.lastPathComponent)")
-        isSyncing = true
 
-        guard let root = rootNode else {
-            isSyncing = false
-            return
-        }
+        // A change that lands before the first sync has published a tree is
+        // already covered by that sync — and clearing `isSyncing` here would
+        // take the spinner down while it is still running, leaving the pane
+        // claiming the directory is empty.
+        guard let root = rootNode else { return }
+        isSyncing = true
 
         // Collect affected directories
         var affectedDirs = Set<String>()
@@ -153,7 +111,6 @@ public final class DirectoryWatchCoordinator: ObservableObject {
 
         let patterns = ignorePatterns
         let pkgExts = config.packageExtensions
-        let storageURL = cacheStorageURL
 
         // Do the filesystem I/O on a background queue
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
@@ -170,17 +127,17 @@ public final class DirectoryWatchCoordinator: ObservableObject {
             DispatchQueue.main.async {
                 guard let self = self else { return }
 
-                // Apply the updates on main thread (just pointer swaps)
+                // Apply the updates on main thread (just pointer swaps).
+                // Merged, not replaced: a fresh read hands back unread child
+                // directories, and swapping those in would collapse whatever
+                // the user had open below the directory that changed.
                 for (node, newChildren) in updates {
-                    node.children = newChildren
+                    node.merge(children: newChildren)
                 }
 
                 self.isSyncing = false
                 self.onChangeCallback?()
             }
-
-            // Save cache in background
-            FileTreeCache.save(rootNode: root, to: storageURL)
         }
     }
 

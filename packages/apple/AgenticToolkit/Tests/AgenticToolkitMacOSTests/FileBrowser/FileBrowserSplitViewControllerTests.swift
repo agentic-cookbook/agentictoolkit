@@ -29,7 +29,7 @@ final class FileBrowserSplitViewControllerTests: XCTestCase {
     ) -> FileBrowserSplitViewController {
         FileBrowserSplitViewController(
             rootURL: directory,
-            cacheURL: directory.appendingPathComponent("Cache.pkg"),
+            excludedURL: directory.appendingPathComponent("Cache.pkg"),
             autosaveName: autosaveName
         )
     }

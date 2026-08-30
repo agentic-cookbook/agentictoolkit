@@ -1,6 +1,5 @@
 import AppKit
 import Combine
-import CryptoKit
 import SwiftUI
 
 import AgenticToolkitCore
@@ -28,7 +27,7 @@ public final class FileBrowserViewController: NSViewController {
     /// a viewer next to the tree — see `FileBrowserSplitViewController`.
     public let selection: FileBrowserSelection
 
-    private let cacheURL: URL
+    private let excludedURL: URL
     private let config: FileTreeConfig
     private let ignorePatterns: [String]
 
@@ -45,9 +44,9 @@ public final class FileBrowserViewController: NSViewController {
     /// - Parameters:
     ///   - directories: The roots to show. The primary is the project itself;
     ///     the rest are the user's additions.
-    ///   - cacheURL: Where scan caches are written, and a directory excluded
-    ///     from the scan. For a document-backed browser this is the document's
-    ///     own package, so the browser neither indexes nor thrashes on it.
+    ///   - excludedURL: A directory left out of the tree and the watcher. For
+    ///     a document-backed browser this is the document's own package, so the
+    ///     browser neither indexes nor thrashes on it.
     ///   - config: Which directory extensions are opaque packages, and the
     ///     `UserDefaults` keys backing the browser's settings.
     ///   - ignorePatterns: Wildcard filename patterns to leave out of the tree.
@@ -55,13 +54,13 @@ public final class FileBrowserViewController: NSViewController {
     ///     own, so a browser used alone needs to know nothing about it.
     public init(
         directories: FileBrowserDirectories,
-        cacheURL: URL,
+        excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         selection: FileBrowserSelection = FileBrowserSelection()
     ) {
         self.directories = directories
-        self.cacheURL = cacheURL
+        self.excludedURL = excludedURL
         self.config = config
         self.ignorePatterns = ignorePatterns
         self.selection = selection
@@ -77,14 +76,14 @@ public final class FileBrowserViewController: NSViewController {
     /// A browser over a single directory, with nothing to add to or remove.
     public convenience init(
         rootURL: URL,
-        cacheURL: URL,
+        excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         selection: FileBrowserSelection = FileBrowserSelection()
     ) {
         self.init(
             directories: FileBrowserDirectories(primary: rootURL),
-            cacheURL: cacheURL,
+            excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
             selection: selection
@@ -111,8 +110,8 @@ public final class FileBrowserViewController: NSViewController {
 
     public override func viewWillAppear() {
         super.viewWillAppear()
-        // `loadInitial()` reads the cache and kicks off a scan; doing it once
-        // keeps a tab switch from re-scanning the whole tree.
+        // `loadInitial()` reads each root's top level; doing it once keeps a
+        // tab switch from re-reading it.
         if !hasLoaded {
             hasLoaded = true
             managersByRoot.values.forEach { $0.loadInitial() }
@@ -189,28 +188,10 @@ public final class FileBrowserViewController: NSViewController {
     private func makeManager(for root: URL) -> FileTreeManager {
         FileTreeManager(
             repoRootURL: root,
-            packageURL: Self.cacheURL(forRoot: root, primary: directories.primary, base: cacheURL),
+            packageURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns
         )
-    }
-
-    /// Where one root's scan cache lives.
-    ///
-    /// The primary keeps the base directory itself, so an existing project's
-    /// cache is still found after this became multi-root. Added directories get
-    /// a subdirectory named for their path, because `FileTreeCache` writes one
-    /// fixed filename and two roots sharing a directory would overwrite each
-    /// other's tree.
-    private static func cacheURL(forRoot root: URL, primary: URL, base: URL) -> URL {
-        guard root != primary else { return base }
-        let digest = SHA256.hash(data: Data(root.path.utf8))
-        let name = digest.prefix(8).map { String(format: "%02x", $0) }.joined()
-        let url = base
-            .appendingPathComponent("directory-caches", isDirectory: true)
-            .appendingPathComponent(name, isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
     }
 
     private var managerForPrimary: FileTreeManager {

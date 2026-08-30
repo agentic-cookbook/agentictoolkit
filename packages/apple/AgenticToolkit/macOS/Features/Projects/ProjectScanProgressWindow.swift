@@ -4,7 +4,13 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-/// The panel shown while a project scan runs.
+/// The small panel shown while a project scan runs.
+///
+/// A headline and a bar, and nothing else. The counts it used to report were
+/// registry bookkeeping the user had not asked for and could not act on, and
+/// the path it flickered through was unreadable at the speed the walk produces
+/// it — so the panel says the one thing it knows: this is happening, and now it
+/// is done.
 ///
 /// Deliberately not modal and deliberately not cancellable: the scan touches
 /// nothing the user could be editing, so blocking them out of the app would buy
@@ -13,13 +19,16 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class ProjectScanProgressWindow: NSWindowController {
 
-    private let headline = ThemedLabel(string: "Scanning for projects…", role: .primaryText, textRole: .heading)
-    private let detail = ThemedLabel(string: "", role: .secondaryText, textRole: .caption)
+    /// How long the finished panel stays up. Long enough to register as an
+    /// answer, short enough not to be in the way.
+    private static let lingerAfterFinishing: TimeInterval = 1.0
+
+    private let headline = ThemedLabel(string: "Scanning for projects…", role: .primaryText, textRole: .body)
     private let bar = NSProgressIndicator()
 
     public init() {
         let panel = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 118),
+            contentRect: NSRect(x: 0, y: 0, width: 240, height: 72),
             styleMask: [.titled, .utilityWindow],
             backing: .buffered,
             defer: false
@@ -44,23 +53,21 @@ public final class ProjectScanProgressWindow: NSWindowController {
         bar.isIndeterminate = true
         bar.controlSize = .small
         bar.usesThreadedAnimation = true
+        bar.minValue = 0
+        bar.maxValue = 1
 
-        // The path is the long one; the middle is the part nobody needs to read.
-        detail.lineBreakMode = .byTruncatingMiddle
-        detail.cell?.usesSingleLineMode = true
-        detail.accessibilityID("project-scan.detail")
         headline.accessibilityID("project-scan.headline")
 
-        let stack = NSStackView(views: [headline, bar, detail])
+        let stack = NSStackView(views: [headline, bar])
         stack.orientation = .vertical
         stack.alignment = .leading
-        stack.spacing = 10
+        stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 20),
-            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -20),
+            stack.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            stack.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
             stack.centerYAnchor.constraint(equalTo: container.centerYAnchor),
             bar.widthAnchor.constraint(equalTo: stack.widthAnchor)
         ])
@@ -76,27 +83,21 @@ public final class ProjectScanProgressWindow: NSWindowController {
         window.orderFrontRegardless()
     }
 
-    public func update(visited: Int, found: Int, path: String) {
-        headline.stringValue = "Scanning for projects — \(found) found"
-        detail.stringValue = abbreviate(path)
-        _ = visited
-    }
-
-    /// Leaves the result on screen just long enough to be read, then closes.
-    /// A panel that vanishes the instant the walk ends reads as a flicker
-    /// rather than an answer.
-    public func finish(summary: ProjectScanSummary) {
+    /// Fills the bar, says so, and closes a second later.
+    ///
+    /// The bar ends full rather than mid-stride: an indeterminate bar frozen
+    /// part-way through reads as a scan that gave up.
+    public func finish() {
         bar.stopAnimation(nil)
+        bar.isIndeterminate = false
+        bar.doubleValue = bar.maxValue
         headline.stringValue = "Scan complete"
-        detail.stringValue = summary.summaryText
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { [weak self] in
-            self?.close()
+        // Strongly captured on purpose: the caller drops its reference as soon
+        // as it has asked for the finish, so a weak capture leaves nothing
+        // alive to run `close()` and the panel stays on screen for good. The
+        // closure fires once and releases.
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.lingerAfterFinishing) {
+            self.close()
         }
-    }
-
-    private func abbreviate(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        guard path.hasPrefix(home) else { return path }
-        return "~" + path.dropFirst(home.count)
     }
 }

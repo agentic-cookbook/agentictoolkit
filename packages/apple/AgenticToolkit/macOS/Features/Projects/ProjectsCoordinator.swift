@@ -37,7 +37,6 @@ public final class ProjectsCoordinator: AppFeature {
     private let injectedScanner: GitRepoScanner?
     private weak var opener: ProjectOpening?
     private var progressWindow: ProjectScanProgressWindow?
-    private var progressTimer: Timer?
 
     public init(
         database: ProjectDatabase,
@@ -81,8 +80,6 @@ public final class ProjectsCoordinator: AppFeature {
     }
 
     public override func stop() {
-        progressTimer?.invalidate()
-        progressTimer = nil
         try? database.checkpoint()
     }
 
@@ -136,42 +133,21 @@ public final class ProjectsCoordinator: AppFeature {
         guard !isScanning else { return }
         isScanning = true
 
-        let box = ScanProgressBox()
         if showingProgress {
             let window = ProjectScanProgressWindow()
             window.present()
             progressWindow = window
-            startProgressPolling(box: box)
         }
 
         let scanner = injectedScanner
             ?? GitRepoScanner(rootSkipPatterns: UserSettings.projectScanSkipPatterns.currentValue)
         Task.detached(priority: .utility) {
-            let found = scanner.scan(onProgress: { progress in box.record(progress) })
+            let found = scanner.scan()
             await MainActor.run { self.finishScan(found: found) }
         }
     }
 
-    private func startProgressPolling(box: ScanProgressBox) {
-        progressTimer?.invalidate()
-        // Polling rather than a callback per directory: the walk visits
-        // thousands of directories a second and the panel can only show one.
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
-            MainActor.assumeIsolated {
-                guard let snapshot = box.snapshot() else { return }
-                self.progressWindow?.update(
-                    visited: snapshot.directoriesVisited,
-                    found: snapshot.reposFound,
-                    path: snapshot.currentPath
-                )
-            }
-        }
-    }
-
     private func finishScan(found: [ScannedGitRepo]) {
-        progressTimer?.invalidate()
-        progressTimer = nil
-
         let plan = ProjectReconciler.plan(existing: repos, scanned: found)
         do {
             for repo in plan.inserts { try database.insert(repo) }
@@ -185,34 +161,8 @@ public final class ProjectsCoordinator: AppFeature {
         reload()
 
         Self.logger.info("Scan complete: \(plan.summary.summaryText, privacy: .public)")
-        progressWindow?.finish(summary: plan.summary)
+        progressWindow?.finish()
         progressWindow = nil
-    }
-}
-
-/// The scanner's latest position, handed across the thread boundary.
-///
-/// `@unchecked Sendable` with a lock rather than an actor: the writer is a
-/// synchronous filesystem walk that must not suspend, and the reader is a
-/// timer that only ever wants the most recent value.
-private final class ScanProgressBox: @unchecked Sendable {
-    private let lock = NSLock()
-    private var latest: GitRepoScanner.Progress?
-
-    func record(_ progress: GitRepoScanner.Progress) {
-        lock.lock()
-        latest = progress
-        lock.unlock()
-    }
-
-    /// Returns the newest progress, or `nil` if nothing has changed since the
-    /// last read — so an idle panel is not redrawn.
-    func snapshot() -> GitRepoScanner.Progress? {
-        lock.lock()
-        defer { lock.unlock() }
-        let value = latest
-        latest = nil
-        return value
     }
 }
 

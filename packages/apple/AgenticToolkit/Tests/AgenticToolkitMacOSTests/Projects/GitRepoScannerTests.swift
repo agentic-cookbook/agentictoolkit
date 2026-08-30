@@ -52,6 +52,26 @@ final class GitRepoScannerTests: XCTestCase {
         XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()), [path("dev/alpha")])
     }
 
+    /// A tool that installs hooks into a plain folder leaves a `.git` behind
+    /// with nothing in it but `hooks/`. Git would not open it, so neither does
+    /// this: calling it a project invents one.
+    func testAGitFolderThatGitWouldNotOpenIsNotAProject() throws {
+        try makeHookOnlyGitFolder("dev/container")
+
+        XCTAssertTrue(GitRepoScanner(roots: [root]).scan().isEmpty)
+    }
+
+    /// And, because it is not a repository, it does not own its subtree — the
+    /// real repositories inside it are exactly what the user was looking for.
+    func testRepositoriesUnderSuchAFolderAreStillFound() throws {
+        try makeHookOnlyGitFolder("dev/container")
+        try makeRepo("dev/container/alpha")
+        try makeRepo("dev/container/beta")
+
+        XCTAssertEqual(paths(GitRepoScanner(roots: [root]).scan()),
+                       [path("dev/container/alpha"), path("dev/container/beta")])
+    }
+
     func testHiddenDirectoriesAreNeverDescendedInto() throws {
         try makeRepo(".claude/worktrees/feature")
         try makeRepo("dev/alpha")
@@ -239,6 +259,15 @@ final class GitRepoScannerTests: XCTestCase {
         }
     }
 
+    /// A `.git` directory holding only `hooks/` — what a hook installer leaves
+    /// in a folder that was never a checkout.
+    private func makeHookOnlyGitFolder(_ relativePath: String) throws {
+        let hooks = root
+            .appendingPathComponent(relativePath, isDirectory: true)
+            .appendingPathComponent(".git/hooks", isDirectory: true)
+        try FileManager.default.createDirectory(at: hooks, withIntermediateDirectories: true)
+    }
+
     @discardableResult
     private func makeRepo(_ relativePath: String, remote: String? = nil) throws -> URL {
         let body = remote.map { "[remote \"origin\"]\n\turl = \($0)\n" } ?? "[core]\n\tbare = false\n"
@@ -253,6 +282,10 @@ final class GitRepoScannerTests: XCTestCase {
         try FileManager.default.createDirectory(at: gitDirectory, withIntermediateDirectories: true)
         try configBody.write(to: gitDirectory.appendingPathComponent("config"),
                              atomically: true, encoding: .utf8)
+        // `HEAD` is what makes it a repository rather than a folder called
+        // `.git`, and what the scanner checks for.
+        try "ref: refs/heads/main\n".write(to: gitDirectory.appendingPathComponent("HEAD"),
+                                           atomically: true, encoding: .utf8)
         return gitDirectory
     }
 

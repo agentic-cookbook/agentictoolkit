@@ -85,6 +85,12 @@ public final class ComposableTabsAddPaneViewController: NSViewController {
         grid.rowSpacing = 12
         grid.columnSpacing = 8
         grid.column(at: 0).xPlacement = .trailing
+        // Centre on centre. A label baseline-aligned against a popup sits high
+        // in it, which reads as a row that did not quite line up.
+        grid.rowAlignment = .none
+        for index in 0..<grid.numberOfRows {
+            grid.row(at: index).yPlacement = .center
+        }
         grid.translatesAutoresizingMaskIntoConstraints = false
 
         let buttons = NSStackView(views: [cancel, okButton])

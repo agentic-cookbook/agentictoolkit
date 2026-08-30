@@ -14,10 +14,11 @@ public enum ProjectBrowserMode: Sendable {
     case chooser
 }
 
-/// A list of the registered projects with a filter field — the project
-/// counterpart of the file browser: the same shape, but the rows are registry
-/// rows rather than directory entries, so a project appears here whether or
-/// not its folder is currently reachable.
+/// The registered projects under the folders that hold them, with a filter
+/// field — the project counterpart of the file browser, and deliberately the
+/// same shape: an outline of folders and leaves. The rows are registry rows
+/// rather than directory entries, so a project appears here whether or not its
+/// folder is currently reachable.
 @MainActor
 public final class ProjectBrowserViewController: NSViewController {
 
@@ -31,10 +32,13 @@ public final class ProjectBrowserViewController: NSViewController {
 
     private let coordinator: ProjectsCoordinator
     private let searchField = ThemedSearchField(placeholder: "Filter Projects")
-    private let table = ThemedTableView(role: .windowBackground)
+    private let outline = ThemedOutlineView(role: .windowBackground)
     private let scrollView = ThemedScrollView()
     private let emptyLabel = ThemedLabel(role: .tertiaryText, textRole: .body)
-    private var filtered: [GitRepo] = []
+    private var roots: [ProjectTreeNode] = []
+    /// What the rows highlight, kept because a row is built long after the
+    /// filter ran and has to be able to ask what it survived.
+    private var query = ""
     private var changeObserver: NSObjectProtocol?
 
     public init(coordinator: ProjectsCoordinator, mode: ProjectBrowserMode = .browser) {
@@ -53,9 +57,13 @@ public final class ProjectBrowserViewController: NSViewController {
     }
 
     public var selectedRepo: GitRepo? {
-        let row = table.selectedRow
-        guard row >= 0, row < filtered.count else { return nil }
-        return filtered[row]
+        selectedNode?.repo
+    }
+
+    private var selectedNode: ProjectTreeNode? {
+        let row = outline.selectedRow
+        guard row >= 0 else { return nil }
+        return outline.item(atRow: row) as? ProjectTreeNode
     }
 
     // MARK: - View
@@ -73,19 +81,22 @@ public final class ProjectBrowserViewController: NSViewController {
 
         let column = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("project"))
         column.resizingMask = .autoresizingMask
-        table.addTableColumn(column)
-        table.headerView = nil
-        table.rowHeight = 40
-        table.style = .inset
-        table.allowsEmptySelection = true
-        table.allowsMultipleSelection = false
-        table.dataSource = self
-        table.delegate = self
-        table.target = self
-        table.doubleAction = #selector(rowDoubleClicked(_:))
-        table.accessibilityID("project-browser.table")
+        outline.addTableColumn(column)
+        outline.outlineTableColumn = column
+        outline.headerView = nil
+        outline.rowHeight = 24
+        outline.indentationPerLevel = 14
+        outline.style = .inset
+        outline.allowsEmptySelection = true
+        outline.allowsMultipleSelection = false
+        outline.dataSource = self
+        outline.delegate = self
+        outline.target = self
+        outline.doubleAction = #selector(rowDoubleClicked(_:))
+        outline.autoresizesOutlineColumn = false
+        outline.accessibilityID("project-browser.table")
 
-        scrollView.documentView = table
+        scrollView.documentView = outline
         scrollView.hasVerticalScroller = true
         scrollView.autohidesScrollers = true
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -137,38 +148,50 @@ public final class ProjectBrowserViewController: NSViewController {
 
     // MARK: - Filtering
 
-    /// Substring match on both the name and the path, because the two things
-    /// someone remembers about a project are what they call it and where they
-    /// keep it.
+    /// A project that matches brings its folders with it, so a filtered tree
+    /// still says where the survivors live. `ProjectFilter` owns what a match
+    /// is; here it only decides which rows are drawn.
     private func applyFilter() {
-        let query = searchField.stringValue.trimmingCharacters(in: .whitespaces).lowercased()
+        query = searchField.stringValue.trimmingCharacters(in: .whitespaces)
         let previous = selectedRepo?.id
         let all = coordinator.repos
-        filtered = query.isEmpty ? all : all.filter {
-            $0.name.lowercased().contains(query) || $0.path.lowercased().contains(query)
-        }
-        table.reloadData()
-        emptyLabel.isHidden = !filtered.isEmpty
-        if filtered.isEmpty {
+        let matching = all.filter { ProjectFilter.matches($0, query: query) }
+        roots = ProjectTree.build(from: matching)
+        outline.reloadData()
+        // Opened all the way down. The tree is what the user came to read, and
+        // a chooser that hides every project behind a disclosure triangle
+        // answers the question with more questions.
+        outline.expandItem(nil, expandChildren: true)
+
+        emptyLabel.isHidden = !matching.isEmpty
+        if matching.isEmpty {
             emptyLabel.stringValue = all.isEmpty
                 ? "No projects yet — run File ▸ Scan for Projects."
                 : "No projects match “\(searchField.stringValue)”."
         }
 
         // Keep whatever was selected if it survived the filter, otherwise take
-        // the first row so Return always has an answer.
-        if let previous, let index = filtered.firstIndex(where: { $0.id == previous }) {
-            select(row: index)
-        } else if !filtered.isEmpty {
-            select(row: 0)
+        // the first project so Return always has an answer. A folder is never
+        // the automatic choice: it is not something the dialog can open.
+        let projects = roots.flatMap { $0.repositoriesInDisplayOrder }
+        if let previous, let node = projects.first(where: { $0.repo?.id == previous }) {
+            select(node)
+        } else if let first = projects.first {
+            select(first)
         } else {
             onSelectionChange?(nil)
         }
     }
 
+    private func select(_ node: ProjectTreeNode) {
+        let row = outline.row(forItem: node)
+        guard row >= 0 else { return }
+        select(row: row)
+    }
+
     private func select(row: Int) {
-        table.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
-        table.scrollRowToVisible(row)
+        outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
+        outline.scrollRowToVisible(row)
     }
 
     @objc private func filterChanged(_ sender: Any?) {
@@ -176,20 +199,32 @@ public final class ProjectBrowserViewController: NSViewController {
     }
 
     @objc private func rowDoubleClicked(_ sender: Any?) {
+        guard let node = selectedNode else { return }
+        // A folder has nothing to open, so a double-click means what it means
+        // everywhere else: show me what is inside, or stop showing me.
+        if node.isFolder {
+            if outline.isItemExpanded(node) {
+                outline.collapseItem(node)
+            } else {
+                outline.expandItem(node)
+            }
+            return
+        }
         chooseSelection()
     }
 
     /// Activates the selection. Public so a hosting window can wire it to a
-    /// button or to Return without reaching into the table.
+    /// button or to Return without reaching into the list.
     public func chooseSelection() {
         guard let repo = selectedRepo else { return }
         onChoose?(repo)
     }
 
     private func moveSelection(by delta: Int) {
-        guard !filtered.isEmpty else { return }
-        let current = table.selectedRow < 0 ? -1 : table.selectedRow
-        select(row: min(max(current + delta, 0), filtered.count - 1))
+        let rows = outline.numberOfRows
+        guard rows > 0 else { return }
+        let current = outline.selectedRow < 0 ? -1 : outline.selectedRow
+        select(row: min(max(current + delta, 0), rows - 1))
     }
 }
 
@@ -225,70 +260,102 @@ extension ProjectBrowserViewController: NSSearchFieldDelegate {
     }
 }
 
-// MARK: - Table
+// MARK: - Outline
 
-extension ProjectBrowserViewController: NSTableViewDataSource, NSTableViewDelegate {
+extension ProjectBrowserViewController: NSOutlineViewDataSource, NSOutlineViewDelegate {
 
-    public func numberOfRows(in tableView: NSTableView) -> Int {
-        filtered.count
+    public func outlineView(_ outlineView: NSOutlineView, numberOfChildrenOfItem item: Any?) -> Int {
+        children(of: item).count
     }
 
-    public func tableView(_ tableView: NSTableView, rowViewForRow row: Int) -> NSTableRowView? {
+    public func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
+        children(of: item)[index]
+    }
+
+    public func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
+        guard let node = item as? ProjectTreeNode else { return false }
+        return !node.children.isEmpty
+    }
+
+    public func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {
         ThemedTableRowView()
     }
 
-    public func tableView(
-        _ tableView: NSTableView,
+    public func outlineView(
+        _ outlineView: NSOutlineView,
         viewFor tableColumn: NSTableColumn?,
-        row: Int
+        item: Any
     ) -> NSView? {
-        guard row < filtered.count else { return nil }
-        return ProjectRowView(repo: filtered[row])
+        guard let node = item as? ProjectTreeNode else { return nil }
+        return ProjectRowView(node: node, query: query)
     }
 
-    public func tableViewSelectionDidChange(_ notification: Notification) {
+    public func outlineViewSelectionDidChange(_ notification: Notification) {
         onSelectionChange?(selectedRepo)
+    }
+
+    private func children(of item: Any?) -> [ProjectTreeNode] {
+        guard let item else { return roots }
+        return (item as? ProjectTreeNode)?.children ?? []
     }
 }
 
-/// Name over path, with a missing project dimmed and labelled rather than
-/// hidden: the settings are still there, and hiding the row would make a
+/// One row: an icon and a name, with the characters the filter matched picked
+/// out. The folder it lives in is the row above it, so the row itself no longer
+/// has to spell out a path — which is the whole point
+/// of showing the hierarchy. A missing project is dimmed and labelled rather
+/// than hidden: the settings are still there, and hiding the row would make a
 /// briefly-unmounted volume look like data loss.
 @MainActor
 private final class ProjectRowView: NSView {
 
-    init(repo: GitRepo) {
+    init(node: ProjectTreeNode, query: String) {
         super.init(frame: .zero)
 
-        let name = ThemedLabel(string: repo.name, role: repo.isMissing ? .tertiaryText : .primaryText)
-        let subtitle = ThemedLabel(
-            string: repo.isMissing ? "Missing — \(abbreviate(repo.path))" : abbreviate(repo.path),
-            role: repo.isMissing ? .warning : .secondaryText,
-            textRole: .caption
+        let missing = node.repo?.isMissing == true
+        let symbol = node.isFolder ? "folder.fill" : "shippingbox.fill"
+        let icon = NSImageView(image: NSImage(
+            systemSymbolName: symbol,
+            accessibilityDescription: node.isFolder ? "Folder" : "Project"
+        ) ?? NSImage())
+        icon.contentTintColor = ThemePaletteObserver.currentPalette.nsColor(
+            missing ? .tertiaryText : (node.isFolder ? .secondaryText : .accent)
         )
-        subtitle.lineBreakMode = .byTruncatingMiddle
-        subtitle.cell?.usesSingleLineMode = true
+        icon.setContentHuggingPriority(.required, for: .horizontal)
 
-        let stack = NSStackView(views: [name, subtitle])
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 1
+        let label = ThemedHighlightLabel(
+            string: node.name,
+            highlighting: ProjectFilter.ranges(of: query, in: node.name),
+            role: missing ? .tertiaryText : .primaryText,
+            textRole: node.isFolder ? .caption : .body
+        )
+        label.lineBreakMode = .byTruncatingMiddle
+        label.cell?.usesSingleLineMode = true
+
+        let views: [NSView]
+        if missing {
+            let note = ThemedLabel(string: "Missing", role: .warning, textRole: .caption)
+            note.setContentHuggingPriority(.required, for: .horizontal)
+            views = [icon, label, NSView(), note]
+        } else {
+            views = [icon, label]
+        }
+
+        let stack = NSStackView(views: views)
+        stack.orientation = .horizontal
+        stack.alignment = .centerY
+        stack.spacing = 6
         stack.translatesAutoresizingMaskIntoConstraints = false
         addSubview(stack)
 
         NSLayoutConstraint.activate([
-            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 8),
+            stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 2),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -8),
-            stack.centerYAnchor.constraint(equalTo: centerYAnchor)
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            icon.widthAnchor.constraint(equalToConstant: 16)
         ])
     }
 
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
-
-    private func abbreviate(_ path: String) -> String {
-        let home = FileManager.default.homeDirectoryForCurrentUser.path
-        guard path.hasPrefix(home) else { return path }
-        return "~" + path.dropFirst(home.count)
-    }
 }

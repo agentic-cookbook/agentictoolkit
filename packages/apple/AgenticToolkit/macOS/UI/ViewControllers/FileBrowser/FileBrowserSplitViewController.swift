@@ -35,8 +35,7 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     /// - Parameters:
     ///   - directories: The roots to show — the project itself, plus whatever
     ///     the user has added with the tree's `+`.
-    ///   - cacheURL: Where scan caches are written, and a directory excluded
-    ///     from the scan.
+    ///   - excludedURL: A directory left out of the tree and the watcher.
     ///   - config: Which directory extensions are opaque packages, and the
     ///     `UserDefaults` keys backing the browser's settings.
     ///   - ignorePatterns: Wildcard filename patterns to leave out of the tree.
@@ -44,7 +43,7 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     ///     open more than one.
     public init(
         directories: FileBrowserDirectories,
-        cacheURL: URL,
+        excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         autosaveName: String = "file-browser-split"
@@ -53,7 +52,7 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         self.selection = selection
         self.browserViewController = FileBrowserViewController(
             directories: directories,
-            cacheURL: cacheURL,
+            excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
             selection: selection
@@ -66,14 +65,14 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     /// A browser over a single directory, with nothing to add or remove.
     public convenience init(
         rootURL: URL,
-        cacheURL: URL,
+        excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         autosaveName: String = "file-browser-split"
     ) {
         self.init(
             directories: FileBrowserDirectories(primary: rootURL),
-            cacheURL: cacheURL,
+            excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
             autosaveName: autosaveName

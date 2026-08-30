@@ -12,8 +12,12 @@ import Foundation
 ///   hidden, and each is either someone else's vendored checkouts or a
 ///   synced mirror big enough to dominate the walk. The list is the user's:
 ///   `rootSkipPatterns` is injected, and the app feeds it from a setting.
-/// - **A directory holding `.git` is a repository, and is not descended into.**
-///   That is also what excludes submodules: they live inside a repository.
+/// - **A directory holding a working `.git` directory is a repository, and is
+///   not descended into.** That is also what excludes submodules: they live
+///   inside a repository. "Working" is checked, not assumed: a `.git` holding
+///   nothing but a `hooks/` folder is what a tool that installs hooks into a
+///   plain folder leaves behind, and calling that a repository both invents a
+///   project and hides the real repositories underneath it.
 /// - **A directory whose `.git` is a *file* is skipped entirely** — that is an
 ///   absorbed submodule or a linked worktree, neither of which is a project in
 ///   its own right.
@@ -121,14 +125,21 @@ public struct GitRepoScanner: Sendable {
                 }
 
                 if let dotGit = children.first(where: { $0.lastPathComponent == ".git" }) {
-                    if isDirectory(dotGit) {
+                    if !isDirectory(dotGit) {
+                        // A `.git` file is a submodule or a linked worktree.
+                        continue
+                    }
+                    if Self.isGitDirectory(dotGit) {
                         found.append(ScannedGitRepo(
                             path: entry.url.path,
                             remote: Self.originRemote(inGitDirectory: dotGit)
                         ))
+                        // A repository owns everything below it.
+                        continue
                     }
-                    // Repository or submodule/worktree, the subtree is done.
-                    continue
+                    // A `.git` that is not a repository says nothing about this
+                    // directory, so the walk carries on into it — the real
+                    // repositories are usually the folders directly underneath.
                 }
 
                 for child in children where shouldDescend(into: child, atDepth: entry.depth + 1) {
@@ -159,6 +170,15 @@ public struct GitRepoScanner: Sendable {
 
     private func isSymbolicLink(_ url: URL) -> Bool {
         (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true
+    }
+
+    /// Whether a `.git` directory is one git would actually open.
+    ///
+    /// `HEAD` is the cheapest thing every repository has and no impostor does:
+    /// git itself refuses a `.git` without it, and the folder a hook installer
+    /// leaves behind — a lone `hooks/` — has nothing else to tell it apart.
+    public static func isGitDirectory(_ url: URL) -> Bool {
+        FileManager.default.fileExists(atPath: url.appendingPathComponent("HEAD").path)
     }
 
     /// `origin`'s URL out of `.git/config`, without shelling out to git.
