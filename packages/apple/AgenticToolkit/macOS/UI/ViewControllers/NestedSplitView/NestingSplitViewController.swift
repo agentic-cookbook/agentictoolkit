@@ -18,6 +18,10 @@ public final class NestingSplitViewController: ThemedSplitViewController {
     private weak var splitDocument: NestedSplitViewDocument?
     private let isRoot: Bool
 
+    /// One-shot: after the first real layout the user owns the dividers, and
+    /// re-imposing a fraction on every layout pass would fight them.
+    private var hasAppliedPreferredThicknesses = false
+
     /// Callback the host (e.g. window controller) installs on the *root*
     /// `NestingSplitViewController` of each tab. Fires whenever a layout
     /// change happens that should be persisted, with a fresh snapshot of
@@ -69,8 +73,42 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         splitView.dividerStyle = .thin
 
         for child in layoutChildren {
-            addSplitViewItem(Self.makeItem(for: child.viewController))
+            addSplitViewItem(makeItem(for: child.viewController))
         }
+    }
+
+    /// `preferredThicknessFraction` alone is not enough. AppKit resolves it
+    /// against whatever thickness the split view has when the item is installed,
+    /// and in `viewDidLoad` that is still the placeholder frame from `loadView`
+    /// — where a 22% sidebar clamps to its minimum and then grows with the
+    /// window, ending up at more than half of it. By the first real layout pass
+    /// the thickness is the window's, so the fraction means what it says.
+    public override func viewDidLayout() {
+        super.viewDidLayout()
+        applyPreferredThicknessesIfNeeded()
+    }
+
+    private func applyPreferredThicknessesIfNeeded() {
+        guard !hasAppliedPreferredThicknesses else { return }
+        let total = splitView.isVertical ? splitView.bounds.width : splitView.bounds.height
+        // A zero-thickness pass carries no information; wait for a real one.
+        guard total > 1 else { return }
+        hasAppliedPreferredThicknesses = true
+
+        var offset: CGFloat = 0
+        for index in 0..<max(splitViewItems.count - 1, 0) {
+            let item = splitViewItems[index]
+            var thickness = self.thickness(of: item.viewController.view)
+            if item.preferredThicknessFraction > 0 {
+                thickness = max(item.minimumThickness, total * item.preferredThicknessFraction)
+                splitView.setPosition(offset + thickness, ofDividerAt: index)
+            }
+            offset += thickness
+        }
+    }
+
+    private func thickness(of view: NSView) -> CGFloat {
+        splitView.isVertical ? view.frame.width : view.frame.height
     }
 
     // MARK: - Mutation
@@ -124,7 +162,7 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         )
         layoutChildren[index] = inner
         if isViewLoaded {
-            insertSplitViewItem(Self.makeItem(for: inner), at: index)
+            insertSplitViewItem(makeItem(for: inner), at: index)
         }
 
         // Propagate to root, which persists the full tree.
@@ -179,7 +217,7 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         guard isViewLoaded,
               let item = splitViewItems.first(where: { $0.viewController === old }) else { return }
         removeSplitViewItem(item)
-        insertSplitViewItem(Self.makeItem(for: replacement.viewController), at: index)
+        insertSplitViewItem(makeItem(for: replacement.viewController), at: index)
     }
 
     // MARK: - Tree walking
@@ -254,20 +292,52 @@ public final class NestingSplitViewController: ThemedSplitViewController {
         return LayoutNode.leaf(id: UUID(), contentType: NestedContentRegistry.placeholderIdentifier)
     }
 
-    /// Sizing comes from whatever the leaf's content type registered. A nested
-    /// split has no content type of its own and takes the defaults — its own
-    /// leaves size themselves one level down.
-    private static func makeItem(for viewController: NSViewController) -> NSSplitViewItem {
+    /// Sizing comes from whatever the leaf's content type registered — or, for a
+    /// nested split, from everything underneath it.
+    private func makeItem(for viewController: NSViewController) -> NSSplitViewItem {
         let item = NSSplitViewItem(viewController: viewController)
         let metrics = (viewController as? NestedViewController)
             .map { NestedContentRegistry.metrics(for: $0.contentTypeIdentifier) }
-            ?? .default
-        item.minimumThickness = metrics.minimumThickness
-        if let fraction = metrics.preferredThicknessFraction {
+        item.minimumThickness = Self.minimumThickness(of: viewController, along: orientation)
+        if let fraction = metrics?.preferredThicknessFraction {
             item.preferredThicknessFraction = fraction
+            // A pane that asked for a share of the window keeps the width it
+            // gets; a higher holding priority makes AppKit take a window resize
+            // out of its neighbours instead of spreading it around. A sidebar
+            // that grew with the window would be a third of a wide display.
+            item.holdingPriority = NSLayoutConstraint.Priority(
+                rawValue: NSLayoutConstraint.Priority.defaultLow.rawValue + 10
+            )
+        } else {
+            item.holdingPriority = .defaultLow
         }
-        item.holdingPriority = .defaultLow
         return item
+    }
+
+    /// What a subtree needs along `axis`. A leaf answers from its registration;
+    /// a nested split answers from its children — summed when they are arranged
+    /// along that axis, maxed when they are stacked across it.
+    ///
+    /// Without this a split is just "some view controller" and takes the bare
+    /// default, so an outer split believes a half holding a 320pt notes pane
+    /// beside a 400pt terminal can be squeezed to 120.
+    private static func minimumThickness(
+        of viewController: NSViewController,
+        along axis: NSUserInterfaceLayoutOrientation
+    ) -> CGFloat {
+        if let leaf = viewController as? NestedViewController {
+            return NestedContentRegistry.metrics(for: leaf.contentTypeIdentifier).minimumThickness
+        }
+        guard let split = viewController as? NestingSplitViewController,
+              !split.layoutChildren.isEmpty else {
+            return NestedContentRegistry.PaneMetrics.default.minimumThickness
+        }
+        let thicknesses = split.layoutChildren.map {
+            minimumThickness(of: $0.viewController, along: axis)
+        }
+        return split.orientation == axis
+            ? thicknesses.reduce(0, +)
+            : (thicknesses.max() ?? NestedContentRegistry.PaneMetrics.default.minimumThickness)
     }
 
     // MARK: - Construction from persisted layout

@@ -121,6 +121,86 @@ final class DocumentPaneContentTests: XCTestCase {
         XCTAssertEqual(root.splitViewItems.last?.minimumThickness, 120)
     }
 
+    /// A nested split is not "some view controller with default metrics" — it is
+    /// as wide as what it holds. Stacked children are as wide as the widest one.
+    func testANestedSplitReportsTheWidestOfItsStackedChildren() {
+        registerLeaf("test.metrics.nested.notes", minimumThickness: 320)
+        registerLeaf("test.metrics.nested.terminal", minimumThickness: 400)
+
+        let inner = NestingSplitViewController(
+            nodeID: UUID(),
+            orientation: .vertical,
+            first: makeLeaf(UUID(), "test.metrics.nested.notes"),
+            second: makeLeaf(UUID(), "test.metrics.nested.terminal"),
+            document: document,
+            isRoot: false
+        )
+        let root = NestingSplitViewController(
+            nodeID: UUID(),
+            orientation: .horizontal,
+            first: makeLeaf(UUID(), "test.metrics.nested.sidebar"),
+            second: inner,
+            document: document,
+            isRoot: true
+        )
+        _ = root.view
+
+        XCTAssertEqual(root.splitViewItems.last?.minimumThickness, 400)
+    }
+
+    /// Children arranged along the same axis as the parent stack up, so the
+    /// split needs room for all of them at once.
+    func testANestedSplitSumsChildrenLaidOutAlongTheSameAxis() {
+        registerLeaf("test.metrics.sidebyside.left", minimumThickness: 320)
+        registerLeaf("test.metrics.sidebyside.right", minimumThickness: 400)
+
+        let inner = NestingSplitViewController(
+            nodeID: UUID(),
+            orientation: .horizontal,
+            first: makeLeaf(UUID(), "test.metrics.sidebyside.left"),
+            second: makeLeaf(UUID(), "test.metrics.sidebyside.right"),
+            document: document,
+            isRoot: false
+        )
+        let root = NestingSplitViewController(
+            nodeID: UUID(),
+            orientation: .horizontal,
+            first: makeLeaf(UUID(), "test.metrics.sidebyside.other"),
+            second: inner,
+            document: document,
+            isRoot: true
+        )
+        _ = root.view
+
+        XCTAssertEqual(root.splitViewItems.last?.minimumThickness, 720)
+    }
+
+    /// A pane that named a fraction holds the width it was given when the window
+    /// grows; without a higher holding priority AppKit spreads the growth evenly
+    /// and a 22% sidebar ends up owning half the window.
+    func testAPaneWithAPreferredFractionResistsResizeMoreThanItsNeighbours() {
+        NestedContentRegistry.register(
+            "test.metrics.holding.sidebar",
+            metrics: .init(minimumThickness: 175, preferredThicknessFraction: 0.2)
+        ) { _, _, paneNumber in
+            PlaceholderPaneViewController(paneNumber: paneNumber)
+        }
+
+        let root = NestingSplitViewController(
+            nodeID: UUID(),
+            orientation: .horizontal,
+            first: makeLeaf(UUID(), "test.metrics.holding.sidebar"),
+            second: makeLeaf(UUID(), "test.metrics.holding.content"),
+            document: document,
+            isRoot: true
+        )
+        _ = root.view
+
+        let sidebar = root.splitViewItems.first?.holdingPriority.rawValue ?? 0
+        let content = root.splitViewItems.last?.holdingPriority.rawValue ?? 0
+        XCTAssertGreaterThan(sidebar, content)
+    }
+
     // MARK: - Content lifecycle
 
     func testContentIsAdoptedAsAChildViewController() {
@@ -187,6 +267,15 @@ final class DocumentPaneContentTests: XCTestCase {
     }
 
     // MARK: - Helpers
+
+    private func registerLeaf(_ identifier: String, minimumThickness: CGFloat) {
+        NestedContentRegistry.register(
+            identifier,
+            metrics: .init(minimumThickness: minimumThickness)
+        ) { _, _, paneNumber in
+            PlaceholderPaneViewController(paneNumber: paneNumber)
+        }
+    }
 
     private func makeLeaf(_ id: UUID, _ contentType: String) -> NestedViewController {
         NestedViewController(
