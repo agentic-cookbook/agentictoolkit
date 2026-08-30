@@ -186,13 +186,17 @@ final class DisclosureCardTests: XCTestCase {
             return XCTFail("a card with a standing draws a badge, and every card has a toggle")
         }
         XCTAssertFalse(badge.isHidden)
-        // Centred ON the top-right corner: half the badge hangs off the card in
-        // each direction. Measured on the ALIGNMENT rect, which is what the
+        // Centred on the corner the card actually DRAWS — the peak of its
+        // rounded corner, a couple of points down and in from the square corner
+        // of the frame, where there is no ink at all. Half the badge hangs off
+        // the card from there. Measured on the ALIGNMENT rect, which is what the
         // constraints place — an SF Symbol carries alignment insets, so its
         // frame spills a point or two past the box the engine positioned.
+        let peak = DisclosureCardView.cornerPeakInset
+        XCTAssertGreaterThan(peak, 0, "a rounded corner peaks inside its frame")
         let box = badge.alignmentRect(forFrame: badge.frame)
-        XCTAssertEqual(box.midX, card.bounds.maxX, accuracy: 0.5)
-        XCTAssertEqual(box.midY, card.bounds.maxY, accuracy: 0.5)
+        XCTAssertEqual(box.midX, card.bounds.maxX - peak, accuracy: 0.5)
+        XCTAssertEqual(box.midY, card.bounds.maxY - peak, accuracy: 0.5)
         XCTAssertEqual(box.width, DisclosureCardView.cornerBadgeDiameter(scaledSize: 13),
                        accuracy: 0.5)
         // …and clear of the triangle, which is the whole constraint on where the
@@ -201,6 +205,23 @@ final class DisclosureCardTests: XCTestCase {
         XCTAssertFalse(badge.frame.intersects(triangle),
                        "the badge must not cover the disclosure toggle")
         XCTAssertGreaterThanOrEqual(badge.frame.minX, triangle.maxX)
+    }
+
+    /// A `CALayer` paints its own border above its sublayers, so a card that
+    /// drew its own border would draw a hairline across the badge stamped on its
+    /// corner. The border belongs to a subview under the badge instead — and the
+    /// badge is the last subview, so it is drawn over it.
+    func testTheBorderIsDrawnUnderTheBadgeRatherThanAcrossIt() {
+        let card = card(isCollapsed: false)
+        card.layoutSubtreeIfNeeded()
+        XCTAssertEqual(card.layer?.borderWidth ?? 0, 0,
+                       "the card itself must not draw a border over its own subviews")
+        guard let surface = card.subviews.first else { return XCTFail("a card draws a surface") }
+        XCTAssertGreaterThan(surface.layer?.borderWidth ?? 0, 0)
+        XCTAssertNotNil(surface.layer?.backgroundColor)
+        XCTAssertEqual(surface.frame, card.bounds, "the surface is the whole card")
+        XCTAssertTrue(card.subviews.last === badge(of: card),
+                      "the badge is drawn last, and so above the border")
     }
 
     func testACardWithNothingToReportDrawsNothing() {

@@ -27,8 +27,9 @@ import AppKit
 ///
 /// ## The standing is a corner badge, not a masthead item
 ///
-/// A card's status is stamped on its top-right corner — centred on it, half of
-/// it hanging off the card — rather than set in the masthead beside the toggle.
+/// A card's status is stamped on its top-right corner — centred on the corner's
+/// own curve, half of it hanging off the card — rather than set in the masthead
+/// beside the toggle.
 /// On the line it cost every card a reserved slot — a card with nothing to
 /// report still had to hold the width of the widest symbol the host could draw,
 /// or the summaries either side of it stopped lining up — and it spent that
@@ -38,6 +39,19 @@ import AppKit
 /// its own radius, which is less than the gutter the masthead is already held
 /// off the edge by: that is what keeps it clear of the disclosure triangle
 /// without either knowing about the other.
+///
+/// It is centred on the *visible* corner, not on the frame's: a rounded card has
+/// no ink at the square corner, so a badge centred there sits up and out on air
+/// and reads as having slipped off. `cornerPeakInset` walks it back down and in
+/// to the point where the corner arc actually turns — the 45° point on it, which
+/// is `r - r/√2` inside the frame on each axis.
+///
+/// The card's surface and border are drawn by a subview rather than by the card
+/// itself, purely so the badge can be drawn over them. A `CALayer` paints its own
+/// border ABOVE its sublayers, so a card that draws its own border draws a
+/// hairline straight across a badge sitting on its corner, whatever the badge's
+/// `zPosition` says — the only fix is for the border to belong to a layer the
+/// badge is not inside.
 ///
 /// ## The title gets whatever the masthead is not using
 ///
@@ -127,6 +141,9 @@ public final class DisclosureCardView: NSView, Themeable {
     /// so the masthead is the same width folded and open (see the width note in
     /// the type's documentation). Empty and invisible when the card is open.
     private let summarySlot = NSView()
+    /// The card's surface and border, drawn by a view of its own so the corner
+    /// badge can sit above them — see the note in the type's documentation.
+    private let surface = NSView()
     private let statusIcon = NSImageView()
     private let disclosure = NSButton()
     private let content = NSStackView()
@@ -191,9 +208,10 @@ public final class DisclosureCardView: NSView, Themeable {
         // it draws keeps meaning exactly what it means on the live card.
         alphaValue = isDimmed ? Self.dimmedAlpha : 1.0
         translatesAutoresizingMaskIntoConstraints = false
-        wantsLayer = true
         // The corner badge is drawn half outside the card on purpose.
         clipsToBounds = false
+        surface.wantsLayer = true
+        surface.translatesAutoresizingMaskIntoConstraints = false
 
         titleField.stringValue = title
         titleField.translatesAutoresizingMaskIntoConstraints = false
@@ -261,6 +279,9 @@ public final class DisclosureCardView: NSView, Themeable {
         // stray spacing under it — and, unlike leaving the content out, the card
         // can still be measured at the width it will want when it opens.
         stack.addFullWidthArrangedSubview(content)
+        // Order is what puts the badge over the border: the surface first, the
+        // content on it, the badge last and so above both.
+        addSubview(surface)
         addSubview(stack)
         addSubview(statusIcon)
 
@@ -277,13 +298,18 @@ public final class DisclosureCardView: NSView, Themeable {
         // masthead is already held off the edge by, so it cannot touch the
         // toggle however large a text size asks for.
         let badge = Self.cornerBadgeDiameter(scaledSize: scaledSize)
+        let peak = Self.cornerPeakInset
         NSLayoutConstraint.activate([
+            surface.topAnchor.constraint(equalTo: topAnchor),
+            surface.bottomAnchor.constraint(equalTo: bottomAnchor),
+            surface.leadingAnchor.constraint(equalTo: leadingAnchor),
+            surface.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.topAnchor.constraint(equalTo: topAnchor, constant: padY),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor, constant: -padY),
             stack.leadingAnchor.constraint(equalTo: leadingAnchor, constant: padX),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -padX),
-            statusIcon.centerXAnchor.constraint(equalTo: trailingAnchor),
-            statusIcon.centerYAnchor.constraint(equalTo: topAnchor),
+            statusIcon.centerXAnchor.constraint(equalTo: trailingAnchor, constant: -peak),
+            statusIcon.centerYAnchor.constraint(equalTo: topAnchor, constant: peak),
             statusIcon.widthAnchor.constraint(equalToConstant: badge),
             statusIcon.heightAnchor.constraint(equalToConstant: badge),
             floor
@@ -351,6 +377,12 @@ public final class DisclosureCardView: NSView, Themeable {
     static func cornerBadgeDiameter(scaledSize: CGFloat) -> CGFloat {
         min(ceil(scaledSize * 1.3), padXFor(scaledSize: scaledSize) * 1.5)
     }
+
+    /// How far inside the frame's corner the rounded corner's curve actually
+    /// peaks: the 45° point on an arc of radius `r` lies `r - r/√2` in on each
+    /// axis. What the badge is centred on, since the square corner it would
+    /// otherwise take is a place the card draws nothing.
+    static let cornerPeakInset: CGFloat = cornerRadius - cornerRadius / 2.0.squareRoot()
 
     /// The card's horizontal gutter, as a function of the text size — the same
     /// arithmetic `padX` is built from, available before there is an instance
@@ -430,13 +462,10 @@ public final class DisclosureCardView: NSView, Themeable {
     }
 
     public func applyTheme(_ palette: SemanticPalette) {
-        layer?.cornerRadius = Self.cornerRadius
-        // Rounding the surface must not start clipping the corner badge, which
-        // is drawn half outside it.
-        layer?.masksToBounds = false
-        layer?.borderWidth = Self.borderWidth
-        layer?.backgroundColor = palette.surfaceColor.cgColor
-        layer?.borderColor = palette.outlineColor.cgColor
+        surface.layer?.cornerRadius = Self.cornerRadius
+        surface.layer?.borderWidth = Self.borderWidth
+        surface.layer?.backgroundColor = palette.surfaceColor.cgColor
+        surface.layer?.borderColor = palette.outlineColor.cgColor
 
         var titleStyle = palette.theme.typography.style(.body)
         titleStyle.weight = .semibold
