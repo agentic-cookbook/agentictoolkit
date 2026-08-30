@@ -36,7 +36,7 @@ public final class ComposableTabsPaneViewController: NSViewController {
     public private(set) var contentViewController: NSViewController?
 
     public override func loadView() {
-        let container = ThemedBackgroundView(role: .windowBackground)
+        let container = ComposableTabsPaneBackgroundView(nodeID: nodeID)
         container.frame = NSRect(x: 0, y: 0, width: 300, height: 200)
 
         let content: NSView
@@ -61,10 +61,10 @@ public final class ComposableTabsPaneViewController: NSViewController {
         container.addSubview(splitButton)
 
         NSLayoutConstraint.activate([
-            content.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            content.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            content.topAnchor.constraint(equalTo: container.topAnchor),
-            content.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            content.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: Self.borderInset),
+            container.trailingAnchor.constraint(equalTo: content.trailingAnchor, constant: Self.borderInset),
+            content.topAnchor.constraint(equalTo: container.topAnchor, constant: Self.borderInset),
+            container.bottomAnchor.constraint(equalTo: content.bottomAnchor, constant: Self.borderInset),
 
             splitButton.topAnchor.constraint(equalTo: container.topAnchor, constant: 8),
             splitButton.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -8)
@@ -72,6 +72,10 @@ public final class ComposableTabsPaneViewController: NSViewController {
 
         self.view = container
     }
+
+    /// The active-pane border is drawn on the backdrop's own layer, so the
+    /// content is held off its edge by that much or the border lands under it.
+    private static let borderInset: CGFloat = 2
 
     /// Called by the enclosing split when this pane leaves the tree for good.
     /// The pane's content may be holding shells or file-system watchers, and

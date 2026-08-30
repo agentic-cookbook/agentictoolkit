@@ -1,21 +1,27 @@
 import AppKit
 import Combine
 import SwiftTerm
+
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// Hosts the active session's terminal view and applies terminal profiles.
+/// Hosts the active session's terminal view.
 ///
-/// Observes `UserDefaults.didChangeNotification` and
-/// `TerminalSessionProfile.didChangeNotification` to reapply the active profile
-/// when the app changes it from elsewhere (e.g. a settings pane).
+/// Colors come from the app theme and font/caret/padding from the terminal
+/// settings — both live, so changing either repaints an open shell rather than
+/// waiting for a new one.
 @MainActor
 public final class TerminalSessionContentViewController: NSViewController {
 
     public let sessionManager: TerminalSessionManager
+
     private var cancellables = Set<AnyCancellable>()
+    private var themeObserver: ThemePaletteObserver?
     private var currentSessionID: UUID?
-    private var currentProfileID: UUID?
+
+    /// The four insets holding the terminal off the container's edges, kept so
+    /// the padding setting can move them without rebuilding the view.
+    private var paddingConstraints: [NSLayoutConstraint] = []
 
     public init(sessionManager: TerminalSessionManager) {
         self.sessionManager = sessionManager
@@ -26,10 +32,11 @@ public final class TerminalSessionContentViewController: NSViewController {
     public required init?(coder: NSCoder) { fatalError() }
 
     public override func loadView() {
-        // Only the backdrop behind the terminal is ours to theme — the terminal's
-        // own colors come from its profile, which is user data.
+        // The backdrop is the terminal's own background color, so the padding
+        // reads as breathing room inside the terminal rather than a frame
+        // around it.
         let container = ThemedBackgroundView(role: .windowBackground)
-        container.autoresizesSubviews = true
+        container.frame = NSRect(x: 0, y: 0, width: 800, height: 600)
         self.view = container
     }
 
@@ -41,15 +48,17 @@ public final class TerminalSessionContentViewController: NSViewController {
             .sink { [weak self] _ in self?.switchToSelectedSession() }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)
+        UserSettings.shared.changes
+            .filter { TerminalAppearance.settingKeys.contains($0) }
             .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.reapplyProfileIfChanged() }
+            .sink { [weak self] _ in self?.reapplyAppearance() }
             .store(in: &cancellables)
 
-        NotificationCenter.default.publisher(for: TerminalSessionProfile.didChangeNotification)
-            .receive(on: RunLoop.main)
-            .sink { [weak self] _ in self?.reapplyProfile() }
-            .store(in: &cancellables)
+        // Fires immediately with the current palette, which is what paints the
+        // first terminal — so there is no separate "apply on load" path.
+        themeObserver = ThemePaletteObserver { [weak self] palette in
+            self?.applyAppearance(palette: palette)
+        }
     }
 
     private func switchToSelectedSession() {
@@ -58,13 +67,23 @@ public final class TerminalSessionContentViewController: NSViewController {
         guard newID != currentSessionID else { return }
 
         for subview in view.subviews { subview.removeFromSuperview() }
+        paddingConstraints = []
 
-        if let session = session {
+        if let session {
             let terminalView = session.terminalView
-            terminalView.autoresizingMask = [.width, .height]
-            terminalView.frame = view.bounds
-            applyProfile(to: terminalView)
+            terminalView.translatesAutoresizingMaskIntoConstraints = false
             view.addSubview(terminalView)
+
+            let padding = TerminalAppearance.resolvedPadding()
+            paddingConstraints = [
+                terminalView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: padding),
+                terminalView.topAnchor.constraint(equalTo: view.topAnchor, constant: padding),
+                view.trailingAnchor.constraint(equalTo: terminalView.trailingAnchor, constant: padding),
+                view.bottomAnchor.constraint(equalTo: terminalView.bottomAnchor, constant: padding)
+            ]
+            NSLayoutConstraint.activate(paddingConstraints)
+
+            TerminalAppearance.apply(to: terminalView, palette: ThemePaletteObserver.currentPalette)
 
             DispatchQueue.main.async { [weak terminalView] in
                 terminalView?.window?.makeFirstResponder(terminalView)
@@ -72,70 +91,27 @@ public final class TerminalSessionContentViewController: NSViewController {
         }
 
         currentSessionID = newID
-        currentProfileID = resolveProfile().id
     }
 
-    private func reapplyProfileIfChanged() {
-        let profile = resolveProfile()
-        guard profile.id != currentProfileID else { return }
-        reapplyProfile()
+    private func reapplyAppearance() {
+        applyAppearance(palette: ThemePaletteObserver.currentPalette)
     }
 
-    private func reapplyProfile() {
-        let profile = resolveProfile()
-        currentProfileID = profile.id
-        if let terminalView = view.subviews.first as? LocalProcessTerminalView {
-            applyProfile(to: terminalView)
+    private func applyAppearance(palette: SemanticPalette) {
+        let padding = TerminalAppearance.resolvedPadding()
+        for constraint in paddingConstraints {
+            constraint.constant = padding
         }
+
+        guard let terminalView = view.subviews.first as? LocalProcessTerminalView else { return }
+        TerminalAppearance.apply(to: terminalView, palette: palette)
     }
+}
 
-    private func resolveProfile() -> TerminalSessionProfile {
-        let all = TerminalSessionProfile.builtInProfiles()
-        let storedID = UserDefaults.standard.string(forKey: "terminal.activeProfileID")
-            ?? TerminalSessionProfile.defaultProfileID
-        if let uuid = UUID(uuidString: storedID),
-           let match = all.first(where: { $0.id == uuid }) {
-            return match
-        }
-        return all[0]
-    }
-
-    private func applyProfile(to terminalView: LocalProcessTerminalView) {
-        let profile = resolveProfile()
-
-        if let foreground = NSColor(hex: profile.colors.foreground) {
-            terminalView.nativeForegroundColor = foreground
-        }
-        if let background = NSColor(hex: profile.colors.background) {
-            terminalView.nativeBackgroundColor = background
-        }
-        if let cursor = NSColor(hex: profile.colors.cursor) {
-            terminalView.caretColor = cursor
-        }
-        if let sel = NSColor(hex: profile.colors.selection) {
-            terminalView.selectedTextBackgroundColor = sel
-        }
-
-        let ansiColors: [SwiftTerm.Color] = profile.colors.ansi.compactMap { hex in
-            var hexStr = hex.trimmingCharacters(in: .whitespacesAndNewlines)
-            if hexStr.hasPrefix("#") { hexStr = String(hexStr.dropFirst()) }
-            guard hexStr.count == 6 else { return nil }
-            var rgb: UInt64 = 0
-            guard Scanner(string: hexStr).scanHexInt64(&rgb) else { return nil }
-            return SwiftTerm.Color(
-                red: UInt16((rgb >> 16) & 0xFF) * 257,
-                green: UInt16((rgb >> 8) & 0xFF) * 257,
-                blue: UInt16(rgb & 0xFF) * 257
-            )
-        }
-        if ansiColors.count == 16 {
-            terminalView.installColors(ansiColors)
-        }
-
-        if let font = NSFont(name: profile.fontName, size: CGFloat(profile.fontSize)) {
-            terminalView.font = font
-        }
-
-        terminalView.needsDisplay = true
+extension TerminalSessionContentViewController: PaneContentTeardown {
+    /// Closing the pane kills its shells. "Released whenever the last reference
+    /// drops" is not good enough for a child process.
+    public func paneContentWillBeDiscarded() {
+        sessionManager.terminateAll()
     }
 }

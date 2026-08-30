@@ -37,6 +37,13 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
         )
         group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
 
+        let activePane = ComposableSettings.ViewModel<Bool>(
+            title: "Outline the active pane",
+            setting: UserSettings.highlightActivePane,
+            explanation: "Draws a border around the pane you last clicked in."
+        )
+        group.addSettingSubview(ComposableSettings.CheckboxView(with: activePane))
+
         return group
     }
 
@@ -108,4 +115,7 @@ extension UserSettings {
 
     /// Discrete text-size scale (xSmall…xxxLarge).
     static public var textSize = UserSetting<TextSize>("text_size", default: .medium)
+
+    /// Whether the pane the user last clicked in is outlined.
+    static public var highlightActivePane = UserSetting<Bool>("highlight_active_pane", default: true)
 }

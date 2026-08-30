@@ -108,6 +108,8 @@ private struct FileBrowserPaneView: View {
     @ObservedObject var manager: FileTreeManager
     @ObservedObject var selection: FileBrowserSelection
 
+    @Environment(\.theme) private var theme
+
     var body: some View {
         Group {
             if let root = manager.rootNode {
@@ -118,9 +120,11 @@ private struct FileBrowserPaneView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 Text("Nothing to show")
-                    .font(.callout)
+                    .font(theme.font(.body))
+                    .foregroundStyle(theme.secondaryText)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
+        .background(theme.windowBackground)
     }
 }

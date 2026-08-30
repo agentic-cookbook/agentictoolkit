@@ -17,6 +17,8 @@ public struct FileTreeView: View {
     /// The currently selected file tree node, bound to the parent view.
     @Binding public var selectedNode: FileTreeNode?
 
+    @Environment(\.theme) private var theme
+
     public init(rootNode: FileTreeNode, selectedNode: Binding<FileTreeNode?>) {
         self.rootNode = rootNode
         self._selectedNode = selectedNode
@@ -28,10 +30,19 @@ public struct FileTreeView: View {
                 OutlineGroup(children, children: \.children) { node in
                     FileTreeRow(node: node)
                         .tag(node)
+                        .listRowBackground(Color.clear)
                 }
             }
         }
         .listStyle(.sidebar)
+        // The sidebar style paints its own translucent material, which is the
+        // system's appearance rather than the theme's — hiding it is what lets
+        // the pane sit on the same surface as everything beside it. The tint is
+        // what colors the selection capsule, so it has to be the theme's accent
+        // or a themed tree still highlights in the system blue.
+        .scrollContentBackground(.hidden)
+        .background(theme.windowBackground)
+        .tint(theme.accent)
     }
 }
 
@@ -66,12 +77,19 @@ public struct FileTreeRow: View {
                     .padding(.horizontal, 3)
             }
         }
+        .contentShape(Rectangle())
         .help(node.url.path)
-        .onTapGesture(count: 2) {
-            if !node.isDirectory {
-                NSWorkspace.shared.open(node.url)
+        // `simultaneousGesture`, not `onTapGesture`: a tap gesture attached the
+        // ordinary way *replaces* the row's built-in click handling, so the
+        // List never sees the single click and selecting a file silently stops
+        // working. Running alongside it leaves selection intact.
+        .simultaneousGesture(
+            TapGesture(count: 2).onEnded {
+                if !node.isDirectory {
+                    NSWorkspace.shared.open(node.url)
+                }
             }
-        }
+        )
     }
 
     /// Name color tinted by git status. `status.color` is the git status's own
