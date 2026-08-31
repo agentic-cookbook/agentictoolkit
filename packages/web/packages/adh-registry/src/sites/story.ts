@@ -195,8 +195,7 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
 export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour-main> managed by landing — do not edit by hand
   research: 'docs',
-  docs: 'toolkit',
-  toolkit: 'community',
+  docs: 'community',
   community: 'registry',
   // </gen:tour-main>
 }
