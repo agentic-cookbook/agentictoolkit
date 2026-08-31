@@ -5,33 +5,35 @@
 // to fill the dev "Routes" flyout for sites that pass no curated `routes` prop.
 //
 // There are several shares because this package is a submodule of every repo that
-// builds part of the fleet — adh, adhmarketing, adhplaceholders,
-// agenticdevelopercommunitywebsite, agenticdevelopercookbookwebsite,
-// agenticdeveloperhubwebsite, agenticdeveloperteamwebsite,
-// agenticpersonaregistrywebsite, agenticdevelopertoolkitwebsite —
-// each owning part of
-// it and none able to see the others' site trees. Each repo's
-// `gen-site-routes.py --region <share>` writes its own file whole; nothing writes
-// this one. A single generated file would instead be written by whichever repo ran
-// last, with every other repo's entries deleted, and nothing would report it — a
-// shorter map compiles, type-checks, satisfies every assertion about the sites it
-// still names, and simply drops the other fleets out of the flyout and out of
-// research's sitemap.
-// `siteRoutes.test.ts` asserts every share is non-empty and that their key sets
-// are pairwise disjoint, which are the two symptoms the arrangement can still
-// produce.
+// builds part of the fleet, each owning part of it and none able to see the others'
+// site trees. Each repo's `gen-site-routes.py --region <share>` writes its own file
+// whole; nothing writes this one. A single generated file would instead be written by
+// whichever repo ran last, with every other repo's entries deleted, and nothing would
+// report it — a shorter map compiles, type-checks, satisfies every assertion about
+// the sites it still names, and simply drops the other fleets out of the flyout and
+// out of research's sitemap. `siteRoutes.test.ts` asserts every share is non-empty
+// and that their key sets are pairwise disjoint, which are the two symptoms the
+// arrangement can still produce.
 //
-// `SITE_ROUTE_SHARES` is the one list of them. The test derives its cases from it
-// rather than repeating the names, so a repo split — and five more are queued —
-// adds a region by editing this file alone. It used to take three coordinated
-// edits, two of them in a test whose whole job is to catch a share nobody wrote.
+// `SITE_ROUTE_SHARES` below is the roster, and the only one: the test derives its
+// cases from that constant rather than repeating the names, so a split adds a region
+// by editing this file alone. Do not restate the repos, or the count, in prose here.
+// The paragraph that used to do so was rewritten at five consecutive splits and was
+// still wrong at the sixth, while sitting a dozen lines above the constant that was
+// right.
 //
-// NOT dev-only tooling: research's `src/lib/sitemap-routes.ts` reads
+// NOT dev-only tooling, and as of 2026-08-31 not even same-repo tooling:
+// agenticdeveloperresearchwebsite's `src/lib/sitemap-routes.ts` reads
 // `SITE_ROUTES.research` at build time to derive which top-level and
 // `[workspace]`-child segments are STATIC — i.e. which author or paper slugs would
-// be shadowed by a real route — so research's public sitemap is a second,
-// load-bearing consumer, not just the flyout above. Do not prune this for being
-// unused outside dev tooling.
+// be shadowed by a real route. research is the only site in the fleet with
+// `public_workspace_segment: true`, so its workspace slugs ARE top-level URL
+// segments and that derivation is load-bearing, not a flyout nicety.
+//
+// That consumer now lives in a different repo and reaches this map through the
+// shared submodule. So pruning the `research` entry — or letting its share go
+// unwritten — breaks a build in a repo nobody reading this file would think to
+// check, and breaks it as a quietly smaller sitemap rather than as an error.
 import type { SiteId } from './registry'
 import { SITE_ROUTES_COMMUNITY } from './routes.community.generated'
 import { SITE_ROUTES_COOKBOOK } from './routes.cookbook.generated'
@@ -41,6 +43,7 @@ import { SITE_ROUTES_MAIN } from './routes.main.generated'
 import { SITE_ROUTES_MARKETING } from './routes.marketing.generated'
 import { SITE_ROUTES_PERSONAREGISTRY } from './routes.personaregistry.generated'
 import { SITE_ROUTES_PLACEHOLDER } from './routes.placeholder.generated'
+import { SITE_ROUTES_RESEARCH } from './routes.research.generated'
 import { SITE_ROUTES_TOOLKIT } from './routes.toolkit.generated'
 
 type Share = Partial<Record<SiteId, readonly string[]>>
@@ -55,6 +58,7 @@ export const SITE_ROUTE_SHARES = {
   marketing: SITE_ROUTES_MARKETING,
   personaregistry: SITE_ROUTES_PERSONAREGISTRY,
   placeholder: SITE_ROUTES_PLACEHOLDER,
+  research: SITE_ROUTES_RESEARCH,
   toolkit: SITE_ROUTES_TOOLKIT,
 } satisfies Record<string, Share>
 
