@@ -98,14 +98,22 @@ describe('reserved slugs', () => {
   // parameter (R6-M7) — every actual key here (`registries`, `consultants`) already is one.
   // Not every reserving site is in every checkout, and that is the split rather than a defect:
   // `registries` builds in adhmarketing, `consultants` and `research` in adh. So a missing
-  // folder skips its own case — and the case below refuses to let ALL of them skip, because a
-  // suite that checked nothing must not read the same as one that checked everything.
-  const PRESENT = (Object.keys(RESERVED_SLUGS) as SiteId[]).filter((id) => APP_DIRS.has(id))
+  // folder skips its own case, and the case below is what stops a suite that checked nothing
+  // from reading like one that checked everything.
+  //
+  // It asserts on APP_DIRS, not on the reserving subset of it, and the difference is the whole
+  // point. Until 2026-08-30 it demanded at least one RESERVING site — true of adh and
+  // adhmarketing and of nothing else, so the one-site repos the monorepo split produces
+  // (agenticdeveloperhubwebsite, agenticdeveloperteamwebsite, and every satellite after them)
+  // failed it by construction while being entirely correct. What the guard is actually about is
+  // the walk: a layout that moved, or a `siteIdForDir` that stopped answering, empties APP_DIRS
+  // completely and every filesystem case below then self-skips green. A checkout holding site
+  // folders but no reserving one is a real repository, and it still proves the walk works.
 
-  it.skipIf(STANDALONE)('finds at least one reserving site checked out here', () => {
+  it.skipIf(STANDALONE)('finds the site folders this checkout holds', () => {
     expect(
-      PRESENT.length,
-      `none of ${Object.keys(RESERVED_SLUGS).join(', ')} has an app/ dir under ${websitesDir} — ` +
+      APP_DIRS.size,
+      `no directory under ${websitesDir} has an app/ dir that siteIdForDir answers for — ` +
         'either the layout moved again or siteIdForDir no longer answers for these folders, ' +
         'and every filesystem case below is passing without reading anything',
     ).toBeGreaterThan(0)
