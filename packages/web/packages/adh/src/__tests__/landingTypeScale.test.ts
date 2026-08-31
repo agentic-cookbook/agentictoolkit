@@ -324,10 +324,35 @@ describe.skipIf(SITES_SRC === null)('consumers replace their size utility, never
     return found
   }
 
+  /** Is `file` one of the toolkit's own, rather than a site's? */
+  const inThisRepo = (file: string) => !relative(workspaceRoot(), file).startsWith('..')
+
   it('finds the elements it is meant to police', () => {
     // Without this the two assertions below pass on an empty scan — which is exactly what
     // a broken srcDir, a skipped directory or a scanner that no longer matches looks like.
-    expect(landingTags().length).toBeGreaterThan(10)
+    // Two halves, because the split fleet made them two different questions.
+    //
+    // The scan REACHED the source. Answerable in every checkout that gets this far: this
+    // file's own package is INSIDE srcDir in all of them (the toolkit is a submodule of
+    // every sites workspace) and SiteLanding.tsx names the scale, so a walk that cannot
+    // see it is not looking at a sites workspace at all. This is the half that catches the
+    // broken srcDir, and it is unconditional.
+    const marked = [...sourceFiles(srcDir, ['.tsx'])].filter((file) =>
+      readFileSync(file, 'utf8').includes('text-landing-'),
+    )
+    const witness = resolve(dirname(fileURLToPath(import.meta.url)), '../layout/SiteLanding.tsx')
+    expect(marked, `the scan of ${srcDir} never reached this package`).toContain(witness)
+
+    // The ELEMENTS. Conditional, because a repo whose sites name the scale in no .tsx has
+    // none to find: agenticpersonaregistrywebsite is the first, one site whose landing
+    // page consumes the scale entirely through the shared SiteLanding component. `> 10`
+    // was adh's own count, and it only ever ran there — every satellite named itself
+    // `<repo>-websites`, so the walk (`adh-websites`, exactly) returned null and this
+    // whole describe self-skipped until 87acf3fa widened it to the suffix. Kept as
+    // written it would not police a satellite, it would demand adh's sites of it.
+    if (marked.some((file) => !inThisRepo(file))) {
+      expect(landingTags().length).toBeGreaterThan(0)
+    }
   })
 
   it('no element carries both a .text-landing-* class and a Tailwind size utility', () => {
