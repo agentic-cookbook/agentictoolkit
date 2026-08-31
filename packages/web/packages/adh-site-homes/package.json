@@ -272,6 +272,7 @@
     "@agentic-toolkit/adh-billing": "workspace:*",
     "@agentic-toolkit/adh-ecosystem-panes": "workspace:*",
     "@agentic-toolkit/adh-products": "workspace:*",
+    "@agentic-toolkit/adh-registries": "workspace:*",
     "@agentic-toolkit/adh-registry": "workspace:*",
     "@agentic-toolkit/auth": "workspace:*",
     "@agentic-toolkit/authentication": "workspace:*",

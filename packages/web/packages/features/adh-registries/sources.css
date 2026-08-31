@@ -1,0 +1,22 @@
+/* Tailwind source self-registration for @agentic-toolkit/adh-registries.
+ *
+ * Tailwind does not scan node_modules, so a consumer app must tell it to scan this
+ * package's className-bearing components. Rather than every host copying @source
+ * globs into its own globals.css (drift-prone, and a missed line renders unstyled
+ * with no error), the package OWNS them here and a host adds one line:
+ *
+ *   @import "@agentic-toolkit/adh-registries/sources.css";
+ *
+ * The paths are relative to THIS file (the package root) and therefore travel with
+ * the package — they resolve identically through a dev pnpm link: symlink and a
+ * materialized prod copy. `src` covers `next dev` (the whole package is symlinked,
+ * so HMR sees source edits); `dist` covers prod builds, where `files` ships only
+ * `dist` + this file and the `src` glob simply matches nothing.
+ *
+ * This package mounts panes it does not own — `ResourceExplorer` and the registry
+ * editing widgets — so a host needs the SIBLING packages' sources.css lines too
+ * (resource, registry), one @import each, exactly as it would for any other package
+ * it mounts. Registering them from here would make this file the second place those
+ * globs are written. */
+@source "./src/**/*.{ts,tsx}";
+@source "./dist/**/*.js";

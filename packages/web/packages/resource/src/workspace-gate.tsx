@@ -54,9 +54,21 @@ export function WorkspaceNotManageable({ feature }: { feature: string }): ReactE
  */
 export function ComingSoon({
   title,
+  blurb,
 }: {
   /** The feature's display title, shown above the "Coming soon" label. */
   title: string;
+  /**
+   * Why it is not here yet, when there is a reason worth saying — a feature that is PAUSED
+   * reads very differently from one that was never started, and "Coming soon" alone cannot
+   * tell the two apart. Optional, because most callers genuinely have nothing to add.
+   *
+   * Added 2026-08-31 for the hub's embedded Messages pane, whose route counterpart already
+   * said why (direct messages are parked while the per-product Messaging tool ships) while
+   * the pane said only "Coming soon". The sentence itself lives with the site model that
+   * owns the feature — `MESSAGES_PAUSED_BLURB` — so the two surfaces cannot drift.
+   */
+  blurb?: string;
 }): ReactElement {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center gap-2 p-8 text-center">
@@ -64,6 +76,7 @@ export function ComingSoon({
       <p className="font-mono text-sm uppercase tracking-widest text-apt-text-dim">
         Coming soon
       </p>
+      {blurb ? <p className="max-w-prose text-sm text-apt-text-muted">{blurb}</p> : null}
     </div>
   );
 }

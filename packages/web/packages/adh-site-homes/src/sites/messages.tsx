@@ -31,17 +31,27 @@ import { SiteHomePlaceholder } from "@agentic-toolkit/adh/layout";
  *
  * Auth: both mounts sit under a HomeGate layout.
  */
+/**
+ * Why direct messages are not here, in the one place the sentence is written.
+ *
+ * Exported because the hub mounts this model at `/<workspace>/messaging` but ALSO renders an
+ * embedded Messages pane from its launcher, and a pane is not a route: it cannot go through
+ * `SiteHomeRoute` and so cannot reach `render` above. Until 2026-08-31 that pane said a bare
+ * "Messages — coming soon", so the two surfaces of one paused feature explained themselves
+ * differently and only the URL got the reason. A shared STRING rather than a shared component
+ * because the pane and the page frame their placeholder differently; what they must not
+ * disagree about is the sentence.
+ */
+export const MESSAGES_PAUSED_BLURB =
+  "Direct messages are paused while the per-product Messaging tool ships — you'll find email " +
+  "and SMS to a product's customers under Product ▸ Messaging in the meantime.";
+
 export const messagesHome = defineSiteHome({
   // No grammar below the workspace: `/<workspace>` is this site's whole address. `noSubPath`
   // is the family's way of saying so — every site mounts the same optional catch-all, so the
   // depth a site accepts is a line here rather than which directories it happens to have.
   parse: noSubPath,
-  render: () => (
-    <SiteHomePlaceholder
-      siteId="messages"
-      blurb="Direct messages are paused while the per-product Messaging tool ships — you'll find email and SMS to a product's customers under Product ▸ Messaging in the meantime."
-    />
-  ),
+  render: () => <SiteHomePlaceholder siteId="messages" blurb={MESSAGES_PAUSED_BLURB} />,
 });
 
 // The default export is what `app/home/page.tsx` and the workspace route import, so

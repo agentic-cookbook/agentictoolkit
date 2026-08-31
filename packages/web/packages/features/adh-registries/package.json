@@ -1,0 +1,77 @@
+{
+  "name": "@agentic-toolkit/adh-registries",
+  "version": "0.1.0",
+  "description": "The Registries feature: the owner's explorer over the registries a workspace built, and the registrant's editor for their own listing in one.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "sources.css"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "comment:tier": "VOCABULARY, not mechanism — see scripts/check_boundaries.py. This package imports @agentic-toolkit/adh-registry (the fleet's site catalogue) and @agentic-toolkit/adh-ui, so it must carry the `adh-` prefix to sit on the right side of the guard's line. That is not a workaround for the boundary, it is what the feature IS: a registry can be BOUND to a fleet site, its slugs are refused against every fleet site's reserved list, and the public address it promises an owner at create time is a fleet host. Those three facts are adh vocabulary, and a version of this feature with them injected would be three seams that every host fills identically — duplication wearing a seam's clothes. The registry MECHANISM (the API client, the field widgets, the profile renderer) stays in @agentic-toolkit/registry, mechanism, where a non-adh host can still use it. The directory is `features/` only because the tsup/vitest presets live there.",
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. The barrel is `use client` and tsup hoists that directive over the chunk, so `./parse` — the URL grammar, plain functions — gets its own directive-free entry: a Server Component page can ask what a path selects without pulling the editor onto the client.",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "development": "./src/index.ts",
+      "import": "./dist/index.js"
+    },
+    "./parse": {
+      "types": "./dist/paths.d.ts",
+      "development": "./src/paths.ts",
+      "import": "./dist/paths.js"
+    },
+    "./sources.css": "./sources.css"
+  },
+  "scripts": {
+    "build": "tsup && pnpm run build:types",
+    "build:types": "tsc --emitDeclarationOnly -p tsconfig.build.json",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@agentic-toolkit/adh-registry": "workspace:*",
+    "@agentic-toolkit/adh-ui": "workspace:*",
+    "@agentic-toolkit/auth": "workspace:*",
+    "@agentic-toolkit/data": "workspace:*",
+    "@agentic-toolkit/registry": "workspace:*",
+    "@agentic-toolkit/resource": "workspace:*",
+    "lucide-react": "^1.16.0",
+    "@agenticdevelopertoolkit/ui": "link:../../../../../external/agenticdevelopertoolkit/packages/web/packages/ui"
+  },
+  "peerDependencies": {
+    "next": ">=15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@base-ui/react": "1.5.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "19.2.16",
+    "@types/react-dom": "19.2.3",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "esbuild-plugin-preserve-directives": "^0.0.11",
+    "harper.js": "^2.4.0",
+    "jsdom": "^29.0.2",
+    "next": "^15.1.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "tailwind-merge": "^2.6.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.4"
+  }
+}
