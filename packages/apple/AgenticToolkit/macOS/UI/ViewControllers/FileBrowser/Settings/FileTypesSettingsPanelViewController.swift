@@ -28,6 +28,31 @@ public final class FileTypesSettingsPanelViewController: ComposableSettings.Sett
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "File Types",
+                body: "Which language and icon the file browser and editor use for a given "
+                    + "extension. The built-in list comes from the editor's own language "
+                    + "definitions — it is what drives syntax highlighting, not just the "
+                    + "icon in the tree."
+            ),
+            .init(
+                title: "Custom Mappings",
+                body: "A custom mapping takes precedence over the built-in entry for the "
+                    + "same extension, so this is how you both add an extension the editor "
+                    + "does not know and re-point one it gets wrong. Extensions are matched "
+                    + "without the leading dot and without regard to case."
+            ),
+            .init(
+                title: "Removing a Mapping",
+                body: "Right-click a custom row to delete it. The built-in entry underneath "
+                    + "it comes back — a custom mapping shadows a built-in one, it never "
+                    + "replaces it."
+            )
+        ])
+    }
+
     public override func loadView() {
         let hosting = NSHostingView(rootView: FileTypesSettingsView().themedRoot())
         hosting.translatesAutoresizingMaskIntoConstraints = false

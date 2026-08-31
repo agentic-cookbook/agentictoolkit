@@ -25,10 +25,20 @@ public protocol ComposableSettingsPanel: NSViewController {
     /// drawer with it. A panel that offers no prose gets the drawer's own empty
     /// state instead, which says so.
     var helpContent: ComposableSettings.PanelHelp? { get }
+
+    /// The help actually shown while this panel is on screen. Same thing as
+    /// `helpContent` for a plain panel — but a panel that holds a selection of
+    /// its own (a nested topic list, a tab view) answers with whatever is
+    /// selected *inside* it, because that is what the reader is looking at.
+    /// Only the window's outermost split has a help presenter, so an inner
+    /// selection's help has to travel outwards to be shown at all.
+    var effectiveHelpContent: ComposableSettings.PanelHelp? { get }
 }
 
 public extension ComposableSettingsPanel {
     var hostsOwnScroll: Bool { false }
 
     var helpContent: ComposableSettings.PanelHelp? { nil }
+
+    var effectiveHelpContent: ComposableSettings.PanelHelp? { helpContent }
 }

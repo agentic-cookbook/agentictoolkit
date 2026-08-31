@@ -145,7 +145,12 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
     public func applyTheme(_ palette: SemanticPalette) {
         layer?.backgroundColor = palette.nsColor(.windowBackground).cgColor
 
-        let isActive = UserSettings.highlightActivePane.value
+        // A theme may override both the switch and the color; neither is set
+        // until the user edits the theme's Project topic, so by default the
+        // Projects settings panel decides.
+        let overrides = palette.theme.project
+        let highlights = overrides?.highlightActivePane ?? UserSettings.highlightActivePane.value
+        let isActive = highlights
             && isWindowFocused
             && ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID
         layer?.borderWidth = isActive ? 2 : 0
@@ -154,6 +159,7 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
         // saturated frame competes with what is inside it, where a tone one
         // step lighter than every other pane's backdrop reads as "raised"
         // without asking for attention (`principle-of-least-astonishment`).
-        layer?.borderColor = isActive ? palette.nsColor(.elevatedSurface).cgColor : nil
+        let outline = overrides?.paneOutline.map { NSColor($0) } ?? palette.nsColor(.elevatedSurface)
+        layer?.borderColor = isActive ? outline.cgColor : nil
     }
 }

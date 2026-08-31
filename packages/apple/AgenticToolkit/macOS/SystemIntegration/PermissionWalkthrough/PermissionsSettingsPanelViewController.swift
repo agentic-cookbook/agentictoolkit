@@ -34,6 +34,32 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "What These Are For",
+                body: "macOS gates a few abilities behind an explicit grant. Accessibility "
+                    + "lets the app find and raise another app's windows; Notifications lets "
+                    + "it tell you about something that finished while you were elsewhere; "
+                    + "Automation lets it drive a specific other app, named per target."
+            ),
+            .init(
+                title: "Granting and Revoking",
+                body: "The grant itself is made in System Settings › Privacy & Security, not "
+                    + "here — this panel shows the live state and takes you there. A grant "
+                    + "revoked while the app is running is picked up when the window comes "
+                    + "back to the front, so you do not have to relaunch to see it."
+            ),
+            .init(
+                title: "Walkthrough",
+                body: "Resetting re-runs the first-launch permission walkthrough the next "
+                    + "time the app starts. It changes nothing that has already been "
+                    + "granted — it only clears the record that you have been shown the "
+                    + "walkthrough."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.settingsView.addGroup(createPermissionsGroup())
@@ -53,10 +79,6 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
     private func createPermissionsGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Permissions")
 
-        group.addSettingSubview(ComposableSettings.ExplanationView(
-            withText: "The following permissions are required to monitor and activate Claude Code sessions."
-        ))
-
         // PermissionsPanelView refreshes itself on appear and on app
         // reactivation (e.g. returning from System Settings) — no polling timer.
         let panel = PermissionsPanelView(permissions: permissions)
@@ -74,10 +96,6 @@ public final class PermissionsSettingsPanelViewController: ComposableSettings.Se
                 title: "Reset Permission Walkthrough",
                 wasPressedCallback: { [weak self] in self?.resetWalkthrough() }
             )
-        ))
-
-        group.addSettingSubview(ComposableSettings.ExplanationView(
-            withText: "Re-runs the first-launch permission walkthrough on next app launch."
         ))
 
         return group

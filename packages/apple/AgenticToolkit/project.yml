@@ -130,8 +130,6 @@ targets:
           - "Features/AIChatWindow/ChatBackend.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowPanelViewController.swift"
           - "Features/SessionWatcher/Old/OldSessionWindowSettingsPane.swift"
-          - "SystemIntegration/Appearance/OldAppearanceSettingsPane.swift"
-          - "SystemIntegration/Appearance/OldAppearanceSettingsPanelViewController.swift"
           # Whole folder, not just the one file it contains (built into
           # AgenticToolkitCoreMacOS instead, see that target's sources
           # above): excluding only the file left an empty "UI/Settings"

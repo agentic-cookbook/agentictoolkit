@@ -19,6 +19,31 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Light and Dark",
+                body: "This is the system appearance the app asks macOS for — the one that "
+                    + "decides how standard controls, menus and sheets are drawn. Auto "
+                    + "follows whatever the Mac is currently doing, including the automatic "
+                    + "switch at sunset."
+            ),
+            .init(
+                title: "Appearance vs. Theme",
+                body: "This is not the color theme. The theme (in Theme settings) sets the "
+                    + "app's own colors and fonts; this setting decides which side of "
+                    + "light/dark the *system* chrome around them is drawn on. A dark theme "
+                    + "under a light appearance is legal and occasionally what you want."
+            ),
+            .init(
+                title: "Text Size",
+                body: "A single scale applied across the app's text. It multiplies the "
+                    + "theme's own type sizes rather than replacing them, so a theme with "
+                    + "deliberately large headings keeps that relationship at every step."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.settingsView.addGroup(createAppearanceGroup())
@@ -36,13 +61,6 @@ public final class AppearanceSettingsPanelViewController: ComposableSettings.Set
             }
         )
         group.addSettingSubview(ComposableSettings.PopupMenuChoiceView(viewModel: viewModel))
-
-        let activePane = ComposableSettings.ViewModel<Bool>(
-            title: "Outline the active pane",
-            setting: UserSettings.highlightActivePane,
-            explanation: "Draws a border around the pane you last clicked in."
-        )
-        group.addSettingSubview(ComposableSettings.CheckboxView(with: activePane))
 
         return group
     }
@@ -85,7 +103,7 @@ public enum AppearanceMode: String, CaseIterable, Sendable, Codable {
     }
 }
 
-/// Discrete text-size scale exposed by `OldAppearanceSettingsPanelViewController`.
+/// Discrete text-size scale exposed by the Appearance settings panel.
 ///
 /// Apps decide how to map this to actual font sizes (point sizes, dynamic
 /// type categories, multipliers) — this type just tracks the user's choice.
@@ -115,7 +133,4 @@ extension UserSettings {
 
     /// Discrete text-size scale (xSmall…xxxLarge).
     static public var textSize = UserSetting<TextSize>("text_size", default: .medium)
-
-    /// Whether the pane the user last clicked in is outlined.
-    static public var highlightActivePane = UserSetting<Bool>("highlight_active_pane", default: true)
 }

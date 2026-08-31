@@ -10,11 +10,9 @@ import AgenticToolkitCore
 @MainActor
 public final class TerminalSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
-    /// `CheckboxView` claims its view model's `onChange` for itself, so the
-    /// font row's enablement needs an observer of its own rather than a second
-    /// consumer of that one.
-    private var usesThemeFontObserver: UserSettingObserver<Bool>?
-    private var fontPicker: ComposableSettings.FontPickerView?
+    /// Width of the padding column's labels, so "Top" and "Bottom" end at the
+    /// same place and the four fields line up under each other.
+    private static let paddingLabelWidth: CGFloat = 60
 
     public init() {
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
@@ -27,6 +25,45 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Padding",
+                body: "Space between the terminal text and the edge of its pane, in points, "
+                    + "set per side. A terminal sitting under a tab bar usually wants more "
+                    + "room at the top than at the bottom, which is why there are four "
+                    + "numbers and not one. Changes apply to every open terminal as you "
+                    + "type them."
+            ),
+            .init(
+                title: "Font",
+                body: "The terminal's own font, independent of the theme's code font — a "
+                    + "terminal is usually read at a different size from a code editor. "
+                    + "Pick a monospaced face: a proportional one renders, but columns "
+                    + "will not line up."
+            ),
+            .init(
+                title: "Cursor",
+                body: "Block, hollow block, underline or bar, blinking or steady. The caret "
+                    + "keeps its shape whether or not the terminal has focus — the active "
+                    + "pane is shown by the pane outline instead."
+            ),
+            .init(
+                title: "Themes Override These",
+                body: "A theme can carry its own terminal padding, font and cursor, and when "
+                    + "it does they win over the values here. Those live in Theme settings, "
+                    + "under the theme's Terminal topic. A theme has no terminal options "
+                    + "until you set them, so by default this panel is what decides."
+            ),
+            .init(
+                title: "Colors",
+                body: "Terminal colors — foreground, background, cursor, selection and the 16 "
+                    + "ANSI colors — are the active theme's, edited in Theme settings. One "
+                    + "palette, not two that drift apart."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.settingsView.addGroup(createLayoutGroup())
@@ -37,10 +74,6 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     private func createLayoutGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Padding")
 
-        group.addSettingSubview(ComposableSettings.ExplanationView(
-            withText: "Space between the terminal text and the edge of its pane, in points."
-        ))
-
         let sides: [(String, UserSetting<Int>)] = [
             ("Top", UserSettings.terminalPaddingTop),
             ("Left", UserSettings.terminalPaddingLeading),
@@ -48,7 +81,9 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
             ("Right", UserSettings.terminalPaddingTrailing)
         ]
 
-        let row = ComposableSettings.HorizontalStackView()
+        // A column, not a row: the four numbers are the four sides of one box,
+        // and stacked with right-aligned labels they read as the box.
+        let column = ComposableSettings.VerticalStackView()
         for (title, setting) in sides {
             let viewModel = ComposableSettings.RangeViewModel<Int>(
                 title: title,
@@ -56,9 +91,11 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
                 minValue: 0,
                 maxValue: 80
             )
-            row.addArrangedSubview(ComposableSettings.IntegerFieldView(viewModel: viewModel))
+            column.addArrangedSubview(ComposableSettings.IntegerFieldView(
+                viewModel: viewModel,
+                labelWidth: Self.paddingLabelWidth))
         }
-        group.addSettingSubview(row)
+        group.addSettingSubview(column)
 
         return group
     }
@@ -66,26 +103,12 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     private func createFontGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Font")
 
-        let usesTheme = ComposableSettings.ViewModel<Bool>(
-            title: "Use the theme's code font",
-            setting: UserSettings.terminalUsesThemeFont,
-            explanation: "Turn this off to pick a font just for the terminal."
-        )
-        group.addSettingSubview(ComposableSettings.CheckboxView(with: usesTheme))
-
         let fontViewModel = ComposableSettings.FontViewModel(
             title: "Terminal font",
             nameSetting: UserSettings.terminalFontName,
             sizeSetting: UserSettings.terminalFontSize
         )
-        let picker = ComposableSettings.FontPickerView(viewModel: fontViewModel)
-        picker.isEnabled = !UserSettings.terminalUsesThemeFont.value
-        group.addSettingSubview(picker)
-        fontPicker = picker
-
-        usesThemeFontObserver = UserSettingObserver(UserSettings.terminalUsesThemeFont) { [weak self] usesTheme in
-            self?.fontPicker?.isEnabled = !usesTheme
-        }
+        group.addSettingSubview(ComposableSettings.FontPickerView(viewModel: fontViewModel))
 
         return group
     }

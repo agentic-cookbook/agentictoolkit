@@ -89,7 +89,9 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
 
         let treeItem = NSSplitViewItem(viewController: browserViewController)
         treeItem.minimumThickness = 180
-        treeItem.maximumThickness = 420
+        // No maximum: a deep tree of long filenames is exactly when the user
+        // wants to drag the column wide, and a cap there reads as the divider
+        // being broken. The viewer's own minimum is what stops the drag.
         treeItem.canCollapse = true
         // The tree keeps its width when the pane is resized; the viewer, which
         // has the text in it, takes the space.
@@ -101,7 +103,6 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
 
         addSplitViewItem(treeItem)
         addSplitViewItem(viewerItem)
-
         splitView.isVertical = true
         splitView.dividerStyle = .thin
         splitView.autosaveName = NSSplitView.AutosaveName(splitAutosaveName)

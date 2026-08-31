@@ -109,7 +109,7 @@ public final class TerminalSessionContentViewController: NSViewController {
 
     private func applyAppearance(palette: SemanticPalette) {
         if let paddingConstraints {
-            let padding = TerminalAppearance.resolvedPadding()
+            let padding = TerminalAppearance.resolvedPadding(theme: palette.theme)
             paddingConstraints.top.constant = padding.top
             paddingConstraints.leading.constant = padding.leading
             paddingConstraints.bottom.constant = padding.bottom

@@ -23,6 +23,25 @@ final class PluginLoadFailuresPanel: ComposableSettings.SettingsPanelViewControl
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Why a Plugin Fails",
+                body: "Provider plugins are loadable bundles in ~/.agenticplugins. macOS "
+                    + "refuses to load one whose code signature it can't verify, and the "
+                    + "app refuses one built against a different version of the frameworks "
+                    + "it links. Either way the reason macOS gave is shown verbatim above."
+            ),
+            .init(
+                title: "Fixing It",
+                body: "Rebuild or reinstall the plugin, then relaunch — plugins are loaded "
+                    + "once at startup, so a replaced bundle is not picked up while the app "
+                    + "is running. A plugin listed here is simply absent: providers that "
+                    + "depend on it can't be used, but nothing else is affected."
+            )
+        ])
+    }
+
     /// "1 plugin failed to load" / "N plugins failed to load". Pure + testable.
     static func summaryTitle(for failures: [PluginLoadFailure]) -> String {
         let count = failures.count

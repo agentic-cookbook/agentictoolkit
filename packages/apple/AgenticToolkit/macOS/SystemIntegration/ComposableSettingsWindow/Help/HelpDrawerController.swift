@@ -37,6 +37,11 @@ extension ComposableSettings {
 
         public var onVisibilityChange: (() -> Void)?
 
+        /// Unused: a drawer comes out of the window's edge, not out of a button.
+        /// `SettingsHelpPresenting` still requires it, because the popover
+        /// presenter does need somewhere to hang its help from.
+        public var helpAnchorView: NSView?
+
         /// The drawer is open because the reader asked for it to be open, and for
         /// no other reason.
         ///

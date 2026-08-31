@@ -17,6 +17,30 @@ public final class GeneralSettingsPanelViewController: ComposableSettings.Settin
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Launch at Login",
+                body: "Registers the app with macOS so it starts when you log in. This uses "
+                    + "the system's own login-items service, so macOS lists it under General "
+                    + "› Login Items and can turn it off there too — which is where to look "
+                    + "if the checkbox here keeps coming back unchecked."
+            ),
+            .init(
+                title: "Restoring Windows",
+                body: "What happens to the windows you had open when the app next starts: "
+                    + "reopen them all, reopen none, or ask. Restoring reopens the documents "
+                    + "themselves, with their pane layout, not just empty frames."
+            ),
+            .init(
+                title: "Recent Documents",
+                body: "How many entries the recent-documents list keeps. Zero switches it "
+                    + "off entirely, which is the setting to use on a shared machine — the "
+                    + "list is a record of what you have opened."
+            )
+        ])
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         self.settingsView.addGroup(createStartupGroup())

@@ -257,6 +257,23 @@ extension ComposableSettings {
             detailContainer.children.first as? any ComposableSettingsPanel
         }
 
+        /// The help the drawer should show while this split is on screen: the
+        /// *innermost* selected panel's, not this level's. A panel that holds a
+        /// selection of its own answers for what is selected inside it — see
+        /// `ComposableSettingsPanel.effectiveHelpContent`.
+        public var effectiveHelp: PanelHelp? {
+            currentPanel?.effectiveHelpContent
+        }
+
+        /// Re-reads the selected panel's help and hands it to the presenter.
+        /// Called up the chain when a *nested* split changes topic: only the
+        /// outermost split has a presenter, so a nested selection has to travel
+        /// there or the drawer keeps showing the topic the user just left.
+        public func refreshHelp() {
+            panelHost.setHelp(effectiveHelp)
+            enclosingSettingsSplit?.refreshHelp()
+        }
+
         private func show(_ panel: (any ComposableSettingsPanel)?) {
             for child in detailContainer.children {
                 child.removeFromParent()
@@ -267,6 +284,7 @@ extension ComposableSettings {
             guard let panel else {
                 panelHost.setContent(nil)
                 panelHost.setHelp(nil)
+                enclosingSettingsSplit?.refreshHelp()
                 applyDetailMinimumThickness()
                 return
             }
@@ -286,8 +304,28 @@ extension ComposableSettings {
                 panelHost.setContent(scroll)
             }
 
-            panelHost.setHelp(panel.helpContent)
+            panelHost.setHelp(effectiveHelp)
+            enclosingSettingsSplit?.refreshHelp()
             applyDetailMinimumThickness()
         }
+    }
+}
+
+extension NSViewController {
+
+    /// The nearest `ComposableSettings.SplitViewController` above this one.
+    ///
+    /// Found by walking `parent` rather than stored, so nesting stays a matter
+    /// of who adds whom as a child and nothing has to be wired up twice. It is
+    /// how an inner selection's help reaches the one presenter, which lives at
+    /// the outermost split.
+    @MainActor
+    var enclosingSettingsSplit: ComposableSettings.SplitViewController? {
+        var candidate = self.parent
+        while let current = candidate {
+            if let split = current as? ComposableSettings.SplitViewController { return split }
+            candidate = current.parent
+        }
+        return nil
     }
 }

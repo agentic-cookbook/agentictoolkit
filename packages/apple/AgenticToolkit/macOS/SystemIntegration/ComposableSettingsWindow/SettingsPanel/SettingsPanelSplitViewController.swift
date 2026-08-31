@@ -23,6 +23,11 @@ extension ComposableSettings {
         /// whole topic list.
         open var helpContent: PanelHelp? { nil }
 
+        /// The selected topic's help, falling back to this panel's own for a
+        /// topic that offers none — a topic list is a selection, and the reader
+        /// is asking about the topic, not about the list.
+        open var effectiveHelpContent: PanelHelp? { effectiveHelp ?? helpContent }
+
         public init(with descriptor: SettingsPanelDescriptor? = nil) {
             if let descriptor {
                 self.descriptor = descriptor

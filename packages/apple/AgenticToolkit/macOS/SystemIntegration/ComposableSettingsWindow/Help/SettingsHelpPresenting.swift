@@ -1,4 +1,4 @@
-import Foundation
+import AppKit
 
 /// What the settings window's chrome needs from whatever is showing help.
 ///
@@ -19,6 +19,12 @@ public protocol SettingsHelpPresenting: AnyObject {
 
     /// Shows or hides help, remembering the choice for the next launch.
     func toggleHelp()
+
+    /// The help button now on screen. A presenter that attaches help to the
+    /// window (the drawer) ignores it; one that hangs help off the control that
+    /// asked for it (the popover) needs it, and only the chrome knows where that
+    /// control ended up.
+    var helpAnchorView: NSView? { get set }
 
     /// Called after `isHelpVisible` changes, so the chrome can restyle itself.
     /// The presenter can change on its own — the remembered preference is shared

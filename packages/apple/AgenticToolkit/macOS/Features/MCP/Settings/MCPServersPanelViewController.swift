@@ -40,6 +40,37 @@ public final class MCPServersPanelViewController: ComposableSettings.SettingsPan
         fatalError("init(coder:) has not been implemented")
     }
 
+    public override var helpContent: ComposableSettings.PanelHelp? {
+        Self.serversHelp
+    }
+
+    /// Shared with the sub-panel: the split shows whichever topic is selected,
+    /// and with one topic that is always the list — so the two would otherwise
+    /// have to say the same thing twice (`dry`).
+    static let serversHelp = ComposableSettings.PanelHelp(topics: [
+        .init(
+            title: "MCP Servers",
+            body: "Model Context Protocol servers give a model tools it would not "
+                + "otherwise have — reading a database, calling an API, driving another "
+                + "program. Each row is one server the app knows how to start, and any "
+                + "chat that supports tools can use the ones connected here."
+        ),
+        .init(
+            title: "Command and Environment",
+            body: "A server is described the way a shell would launch it: a command, its "
+                + "arguments, and environment variables. Values marked secret are kept in "
+                + "your login Keychain rather than in the settings file, so an API token "
+                + "a server needs never lands in plain text."
+        ),
+        .init(
+            title: "Connection Status",
+            body: "The indicator beside each row is live: it reflects whether the server "
+                + "process is actually running and has completed its handshake, not "
+                + "whether it is merely enabled. A server that keeps dropping back to "
+                + "disconnected is usually failing to start — check its command path."
+        )
+    ])
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         addPanel(MCPServersListPanelViewController(registry: registry, store: store))
@@ -62,6 +93,10 @@ private final class MCPServersListPanelViewController: ComposableSettings.Settin
 
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+
+    override var helpContent: ComposableSettings.PanelHelp? {
+        MCPServersPanelViewController.serversHelp
     }
 
     override func loadView() {

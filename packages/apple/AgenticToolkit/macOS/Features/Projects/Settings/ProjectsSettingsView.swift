@@ -1,16 +1,21 @@
 import SwiftUI
 import AgenticToolkitCore
 
-/// Edits the list of home-directory folders the project scan skips.
+/// The Projects settings panel's content: how project windows behave, and the
+/// list of home-directory folders the project scan skips.
 ///
-/// Each row says which of the user's own folders the pattern currently
+/// Each skip row says which of the user's own folders the pattern currently
 /// excludes, because a glob with nothing behind it looks identical to a glob
 /// that is quietly hiding half their work (`explicit-over-implicit`).
-public struct ProjectScanSettingsView: View {
+///
+/// The explanatory prose that used to lead this view lives in the panel's help
+/// drawer instead — a settings panel is a place to change things, not to read.
+public struct ProjectsSettingsView: View {
 
     @State private var patterns: [String] = UserSettings.projectScanSkipPatterns.currentValue
     @State private var newPattern = ""
-    @State private var homeFolders: [String] = ProjectScanSettingsView.homeFolderNames()
+    @State private var highlightActivePane: Bool = UserSettings.highlightActivePane.currentValue
+    @State private var homeFolders: [String] = ProjectsSettingsView.homeFolderNames()
 
     public init() {}
 
@@ -33,13 +38,11 @@ public struct ProjectScanSettingsView: View {
     // MARK: - Pieces
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Folders in your home directory that the project scan never looks inside. "
-                 + "Names match without regard to case, and `*` stands for any run of characters — "
-                 + "`* Dropbox` covers `Acme Dropbox`.")
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle("Outline the active pane", isOn: $highlightActivePane)
+                .onChange(of: highlightActivePane) { _, isOn in
+                    UserSettings.highlightActivePane.value = isOn
+                }
 
             HStack {
                 TextField("Folder name or pattern", text: $newPattern)

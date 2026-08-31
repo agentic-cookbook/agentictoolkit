@@ -74,6 +74,10 @@ private final class ProjectSettingsSplitViewController: ComposableSettings.Split
 
     private let tabsPanel: ProjectTabsSettingsPanel
 
+    /// A sheet has no free edge for a drawer to slide out of, so this split
+    /// presents its help in a popover off the help button instead.
+    private let help = ComposableSettings.HelpPopoverController()
+
     init(
         isEdgeEnabled: @escaping (Edge) -> Bool,
         setEdgeEnabled: @escaping (Edge, Bool) -> Void
@@ -99,6 +103,7 @@ private final class ProjectSettingsSplitViewController: ComposableSettings.Split
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        helpPresenter = help
         addPanel(tabsPanel)
         selectPanel(at: 0)
     }
@@ -130,15 +135,27 @@ private final class ProjectTabsSettingsPanel: ComposableSettings.SettingsPanelVi
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
+    override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Tab Bars",
+                body: "Each enabled edge of the window carries its own tab bar. Every "
+                    + "document tab gets one member on every enabled edge, so turning an "
+                    + "edge off hides its bar without losing the tabs on it."
+            ),
+            .init(
+                title: "This Project Only",
+                body: "These edges belong to this project, not to the app — another "
+                    + "project window keeps whatever edges it was given. Changes apply "
+                    + "as you make them and are saved with the project."
+            )
+        ])
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
         let group = ComposableSettings.GroupView(withTitle: "Tab Bars")
-        group.addSettingSubview(ComposableSettings.ExplanationView(
-            withText: "Each enabled edge carries its own tab bar. Every document tab "
-                + "gets one member on every enabled edge, so turning an edge off "
-                + "hides its bar without losing the tabs on it."
-        ))
 
         for (index, edge) in Self.edges.enumerated() {
             let checkbox = NSButton(

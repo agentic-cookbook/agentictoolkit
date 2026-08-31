@@ -16,7 +16,7 @@ extension ComposableSettings {
         ) {
             let settingsWindow = ComposableSettings.SettingsWindow()
             settingsWindow.windowTitle = windowTitle
-            settingsWindow.settingPanels = settingsPanels
+            settingsWindow.settingPanels = Self.sortedByTitle(settingsPanels)
 
             settingsWindow.windowSpec = WindowSpec(
                 defaultSize: NSSize(width: 720, height: 480),
@@ -48,7 +48,19 @@ extension ComposableSettings {
         /// panels whose dependencies (plugin managers, coordinators) aren't
         /// available when `SettingsCoordinator` is built.
         public func addPanel(_ panel: any ComposableSettingsPanel) {
-            settingsWindow.settingPanels += [panel]
+            settingsWindow.settingPanels = Self.sortedByTitle(settingsWindow.settingPanels + [panel])
+        }
+
+        /// The sidebar is alphabetical, so a panel added late lands where its name
+        /// says rather than at the bottom. Sorting lives here and not in
+        /// `SplitViewController` because that class also backs *nested* topic lists
+        /// (a theme's Details/Colors/Typography), where authored order is meaning.
+        private static func sortedByTitle(
+            _ panels: [any ComposableSettingsPanel]
+        ) -> [any ComposableSettingsPanel] {
+            panels.sorted {
+                $0.descriptor.title.localizedStandardCompare($1.descriptor.title) == .orderedAscending
+            }
         }
 
         public override func value(forScriptingKey key: String) -> Any? {

@@ -17,7 +17,18 @@ extension ComposableSettings {
 
         private let viewModel: RangeViewModel<Int>
 
-        public init(viewModel: RangeViewModel<Int>, fieldWidth: CGFloat = 52) {
+        /// - Parameters:
+        ///   - fieldWidth: Width of the number field.
+        ///   - labelWidth: When set, the label is pinned to this width and
+        ///     right-aligned. That is what lets a *column* of these read as one
+        ///     form — four sides of a padding box, say — with the fields lined
+        ///     up under each other instead of stepping in and out with the
+        ///     length of each name.
+        public init(
+            viewModel: RangeViewModel<Int>,
+            fieldWidth: CGFloat = 52,
+            labelWidth: CGFloat? = nil
+        ) {
             self.viewModel = viewModel
             self.label = ComposableSettings.makeRowLabel(viewModel.title)
             self.textField = NSTextField()
@@ -43,11 +54,27 @@ extension ComposableSettings {
 
             let row = Self.makeRow([self.label, self.textField])
             self.addSubview(row)
-            Self.pinToEdges(row, of: self)
 
             NSLayoutConstraint.activate([
                 self.textField.widthAnchor.constraint(equalToConstant: fieldWidth)
             ])
+
+            if let labelWidth {
+                self.label.alignment = .right
+                self.label.widthAnchor.constraint(equalToConstant: labelWidth).isActive = true
+                // Content-width row rather than a pinned one: pinned to both
+                // edges the stack would spread its two fixed-width children
+                // across whatever the panel is wide, and the field would drift
+                // away from the label it belongs to.
+                NSLayoutConstraint.activate([
+                    row.topAnchor.constraint(equalTo: self.topAnchor),
+                    row.leadingAnchor.constraint(equalTo: self.leadingAnchor),
+                    row.bottomAnchor.constraint(equalTo: self.bottomAnchor),
+                    row.trailingAnchor.constraint(lessThanOrEqualTo: self.trailingAnchor)
+                ])
+            } else {
+                Self.pinToEdges(row, of: self)
+            }
 
             viewModel.onChange = { [weak self] _ in self?.sync() }
             self.sync()

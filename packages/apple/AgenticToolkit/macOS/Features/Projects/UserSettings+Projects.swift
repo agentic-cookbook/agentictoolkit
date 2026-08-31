@@ -14,4 +14,10 @@ extension UserSettings {
         "projectScanSkipPatterns",
         default: GitRepoScanner.defaultRootSkipPatterns
     )
+
+    /// Whether the pane the user last clicked in is outlined. Lives with the
+    /// project settings rather than the appearance ones because it is about a
+    /// project window's panes — nothing else in the app has any.
+    /// `ThemeProjectOptions.highlightActivePane` overrides it.
+    static public var highlightActivePane = UserSetting<Bool>("highlight_active_pane", default: true)
 }

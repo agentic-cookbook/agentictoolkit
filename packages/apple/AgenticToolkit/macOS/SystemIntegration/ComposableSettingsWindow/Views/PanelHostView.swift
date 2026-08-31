@@ -33,6 +33,7 @@ extension ComposableSettings {
                 self.helpPresenter?.onVisibilityChange = { [weak self] in
                     self?.updateHelpButton()
                 }
+                self.helpPresenter?.helpAnchorView = self.helpButton
                 self.helpPresenter?.setHelp(self.help)
                 self.updateHelpButton()
             }

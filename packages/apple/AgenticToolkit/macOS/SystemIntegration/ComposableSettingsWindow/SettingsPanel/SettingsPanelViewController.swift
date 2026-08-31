@@ -27,6 +27,10 @@ extension ComposableSettings {
         /// is redeclared for the same reason.
         open var helpContent: PanelHelp? { nil }
 
+        /// A plain panel holds no selection, so what it shows is simply its own
+        /// help. Redeclared for the same dispatch reason as `helpContent`.
+        open var effectiveHelpContent: PanelHelp? { helpContent }
+
         open var hostsOwnScroll: Bool { false }
 
         open override func loadView() {

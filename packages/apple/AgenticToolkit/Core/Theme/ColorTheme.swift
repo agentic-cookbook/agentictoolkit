@@ -65,6 +65,16 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
     /// typography so existing/imported themes look unchanged until customized.
     public var typography: ThemeTypography
 
+    // MARK: Optional per-feature overrides
+
+    /// Terminal padding / font / caret this theme overrides. `nil` — the state
+    /// every theme starts in — means the Terminal settings panel decides.
+    public var terminal: ThemeTerminalOptions?
+
+    /// Project-window chrome this theme overrides. `nil` means the Projects
+    /// settings panel decides.
+    public var project: ThemeProjectOptions?
+
     public init(
         id: String = UUID().uuidString,
         name: String,
@@ -78,7 +88,9 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         selection: RGBAColor,
         ansi: [RGBAColor],
         roleOverrides: [String: RGBAColor] = [:],
-        typography: ThemeTypography = .system
+        typography: ThemeTypography = .system,
+        terminal: ThemeTerminalOptions? = nil,
+        project: ThemeProjectOptions? = nil
     ) {
         self.id = id
         self.name = name
@@ -93,6 +105,8 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         self.ansi = ansi
         self.roleOverrides = roleOverrides
         self.typography = typography
+        self.terminal = terminal
+        self.project = project
     }
 
     // Custom decoding so themes persisted before typography existed still load
@@ -119,6 +133,10 @@ public struct ColorTheme: Codable, Identifiable, Equatable, Sendable {
         ansi = try container.decode([RGBAColor].self, forKey: .ansi)
         roleOverrides = try container.decodeIfPresent([String: RGBAColor].self, forKey: .roleOverrides) ?? [:]
         typography = try container.decodeIfPresent(ThemeTypography.self, forKey: .typography) ?? .system
+        // Absent is the meaningful state, not a migration fallback: a theme that
+        // has never been given terminal or project overrides has none.
+        terminal = try container.decodeIfPresent(ThemeTerminalOptions.self, forKey: .terminal)
+        project = try container.decodeIfPresent(ThemeProjectOptions.self, forKey: .project)
     }
 }
 
