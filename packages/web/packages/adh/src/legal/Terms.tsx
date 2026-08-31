@@ -65,7 +65,7 @@ export function TermsBody(): ReactElement {
       <p>
         Portions of the Service are open source and made available under their
         respective licenses, including the repositories at{' '}
-        <a href="https://github.com/agentic-cookbook">github.com/agentic-cookbook</a>.
+        <a href="https://github.com/agenticdevelopmentstudio">github.com/agenticdevelopmentstudio</a>.
         Those licenses govern your use of that code. The Service also relies on
         third-party providers (for example, hosting, authentication, and analytics
         providers) whose terms apply to their respective portions of the offering.

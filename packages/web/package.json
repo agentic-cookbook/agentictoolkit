@@ -8,11 +8,11 @@
   "packageManager": "pnpm@9.15.9",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/agentic-cookbook/agentic-web-toolkit.git"
+    "url": "git+https://github.com/agenticdevelopmentstudio/agentic-web-toolkit.git"
   },
-  "homepage": "https://github.com/agentic-cookbook/agentic-web-toolkit#readme",
+  "homepage": "https://github.com/agenticdevelopmentstudio/agentic-web-toolkit#readme",
   "bugs": {
-    "url": "https://github.com/agentic-cookbook/agentic-web-toolkit/issues"
+    "url": "https://github.com/agenticdevelopmentstudio/agentic-web-toolkit/issues"
   },
   "scripts": {
     "build": "pnpm -r --workspace-concurrency=1 run build",
