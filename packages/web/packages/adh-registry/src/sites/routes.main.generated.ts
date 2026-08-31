@@ -72,15 +72,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/terms',
     '/tour',
   ],
-  personaregistry: [
-    '/',
-    '/[slug]',
-    '/[slug]/[persona]',
-    '/auth/callback',
-    '/privacy',
-    '/terms',
-    '/tour',
-  ],
   registry: [
     '/',
     '/[workspace]/[[...path]]',
