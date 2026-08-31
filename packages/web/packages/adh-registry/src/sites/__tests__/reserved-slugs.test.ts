@@ -42,6 +42,37 @@ const websitesRoot = (): string | null => {
 const websitesDir = websitesRoot()
 const STANDALONE = websitesDir === null
 
+/** Does this checkout's sites workspace DECLARE that it holds no site at all?
+ *
+ *  Read from the same manifest the walk above anchors on, so the claim lives with
+ *  the workspace it is about rather than in a list of repo names here.
+ *
+ *  This exists because since 2026-08-31 an empty walk has two meanings and the
+ *  tree cannot tell them apart. `registry` was the last site to leave adh, so
+ *  `frontend/websites/` is a real sites workspace holding a tools package and no
+ *  app — while an empty walk is also exactly what a moved layout or a
+ *  `siteIdForDir` that stopped answering looks like, which is the failure the
+ *  `> 0` guards below were written against. A blanket floor cannot keep the second
+ *  meaning without failing the first, and dropping the floor loses the guard
+ *  entirely, so the repo says which one it is.
+ *
+ *  It is asserted EXACTLY, not merely tolerated: a workspace that declares no
+ *  sites and then walks up some is either a repo that has gained a site (delete
+ *  the declaration) or a walk that has started answering for something it should
+ *  not, and both need saying out loud. */
+const declaresNoSites = (): boolean => {
+  if (websitesDir === null) return false
+  try {
+    const manifest = JSON.parse(
+      readFileSync(resolve(websitesDir, 'package.json'), 'utf8'),
+    )
+    return manifest?.adhFleet?.sites === 'none'
+  } catch {
+    return false // unreadable manifest is not a declaration
+  }
+}
+const NO_SITES = declaresNoSites()
+
 // Build/tooling directories that can sit beside the real site apps. `external` holds the
 // submodule checkouts (including this toolkit's own demo Next app, which is not a fleet site)
 // and `tools` is the shared build/lint package; both would otherwise be walked into.
@@ -111,11 +142,23 @@ describe('reserved slugs', () => {
   // folders but no reserving one is a real repository, and it still proves the walk works.
 
   it.skipIf(STANDALONE)('finds the site folders this checkout holds', () => {
+    if (NO_SITES) {
+      expect(
+        APP_DIRS.size,
+        `${websitesDir}'s manifest declares adhFleet.sites "none", so this walk must ` +
+          'find nothing. Finding something means the repo has gained a site (delete ' +
+          'the declaration) or the walk has started answering for a folder that is ' +
+          'not one',
+      ).toBe(0)
+      return
+    }
     expect(
       APP_DIRS.size,
       `no directory under ${websitesDir} has an app/ dir that siteIdForDir answers for — ` +
         'either the layout moved again or siteIdForDir no longer answers for these folders, ' +
-        'and every filesystem case below is passing without reading anything',
+        'and every filesystem case below is passing without reading anything. If this ' +
+        'repo genuinely builds no site any more, declare adhFleet.sites "none" in its ' +
+        'workspace manifest rather than loosening this',
     ).toBeGreaterThan(0)
   })
 

@@ -44,6 +44,7 @@ import { SITE_ROUTES_MAIN } from './routes.main.generated'
 import { SITE_ROUTES_MARKETING } from './routes.marketing.generated'
 import { SITE_ROUTES_PERSONAREGISTRY } from './routes.personaregistry.generated'
 import { SITE_ROUTES_PLACEHOLDER } from './routes.placeholder.generated'
+import { SITE_ROUTES_REGISTRY } from './routes.registry.generated'
 import { SITE_ROUTES_RESEARCH } from './routes.research.generated'
 import { SITE_ROUTES_TOOLKIT } from './routes.toolkit.generated'
 
@@ -60,6 +61,7 @@ export const SITE_ROUTE_SHARES = {
   marketing: SITE_ROUTES_MARKETING,
   personaregistry: SITE_ROUTES_PERSONAREGISTRY,
   placeholder: SITE_ROUTES_PLACEHOLDER,
+  registry: SITE_ROUTES_REGISTRY,
   research: SITE_ROUTES_RESEARCH,
   toolkit: SITE_ROUTES_TOOLKIT,
 } satisfies Record<string, Share>

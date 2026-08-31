@@ -39,6 +39,33 @@ import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 // Router segment semantics rather than two.
 
 const shares = Object.entries(SITE_ROUTE_SHARES)
+
+/** What each share's committed file is expected to hold — read the long note in
+ *  the `has every share filled in` assertion below before editing this.
+ *  `'empty'` is a claim about the OWNING REPO: it says that repo owns no App
+ *  Router tree the generator can walk, so an empty file is the correct committed
+ *  state rather than the symptom of a region nobody claimed. Every other share
+ *  must name at least one site. Both halves are asserted, and the table is
+ *  checked against `SITE_ROUTE_SHARES` in both directions, so an entry that
+ *  stops being true fails here rather than silently disarming the guard. */
+const EXPECTED_FILL: Record<keyof typeof SITE_ROUTE_SHARES, 'empty' | 'some'> = {
+  community: 'some',
+  cookbook: 'some',
+  devteam: 'some',
+  docs: 'some',
+  hub: 'some',
+  // adh, since 2026-08-31. `registry` was the last site left in adh and it left
+  // for agenticdeveloperregistrywebsite, so `main` names a repo that owns no site
+  // tree at all: `--region main` now legitimately writes an empty map. Delete this
+  // line the moment adh builds a site again.
+  main: 'empty',
+  marketing: 'some',
+  personaregistry: 'some',
+  placeholder: 'some',
+  registry: 'some',
+  research: 'some',
+  toolkit: 'some',
+}
 const SITES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../sites')
 
 describe('SITE_ROUTES (generated per-site route map)', () => {
@@ -77,8 +104,24 @@ describe('SITE_ROUTES (generated per-site route map)', () => {
     // and it keeps whatever it was committed with — so an empty share is the only
     // symptom that mistake ever produces.
     expect(shares.length, 'SITE_ROUTE_SHARES').toBeGreaterThan(0)
+    // The table is the roster's mirror, checked both ways first: a share with no
+    // row would otherwise be exempted by the lookup below returning undefined, and
+    // a row for a share that no longer exists would keep a claim alive about a
+    // repo that has none.
+    expect(Object.keys(EXPECTED_FILL).sort(), 'EXPECTED_FILL vs SITE_ROUTE_SHARES').toEqual(
+      shares.map(([region]) => region).sort(),
+    )
     for (const [region, share] of shares) {
-      expect(Object.keys(share).length, `routes.${region}.generated.ts`).toBeGreaterThan(0)
+      const n = Object.keys(share).length
+      const label = `routes.${region}.generated.ts`
+      if (EXPECTED_FILL[region as keyof typeof EXPECTED_FILL] === 'empty') {
+        // Asserted exactly, not merely allowed: a repo declared to own no site
+        // tree that starts writing entries here has either gained a site or been
+        // handed another repo's region, and both need saying out loud.
+        expect(n, `${label} (declared empty)`).toBe(0)
+      } else {
+        expect(n, label).toBeGreaterThan(0)
+      }
     }
   })
 
