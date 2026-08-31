@@ -27,6 +27,5 @@ export const SITE_ROUTES_SHIPR: Partial<Record<SiteId, readonly string[]>> = {
     '/home',
     '/privacy',
     '/terms',
-    '/tour',
   ],
 }
