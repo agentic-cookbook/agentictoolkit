@@ -153,16 +153,20 @@ const ICONS: Record<string, LucideIcon> = {
   '/server-bags': Server,
   '/settings': Settings,
   '/signin-apps': LogIn,
-  '/tokens': KeyRound,
+  // The workspace's ecosystem sign-in CONFIGURATION — a hub knob, which is why it is written
+  // out here beside its neighbours rather than folded in from the registry. It sat in the
+  // block below until 2026-08-31, when `authentication` was repointed from `auth` to `tokens`
+  // and this segment stopped being any site's.
+  '/auth': KeyRound,
 
-  // The three fleet segments whose HUB view is deliberately not its site's, so the
+  // The three fleet segments whose HUB glyph is deliberately not its site's, so the
   // derivation below must not decide them. A hand-written key always wins.
-  //   '/auth'      — the workspace's auth CONFIG (KeyRound, beside '/tokens'), not the
-  //                  Authentication product's identity glyph.
+  //   '/tokens'    — the Authentication site's own feature, but wearing the KEY it is about
+  //                  (beside '/auth') rather than that site's identity Fingerprint.
   //   '/messaging' — labelled "Messages" in the hub and leading to the DM workspace; the
   //                  site that owns the `messaging` segment is about email & SMS.
   //   '/teams'     — the Teams feature, not the team DIRECTORY teamregistry.com is.
-  '/auth': KeyRound,
+  '/tokens': KeyRound,
   '/messaging': MessageCircle,
   '/teams': UsersRound,
 

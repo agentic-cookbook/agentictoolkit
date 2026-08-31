@@ -12,8 +12,13 @@ import { parseTokensPath, TokensFeature } from "@agentic-toolkit/authentication"
  * They are two topics rather than one list because they are two PRINCIPALS. A `tmp_` API token
  * acts as the signed-in user across the REST paths it is scoped to; an `adh_` storage token is a
  * principal in its own right, owned by the workspace, reaching only the bucket minted with it.
- * The hub's Settings ▸ Tokens topic still renders the flat single-family @agentic-toolkit/
- * authentication panel (TokensPanel) — this rework is this site's, not that one's.
+ *
+ * The hub mounts this same feature at `/<slug>/tokens` (its TokensRoute), so the rework is no
+ * longer this site's alone. Until 2026-08-31 the hub's route rendered ecosystem-config's flat
+ * single-family `StorageTokensPanel` — the `adh_` principals only — which left the whole family
+ * with no surface for a `tmp_` API token outside this domain, under a rail row that said
+ * "Tokens" and showed half of them. `HUB_FEATURE_SEGMENT.authentication` names `tokens` for the
+ * same reason: `/<slug>/auth` is the workspace's sign-in configuration, which this site is not.
  *
  * The package's OTHER pane (AccessPane, per-ecosystem bucket access) is NOT mounted here: it
  * requires the host's user/application directories (usersDirectory/applicationsDirectory), which

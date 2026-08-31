@@ -780,8 +780,17 @@ export const HUB_FEATURE_SEGMENT = {
   // ecosystem), so both the ecosystems and products sites resolve to that view.
   ecosystems: 'products',
   products: 'products',
-  // Customer auth: the hub has routed it as `auth` since before the site existed.
-  authentication: 'auth',
+  // The two TOKEN families — `Tokens ▸ API tokens` and `Tokens ▸ Storage tokens` — which is
+  // what agenticdeveloperauthentication.com's workspace surface IS (see adh-site-homes'
+  // authentication.tsx). The hub mounts that same `TokensFeature` at `/<slug>/tokens`.
+  //
+  // It read `'auth'` until 2026-08-31, because the hub had routed customer auth under that name
+  // since before the site existed. That was a mislanding, not a spelling: `/<slug>/auth` is the
+  // workspace's ecosystem SIGN-IN CONFIGURATION, a hub-own knob this site does not implement, so
+  // `useSiteMenu`'s hub branch answered the Authentication row with a route onto a different
+  // feature entirely — the exact failure the whole in-hub mounting exists to remove. The map's
+  // contract is the segment that mounts the SITE's implementation; `tokens` is where that is.
+  authentication: 'tokens',
   // The teams feature is agenticteamregistry.com's implementation; the hub's route for it is
   // `teams`, which is also what the header and the breadcrumb have always called it.
   teamregistry: 'teams',
@@ -890,7 +899,11 @@ export const SITE_FOR_HUB_SEGMENT: Record<HubFeatureSegment, SiteId> = (() => {
  *  collides with a segment above is otherwise absorbed in silence by that spread, and the only
  *  visible trace is a rail row missing its site. */
 export const HUB_EXTRA_FEATURE_SEGMENTS = [
-  'all-data', 'persona-services', 'tokens', 'members', 'settings',
+  // `auth` moved here from HUB_FEATURE_SEGMENT on 2026-08-31, when `authentication` was repointed
+  // at `tokens`: the workspace's ecosystem sign-in configuration is a hub knob with no site
+  // behind it, which is precisely what this list is. `tokens` went the other way — it is the
+  // authentication site's own feature now, not the hub's.
+  'all-data', 'persona-services', 'auth', 'members', 'settings',
   // Ecosystem topics + LLM Providers promoted onto the root workspace rail (each is a
   // `/<slug>/<segment>` route with a FEATURE_META entry, no distinct registry site to
   // switch into) — kept lockstep with FEATURE_META by the reverse-lockstep test (#9).

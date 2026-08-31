@@ -207,7 +207,12 @@ describe('useSiteMenu', () => {
       // serves — `/acme/teamregistry` is a 404 — so the row has to ask the registry rather
       // than assume. Three of the five departures, one per reason:
       expect(row(entries, 'teamregistry')?.href).toBe('/acme/teams')      // hub's older name
-      expect(row(entries, 'authentication')?.href).toBe('/acme/auth')     // hub's older name
+      // Not `/acme/auth`, which is what this asserted until 2026-08-31. That segment is the
+      // workspace's ecosystem SIGN-IN CONFIGURATION — a hub knob — and the authentication site
+      // is the two token families, which the hub mounts at `/acme/tokens`. The old entry was a
+      // departure of the same shape as teamregistry's but pointing at a different FEATURE, so
+      // this row landed on a pane the site does not implement.
+      expect(row(entries, 'authentication')?.href).toBe('/acme/tokens')   // the site's feature
       expect(row(entries, 'ecosystems')?.href).toBe('/acme/products')     // two sites, one pane
     })
 
@@ -347,9 +352,15 @@ describe('useSiteMenu', () => {
     })
 
     it('keeps the hub current on the hub\'s OWN workspace knobs', () => {
-      // `/acme/tokens` is no site's route, so no row represents it and the header's site is
+      // `/acme/auth` is no site's route, so no row represents it and the header's site is
       // the honest answer — the same one it gives on `/acme` itself.
-      const entries = at('agenticdeveloperhub.com', '/acme/tokens', () =>
+      //
+      // This stood on `/acme/tokens` until 2026-08-31, when `authentication` was repointed
+      // there and the segment stopped being a hub knob; `auth` is the one that became one, and
+      // it makes the same point. A hub-own segment is what this test needs, so it has to be a
+      // name HUB_FEATURE_SEGMENT does not carry — reusing a fleet segment would assert the
+      // opposite branch while still passing on the day the map changed under it.
+      const entries = at('agenticdeveloperhub.com', '/acme/auth', () =>
         renderHook(() =>
           useSiteMenu(FLEET_MENU_GROUPS, {
             currentSiteId: 'hub',
