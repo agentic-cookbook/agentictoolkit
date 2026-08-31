@@ -6,8 +6,9 @@
 //
 // There are several shares because this package is a submodule of every repo that
 // builds part of the fleet — adh, adhmarketing, adhplaceholders,
-// agenticdeveloperhubwebsite, agenticdeveloperteamwebsite — each owning part of it
-// and none able to see the others' site trees. Each repo's
+// agenticdeveloperhubwebsite, agenticdeveloperteamwebsite,
+// agenticpersonaregistrywebsite — each owning part of it and none able to see the
+// others' site trees. Each repo's
 // `gen-site-routes.py --region <share>` writes its own file whole; nothing writes
 // this one. A single generated file would instead be written by whichever repo ran
 // last, with every other repo's entries deleted, and nothing would report it — a
@@ -34,6 +35,7 @@ import { SITE_ROUTES_DEVTEAM } from './routes.devteam.generated'
 import { SITE_ROUTES_HUB } from './routes.hub.generated'
 import { SITE_ROUTES_MAIN } from './routes.main.generated'
 import { SITE_ROUTES_MARKETING } from './routes.marketing.generated'
+import { SITE_ROUTES_PERSONAREGISTRY } from './routes.personaregistry.generated'
 import { SITE_ROUTES_PLACEHOLDER } from './routes.placeholder.generated'
 
 type Share = Partial<Record<SiteId, readonly string[]>>
@@ -44,6 +46,7 @@ export const SITE_ROUTE_SHARES = {
   hub: SITE_ROUTES_HUB,
   main: SITE_ROUTES_MAIN,
   marketing: SITE_ROUTES_MARKETING,
+  personaregistry: SITE_ROUTES_PERSONAREGISTRY,
   placeholder: SITE_ROUTES_PLACEHOLDER,
 } satisfies Record<string, Share>
 
