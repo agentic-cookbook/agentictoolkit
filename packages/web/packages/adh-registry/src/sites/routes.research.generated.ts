@@ -1,12 +1,12 @@
 // GENERATED FILE — do not edit by hand.
-// Regenerate: python3 <websites-root>/tools/gen-site-routes.py --region main
+// Regenerate: python3 <websites-root>/tools/gen-site-routes.py --region research
 //
-// main's share of the fleet's page routes, derived from that repo's App Router
-// trees. The rest is in its siblings `routes.community.generated.ts`, `routes.cookbook.generated.ts`, `routes.devteam.generated.ts`, `routes.hub.generated.ts`, `routes.marketing.generated.ts`, `routes.personaregistry.generated.ts`, `routes.placeholder.generated.ts`, `routes.research.generated.ts`, `routes.toolkit.generated.ts`, written by the other repos;
+// research's share of the fleet's page routes, derived from that repo's App Router
+// trees. The rest is in its siblings `routes.community.generated.ts`, `routes.cookbook.generated.ts`, `routes.devteam.generated.ts`, `routes.hub.generated.ts`, `routes.main.generated.ts`, `routes.marketing.generated.ts`, `routes.personaregistry.generated.ts`, `routes.placeholder.generated.ts`, `routes.toolkit.generated.ts`, written by the other repos;
 // `routes.generated.ts` merges them all and is what consumers import. See the
 // generator's docstring for why this is one file per repo.
 //
-// `gen-site-routes.py --region main --check` re-derives this map in that
+// `gen-site-routes.py --region research --check` re-derives this map in that
 // repo's CI, so a page added, moved, or removed anywhere in its fleet fails there
 // until the script is re-run.
 //
@@ -18,24 +18,20 @@
 // either half for being unused outside dev tooling.
 import type { SiteId } from './registry'
 
-export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
-  docs: [
+export const SITE_ROUTES_RESEARCH: Partial<Record<SiteId, readonly string[]>> = {
+  research: [
     '/',
-    '/[workspace]/[[...path]]',
+    '/[workspace]',
+    '/[workspace]/[paperSlug]',
+    '/[workspace]/edit/[paperUuid]',
+    '/[workspace]/home/[[...path]]',
     '/[workspace]/profile',
     '/auth/callback',
+    '/details',
+    '/details/[topic]',
     '/home',
     '/privacy',
-    '/terms',
-    '/tour',
-  ],
-  registry: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/auth/callback',
-    '/home',
-    '/privacy',
+    '/search',
     '/terms',
     '/tour',
   ],
