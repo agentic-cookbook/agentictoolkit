@@ -125,7 +125,7 @@ describe('the landing scale is in every theme that carries type', () => {
  * rather than by counting `..` segments — the package has already moved once.
  *
  * Always present, in either checkout, and it can never resolve to something OUTSIDE this
- * repository. That is the whole difference from adhFrontendSrc() below, and the reason the
+ * repository. That is the whole difference from sitesWorkspaceRoot() below, and the reason the
  * two are separate functions instead of one with a flag.
  */
 function workspaceRoot(): string {
@@ -139,7 +139,7 @@ function workspaceRoot(): string {
 }
 
 /**
- * `frontend/src` of the adh checkout this submodule is sitting inside — or null when the
+ * The sites workspace of the checkout this submodule is sitting inside — or null when the
  * toolkit is checked out on its own.
  *
  * This repository is a submodule with more than one host, and it is CI'd twice: adh's
@@ -159,23 +159,31 @@ function workspaceRoot(): string {
  * allowed only for as long as there is provably nothing here to skip.
  */
 /**
- * The marker is frontend/src's OWN manifest, identified by name. It was
- * `next-config-base.mjs` until that file was split into `@agentic-toolkit/adh-next-config`
- * and deleted — at which point this walk returned null in an adh checkout too, so
- * ADH_SRC was null everywhere and the scale check self-skipped GREEN in the one
- * repository it is about. A sentinel that can be deleted takes the test with it
- * silently. `frontend/src/package.json` is the pnpm workspace root every site installs
- * from, so it cannot go without the fleet ceasing to build, and matching on `name` is
- * what stops the walk there rather than at the toolkit's own `packages/web/package.json`
- * on the way up.
+ * The marker is the sites workspace's OWN manifest, identified by the `-websites` SUFFIX of
+ * its name. It was `next-config-base.mjs` until that file was split into
+ * `@agentic-toolkit/adh-next-config` and deleted — at which point this walk returned null in
+ * an adh checkout too, so SITES_SRC was null everywhere and the scale check self-skipped
+ * GREEN in the one repository it is about. A sentinel that can be deleted takes the test
+ * with it silently. The workspace root every site installs from cannot go without the fleet
+ * ceasing to build, and the name check is what stops the walk there rather than at the
+ * toolkit's own `packages/web/package.json` on the way up.
+ *
+ * It matched `adh-websites` exactly until 2026-08-30, which was true of one checkout and is
+ * the shape the monorepo split retires: `agenticdeveloperteamwebsite-websites` and every
+ * one-site satellite after it holds site source this file is entirely about, and each of
+ * them returned null — so both scans below self-skipped or narrowed to the toolkit's own
+ * copies, in the repositories that now own the consumers. The suffix is the same marker
+ * `reserved-slugs.test.ts` in this package walks for, for the same reason and on the same
+ * day; the two are deliberately re-stated rather than shared, a test-only helper not being
+ * worth either file's public surface.
  */
-function adhFrontendSrc(): string | null {
+function sitesWorkspaceRoot(): string | null {
   let dir = dirname(fileURLToPath(import.meta.url))
   for (;;) {
     const manifest = resolve(dir, 'package.json')
     if (existsSync(manifest)) {
       try {
-        if (JSON.parse(readFileSync(manifest, 'utf8')).name === 'adh-websites') return dir
+        if (/-websites$/.test(JSON.parse(readFileSync(manifest, 'utf8')).name ?? '')) return dir
       } catch {
         // Unreadable or not JSON — not the marker; keep walking rather than throw.
       }
@@ -186,8 +194,9 @@ function adhFrontendSrc(): string | null {
   }
 }
 
-/** Non-null in an adh checkout (including every worktree); null in the toolkit's own CI. */
-const ADH_SRC = adhFrontendSrc()
+/** Non-null in any fleet checkout that holds sites (worktrees included); null in the
+ *  toolkit's own CI, which checks this repo out alone. */
+const SITES_SRC = sitesWorkspaceRoot()
 
 /**
  * The themes package's `src/fonts`, reached through this package's own dependency link.
@@ -218,7 +227,7 @@ function themeFontsDir(): string {
 
 /**
  * Every source file under `dir` that is neither build output nor a dependency. `dir` is
- * frontend/src or the workspace, depending on the checkout — see adhFrontendSrc().
+ * frontend/src or the workspace, depending on the checkout — see sitesWorkspaceRoot().
  *
  * Dot-directories are skipped wholesale, which is not cosmetic: `frontend/src/external`
  * holds pnpm's `.pnpm-deploy-link-*` trees — whole second copies of the toolkit packages
@@ -294,8 +303,8 @@ describe('the layering scan is skipped only where there is nothing to scan', () 
   })
 })
 
-describe.skipIf(ADH_SRC === null)('consumers replace their size utility, never layer over it', () => {
-  const srcDir = ADH_SRC as string
+describe.skipIf(SITES_SRC === null)('consumers replace their size utility, never layer over it', () => {
+  const srcDir = SITES_SRC as string
   // Tailwind's font-size utilities. Deliberately NOT `text-[...]`: an arbitrary value is
   // almost always a colour (`text-[var(--color-text-dim)]`), which never conflicts.
   const SIZE_UTILITY = /\btext-(xs|sm|base|lg|xl|[2-9]xl)\b/
@@ -368,7 +377,7 @@ describe('every fallback literal is the value the default theme sets', () => {
   // form is what CSS files and inline-style components use, and this repo has three of
   // them (SiteLanding.tsx, adh-concepts.css, adh-legal.css). So it widens to frontend/src
   // when that is there and falls back to the workspace when it is not — never skipping.
-  const srcDir = ADH_SRC ?? workspaceRoot()
+  const srcDir = SITES_SRC ?? workspaceRoot()
   const tokens = new Map<string, string>()
   for (const m of themes[DEFAULT_ADH_THEME].css.matchAll(/(--type-landing-[a-z-]+):([^;]+);/g)) {
     // Both groups are matched by the pattern that produced `m`, so they exist; TS types
@@ -405,25 +414,33 @@ describe('every fallback literal is the value the default theme sets', () => {
         }
       }
     }
-    // A scan that found nothing to check is the failure this whole describe exists for, so
-    // the floor moves with the root rather than being one number that has to hold for both,
-    // and each is set just below the measured count so a real consumer going missing trips
-    // it.
+    // A scan that found nothing to check is the failure this whole describe exists for, and
+    // this floor is what says so. It is one number now, and the history of the pair it
+    // replaced is the argument for why it has to be.
     //
-    // RE-MEASURED after adh's mono-repo split. The old pair (50 / 30) was taken when
-    // frontend/src held every site in the fleet and the adh root therefore checked 109
-    // against the workspace's 40 — which is what the old comment's "two thirds of its
-    // coverage" was about. Those sites are their own repositories now, so almost every
-    // consumer of this scale lives inside THIS package: 44 of the 47 an adh checkout sees
-    // come from SiteLanding.tsx (12), adh-concepts.css (25) and adh-legal.css (7), and the
-    // remaining 3 from the one site adh still holds, agenticdeveloperteam/src/site.css.
+    // It was 50/30 when frontend/src held every site in the fleet and the adh root checked
+    // 109 against the workspace's 40. The 2026-08 splits took the sites out to their own
+    // repositories, leaving 44/47 — 44 from THIS package (SiteLanding.tsx 12,
+    // adh-concepts.css 25, adh-legal.css 7) and 3 from the one site adh still held,
+    // `agenticdeveloperteam/src/site.css`. The floors became 44 and 40, and the comment
+    // then said: 44 fails the moment adh's last in-repo consumer goes (47 -> 44), and the
+    // number to move is the one the consumer went to.
     //
-    // So the gap between the two roots is 3 rather than 69, and the floors are picked to
-    // catch the smallest real loss on each side: 44 fails the moment adh's last in-repo
-    // consumer goes (47 -> 44), and 40 fails if any one of the three files above does. Do
-    // not "fix" a future failure here by lowering a floor — the count falling is the
-    // finding, and the number to move is the one the consumer went to.
-    expect(checked).toBeGreaterThan(ADH_SRC ? 44 : 40)
+    // That is exactly what happened, on 2026-08-30: `devteam` left for
+    // agenticdeveloperteamwebsite and took site.css with it, so the adh root measures 44 —
+    // the same 44 the workspace root does, because adh's remaining seven sites consume this
+    // scale through `.text-landing-*` classes and name no var at all. The pair had stopped
+    // discriminating between the two roots, and a pair that names one number twice is worse
+    // than one number: it reads as though the roots were still being told apart.
+    //
+    // 43 is the floor for what is now invariant — those three files, in every checkout, in
+    // both roots. What it deliberately does NOT bound is a satellite's own consumers: the
+    // walk above reaches them (`-websites`), so agenticdeveloperteamwebsite measures 47, but
+    // no single number can be below 44 for adh and above 46 for that repo. Per-repo
+    // consumers are guarded by `offenders` instead — the assertion that actually matters,
+    // and the one that does not weaken as the fleet comes apart. Moving 43 down is a
+    // finding about the three files, not a fix.
+    expect(checked).toBeGreaterThan(43)
     expect(offenders).toEqual([])
   })
 })
