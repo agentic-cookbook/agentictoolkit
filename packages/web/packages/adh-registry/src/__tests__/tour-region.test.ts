@@ -66,6 +66,31 @@ function compilerOptions(): ts.CompilerOptions {
 
 const OPTIONS = compilerOptions()
 
+/** The three rings, in one place: two assertions below walk them pairwise and
+ *  one walks them against `EXPECTED_SIZE`. */
+const RINGS = [
+  ['main', TOUR_MAIN],
+  ['marketing', TOUR_MARKETING],
+  ['placeholder', TOUR_PLACEHOLDER],
+] as const
+
+/** What each ring's committed region is expected to hold — read the long note
+ *  in the first assertion below before editing this. `'empty'` is a claim
+ *  about the OWNING REPO'S MANIFEST, not about this package: it says that repo
+ *  declares no tour edges at all, so its generator has nothing to splice.
+ *  Every other ring must carry at least one edge. Both halves are asserted, so
+ *  an entry that stops being true fails here rather than silently disarming
+ *  the guard. */
+const EXPECTED_SIZE: Record<(typeof RINGS)[number][0], 'empty' | 'some'> = {
+  // adh, since 2026-08-31. `docs` and `registry` were its last two tour
+  // entries; `docs` left for its own repo and `registry` — the one site adh
+  // still holds — has nowhere to walk to. Delete this line the moment adh's
+  // landing manifest declares an edge again.
+  main: 'empty',
+  marketing: 'some',
+  placeholder: 'some',
+}
+
 /** Every syntactic and semantic diagnostic `text` produces as `story.ts`. */
 function diagnose(text: string): string[] {
   const host = ts.createCompilerHost(OPTIONS, true)
@@ -89,26 +114,49 @@ describe('the generated <gen:tour-*> regions', () => {
     expect(diagnose(readFileSync(STORY, 'utf8'))).toEqual([])
   })
 
-  it('is a walk that is actually turned on, in EVERY ring', () => {
+  it('is a walk that is actually turned on, in every ring that owns one', () => {
     // Vacuity guard for everything above and below: an empty region compiles
     // perfectly, and so would a `check` that regenerated nothing. At least
     // one real edge has to be in the committed file for "it compiles" to be
-    // a statement about the emitter rather than about an empty object.
+    // a statement about the emitter rather than about an empty object. That
+    // half is unconditional, and it is asserted on the merge at the end.
     //
-    // Per region, not on the merge, and that is the point. The three generators
-    // address their regions by a marker string configured in each repo's
-    // manifest, and nothing on any side can see the others' values — so the
-    // way this breaks is TWO repos naming the same marker, which does not
-    // collide, does not fail, and does not even shorten the merged map: the
-    // second run overwrites the first's entries and the region nobody claimed
-    // is left exactly as committed, forever. Empty is what that looks like
-    // from here, and it is the only symptom, so it has to be the assertion.
-    expect(Object.keys(TOUR_MAIN).length, '<gen:tour-main> is empty').toBeGreaterThan(0)
-    expect(Object.keys(TOUR_MARKETING).length, '<gen:tour-marketing> is empty').toBeGreaterThan(0)
-    expect(
-      Object.keys(TOUR_PLACEHOLDER).length,
-      '<gen:tour-placeholder> is empty',
-    ).toBeGreaterThan(0)
+    // The per-region half is what catches the failure this file was written
+    // for. The three generators address their regions by a marker string
+    // configured in each repo's manifest, and nothing on any side can see the
+    // others' values — so the way this breaks is TWO repos naming the same
+    // marker, which does not collide, does not fail, and does not even shorten
+    // the merged map: the second run overwrites the first's entries and the
+    // region nobody claimed is left exactly as committed, forever.
+    //
+    // That used to make "non-empty" the assertion for all three. It cannot be
+    // any more, and the reason is not a weakening of the guard but a fact
+    // about the fleet: a ring is empty whenever its owning repo declares no
+    // tour edges, and on 2026-08-31 adh's `main` ring became the first to do
+    // so — `docs` and `registry` were its last two entries, `docs` left for
+    // agenticdevelopmentstudio/agenticdeveloperdocswebsite, and the one site
+    // still in adh has nowhere to walk to. So EXPECTED_SIZE below states the
+    // expectation per ring instead of a floor under all of them.
+    //
+    // It is deliberately exact in BOTH directions. A ring listed here as
+    // empty that fills up fails just as loudly as one that empties, so the
+    // declaration cannot quietly rot; and the day adh's manifest declares a
+    // tour edge again, this test fails and the entry has to come out, which
+    // is precisely when the collision symptom becomes observable for `main`
+    // again. While a ring is empty by declaration that symptom is NOT visible
+    // from here for that ring — a collision would leave it looking exactly as
+    // expected — and no assertion in this file can see it. `landing sites
+    // check` in the owning repo is what covers the gap in the meantime.
+    for (const [name, ring] of RINGS) {
+      const expected = EXPECTED_SIZE[name]
+      const size = Object.keys(ring).length
+      if (expected === 'empty') {
+        expect(size, `<gen:tour-${name}> has edges again — see EXPECTED_SIZE`).toBe(0)
+      } else {
+        expect(size, `<gen:tour-${name}> is empty`).toBeGreaterThan(0)
+      }
+    }
+    expect(Object.keys(SITE_TOUR_NEXT).length, 'the whole tour is empty').toBeGreaterThan(0)
   })
 
   it('gives every site to at most one ring', () => {
@@ -123,20 +171,15 @@ describe('the generated <gen:tour-*> regions', () => {
     // closure guard is hub-and-spoke and neither satellite checks out the other —
     // so a site claimed by both of THEM is the pair nothing else in the fleet
     // compares.
-    const rings = [
-      ['main', TOUR_MAIN],
-      ['marketing', TOUR_MARKETING],
-      ['placeholder', TOUR_PLACEHOLDER],
-    ] as const
-    for (const [i, [a, left]] of rings.entries()) {
-      for (const [b, right] of rings.slice(i + 1)) {
+    for (const [i, [a, left]] of RINGS.entries()) {
+      for (const [b, right] of RINGS.slice(i + 1)) {
         const both = Object.keys(left).filter((id) => id in right)
         expect(both, `claimed by both the ${a} and ${b} rings`).toEqual([])
       }
     }
     // And the merge loses nothing: the sum of the parts is the whole.
     expect(Object.keys(SITE_TOUR_NEXT).length).toBe(
-      rings.reduce((n, [, ring]) => n + Object.keys(ring).length, 0),
+      RINGS.reduce((n, [, ring]) => n + Object.keys(ring).length, 0),
     )
   })
 
