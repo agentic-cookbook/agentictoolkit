@@ -2,7 +2,7 @@
 // Regenerate: python3 <websites-root>/tools/gen-site-routes.py --region main
 //
 // main's share of the fleet's page routes, derived from that repo's App Router
-// trees. The rest is in its siblings `routes.devteam.generated.ts`, `routes.hub.generated.ts`, `routes.marketing.generated.ts`, `routes.personaregistry.generated.ts`, `routes.placeholder.generated.ts`, written by the other repos;
+// trees. The rest is in its siblings `routes.cookbook.generated.ts`, `routes.devteam.generated.ts`, `routes.hub.generated.ts`, `routes.marketing.generated.ts`, `routes.personaregistry.generated.ts`, `routes.placeholder.generated.ts`, written by the other repos;
 // `routes.generated.ts` merges them all and is what consumers import. See the
 // generator's docstring for why this is one file per repo.
 //
@@ -41,25 +41,6 @@ export const SITE_ROUTES_MAIN: Partial<Record<SiteId, readonly string[]>> = {
     '/privacy',
     '/terms',
     '/topics/[slug]',
-    '/tour',
-  ],
-  cookbook: [
-    '/',
-    '/[workspace]/[[...path]]',
-    '/[workspace]/profile',
-    '/appendix/[[...slug]]',
-    '/auth/callback',
-    '/compliance/[[...slug]]',
-    '/guidelines/[[...slug]]',
-    '/home',
-    '/ingredients/[[...slug]]',
-    '/introduction/[[...slug]]',
-    '/principles/[[...slug]]',
-    '/privacy',
-    '/projects/[[...slug]]',
-    '/recipes/[[...slug]]',
-    '/reference/[[...slug]]',
-    '/terms',
     '/tour',
   ],
   docs: [
