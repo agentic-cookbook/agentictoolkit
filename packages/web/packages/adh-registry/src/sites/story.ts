@@ -198,7 +198,6 @@ export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
   docs: 'toolkit',
   toolkit: 'community',
   community: 'registry',
-  registry: 'cookbook',
   // </gen:tour-main>
 }
 
