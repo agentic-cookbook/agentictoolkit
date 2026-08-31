@@ -38,6 +38,7 @@ import type { SiteId } from './registry'
 import { SITE_ROUTES_COMMUNITY } from './routes.community.generated'
 import { SITE_ROUTES_COOKBOOK } from './routes.cookbook.generated'
 import { SITE_ROUTES_DEVTEAM } from './routes.devteam.generated'
+import { SITE_ROUTES_DOCS } from './routes.docs.generated'
 import { SITE_ROUTES_HUB } from './routes.hub.generated'
 import { SITE_ROUTES_MAIN } from './routes.main.generated'
 import { SITE_ROUTES_MARKETING } from './routes.marketing.generated'
@@ -53,6 +54,7 @@ export const SITE_ROUTE_SHARES = {
   community: SITE_ROUTES_COMMUNITY,
   cookbook: SITE_ROUTES_COOKBOOK,
   devteam: SITE_ROUTES_DEVTEAM,
+  docs: SITE_ROUTES_DOCS,
   hub: SITE_ROUTES_HUB,
   main: SITE_ROUTES_MAIN,
   marketing: SITE_ROUTES_MARKETING,

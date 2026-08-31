@@ -194,7 +194,6 @@ export const SITE_STORIES: Record<SiteId, SiteStory> = {
  *  that is a state to render, not an error. */
 export const TOUR_MAIN: Partial<Record<SiteId, SiteId>> = {
   // <gen:tour-main> managed by landing — do not edit by hand
-  docs: 'registry',
   // </gen:tour-main>
 }
 
