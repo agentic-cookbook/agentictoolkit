@@ -64,6 +64,7 @@ const EXPECTED_FILL: Record<keyof typeof SITE_ROUTE_SHARES, 'empty' | 'some'> = 
   placeholder: 'some',
   registry: 'some',
   research: 'some',
+  shipr: 'some',
   toolkit: 'some',
 }
 const SITES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../sites')
