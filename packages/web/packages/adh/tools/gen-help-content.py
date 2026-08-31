@@ -29,27 +29,30 @@ Runnable from anywhere (content dir is resolved relative to this script, not cwd
 
 `--check` is what keeps the committed module honest, and it exists because the module went
 stale in exactly the way an unguarded derived artifact does: the MCP catalog gained five
-tools (Teams, Persona Knowledge, searchMyData) and the corpus kept advertising 47. adh's
-side of that chain was already pinned (backend/src/adh/test/mcp/catalog-snapshot.test.ts
-holds catalog.generated.json against the live registry) — this second hop was not, so the
-catalog moved and the help text silently did not. Wired into adh's ci.yml, since only an
-adh checkout has both halves (see the note below).
+tools (Teams, Persona Knowledge, searchMyData) and the corpus kept advertising 47. The
+backend's side of that chain was already pinned (`test/mcp/catalog-snapshot.test.ts` holds
+catalog.generated.json against the live registry) — this second hop was not, so the catalog
+moved and the help text silently did not. Wired into adh's ci.yml, since that is the job
+that has both halves to hand (see the note below).
 
-REQUIRES AN ADH CHECKOUT — the one thing in this package that does. The MCP topic
-(see MCP_COUNT_PLACEHOLDER below) is filled from `backend/src/adh/.../catalog.generated.json`,
-which exists only in the agenticdeveloperhub monorepo that consumes this toolkit as a
-submodule. Everything this generator PRODUCES is committed (`src/help/content.generated.ts`),
-so a standalone toolkit checkout consumes the help corpus perfectly well and simply cannot
-regenerate it: `_mcp_catalog_path()` exits with that message rather than emitting a module
-with an unresolved `{{MCP_TOOL_COUNT}}` in it. Recorded here because it is a real, if
-narrow, dependency of this repo on its consumer — the inverse of the direction the rest of
-the boundary runs (see frontend/tools/verify_toolkit_boundary.py in adh, which scans import
-specifiers in .ts/.tsx/.js and therefore cannot see this file at all).
+REQUIRES THE BACKEND'S CATALOG — the one input in this package that comes from outside the
+repo. The MCP topic (see MCP_COUNT_PLACEHOLDER below) is filled from
+`src/adh/src/mcp/catalog.generated.json` in `agenticdevelopmentstudio/adhbackend`, named to
+this script through `ADH_MCP_CATALOG` rather than derived (see `_mcp_catalog_path()`, which
+records why the old walk-up cannot work any more). Everything this generator PRODUCES is
+committed (`src/help/content.generated.ts`), so a standalone toolkit checkout consumes the
+help corpus perfectly well and simply cannot regenerate it: `_mcp_catalog_path()` exits with
+that message rather than emitting a module with an unresolved `{{MCP_TOOL_COUNT}}` in it.
+Recorded here because it is a real, if narrow, dependency of this repo on a repo it does not
+contain — the inverse of the direction the rest of the boundary runs (see
+frontend/tools/verify_toolkit_boundary.py in adh, which scans import specifiers in
+.ts/.tsx/.js and therefore cannot see this file at all).
 """
 
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -110,12 +113,31 @@ def topic_key(md_path: Path) -> str:
 
 
 def _mcp_catalog_path() -> Path:
-    """Locate the backend's committed MCP tool-catalog snapshot by walking up to the
-    monorepo root (the ancestor holding both backend/src/adh and frontend/)."""
-    for base in (PACKAGE_DIR, *PACKAGE_DIR.parents):
-        if (base / "backend" / "src" / "adh").is_dir() and (base / "frontend").is_dir():
-            return base / "backend" / "src" / "adh" / "src" / "mcp" / "catalog.generated.json"
-    raise SystemExit("could not locate the monorepo root (no backend/ + frontend/ ancestor)")
+    """The backend's committed MCP tool-catalog snapshot, which is an INPUT.
+
+    It used to be a computed path: walk up to the ancestor holding both
+    `backend/src/adh` and `frontend/`, i.e. the adh monorepo root. That ancestor
+    stopped existing on 2026-08-31, when the backend left for
+    `agenticdevelopmentstudio/adhbackend` — no repo in the fleet has both
+    directories any more, so the walk can no longer succeed anywhere and the
+    fallback would only ever be a slower way to reach the same SystemExit.
+
+    So it is an explicit input now, exactly like `ADH_OPENAPI_SPEC` in this repo's
+    adh-api-types package, and for the same reason stated there: this repo is
+    consumed standalone by repos that have no catalog at all, and there is no
+    relative location it could honestly derive. adh's CI passes the path from its
+    `.peer-adhbackend` checkout; by hand, name the adhbackend checkout.
+    """
+    raw = os.environ.get("ADH_MCP_CATALOG")
+    if not raw:
+        raise SystemExit(
+            "no MCP tool catalog given. This generator reads the backend's committed "
+            "snapshot, which does not live in this repo — it is in "
+            "agenticdevelopmentstudio/adhbackend. Set ADH_MCP_CATALOG:\n"
+            "  ADH_MCP_CATALOG=<adhbackend>/src/adh/src/mcp/catalog.generated.json "
+            "python3 tools/gen-help-content.py --check"
+        )
+    return Path(raw).expanduser().resolve()
 
 
 def _render_tool_groups(catalog: dict) -> str:
@@ -149,7 +171,8 @@ def inject_mcp_catalog(markdown: str) -> str:
     if not path.exists():
         raise SystemExit(
             f"mcp/tools.md needs the tool catalog but {path} is missing.\n"
-            "Run `python3 tools/gen-mcp-catalog.py` from backend/src/adh first."
+            "ADH_MCP_CATALOG named it; check the path, or regenerate it with "
+            "`python3 tools/gen-mcp-catalog.py` from adhbackend's src/adh."
         )
     catalog = json.loads(path.read_text(encoding="utf-8"))
 
