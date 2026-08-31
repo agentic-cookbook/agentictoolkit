@@ -10,7 +10,7 @@ rebuilds from source.
 Add the submodule wherever you want it to live:
 
 ```bash
-git submodule add git@github.com:agentic-cookbook/agentictoolkit.git vendor/agentictoolkit
+git submodule add git@github.com:agenticdevelopmentstudio/agentictoolkit.git vendor/agentictoolkit
 ```
 
 Generate the Apple xcodeproj files so they exist on disk (they are

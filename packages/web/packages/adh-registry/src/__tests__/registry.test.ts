@@ -542,8 +542,8 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   // Family sites whose Next app is in ITS OWN REPO rather than under adh's
   // `frontend/src/sites/`. Both left on 2026-08-15 and neither left the fleet: their
   // registry rows, `MAIN_SITE_IDS` membership, story tiers, menu rows and SSO are all
-  // unchanged, and only the source tree moved (agentic-cookbook/bitbag,
-  // agentic-cookbook/myagenticteams).
+  // unchanged, and only the source tree moved (agenticdevelopmentstudio/bitbagwebsite,
+  // agenticdevelopmentstudio/myagenticteamswebsite).
   //
   // Listed HERE and not in registry.ts on purpose. "Where the source is checked out" is
   // a fact about adh's directory layout, not about the fleet — from inside either of

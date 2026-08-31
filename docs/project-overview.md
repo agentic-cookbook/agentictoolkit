@@ -12,7 +12,7 @@
 
 ## GitHub URL
 
-https://github.com/agentic-cookbook/agentictoolkit
+https://github.com/agenticdevelopmentstudio/agentictoolkit
 
 ## Directory Structure
 

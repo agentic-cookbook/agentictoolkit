@@ -79,7 +79,7 @@ function TermsBody() {
     /* @__PURE__ */ jsxs2("p", { children: [
       "Portions of the Service are open source and made available under their respective licenses, including the repositories at",
       " ",
-      /* @__PURE__ */ jsx2("a", { href: "https://github.com/agentic-cookbook", children: "github.com/agentic-cookbook" }),
+      /* @__PURE__ */ jsx2("a", { href: "https://github.com/agenticdevelopmentstudio", children: "github.com/agenticdevelopmentstudio" }),
       ". Those licenses govern your use of that code. The Service also relies on third-party providers (for example, hosting, authentication, and analytics providers) whose terms apply to their respective portions of the offering."
     ] }),
     /* @__PURE__ */ jsx2("h2", { children: "6. Intellectual Property" }),
