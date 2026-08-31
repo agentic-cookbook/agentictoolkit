@@ -46,6 +46,7 @@ import { SITE_ROUTES_PERSONAREGISTRY } from './routes.personaregistry.generated'
 import { SITE_ROUTES_PLACEHOLDER } from './routes.placeholder.generated'
 import { SITE_ROUTES_REGISTRY } from './routes.registry.generated'
 import { SITE_ROUTES_RESEARCH } from './routes.research.generated'
+import { SITE_ROUTES_SHIPR } from './routes.shipr.generated'
 import { SITE_ROUTES_TOOLKIT } from './routes.toolkit.generated'
 
 type Share = Partial<Record<SiteId, readonly string[]>>
@@ -63,6 +64,7 @@ export const SITE_ROUTE_SHARES = {
   placeholder: SITE_ROUTES_PLACEHOLDER,
   registry: SITE_ROUTES_REGISTRY,
   research: SITE_ROUTES_RESEARCH,
+  shipr: SITE_ROUTES_SHIPR,
   toolkit: SITE_ROUTES_TOOLKIT,
 } satisfies Record<string, Share>
 
