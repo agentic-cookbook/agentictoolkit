@@ -1,3 +1,6 @@
+import { readdirSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it, expect } from 'vitest'
 import { SITE_ROUTES, SITE_ROUTE_SHARES } from '../sites/routes.generated'
 import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
@@ -10,8 +13,12 @@ import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 // `routes.main.generated.ts` from adh, `routes.marketing.generated.ts` from
 // adhmarketing, `routes.placeholder.generated.ts` from adhplaceholders,
 // `routes.hub.generated.ts` from agenticdeveloperhubwebsite,
-// `routes.devteam.generated.ts` from agenticdeveloperteamwebsite — because this
-// package is a submodule of all of them, each owns part of the fleet, and no
+// `routes.devteam.generated.ts` from agenticdeveloperteamwebsite,
+// `routes.cookbook.generated.ts` from agenticdevelopercookbookwebsite,
+// `routes.toolkit.generated.ts` from agenticdevelopertoolkitwebsite,
+// `routes.personaregistry.generated.ts` from agenticpersonaregistrywebsite,
+// `routes.community.generated.ts` from agenticdevelopercommunitywebsite — because
+// this package is a submodule of all of them, each owns part of the fleet, and no
 // generator can see the others' site trees.
 // `routes.generated.ts` merges them and is hand-written. The two assertions about that
 // arrangement are below; they exist because both of its failure modes are silent, and
@@ -32,11 +39,35 @@ import { MAIN_SITE_IDS, MARKETING_SITE_IDS } from '../sites/registry'
 // Router segment semantics rather than two.
 
 const shares = Object.entries(SITE_ROUTE_SHARES)
+const SITES_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../sites')
 
 describe('SITE_ROUTES (generated per-site route map)', () => {
   it('keys only registry family sites, so the SiteId typing stays honest', () => {
     const family = new Set<string>([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS])
     for (const key of Object.keys(SITE_ROUTES)) expect(family).toContain(key)
+  })
+
+  it('merges every share file that exists on disk', () => {
+    // The one case here that does NOT read SITE_ROUTE_SHARES, because that list is
+    // precisely what an unmerged share is missing from. `routes.generated.ts` is
+    // hand-written — its own header says a repo split "adds a region by editing this
+    // file alone" — so the single step of a split with no generator behind it is also
+    // the one nothing checked. A share file imported by nobody compiles, ships, and
+    // takes its sites' routes out of the flyout and out of research's sitemap; every
+    // other assertion in this file passes over it in silence, because it iterates the
+    // shares that WERE merged.
+    //
+    // Reading the directory is fair here in a way re-walking the site trees was not
+    // (see the header): these files are committed siblings of the index that merges
+    // them, present in a standalone toolkit clone exactly as they are in adh.
+    const onDisk = readdirSync(SITES_DIR)
+      .map((f) => /^routes\.(.+)\.generated\.ts$/.exec(f)?.[1])
+      .filter((r): r is string => Boolean(r))
+      .sort()
+    expect(onDisk.length, 'routes.<region>.generated.ts files').toBeGreaterThan(0)
+    expect(onDisk, 'every share file must appear in SITE_ROUTE_SHARES, and vice versa').toEqual(
+      shares.map(([region]) => region).sort(),
+    )
   })
 
   it('has every share filled in', () => {
