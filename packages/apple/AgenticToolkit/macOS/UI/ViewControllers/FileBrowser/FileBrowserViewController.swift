@@ -1,12 +1,12 @@
 import AppKit
 import Combine
-import SwiftUI
 
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// AppKit host for the SwiftUI file tree, so a file browser can be dropped into
-/// any AppKit container — a document pane, a sidebar, a window.
+/// A file browser — the tree, and the footer that adds and removes roots — so
+/// one can be dropped into any AppKit container: a document pane, a sidebar, a
+/// window.
 ///
 /// Owns one `FileTreeManager` per root directory, and starts/stops watching with
 /// the view's appearance: a browser in a hidden tab has no business running an
@@ -36,6 +36,15 @@ public final class FileBrowserViewController: NSViewController {
     /// tree is not rescanned because a *different* directory appeared.
     private var managersByRoot: [URL: FileTreeManager] = [:]
     private let roots = FileBrowserRootsModel()
+
+    private lazy var tree = FileTreeOutlineViewController(
+        roots: roots,
+        directories: directories,
+        selection: selection
+    )
+
+    private let addButton = NSButton(title: "", target: nil, action: nil)
+    private let removeButton = NSButton(title: "", target: nil, action: nil)
 
     private var isWatching = false
     private var hasLoaded = false
@@ -96,16 +105,97 @@ public final class FileBrowserViewController: NSViewController {
     }
 
     public override func loadView() {
-        let hosting = NSHostingView(
-            rootView: FileBrowserPaneView(
-                roots: roots,
-                directories: directories,
-                selection: selection,
-                onAdd: { [weak self] in self?.addDirectory() }
-            ).themedRoot()
+        let container = ThemedBackgroundView(role: .windowBackground)
+        container.frame = NSRect(x: 0, y: 0, width: 260, height: 400)
+
+        addChild(tree)
+        let treeView = tree.view
+        treeView.translatesAutoresizingMaskIntoConstraints = false
+
+        let divider = NSBox()
+        divider.boxType = .separator
+        divider.translatesAutoresizingMaskIntoConstraints = false
+
+        let footer = makeFooter()
+
+        container.addSubview(treeView)
+        container.addSubview(divider)
+        container.addSubview(footer)
+
+        NSLayoutConstraint.activate([
+            treeView.topAnchor.constraint(equalTo: container.topAnchor),
+            treeView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            treeView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            divider.topAnchor.constraint(equalTo: treeView.bottomAnchor),
+            divider.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            divider.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+
+            footer.topAnchor.constraint(equalTo: divider.bottomAnchor),
+            footer.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            footer.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            footer.bottomAnchor.constraint(equalTo: container.bottomAnchor)
+        ])
+
+        view = container
+    }
+
+    /// The `+`/`−` strip under the tree.
+    private func makeFooter() -> NSView {
+        let footer = ThemedBackgroundView(role: .surface)
+        footer.translatesAutoresizingMaskIntoConstraints = false
+
+        for (button, symbol, action) in [
+            (addButton, "plus", #selector(addDirectory)),
+            (removeButton, "minus", #selector(removeSelectedDirectory))
+        ] {
+            button.bezelStyle = .accessoryBar
+            button.isBordered = false
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            button.target = self
+            button.action = action
+        }
+        addButton.toolTip = "Add a directory to this project"
+        addButton.accessibilityID("file-browser.add-directory")
+        removeButton.accessibilityID("file-browser.remove-directory")
+
+        let stack = NSStackView(views: [addButton, removeButton])
+        stack.orientation = .horizontal
+        stack.spacing = 2
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        footer.addSubview(stack)
+
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: footer.leadingAnchor, constant: 8),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: footer.trailingAnchor, constant: -8),
+            stack.topAnchor.constraint(equalTo: footer.topAnchor, constant: 4),
+            stack.bottomAnchor.constraint(equalTo: footer.bottomAnchor, constant: -4)
+        ])
+        return footer
+    }
+
+    public override func viewDidLoad() {
+        super.viewDidLoad()
+        // `−` is only ever aimed at a root the user added, and which root that
+        // is changes with every click in the tree.
+        Publishers.Merge(
+            directories.$selectedRoot.map { _ in () },
+            directories.$additional.map { _ in () }
         )
-        hosting.frame = NSRect(x: 0, y: 0, width: 260, height: 400)
-        view = hosting
+        .receive(on: RunLoop.main)
+        .sink { [weak self] in self?.updateFooter() }
+        .store(in: &cancellables)
+        updateFooter()
+    }
+
+    private func updateFooter() {
+        let root = directories.selectedRoot
+        let removable = root.map { directories.isRemovable($0) } ?? false
+        removeButton.isEnabled = removable
+        // Saying *why* the button is off beats an unexplained grey minus.
+        removeButton.toolTip = removable && root != nil
+            ? "Remove “\(root!.lastPathComponent)” from this project"
+            : "Select an added directory to remove it"
     }
 
     public override func viewWillAppear() {
@@ -229,84 +319,10 @@ extension FileBrowserViewController: PaneContentTeardown {
 
 /// The managers the pane draws, as one observable list.
 ///
-/// The view cannot observe a dictionary owned by a view controller, and making
+/// The tree cannot observe a dictionary owned by a view controller, and making
 /// the controller itself observable would publish far more than the one fact
-/// SwiftUI needs (`separation-of-concerns`).
+/// the tree needs (`separation-of-concerns`).
 @MainActor
 final class FileBrowserRootsModel: ObservableObject {
     @Published var managers: [FileTreeManager] = []
-}
-
-/// The pane's own chrome: the trees, and the footer that adds and removes them.
-private struct FileBrowserPaneView: View {
-
-    @ObservedObject var roots: FileBrowserRootsModel
-    @ObservedObject var directories: FileBrowserDirectories
-    @ObservedObject var selection: FileBrowserSelection
-
-    let onAdd: () -> Void
-
-    @Environment(\.theme) private var theme
-
-    var body: some View {
-        VStack(spacing: 0) {
-            FileTreeRootsView(
-                managers: roots.managers,
-                selectedRoot: $directories.selectedRoot,
-                selectedNode: $selection.selectedNode
-            )
-            Divider()
-            footer
-        }
-        .background(theme.windowBackground)
-        // Clicking a file is also how you say which directory you mean, so the
-        // footer's target follows the tree rather than needing its own click.
-        .onChange(of: selection.selectedNode) { _, node in
-            if let url = node?.url, let root = directories.root(containing: url) {
-                directories.selectedRoot = root
-            }
-        }
-    }
-
-    private var footer: some View {
-        HStack(spacing: 2) {
-            Button(action: onAdd) {
-                Image(systemName: "plus")
-            }
-            .help("Add a directory to this project")
-            .accessibilityIdentifier("file-browser.add-directory")
-
-            Button {
-                if let root = directories.selectedRoot {
-                    directories.remove(root)
-                }
-            } label: {
-                Image(systemName: "minus")
-            }
-            .disabled(!canRemoveSelection)
-            .help(removeHelp)
-            .accessibilityIdentifier("file-browser.remove-directory")
-
-            Spacer()
-        }
-        .buttonStyle(.borderless)
-        .foregroundStyle(theme.secondaryText)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(theme.surface)
-    }
-
-    private var canRemoveSelection: Bool {
-        guard let root = directories.selectedRoot else { return false }
-        return directories.isRemovable(root)
-    }
-
-    private var removeHelp: String {
-        guard let root = directories.selectedRoot, directories.isRemovable(root) else {
-            // The project's own folder is always there, so saying *why* the
-            // button is off beats an unexplained gray minus.
-            return "Select an added directory to remove it"
-        }
-        return "Remove “\(root.lastPathComponent)” from this project"
-    }
 }

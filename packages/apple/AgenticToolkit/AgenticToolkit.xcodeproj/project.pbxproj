@@ -284,7 +284,6 @@
 		5CE1EE9105CDACA98DEF6DB5 /* PinnedEndsLine.swift in Sources */ = {isa = PBXBuildFile; fileRef = C16470272D3A02EFD3772340 /* PinnedEndsLine.swift */; };
 		5D20D5C9B253CB6DC63EC8D9 /* MCP in Frameworks */ = {isa = PBXBuildFile; productRef = 5599A12B4A811CA2E4590E67 /* MCP */; };
 		5D6ED81D172A900CE68BE60E /* SystemWindowInfo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6717C0944EE1895FD8420EAB /* SystemWindowInfo.swift */; };
-		5DEDC0371B0450DB2DF05CB6 /* FileTreeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 24022B5E0781ABA866D1150A /* FileTreeView.swift */; };
 		5E3FAB824D0D5BA3CADF0197 /* RangeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80F6AEF2C35429822C9FB844 /* RangeViewModel.swift */; };
 		5E47BF016CD0D843EF810003 /* MCPServerConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 635A19282B38E0A6A626932E /* MCPServerConfiguration.swift */; };
 		5E64CEBE5E66B5047D420EC5 /* AIPlugin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4EF995FC0CC791F38212BEE6 /* AIPlugin.swift */; };
@@ -446,6 +445,7 @@
 		9D0EDE5E4875C66A08E1FEDD /* OpenAIModelCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8EDB01019588E6CF7B6FE0CE /* OpenAIModelCatalog.swift */; };
 		9DA37D73639C3DA17E2A79B9 /* FontViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 80B2A3D33F2CD7481690F696 /* FontViewModel.swift */; };
 		9E1C45252967A40E76ECE8A0 /* AgenticToolkitCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = FF857DF2BB3D2BE006BBA101 /* AgenticToolkitCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9E6D881D96D7BF87A2D0EF84 /* FileTreeOutlineViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11000504C1A1C034A52A96A0 /* FileTreeOutlineViewController.swift */; };
 		9EDD58AF14F05041A6650422 /* NoteStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 90627AC37DA4BFBF6C32C07D /* NoteStorage.swift */; };
 		9EFE6FCB1B594B2CCD433F6C /* AIProviderConfigSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25B2D0B033D35FA8A23E53EF /* AIProviderConfigSync.swift */; };
 		9F173A2DD1B90807959C4F6D /* ColorSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D3B50946944B1C6A884F9F /* ColorSetting.swift */; };
@@ -1283,6 +1283,7 @@
 		100B07B85D9C237535E20F8C /* PlaceholderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceholderTests.swift; sourceTree = "<group>"; };
 		101685017FD3939C6E5EED27 /* AgenticToolkitCoreMacOSTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitCoreMacOSTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		10C06EB2ADBF3FE51A046E3D /* AIProviderConfigStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderConfigStoreTests.swift; sourceTree = "<group>"; };
+		11000504C1A1C034A52A96A0 /* FileTreeOutlineViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeOutlineViewController.swift; sourceTree = "<group>"; };
 		11E81DAA1316C42A0091575C /* iCloudSettingsStorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iCloudSettingsStorageProvider.swift; sourceTree = "<group>"; };
 		127425969220F166083FBCAD /* AIRequestSpec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIRequestSpec.swift; sourceTree = "<group>"; };
 		1302FC853711BD157199061C /* SemanticPalette+EditorTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "SemanticPalette+EditorTheme.swift"; sourceTree = "<group>"; };
@@ -1322,7 +1323,6 @@
 		234428AD995F284FF4451931 /* XcodeHeuristic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = XcodeHeuristic.swift; sourceTree = "<group>"; };
 		235F297328FDE472618E67F4 /* AgenticToolkitSyncGRDBTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AgenticToolkitSyncGRDBTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		23ACD95DA5701320C1553646 /* ColorThemeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorThemeTests.swift; sourceTree = "<group>"; };
-		24022B5E0781ABA866D1150A /* FileTreeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTreeView.swift; sourceTree = "<group>"; };
 		2409940EA4173ECCF42BFCC4 /* ScreenMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenMatcher.swift; sourceTree = "<group>"; };
 		24D9B70A850325218B915C39 /* SettingsViewProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsViewProtocol.swift; sourceTree = "<group>"; };
 		24E6CBB031D6B413970E141E /* LocalModelCatalogTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModelCatalogTests.swift; sourceTree = "<group>"; };
@@ -2248,7 +2248,7 @@
 				EDA65482B1211A93412EC507 /* ContentViewerView.swift */,
 				39E42B65AECE7EFEA631F88B /* FileEditorView.swift */,
 				0BAD2B2B1816CCDBB5D2DDD0 /* FilePreviewLoader.swift */,
-				24022B5E0781ABA866D1150A /* FileTreeView.swift */,
+				11000504C1A1C034A52A96A0 /* FileTreeOutlineViewController.swift */,
 				DBF568C4E57FFEE3670544C8 /* FileTypesSettingsView.swift */,
 				F0B2A22C81E94C0BA99434A7 /* QuickLookPreview.swift */,
 			);
@@ -4568,7 +4568,7 @@
 				484DA71B61541E3071624419 /* FileTreeConfig.swift in Sources */,
 				6896BC5559FFE5093EE00AA6 /* FileTreeManager.swift in Sources */,
 				F8B98EF1B775D5033F45725E /* FileTreeNode.swift in Sources */,
-				5DEDC0371B0450DB2DF05CB6 /* FileTreeView.swift in Sources */,
+				9E6D881D96D7BF87A2D0EF84 /* FileTreeOutlineViewController.swift in Sources */,
 				9A05C9F3A94BE457552214D7 /* FileTypesSettingsPanelViewController.swift in Sources */,
 				D9B386B67255C3A6B3C62BB7 /* FileTypesSettingsView.swift in Sources */,
 				843AAA251CDACA9005035528 /* FileViewerViewController.swift in Sources */,

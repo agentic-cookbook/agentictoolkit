@@ -20,6 +20,7 @@ final class ComposableTabsArrangeOverlayView: NSView {
     var onAdd: (() -> Void)?
     var onRemove: (() -> Void)?
     var onMove: ((Direction) -> Void)?
+    var onDone: (() -> Void)?
 
     /// Re-read on every `refreshAvailability()`; the tree changes under this
     /// view every time any pane moves.
@@ -42,10 +43,12 @@ final class ComposableTabsArrangeOverlayView: NSView {
     private let addButton: NSButton
     private let removeButton: NSButton
     private let moveButton = NSPopUpButton(frame: .zero, pullsDown: true)
+    private let doneButton: NSButton
 
     override init(frame frameRect: NSRect) {
         addButton = Self.makeButton(title: "Add", symbolName: "plus")
         removeButton = Self.makeButton(title: "Remove", symbolName: "minus")
+        doneButton = Self.makeButton(title: "Done", symbolName: "checkmark")
         super.init(frame: frameRect)
         wantsLayer = true
         accessibilityID("composable-tabs.arrange.scrim")
@@ -62,6 +65,15 @@ final class ComposableTabsArrangeOverlayView: NSView {
         moveButton.addItem(withTitle: "Move")
         moveButton.menu?.autoenablesItems = false
         moveButton.accessibilityID("composable-tabs.arrange.move")
+
+        // Return, Enter and Escape already leave the mode, but none of them is
+        // visible. A pane that shows every other thing arranging can do owes
+        // the way out the same billing (`explicit-over-implicit`). No `\r` key
+        // equivalent: every pane in the window carries one of these, and a
+        // window with four default buttons has none.
+        doneButton.target = self
+        doneButton.action = #selector(doneTapped(_:))
+        doneButton.accessibilityID("composable-tabs.arrange.done")
 
         buildToolbar()
         observeTheme { view, palette in view.applyPalette(palette) }
@@ -85,7 +97,7 @@ final class ComposableTabsArrangeOverlayView: NSView {
         toolbar.layer?.borderWidth = 1
         toolbar.translatesAutoresizingMaskIntoConstraints = false
 
-        let stack = NSStackView(views: [addButton, removeButton, moveButton])
+        let stack = NSStackView(views: [addButton, removeButton, moveButton, doneButton])
         stack.orientation = .horizontal
         stack.spacing = 8
         stack.translatesAutoresizingMaskIntoConstraints = false
@@ -165,6 +177,7 @@ final class ComposableTabsArrangeOverlayView: NSView {
 
     @objc private func addTapped(_ sender: Any?) { onAdd?() }
     @objc private func removeTapped(_ sender: Any?) { onRemove?() }
+    @objc private func doneTapped(_ sender: Any?) { onDone?() }
 
     @objc private func moveSelected(_ sender: NSMenuItem) {
         guard let box = sender.representedObject as? DirectionBox else { return }

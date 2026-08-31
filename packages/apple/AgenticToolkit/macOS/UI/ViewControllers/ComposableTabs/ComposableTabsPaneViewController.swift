@@ -168,6 +168,10 @@ public final class ComposableTabsPaneViewController: NSViewController {
         overlay.onAdd = { [weak self] in self?.presentAddSheet() }
         overlay.onRemove = { [weak self] in self?.confirmAndRemove() }
         overlay.onMove = { [weak self] direction in self?.move(direction) }
+        overlay.onDone = { [weak self] in
+            guard let window = self?.view.window else { return }
+            ComposableTabsArrangeMode.shared.setEnabled(false, in: window)
+        }
 
         // Above the content, inside the active-pane border.
         view.addSubview(overlay)

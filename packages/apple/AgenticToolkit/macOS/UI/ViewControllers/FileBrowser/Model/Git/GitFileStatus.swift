@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 public enum GitFileStatus: String, Codable, CaseIterable, Sendable {
@@ -17,6 +18,20 @@ public enum GitFileStatus: String, Codable, CaseIterable, Sendable {
         case .renamed: return .blue
         case .conflicted: return .purple
         case .ignored: return .gray
+        }
+    }
+
+    /// The same colors for AppKit callers. Two spellings of one fact rather
+    /// than two facts: whichever framework draws the badge, red still means
+    /// deleted (`dry`).
+    public var nsColor: NSColor {
+        switch self {
+        case .modified: return .systemOrange
+        case .added, .untracked: return .systemGreen
+        case .deleted: return .systemRed
+        case .renamed: return .systemBlue
+        case .conflicted: return .systemPurple
+        case .ignored: return .systemGray
         }
     }
 
