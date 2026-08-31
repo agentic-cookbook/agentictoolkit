@@ -470,6 +470,36 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
   }
   const websitesDir = adhFrontendSrc()
   const STANDALONE = websitesDir === null
+  /** Does this checkout's sites workspace DECLARE that it holds no site at all?
+   *
+   *  Read from the same manifest the walk above anchors on, so the claim lives with
+   *  the workspace it is about rather than in a list of repo names here.
+   *
+   *  This exists because since 2026-08-31 an empty walk has two meanings and the
+   *  tree cannot tell them apart. `registry` was the last site to leave adh, so
+   *  `frontend/websites/` is a real sites workspace holding a tools package and no
+   *  app — while an empty walk is also exactly what a moved layout or a
+   *  `siteIdForDir` that stopped answering looks like, which is the failure the
+   *  `> 0` guards below were written against. A blanket floor cannot keep the second
+   *  meaning without failing the first, and dropping the floor loses the guard
+   *  entirely, so the repo says which one it is.
+   *
+   *  It is asserted EXACTLY, not merely tolerated: a workspace that declares no
+   *  sites and then walks up some is either a repo that has gained a site (delete
+   *  the declaration) or a walk that has started answering for something it should
+   *  not, and both need saying out loud. */
+  const declaresNoSites = (): boolean => {
+    if (websitesDir === null) return false
+    try {
+      const manifest = JSON.parse(
+        readFileSync(resolve(websitesDir, 'package.json'), 'utf8'),
+      )
+      return manifest?.adhFleet?.sites === 'none'
+    } catch {
+      return false // unreadable manifest is not a declaration
+    }
+  }
+  const NO_SITES = declaresNoSites()
   // Build/tooling directories that can sit beside the real site apps — excluded so
   // the guard tracks site folders, not filesystem noise (a stray `.next` or
   // `node_modules` must not false-fail a test about the site registry).
@@ -539,7 +569,15 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     () => {
       const found = siteFolders()
       // Non-vacuity: an empty scan is what a wrong anchor looks like, and it is exactly
-      // how the sibling test passed while checking nothing.
+      // how the sibling test passed while checking nothing — unless the workspace says
+      // it holds no site, in which case empty is the answer and is asserted as one.
+      if (NO_SITES) {
+        expect(
+          found.length,
+          `${websitesDir}'s manifest declares adhFleet.sites "none"`,
+        ).toBe(0)
+        return
+      }
       expect(found.length).toBeGreaterThan(0)
       const family = new Set<string>([...MAIN_SITE_IDS, ...MARKETING_SITE_IDS])
       for (const id of found) {
@@ -578,6 +616,13 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
       return existsSync(resolve(base, 'app', '[workspace]'))
     }
     const folders = siteFolders()
+    if (NO_SITES) {
+      expect(
+        folders.length,
+        `${websitesDir}'s manifest declares adhFleet.sites "none"`,
+      ).toBe(0)
+      return
+    }
     expect(folders.length).toBeGreaterThan(0) // non-vacuity, as above
     // Non-vacuity for the assertion itself: if NO folder had a workspace route the
     // loop below would pass while proving nothing. Conditional for the same reason
