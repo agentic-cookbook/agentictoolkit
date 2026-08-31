@@ -580,8 +580,15 @@ describe('MAIN_SITE_IDS / MARKETING_SITE_IDS (dev site-menu families)', () => {
     const folders = siteFolders()
     expect(folders.length).toBeGreaterThan(0) // non-vacuity, as above
     // Non-vacuity for the assertion itself: if NO folder had a workspace route the
-    // loop below would pass while proving nothing.
-    expect(folders.filter(hasWorkspaceOnDisk).length).toBeGreaterThan(0)
+    // loop below would pass while proving nothing. Conditional for the same reason
+    // its mirror below is -- a repo whose sites are ALL workspace-less has no
+    // positive example to offer, and agenticpersonaregistrywebsite is the first:
+    // its one site's first segment is a persona handle, so there is nowhere to
+    // carry a workspace to. Demanding one there would be demanding a route the
+    // site is defined by not having.
+    if (folders.some((id) => getSite(id)!.workspaceRoute !== undefined)) {
+      expect(folders.filter(hasWorkspaceOnDisk).length).toBeGreaterThan(0)
+    }
     // …and the other way: a run where EVERY folder had one would equally pass while
     // proving the absent case nothing. `status` and `admin` are the sites without —
     // both in adh, and adhmarketing's 31 all carry a workspace, so this half is only
