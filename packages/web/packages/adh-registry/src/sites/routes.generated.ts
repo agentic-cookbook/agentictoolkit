@@ -6,9 +6,10 @@
 //
 // There are several shares because this package is a submodule of every repo that
 // builds part of the fleet — adh, adhmarketing, adhplaceholders,
-// agenticdevelopercookbookwebsite, agenticdeveloperhubwebsite,
-// agenticdeveloperteamwebsite, agenticpersonaregistrywebsite,
-// agenticdevelopertoolkitwebsite — each owning part of
+// agenticdevelopercommunitywebsite, agenticdevelopercookbookwebsite,
+// agenticdeveloperhubwebsite, agenticdeveloperteamwebsite,
+// agenticpersonaregistrywebsite, agenticdevelopertoolkitwebsite —
+// each owning part of
 // it and none able to see the others' site trees. Each repo's
 // `gen-site-routes.py --region <share>` writes its own file whole; nothing writes
 // this one. A single generated file would instead be written by whichever repo ran
@@ -32,6 +33,7 @@
 // load-bearing consumer, not just the flyout above. Do not prune this for being
 // unused outside dev tooling.
 import type { SiteId } from './registry'
+import { SITE_ROUTES_COMMUNITY } from './routes.community.generated'
 import { SITE_ROUTES_COOKBOOK } from './routes.cookbook.generated'
 import { SITE_ROUTES_DEVTEAM } from './routes.devteam.generated'
 import { SITE_ROUTES_HUB } from './routes.hub.generated'
@@ -45,6 +47,7 @@ type Share = Partial<Record<SiteId, readonly string[]>>
 
 /** Every share, keyed by the `--region` argument that regenerates it. */
 export const SITE_ROUTE_SHARES = {
+  community: SITE_ROUTES_COMMUNITY,
   cookbook: SITE_ROUTES_COOKBOOK,
   devteam: SITE_ROUTES_DEVTEAM,
   hub: SITE_ROUTES_HUB,
