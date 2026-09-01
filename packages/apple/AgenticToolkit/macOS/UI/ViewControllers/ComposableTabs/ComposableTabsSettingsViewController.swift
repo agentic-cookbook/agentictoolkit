@@ -187,7 +187,11 @@ private final class ProjectTabsSettingsPanel: ComposableSettings.SettingsPanelVi
 
     @objc private func toggleEdge(_ sender: NSButton) {
         guard Self.edges.indices.contains(sender.tag) else { return }
-        setEdgeEnabled(Self.edges[sender.tag], sender.state == .on)
+        let edge = Self.edges[sender.tag]
+        setEdgeEnabled(edge, sender.state == .on)
+        // The window refuses to turn off its last tab bar, so the checkbox is
+        // re-read rather than left showing a state the window does not have.
+        sender.state = isEdgeEnabled(edge) ? .on : .off
     }
 
 }

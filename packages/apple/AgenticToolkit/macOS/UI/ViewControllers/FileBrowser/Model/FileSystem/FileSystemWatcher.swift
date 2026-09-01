@@ -20,6 +20,16 @@ public final class FileSystemWatcher: @unchecked Sendable {
         self.handler = handler
     }
 
+    /// Whether `path` is an excluded directory or something inside one.
+    ///
+    /// The separator is what makes it "inside": a bare `hasPrefix` on
+    /// `<root>/.git` also swallows `<root>/.gitignore`, `.gitmodules`,
+    /// `.gitattributes` and everything under `.github/` — files the tree shows
+    /// and whose edits it therefore has to hear about.
+    static func isExcluded(_ path: String, by prefixes: [String]) -> Bool {
+        prefixes.contains { path == $0 || path.hasPrefix($0 + "/") }
+    }
+
     public func start() {
         guard streamRef == nil else { return }
 
@@ -32,7 +42,7 @@ public final class FileSystemWatcher: @unchecked Sendable {
 
             let paths = unsafeBitCast(eventPaths, to: NSArray.self) as! [String] // swiftlint:disable:this force_cast
             let filtered = paths.filter { path in
-                !watcher.excludedPrefixes.contains(where: { path.hasPrefix($0) })
+                !FileSystemWatcher.isExcluded(path, by: watcher.excludedPrefixes)
             }
 
             guard !filtered.isEmpty else { return }

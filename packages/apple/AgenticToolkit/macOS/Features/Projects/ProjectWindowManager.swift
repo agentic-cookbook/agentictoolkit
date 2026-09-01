@@ -147,10 +147,17 @@ public final class ProjectWindowManager: ProjectOpening {
     /// builds a fresh window rather than resurrecting a closed one.
     private func observeClose(of controller: ComposableTabsWindowController, repoID: UUID) {
         guard let window = controller.window else { return }
+        // `queue: nil`, not `.main`: a queue makes delivery an *enqueue*, so the
+        // block runs a runloop turn after the close. The scan closes a deleted
+        // project's window and then deletes its row in the same turn, and a
+        // block that lands after that deletes-then-writes — a foreign key that
+        // no longer resolves, and a controller still registered for a project
+        // that is gone. Running on the poster's thread (always the main one,
+        // for a window close) keeps the order the caller wrote.
         closeObservers[repoID] = NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: window,
-            queue: .main
+            queue: nil
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }

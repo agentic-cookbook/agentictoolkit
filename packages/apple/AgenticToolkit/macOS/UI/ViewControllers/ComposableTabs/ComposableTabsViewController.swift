@@ -460,7 +460,27 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         for leaf: ComposableTabsPaneViewController
     ) -> Set<Direction> {
         guard let root = rootSplit() else { return [] }
-        return ComposableTabsMove.availableDirections(for: leaf.nodeID, in: root.snapshotNode())
+        let tree = root.snapshotNode()
+        return ComposableTabsMove.availableDirections(for: leaf.nodeID, in: tree)
+            .filter { direction in
+                guard let moved = ComposableTabsMove.moving(leaf.nodeID, direction, in: tree) else {
+                    return false
+                }
+                return allowsBySpec(moved)
+            }
+    }
+
+    /// Whether the layout would keep every pane it has if it were arranged like
+    /// `tree`.
+    ///
+    /// A move is pure arithmetic on the tree and knows nothing about which
+    /// views a region allows, so a pane can be walked into a subtree whose spec
+    /// does not permit it — where the next load quietly replaces it with a
+    /// placeholder. Asking the spec here is what keeps an offered arrow from
+    /// being a way to lose a pane. No spec means no constraint.
+    private func allowsBySpec(_ tree: LayoutNode) -> Bool {
+        guard let spec = (rootSplit()?.project ?? project)?.layout.spec else { return true }
+        return spec.allows(tree)
     }
 
     /// Moves `leaf` one step in `direction`, or reports that it could not.
@@ -473,7 +493,8 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     public func move(_ leaf: ComposableTabsPaneViewController, _ direction: Direction) -> Bool {
         guard let root = rootSplit(),
               let moved = ComposableTabsMove.moving(
-                leaf.nodeID, direction, in: root.snapshotNode()) else { return false }
+                leaf.nodeID, direction, in: root.snapshotNode()),
+              allowsBySpec(moved) else { return false }
         root.rebuild(from: moved)
         return true
     }

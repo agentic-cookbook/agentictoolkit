@@ -18,10 +18,6 @@ public final class FileBrowserDirectories: ObservableObject {
     /// What the user has added, in the order they added it.
     @Published public private(set) var additional: [URL]
 
-    /// The root the `+`/`−` footer acts on. Set by clicking a root's header, or
-    /// derived from the selected file when the user clicked into a tree.
-    @Published public var selectedRoot: URL?
-
     /// Called with the new `additional` list whenever it changes, so a host can
     /// persist it. Injected rather than reached for: this type has no idea
     /// whether it is backed by a document, defaults, or nothing at all
@@ -52,7 +48,6 @@ public final class FileBrowserDirectories: ObservableObject {
         let standardized = url.standardizedFileURL
         guard !all.contains(standardized) else { return false }
         additional.append(standardized)
-        selectedRoot = standardized
         onChange?(additional)
         return true
     }
@@ -64,7 +59,6 @@ public final class FileBrowserDirectories: ObservableObject {
         let standardized = url.standardizedFileURL
         guard let index = additional.firstIndex(of: standardized) else { return false }
         additional.remove(at: index)
-        if selectedRoot == standardized { selectedRoot = nil }
         onChange?(additional)
         return true
     }

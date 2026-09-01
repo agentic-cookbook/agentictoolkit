@@ -61,6 +61,19 @@ public final class NotesSplitViewController: ThemedSplitViewController {
     override public func viewWillAppear() {
         super.viewWillAppear()
         reload()
+        // The manager loads from storage asynchronously at launch, and a notes
+        // *pane* is on screen before that finishes — it comes up with the
+        // project window rather than because someone asked for it. Reloading
+        // once from an empty manager and never hearing about the load is how a
+        // pane sits blank beside a notes window listing the same notes. The
+        // window already does this when it is shown; the pane is the third host
+        // and the only one that appears unbidden.
+        guard !notesManager.isLoaded else { return }
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            await self.notesManager.loadNotes()
+            self.reload()
+        }
     }
 
     /// Width a notes pane opens at, the first time it is ever shown, in a pane

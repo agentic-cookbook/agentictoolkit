@@ -189,7 +189,7 @@ public final class FileBrowserViewController: NSViewController {
         // `−` is only ever aimed at a root the user added, and which root that
         // is changes with every click in the tree.
         Publishers.Merge(
-            directories.$selectedRoot.map { _ in () },
+            selection.$selectedRoot.map { _ in () },
             directories.$additional.map { _ in () }
         )
         .receive(on: RunLoop.main)
@@ -199,7 +199,7 @@ public final class FileBrowserViewController: NSViewController {
     }
 
     private func updateFooter() {
-        let root = directories.selectedRoot
+        let root = selection.selectedRoot
         let removable = root.map { directories.isRemovable($0) } ?? false
         removeButton.isEnabled = removable
         // Saying *why* the button is off beats an unexplained grey minus.
@@ -239,12 +239,21 @@ public final class FileBrowserViewController: NSViewController {
         // A directory already in the list is not an error worth a dialog: the
         // user asked for it to be there, and it is.
         panel.urls.forEach { directories.add($0) }
+        // The footer aims at what this browser just added — in this browser
+        // only, since the list is the project's but the aim is the pane's.
+        if let added = panel.urls.last?.standardizedFileURL, directories.isRemovable(added) {
+            selection.selectedRoot = added
+        }
     }
 
     /// Removes the root the footer's `−` targets, if it is a removable one.
     @objc public func removeSelectedDirectory() {
-        guard let root = directories.selectedRoot else { NSSound.beep(); return }
-        if !directories.remove(root) { NSSound.beep() }
+        guard let root = selection.selectedRoot else { NSSound.beep(); return }
+        if directories.remove(root) {
+            selection.selectedRoot = nil
+        } else {
+            NSSound.beep()
+        }
     }
 
     /// Rebuilds the manager list to match `directories.all`, reusing the
@@ -268,6 +277,9 @@ public final class FileBrowserViewController: NSViewController {
                selected.path == root.path || selected.path.hasPrefix(root.path + "/") {
                 selection.selectedNode = nil
             }
+            // Nor may the footer keep aiming at a root that is gone — which it
+            // can be because *another* pane of the same project removed it.
+            if selection.selectedRoot == root { selection.selectedRoot = nil }
         }
 
         managersByRoot = rebuilt

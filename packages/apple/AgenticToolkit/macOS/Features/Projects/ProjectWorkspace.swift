@@ -23,6 +23,7 @@ public final class ProjectWorkspace {
     public var layout: ComposableTabsLayout
 
     private var nextPaneNumber = 1
+    private var cachedDirectories: FileBrowserDirectories?
 
     public init(
         repo: GitRepo,
@@ -45,13 +46,17 @@ public final class ProjectWorkspace {
     /// Beside the database, not inside the repository: a project owns no files
     /// in the folder it is about, so nothing it caches can show up in the
     /// user's diff or have to be excluded from its own file tree.
+    /// Answering where it is does not create it: every caller so far only names
+    /// the folder — the file browser excludes it from the tree — and a getter
+    /// that quietly makes a directory on disk (for every project, whether or
+    /// not anything ever caches into it) is a side effect nobody reading
+    /// `project.cacheDirectoryURL` would expect. Whoever writes there first
+    /// creates it (`explicit-over-implicit`).
     public var cacheDirectoryURL: URL {
-        let url = URL(fileURLWithPath: database.databasePath)
+        URL(fileURLWithPath: database.databasePath)
             .deletingLastPathComponent()
             .appendingPathComponent("caches", isDirectory: true)
             .appendingPathComponent(repo.id.uuidString, isDirectory: true)
-        try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
-        return url
     }
 
     /// Picks up a rename or a move without rebuilding the window.
@@ -155,6 +160,31 @@ public final class ProjectWorkspace {
             Self.logger.error("Failed to load project directories: \(error.localizedDescription, privacy: .public)")
             return []
         }
+    }
+
+    /// The roots every file browser pane of this project shows — one object,
+    /// not one per pane.
+    ///
+    /// Each pane used to build its own from a snapshot taken when it was
+    /// created, and each wrote the *whole* list back on any change: a directory
+    /// added in one pane was silently dropped the next time another pane saved
+    /// (`dry` — one representation of the project's roots). Which root a pane's
+    /// footer is aimed at stays per-pane, on `FileBrowserSelection`.
+    public var fileBrowserDirectories: FileBrowserDirectories {
+        // A project that moved has a different primary root, so the cached list
+        // is rebuilt rather than left pointing at the old folder.
+        if let cached = cachedDirectories, cached.primary == directoryURL.standardizedFileURL {
+            return cached
+        }
+        let directories = FileBrowserDirectories(
+            primary: directoryURL,
+            additional: projectDirectories()
+        )
+        directories.onChange = { [weak self] urls in
+            self?.persistProjectDirectories(urls)
+        }
+        cachedDirectories = directories
+        return directories
     }
 
     /// Persists the extra directories. Called whenever the browser's `+`/`−`

@@ -222,6 +222,13 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     /// the edge's members so re-enabling restores them.
     public func setEdgeEnabled(_ edge: Edge, _ enabled: Bool) {
         guard tabbed.isEdgeEnabled(edge) != enabled else { return }
+        // The last enabled edge stays enabled. A window with no tab bar has no
+        // tabs, therefore no panes, and no control anywhere in it to bring one
+        // back — the only way out would be the titlebar settings button
+        // (`principle-of-least-astonishment`).
+        guard enabled || Edge.allCases.contains(where: { $0 != edge && tabbed.isEdgeEnabled($0) }) else {
+            return
+        }
         tabbed.setEdgeEnabled(edge, enabled)
         if enabled {
             topUpTabs(on: edge)
@@ -230,14 +237,18 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     }
 
     /// Gives `edge` one member tab per group so its count matches the
-    /// global tab count.
-    private func topUpTabs(on edge: Edge) {
+    /// global tab count. Returns whether it had to create any.
+    @discardableResult
+    private func topUpTabs(on edge: Edge) -> Bool {
+        var created = false
         for (index, group) in tabGroups.enumerated() where group.members[edge] == nil {
             let id = UUID()
             let split = makeSplitController(for: id)
             tabbed.insertTab(.init(id: id, title: group.title, viewController: split), at: index, on: edge)
             tabGroups[index].members[edge] = id
+            created = true
         }
+        return created
     }
 
     /// Creates a project-level tab: one member per enabled edge, all
@@ -375,13 +386,28 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         }
         // A project saved while an edge was disabled may lack members on a
         // now-enabled edge — restore the global-count invariant.
+        var toppedUp = false
         for edge in Edge.allCases where tabbed.isEdgeEnabled(edge) {
-            topUpTabs(on: edge)
+            toppedUp = topUpTabs(on: edge) || toppedUp
         }
+        // Save what the top-up made. Without this the same members are built
+        // from scratch on every launch — new ids, a default layout, and a fresh
+        // set of panes each time — because nothing ever wrote them down
+        // (`idempotency`).
+        if toppedUp { persistAllTabs() }
+
         if let record = initial.tabs.first(where: { $0.id == initial.activeTabID }) {
             tabbed.selectTab(id: record.id, on: record.edge)
-        } else {
-            tabbed.selectTab(id: initial.activeTabID, on: .top)
+        } else if let fallback = Edge.allCases
+            .filter({ tabbed.isEdgeEnabled($0) })
+            .compactMap({ edge -> (id: UUID, edge: Edge)? in
+                tabbed.tabs(on: edge).first.map { (id: $0.id, edge: edge) }
+            })
+            .first {
+            // The stored active tab is gone, or there never was one. Selecting
+            // the id anyway — on `.top`, an edge that may not even be enabled —
+            // leaves the window with nothing selected and no visible pane.
+            tabbed.selectTab(id: fallback.id, on: fallback.edge)
         }
     }
 

@@ -27,12 +27,24 @@ public enum ProjectReconciler {
     /// settings and layout. The registry is a picture of what is on disk now,
     /// and a list padded with projects that are not there is a list nobody can
     /// use — the browser would have to show rows that cannot be opened
-    /// (`principle-of-least-astonishment`). The cost is real and accepted: a
+    /// (`principle-of-least-astonishment`).
+    ///
+    /// "Does not account for" is checked against disk, not against the scan
+    /// alone. A row the scan missed whose path is still a git repository was
+    /// not lost, it was not looked at: the user added a skip pattern, a parent
+    /// directory turned unreadable, a scan root moved. Deleting on that
+    /// evidence cascades the project's settings, layout, tabs, pane state and
+    /// window frame away with no undo, so such a row is left where it is —
+    /// counted as skipped, and kept out of the move pass, which would otherwise
+    /// re-point it at whatever else happens to share its name.
+    ///
+    /// The cost is still real and accepted for a genuinely absent path: a
     /// project on an unmounted volume is forgotten and comes back as new.
     public static func plan(
         existing: [GitRepo],
         scanned: [ScannedGitRepo],
-        now: Date = Date()
+        now: Date = Date(),
+        isStillARepository: (String) -> Bool = ProjectReconciler.repositoryExists
     ) -> Plan {
         var plan = Plan()
         var byPath: [String: GitRepo] = [:]
@@ -55,7 +67,14 @@ public enum ProjectReconciler {
             plan.summary.unchanged += 1
         }
 
+        // Rows the scan did not report. The ones whose path is still a git
+        // repository were not looked at rather than lost — they are held back
+        // from both the move pass and the delete pass (see the note above).
         var missing = existing.filter { !seenIDs.contains($0.id) }
+        let skippedCount = missing.count
+        missing.removeAll { isStillARepository($0.path) }
+        plan.summary.skipped = skippedCount - missing.count
+
         var claimed = Set<String>()
 
         // Moves first: a moved repository must claim its new path before the
@@ -68,8 +87,17 @@ public enum ProjectReconciler {
                 }
                 return false
             }
+            // A name is only evidence when there is no remote on either side to
+            // disagree about. `~/work/api` and `~/scratch/api` are two different
+            // projects that share a leaf name, and re-pointing one at the other
+            // hands its settings and layout to a stranger — the outcome the
+            // uniqueness rule above exists to prevent. Repositories with remotes
+            // are already matched by the pass above, on evidence that means
+            // something.
             let byName = unmatchedScans.filter { candidate in
                 !claimed.contains(candidate.path)
+                    && (missing[index].remote ?? "").isEmpty
+                    && (candidate.remote ?? "").isEmpty
                     && candidate.leafName == GitRepo.defaultName(forPath: missing[index].path)
             }
             let match = candidates.count == 1 ? candidates.first : (byName.count == 1 ? byName.first : nil)
@@ -105,6 +133,17 @@ public enum ProjectReconciler {
         plan.summary.removed = missing.count
 
         return plan
+    }
+
+    /// Whether `path` still holds a git repository.
+    ///
+    /// `.git` is a directory in an ordinary checkout and a file in a worktree
+    /// or a submodule, so its existence is the whole test. Injected into
+    /// `plan(existing:scanned:now:isStillARepository:)` rather than called from
+    /// it, so the reconciler stays pure and testable without a filesystem
+    /// (`dependency-injection`).
+    public static func repositoryExists(atPath path: String) -> Bool {
+        FileManager.default.fileExists(atPath: (path as NSString).appendingPathComponent(".git"))
     }
 
     /// The directory name, qualified with as many parent segments as it takes

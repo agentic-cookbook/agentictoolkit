@@ -26,11 +26,11 @@ extension ProjectDatabase {
         bindText(stmt, 1, repoID.uuidString)
 
         var tabs: [TabRecord] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        try forEachRow(stmt) {
             guard let idText = columnText(stmt, 0),
                   let id = UUID(uuidString: idText),
                   let rootText = columnText(stmt, 2),
-                  let rootID = UUID(uuidString: rootText) else { continue }
+                  let rootID = UUID(uuidString: rootText) else { return }
             let edge = columnText(stmt, 4).flatMap { Edge(rawValue: $0) } ?? .top
             tabs.append(TabRecord(
                 id: id,
@@ -51,11 +51,16 @@ extension ProjectDatabase {
         bindText(stateStmt, 1, repoID.uuidString)
         var activeTabID: UUID?
         var enabledEdges: [Edge] = [.top]
-        if sqlite3_step(stateStmt) == SQLITE_ROW {
+        if try stepRow(stateStmt) {
             activeTabID = columnText(stateStmt, 0).flatMap { UUID(uuidString: $0) }
-            if let joined = columnText(stateStmt, 1) {
-                enabledEdges = joined.split(separator: ",").compactMap { Edge(rawValue: String($0)) }
-            }
+            // An empty or unparseable column keeps the default rather than
+            // becoming an empty list: a window with no enabled edge has no tab
+            // bar, so it has nowhere to put the control that would bring one
+            // back (`principle-of-least-astonishment`).
+            let stored = columnText(stateStmt, 1)?
+                .split(separator: ",")
+                .compactMap { Edge(rawValue: String($0)) } ?? []
+            if !stored.isEmpty { enabledEdges = stored }
         }
         return (tabs, activeTabID, enabledEdges)
     }
@@ -192,8 +197,8 @@ extension ProjectDatabase {
         }
         bindText(stmt, 1, repoID.uuidString)
         var rows: [UUID: NodeRow] = [:]
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            guard let idText = columnText(stmt, 0), let id = UUID(uuidString: idText) else { continue }
+        try forEachRow(stmt) {
+            guard let idText = columnText(stmt, 0), let id = UUID(uuidString: idText) else { return }
             rows[id] = NodeRow(
                 id: id,
                 parentID: columnText(stmt, 1).flatMap { UUID(uuidString: $0) },
@@ -300,8 +305,8 @@ extension ProjectDatabase {
         }
         bindText(stmt, 1, repoID.uuidString)
         var paths: [String] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            guard let path = columnText(stmt, 0) else { continue }
+        try forEachRow(stmt) {
+            guard let path = columnText(stmt, 0) else { return }
             paths.append(path)
         }
         return paths

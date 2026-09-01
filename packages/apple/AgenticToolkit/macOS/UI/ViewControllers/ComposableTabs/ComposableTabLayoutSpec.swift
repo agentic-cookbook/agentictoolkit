@@ -292,6 +292,24 @@ public struct ComposableTabLayoutSpec: Sendable {
     /// forbids. Offending leaves become placeholders rather than being deleted,
     /// because the shape of the layout is the user's and the content is ours.
     public func reconcile(_ tree: LayoutNode) -> LayoutNode {
+        let demoted = demotedLeaves(in: tree)
+        guard !demoted.isEmpty else { return tree }
+        return Self.demoting(tree, leaves: demoted)
+    }
+
+    /// Whether this spec would leave `tree` exactly as it is — nothing in it
+    /// for `reconcile(_:)` to demote.
+    ///
+    /// The question a rearrangement has to ask before it commits: moving a pane
+    /// can land it in a region whose spec does not allow that view, and a tree
+    /// the user is looking at which the next load will gut is worse than an
+    /// arrow that was never offered (`fail-fast`).
+    public func allows(_ tree: LayoutNode) -> Bool {
+        demotedLeaves(in: tree).isEmpty
+    }
+
+    /// The leaves `reconcile(_:)` would turn into placeholders.
+    private func demotedLeaves(in tree: LayoutNode) -> Set<UUID> {
         let resolution = Resolution(spec: self, tree: tree)
         var budget: [ResolutionPath: [ComposableTabsViewID: Int]] = [:]
         var demoted: Set<UUID> = []
@@ -314,8 +332,7 @@ public struct ComposableTabLayoutSpec: Sendable {
             }
         }
 
-        guard !demoted.isEmpty else { return tree }
-        return Self.demoting(tree, leaves: demoted)
+        return demoted
     }
 
     private static func demoting(_ node: LayoutNode, leaves: Set<UUID>) -> LayoutNode {
@@ -392,9 +409,18 @@ private struct Resolution {
         case .leaf:
             chainsByLeafID[node.id] = extended
         case .split(_, let first, let second):
-            if case .split(_, let children) = spec.kind, children.count >= 2 {
+            if case .split(let axis, let children) = spec.kind, children.count >= 2 {
                 walk(first, spec: children[0], path: path + [0], chain: extended)
-                walk(second, spec: children[1], path: path + [1], chain: extended)
+                // `blueprint()` right-chains three or more children into the
+                // binary shape the live tree has, so the *second* half of a
+                // split with a tail is the rest of the chain — not `children[1]`
+                // alone. Pairing it with `children[1]` handed that pane's rules
+                // to every node in the tail (`dry` — one description of the
+                // chaining, mirrored here rather than restated differently).
+                let tail = children.count == 2
+                    ? children[1]
+                    : ComposableTabLayoutSpec.split(axis: axis, children: Array(children.dropFirst()))
+                walk(second, spec: tail, path: path + [1], chain: extended)
             } else {
                 // The live tree grew past the template: everything below stays
                 // governed by the spec node it grew out of.

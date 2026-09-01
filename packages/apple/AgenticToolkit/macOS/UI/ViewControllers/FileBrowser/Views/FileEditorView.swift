@@ -8,10 +8,10 @@ import os
 
 /// Shows whatever the file tree has selected.
 ///
-/// Text files open in an editable, syntax-highlighted source editor (Cmd+S to
-/// save, dirty state tracked). Everything else — images, PDFs, movies — goes to
-/// QuickLook, so clicking a file shows the file rather than an apology
-/// (`principle-of-least-astonishment`).
+/// Text files open in an editable, syntax-highlighted source editor; edits are
+/// written back when the selection moves off the file. Everything else —
+/// images, PDFs, movies — goes to QuickLook, so clicking a file shows the file
+/// rather than an apology (`principle-of-least-astonishment`).
 ///
 /// Colors and font come from the app theme in the environment, so the editor
 /// follows a theme switch like the rest of the UI and there is no second
@@ -20,23 +20,46 @@ public struct FileEditorView: View {
     /// The currently selected file tree node, or `nil` if nothing is selected.
     public let selectedNode: FileTreeNode?
 
+    /// Owned here rather than inside the content view. Selecting a directory
+    /// or nothing switches which branch of `body` exists, and SwiftUI destroys
+    /// the branch it leaves — taking a `@StateObject` living in it, and with it
+    /// any unsaved edits, before anything had a chance to write them
+    /// (`explicit-over-implicit` about who owns the open file).
+    @StateObject private var editorState = EditorState()
+
     public init(selectedNode: FileTreeNode?) {
         self.selectedNode = selectedNode
     }
 
+    /// Whether the selection is something the editor can open at all.
+    private var openableNode: FileTreeNode? {
+        guard let node = selectedNode, !node.isDirectory, !node.isPackage else { return nil }
+        return node
+    }
+
     public var body: some View {
         Group {
-            if let node = selectedNode {
-                if node.isDirectory || node.isPackage {
-                    EditorPlaceholderView(message: "Select a file to view its contents")
-                } else {
-                    FileEditorContentView(node: node)
-                }
+            if openableNode != nil {
+                FileEditorContentView(editorState: editorState)
             } else {
                 EditorPlaceholderView(message: "Select a file to view its contents")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onAppear { showSelection() }
+        .onChange(of: selectedNode) { showSelection() }
+    }
+
+    /// Writes back whatever was open, then opens what is selected now. Both
+    /// halves run for every selection change, including the ones that show no
+    /// editor at all — that is the case the old placement could not cover.
+    private func showSelection() {
+        editorState.save()
+        if let node = openableNode {
+            editorState.load(from: node.url)
+        } else {
+            editorState.unload()
+        }
     }
 }
 
@@ -66,14 +89,10 @@ private struct EditorPlaceholderView: View {
 
 /// Loads the file and shows it the way `FilePreviewLoader` classified it.
 private struct FileEditorContentView: View {
-    public let node: FileTreeNode
+    /// Observed, not owned: the state outlives this view (see `FileEditorView`).
+    @ObservedObject var editorState: EditorState
 
     @Environment(\.themePalette) private var appPalette
-    @StateObject private var editorState = EditorState()
-
-    public init(node: FileTreeNode) {
-        self.node = node
-    }
 
     private var language: CodeLanguage {
         LanguageDetection.language(for: editorState.currentURL ?? URL(fileURLWithPath: "/untitled"))
@@ -116,16 +135,6 @@ private struct FileEditorContentView: View {
                 EditorPlaceholderView(message: "Cannot open this file")
             }
         }
-        .onAppear {
-            editorState.load(from: node.url)
-        }
-        .onChange(of: node) {
-            // Save current file if modified before switching
-            if editorState.isModified {
-                editorState.save()
-            }
-            editorState.load(from: node.url)
-        }
     }
 }
 
@@ -155,8 +164,15 @@ private final class EditorState: ObservableObject {
     /// The current text content displayed in the editor.
     @Published public var content: String = ""
 
-    /// Whether the content has been modified since the last save or load.
-    @Published public var isModified: Bool = false
+    /// Whether the editor's text differs from what is on disk.
+    ///
+    /// Computed rather than tracked. The stored flag it replaces was driven by
+    /// a `$content` sink, and `@Published` fires in `willSet` — so the sink
+    /// compared the *incoming* file's text against the *previous* file's saved
+    /// content and latched true on every load. Combined with QuickLook files
+    /// leaving `content` empty, that latch is what let `save()` write an empty
+    /// string over a PNG on the way out. A comparison cannot go stale.
+    public var isModified: Bool { display == .text && content != savedContent }
 
     /// Monotonic counter incremented on each load, used as `.id()` to force SourceEditor recreation.
     @Published public var loadGeneration: Int = 0
@@ -174,20 +190,6 @@ private final class EditorState: ObservableObject {
     /// file can't land on top of a newer one.
     private var loadTask: Task<Void, Never>?
 
-    /// Combine subscription for dirty tracking.
-    private var cancellables = Set<AnyCancellable>()
-
-    public init() {
-        // Track content changes for dirty state via Combine
-        $content
-            .dropFirst()
-            .sink { [weak self] newValue in
-                guard let self = self else { return }
-                self.isModified = (newValue != self.savedContent)
-            }
-            .store(in: &cancellables)
-    }
-
     deinit {
         loadTask?.cancel()
     }
@@ -196,8 +198,9 @@ private final class EditorState: ObservableObject {
     public func load(from url: URL) {
         loadTask?.cancel()
 
+        guard url != currentURL else { return }
+
         currentURL = url
-        isModified = false
         display = .loading
         sourceEditorState = SourceEditorState()
 
@@ -226,15 +229,28 @@ private final class EditorState: ObservableObject {
         }
     }
 
+    /// Forgets the current file, after any pending save. The selection has
+    /// moved to a directory or to nothing, and a state still pointing at a file
+    /// nobody is looking at is a file a later save could land on.
+    public func unload() {
+        loadTask?.cancel()
+        currentURL = nil
+        content = ""
+        savedContent = ""
+        display = .loading
+    }
+
     /// Saves the current content back to disk.
     public func save() {
         guard let url = currentURL else { return }
+        // `isModified` is false for anything that is not text, so a QuickLook
+        // preview's empty `content` can never be written over the file it is
+        // previewing.
         guard isModified else { return }
 
         do {
             try content.write(to: url, atomically: true, encoding: .utf8)
             savedContent = content
-            isModified = false
             logger.info("Saved file: \(url.lastPathComponent, privacy: .public)")
         } catch {
             logger.error("Failed to save file: \(error.localizedDescription, privacy: .public)")

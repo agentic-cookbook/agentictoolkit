@@ -154,31 +154,48 @@ public final class ProjectsCoordinator: AppFeature {
 
     private func finishScan(found: [ScannedGitRepo]) {
         let plan = ProjectReconciler.plan(existing: repos, scanned: found)
-        do {
-            for repo in plan.inserts { try database.insert(repo) }
-            for repo in plan.updates { try database.update(repo) }
-            // Windows close first: closing one writes to the row it belongs
-            // to, which after the delete is a foreign key that no longer
-            // resolves.
-            for repo in plan.deletes { opener?.closeProject(repoID: repo.id) }
-            for repo in plan.deletes {
-                try database.delete(id: repo.id)
-                // The rows cascade; the window frame does not — it lives in
-                // `UserDefaults` under an id nothing else will ever ask for
-                // again, so it is cleared here or it is leaked forever.
-                let windowID = ComposableTabsWindowController.windowID(for: repo.id)
-                WindowManager.shared.frames.clearSavedState(for: windowID)
-                WindowManager.shared.frames.clearVisibility(for: windowID)
+        var summary = plan.summary
+
+        // Each row is applied on its own. One failed write used to abandon
+        // every row after it while the summary still claimed the whole plan had
+        // been applied, so the registry and what the user was told disagreed
+        // (`fail-fast`: report what actually happened, per row).
+        for repo in plan.inserts {
+            do { try database.insert(repo) } catch {
+                summary.added -= 1
+                Self.logger.error("Could not add \(repo.path, privacy: .public): \(error)")
             }
-        } catch {
-            Self.logger.error("Could not apply scan results: \(error)")
+        }
+        for repo in plan.updates {
+            do { try database.update(repo) } catch {
+                Self.logger.error("Could not update \(repo.path, privacy: .public): \(error)")
+            }
+        }
+        // Windows close first: closing one writes to the row it belongs
+        // to, which after the delete is a foreign key that no longer
+        // resolves.
+        for repo in plan.deletes { opener?.closeProject(repoID: repo.id) }
+        for repo in plan.deletes {
+            do {
+                try database.delete(id: repo.id)
+            } catch {
+                summary.removed -= 1
+                Self.logger.error("Could not remove \(repo.path, privacy: .public): \(error)")
+                continue
+            }
+            // The rows cascade; the window frame does not — it lives in
+            // `UserDefaults` under an id nothing else will ever ask for
+            // again, so it is cleared here or it is leaked forever.
+            let windowID = ComposableTabsWindowController.windowID(for: repo.id)
+            WindowManager.shared.frames.clearSavedState(for: windowID)
+            WindowManager.shared.frames.clearVisibility(for: windowID)
         }
 
-        lastScanSummary = plan.summary
+        lastScanSummary = summary
         isScanning = false
         reload()
 
-        Self.logger.info("Scan complete: \(plan.summary.summaryText, privacy: .public)")
+        Self.logger.info("Scan complete: \(summary.summaryText, privacy: .public)")
         progressWindow?.finish()
         progressWindow = nil
     }

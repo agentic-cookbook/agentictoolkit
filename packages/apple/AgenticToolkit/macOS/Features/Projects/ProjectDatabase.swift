@@ -32,9 +32,13 @@ public final class ProjectDatabase {
     /// A dotfolder in the home directory rather than Application Support: this
     /// is the same registry the command line tools read, and asking someone to
     /// type a path with two spaces in it is a hostile default.
-    public static func defaultPath() -> String {
+    /// - Parameter home: The home directory to hang it off. Defaults to the
+    ///   user's; a test passes a temporary one so a run cannot edit the
+    ///   developer's own registry (`homeDirectoryForCurrentUser` ignores
+    ///   `$HOME`, so there is no ambient way to redirect this).
+    public static func defaultPath(inHome home: URL = FileManager.default.homeDirectoryForCurrentUser) -> String {
         let appName = (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String) ?? "AgenticToolkit"
-        return FileManager.default.homeDirectoryForCurrentUser
+        return home
             .appendingPathComponent(".\(appName.lowercased())")
             .appendingPathComponent("\(appName).db")
             .path
@@ -66,6 +70,11 @@ public final class ProjectDatabase {
         }
         try execute("PRAGMA journal_mode=WAL")
         try execute("PRAGMA foreign_keys=ON")
+        // WAL allows one writer at a time, and this file has more than one
+        // connection on it — the notes store opens the same database. Without a
+        // busy timeout the loser of a race gets `SQLITE_BUSY` immediately, which
+        // surfaces as a lost save rather than a wait.
+        sqlite3_busy_timeout(database, 5_000)
     }
 
     /// Flushes the WAL into the main file so a file-level copy captures every
@@ -101,7 +110,9 @@ public final class ProjectDatabase {
         guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
             throw ProjectDatabaseError.prepareFailed(lastErrorMessage)
         }
-        guard sqlite3_step(stmt) == SQLITE_ROW else { return 0 }
+        // Not `?? 0`: a read that failed rather than found nothing would report
+        // a fresh database and re-run every migration over a populated one.
+        guard try stepRow(stmt) else { return 0 }
         return Int(sqlite3_column_int(stmt, 0))
     }
 
@@ -311,10 +322,10 @@ public final class ProjectDatabase {
         }
         bind?(stmt)
         var repos: [GitRepo] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
+        try forEachRow(stmt) {
             guard let idText = columnText(stmt, 0),
                   let id = UUID(uuidString: idText),
-                  let path = columnText(stmt, 1) else { continue }
+                  let path = columnText(stmt, 1) else { return }
             repos.append(GitRepo(
                 id: id,
                 path: path,
@@ -344,8 +355,8 @@ public final class ProjectDatabase {
         }
         bindText(stmt, 1, repoID.uuidString)
         var result: [String: String] = [:]
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            guard let key = columnText(stmt, 0), let value = columnText(stmt, 1) else { continue }
+        try forEachRow(stmt) {
+            guard let key = columnText(stmt, 0), let value = columnText(stmt, 1) else { return }
             result[key] = value
         }
         return result
@@ -360,7 +371,7 @@ public final class ProjectDatabase {
         }
         bindText(stmt, 1, repoID.uuidString)
         bindText(stmt, 2, key)
-        guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+        guard try stepRow(stmt) else { return nil }
         return columnText(stmt, 0)
     }
 
@@ -416,6 +427,35 @@ public final class ProjectDatabase {
         }
     }
 
+    /// Steps `stmt` to exhaustion, calling `row` once per result row.
+    ///
+    /// The obvious `while sqlite3_step(stmt) == SQLITE_ROW` ends on anything
+    /// that is not a row, and `SQLITE_BUSY` is not a row: a locked database
+    /// would end the loop early and be indistinguishable from a short answer.
+    /// Every caller here writes back what it read, so a truncated read becomes
+    /// a truncated table. Anything but ROW or DONE is raised (`fail-fast`).
+    func forEachRow(_ stmt: OpaquePointer?, _ row: () throws -> Void) throws {
+        while true {
+            let status = sqlite3_step(stmt)
+            if status == SQLITE_DONE { return }
+            guard status == SQLITE_ROW else {
+                throw ProjectDatabaseError.executionFailed(lastErrorMessage)
+            }
+            try row()
+        }
+    }
+
+    /// Steps once, keeping "there is no such row" and "the read failed" apart.
+    @discardableResult
+    func stepRow(_ stmt: OpaquePointer?) throws -> Bool {
+        let status = sqlite3_step(stmt)
+        if status == SQLITE_ROW { return true }
+        guard status == SQLITE_DONE else {
+            throw ProjectDatabaseError.executionFailed(lastErrorMessage)
+        }
+        return false
+    }
+
     /// SQLite keeps the pointer, so the string has to outlive the bind call —
     /// which is what `SQLITE_TRANSIENT` asks it to copy. Every text bind in
     /// this file goes through here so none of them can forget.
@@ -451,7 +491,7 @@ public final class ProjectDatabase {
             throw ProjectDatabaseError.prepareFailed(lastErrorMessage)
         }
         bind?(stmt)
-        guard sqlite3_step(stmt) == SQLITE_ROW else { return nil }
+        guard try stepRow(stmt) else { return nil }
         return columnText(stmt, 0)
     }
 

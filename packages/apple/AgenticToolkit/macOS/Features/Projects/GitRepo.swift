@@ -68,13 +68,15 @@ public struct ProjectScanSummary: Sendable, Equatable {
     /// Rows the scan deleted because nothing it found on disk accounts for them.
     public var removed: Int = 0
     public var unchanged: Int = 0
+    /// Rows the scan did not report but which are still git repositories on
+    /// disk — kept, because the scan not looking is not the same as the
+    /// project being gone.
+    public var skipped: Int = 0
 
     public init() {}
 
-    /// Every project in the registry once the scan has been applied. A row the
-    /// scan did not find is deleted rather than kept aside, so this is also
-    /// exactly what is on disk.
-    public var found: Int { added + moved + unchanged }
+    /// Every project in the registry once the scan has been applied.
+    public var found: Int { added + moved + unchanged + skipped }
 
     /// One line for the log, and for the progress window before it closes.
     public var summaryText: String {
@@ -82,6 +84,7 @@ public struct ProjectScanSummary: Sendable, Equatable {
         if added > 0 { parts.append("\(added) new") }
         if moved > 0 { parts.append("\(moved) moved") }
         if removed > 0 { parts.append("\(removed) removed") }
+        if skipped > 0 { parts.append("\(skipped) not scanned") }
         let headline = "\(found) project\(found == 1 ? "" : "s")"
         if parts.isEmpty { return headline + ", no changes" }
         return headline + " — " + parts.joined(separator: ", ")

@@ -17,7 +17,18 @@ public final class FileBrowserSelection: ObservableObject {
     /// show is the viewer's job, not the tree's.
     @Published public var selectedNode: FileTreeNode?
 
-    public init(selectedNode: FileTreeNode? = nil) {
+    /// The root the `+`/`−` footer acts on. Set by clicking a root's header, or
+    /// derived from the selected file when the user clicked into a tree.
+    ///
+    /// Here rather than on `FileBrowserDirectories` because it is a fact about
+    /// *this browser*, not about the project: the root list is shared by every
+    /// browser pane of a project, and two panes highlighting each other's
+    /// clicks would be the surprise (`srp` — the list and the pointer into it
+    /// answer to different actors).
+    @Published public var selectedRoot: URL?
+
+    public init(selectedNode: FileTreeNode? = nil, selectedRoot: URL? = nil) {
         self.selectedNode = selectedNode
+        self.selectedRoot = selectedRoot
     }
 }

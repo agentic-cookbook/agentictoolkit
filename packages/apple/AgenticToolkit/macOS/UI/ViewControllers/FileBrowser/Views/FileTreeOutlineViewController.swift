@@ -39,10 +39,22 @@ final class FileTreeOutlineViewController: NSViewController {
     /// pointer, and a fresh one every call would collapse the row on reload).
     private var placeholders: [URL: Placeholder] = [:]
 
-    /// One subscription per directory whose contents are being read, so the row
-    /// redraws when they land. Keyed by node id, because a scan re-reading a
-    /// directory hands back the same node.
-    private var childWatchers: [String: AnyCancellable] = [:]
+    /// A directory's `$children` subscription, with the object it was made for.
+    ///
+    /// The node is held weakly and compared by identity: a node id is a path,
+    /// and the same path can come back as a *different* object — `merge` only
+    /// re-uses the ones whose id survived, and `loadChildrenIfNeeded` replaces
+    /// the list outright. A watcher left pointing at the old object never fires
+    /// for the row the outline is actually drawing.
+    private struct ChildWatcher {
+        weak var node: FileTreeNode?
+        let subscription: AnyCancellable
+    }
+
+    /// One subscription per expanded directory, so the row redraws when its
+    /// contents land. Dropped on collapse, which is what keeps this from
+    /// accumulating every directory ever opened.
+    private var childWatchers: [String: ChildWatcher] = [:]
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -123,7 +135,7 @@ final class FileTreeOutlineViewController: NSViewController {
         // file assigns the root it already lives under, and `@Published`
         // republishes an unchanged value, so without this every click in the
         // tree rebuilt the tree it had just been made in.
-        directories.$selectedRoot
+        selection.$selectedRoot
             .removeDuplicates()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in self?.reloadPreservingSelection() }
@@ -169,8 +181,8 @@ final class FileTreeOutlineViewController: NSViewController {
     /// Watches one directory's contents so the rows appear when the read that
     /// `loadChildrenIfNeeded()` started finishes.
     private func watchChildren(of node: FileTreeNode) {
-        guard childWatchers[node.id] == nil else { return }
-        childWatchers[node.id] = node.$children
+        guard childWatchers[node.id]?.node !== node else { return }
+        let subscription = node.$children
             .dropFirst()
             .receive(on: RunLoop.main)
             .sink { [weak self] _ in
@@ -190,6 +202,7 @@ final class FileTreeOutlineViewController: NSViewController {
                 // step down the tree.
                 self.restoreDisclosure()
             }
+        childWatchers[node.id] = ChildWatcher(node: node, subscription: subscription)
     }
 
     /// `reloadData` throws away the selection, and a git-status refresh runs it
@@ -252,6 +265,34 @@ final class FileTreeOutlineViewController: NSViewController {
             selection.selectedNode = node
             return
         }
+
+        // Not drawn. If the folder that would hold it *is* drawn, is open, and
+        // has finished reading its contents, then the file is not there any
+        // more — deleted or renamed since the last launch — and the request is
+        // dropped. It has to be: while it stands, the selection sink treats
+        // every choice the user makes as "the restore is still running" and
+        // persists none of them, for the life of the pane.
+        let parent = (wanted as NSString).deletingLastPathComponent
+        guard let parentRow = outline.item(atRow: self.row(forPath: parent)) else { return }
+        if outline.isItemExpanded(parentRow), hasReadChildren(parentRow) {
+            pendingSelectionPath = nil
+        }
+    }
+
+    /// Whether `item`'s contents have arrived, as opposed to merely being on
+    /// their way. An empty `children` array is `FileTreeNode`'s "expandable,
+    /// not read yet" — `childrenLoaded` is set when the read *starts*, so it
+    /// cannot answer this.
+    private func hasReadChildren(_ item: Any) -> Bool {
+        switch item {
+        case let manager as FileTreeManager:
+            guard let root = manager.rootNode else { return false }
+            return hasReadChildren(root)
+        case let node as FileTreeNode:
+            return !(node.children?.isEmpty ?? false)
+        default:
+            return false
+        }
     }
 
     /// How a row is named in stored state: its path on disk, the one identity
@@ -271,12 +312,29 @@ final class FileTreeOutlineViewController: NSViewController {
     /// showing a file the tree no longer lists (`fail-fast`).
     private func reselect(_ item: Any?) {
         guard let item else { return }
-        let row = outline.row(forItem: item)
+        var row = outline.row(forItem: item)
+        // `row(forItem:)` matches on pointer identity, and the same file can
+        // come back as a different node object whenever a directory is re-read.
+        // Falling back to the path is what tells "this file is gone" apart from
+        // "this file is now a different object" — without it, ordinary refresh
+        // churn cleared the selection and persisted that as the user's answer.
+        if row < 0, let path = path(of: item) {
+            row = self.row(forPath: path)
+        }
         if row >= 0 {
             outline.selectRowIndexes(IndexSet(integer: row), byExtendingSelection: false)
         } else if item is FileTreeNode {
             selection.selectedNode = nil
         }
+    }
+
+    /// The row currently drawing `path`, or `-1`.
+    private func row(forPath path: String) -> Int {
+        for row in 0..<outline.numberOfRows {
+            guard let item = outline.item(atRow: row), self.path(of: item) == path else { continue }
+            return row
+        }
+        return -1
     }
 
     /// Puts the outline on `node`, for a selection that was set from outside —
@@ -369,7 +427,14 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
     }
 
     func outlineView(_ outlineView: NSOutlineView, child index: Int, ofItem item: Any?) -> Any {
-        children(of: item)[index]
+        let children = children(of: item)
+        // AppKit asks for the count and for each child in separate calls, and a
+        // directory being re-read can shrink the list in between. That is a
+        // stale question, not a programmer error, so it is answered with a
+        // throwaway row instead of a crash — the reload that the change is
+        // about to trigger redraws it.
+        guard children.indices.contains(index) else { return Placeholder("") }
+        return children[index]
     }
 
     func outlineView(_ outlineView: NSOutlineView, isItemExpandable item: Any) -> Bool {
@@ -397,9 +462,13 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
     }
 
     func outlineViewItemDidCollapse(_ notification: Notification) {
-        guard !isSyncingExpansion,
-              let item = notification.userInfo?["NSObject"],
+        guard let item = notification.userInfo?["NSObject"],
               let path = path(of: item) else { return }
+        // A closed folder draws no rows, so nothing needs redrawing when its
+        // contents change. `outlineViewItemWillExpand` re-subscribes if it is
+        // opened again.
+        if let node = item as? FileTreeNode { childWatchers[node.id] = nil }
+        guard !isSyncingExpansion else { return }
         restoration.setExpanded(false, path: path)
     }
 
@@ -419,7 +488,7 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
         let palette = ThemePaletteObserver.currentPalette
         switch item {
         case let manager as FileTreeManager:
-            let isTarget = directories.selectedRoot == manager.repoRootURL
+            let isTarget = selection.selectedRoot == manager.repoRootURL
             let label = ThemedLabel(
                 string: manager.repoRootURL.lastPathComponent,
                 role: isTarget ? .primaryText : .secondaryText,
@@ -444,7 +513,7 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
         let item = outline.item(atRow: outline.selectedRow)
 
         if let manager = item as? FileTreeManager {
-            directories.selectedRoot = manager.repoRootURL
+            selection.selectedRoot = manager.repoRootURL
             return
         }
 
@@ -453,7 +522,7 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
         // Clicking a file is also how you say which directory you mean, so the
         // footer's target follows the tree rather than needing its own click.
         if let url = node?.url, let root = directories.root(containing: url) {
-            directories.selectedRoot = root
+            selection.selectedRoot = root
         }
     }
 }

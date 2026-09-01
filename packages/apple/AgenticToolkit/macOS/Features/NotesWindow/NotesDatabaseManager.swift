@@ -70,22 +70,32 @@ public final class NotesDatabaseManager: NoteStorage {
     }
 
     /// `<AppSupport>/<CFBundleName>/notes.db` — e.g. `~/Library/Application Support/Whippet/notes.db`.
+    ///
+    /// Answers where the file *would* be without creating anything, so a host
+    /// can ask about a store it has moved away from (see
+    /// `importNotes(fromDatabaseAt:)`) without conjuring an empty folder for a
+    /// database nobody is going to open. `openDatabase()` makes the directory.
     static public func defaultDatabasePath() throws -> String {
         let appSupport = FileManager.default.urls(
             for: .applicationSupportDirectory,
             in: .userDomainMask
         ).first!
         let appName = (Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String) ?? "AgenticToolkit"
-        let directory = appSupport.appendingPathComponent(appName)
-
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-
-        return directory.appendingPathComponent("notes.db").path
+        return appSupport
+            .appendingPathComponent(appName)
+            .appendingPathComponent("notes.db")
+            .path
     }
 
     // MARK: - Connection
 
     private func openDatabase() throws {
+        // SQLite will not create a missing directory, and the path may name one
+        // — the default does.
+        try FileManager.default.createDirectory(
+            at: URL(fileURLWithPath: dbPath).deletingLastPathComponent(),
+            withIntermediateDirectories: true
+        )
         // FULLMUTEX (serialized mode): SQLite handles thread-safety internally.
         let result = sqlite3_open_v2(
             dbPath, &database,
@@ -158,6 +168,57 @@ public final class NotesDatabaseManager: NoteStorage {
         try execute("INSERT INTO \(Self.migrationsTable) (version) VALUES (1)")
     }
 
+    // MARK: - Importing an older store
+
+    /// Copies every note out of a database file this app used to keep notes in.
+    ///
+    /// A host that moves its store — Whippet moved from
+    /// `<AppSupport>/Whippet/notes.db` into the one database it keeps beside
+    /// the project registry — leaves the old file sitting there with the user's
+    /// notes in it. Nothing else knows it exists, so without this an upgrade is
+    /// indistinguishable from a wiped note list.
+    ///
+    /// Rows already here win: the copy is `INSERT OR IGNORE` keyed by note id,
+    /// so running it against a store that already has the notes changes
+    /// nothing (`idempotency`). Missing file, or a file with no `notes` table,
+    /// is not an error — there is simply nothing to import.
+    ///
+    /// - Returns: how many notes were copied.
+    @discardableResult
+    public func importNotes(fromDatabaseAt path: String) throws -> Int {
+        try queue.sync { try _importNotes(fromDatabaseAt: path) }
+    }
+
+    private func _importNotes(fromDatabaseAt path: String) throws -> Int {
+        guard FileManager.default.fileExists(atPath: path) else { return 0 }
+
+        try executeBinding("ATTACH DATABASE ? AS legacy_notes", text: path)
+        // Detaching cannot usefully fail here, and its failure must not
+        // mask whatever the import itself is throwing.
+        defer { _ = try? execute("DETACH DATABASE legacy_notes") }
+
+        guard try legacyHasNotesTable() else { return 0 }
+
+        try execute("""
+            INSERT OR IGNORE INTO main.notes (id, title, content, created_date, modified_date, is_pinned)
+            SELECT id, title, content, created_date, modified_date, is_pinned FROM legacy_notes.notes
+            """)
+        let imported = Int(sqlite3_changes(database))
+        logger.info("Imported \(imported) note(s) from \(path, privacy: .public)")
+        return imported
+    }
+
+    private func legacyHasNotesTable() throws -> Bool {
+        let sql = "SELECT COUNT(*) FROM legacy_notes.sqlite_master WHERE type = 'table' AND name = 'notes'"
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw NotesDatabaseError.prepareFailed(lastErrorMessage)
+        }
+        guard sqlite3_step(stmt) == SQLITE_ROW else { return false }
+        return sqlite3_column_int(stmt, 0) > 0
+    }
+
     // MARK: - SQL Helpers
 
     private var lastErrorMessage: String {
@@ -178,6 +239,20 @@ public final class NotesDatabaseManager: NoteStorage {
             throw NotesDatabaseError.executionFailed(message)
         }
         return result
+    }
+
+    /// Runs a statement with one bound text value — for the statements whose
+    /// argument is a path, which cannot be spliced into SQL safely.
+    private func executeBinding(_ sql: String, text: String) throws {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        guard sqlite3_prepare_v2(database, sql, -1, &stmt, nil) == SQLITE_OK else {
+            throw NotesDatabaseError.prepareFailed(lastErrorMessage)
+        }
+        sqlite3_bind_text(stmt, 1, text, -1, NotesDatabaseManager.sqliteTransient)
+        guard sqlite3_step(stmt) == SQLITE_DONE else {
+            throw NotesDatabaseError.executionFailed(lastErrorMessage)
+        }
     }
 
     // MARK: - NoteStorage
