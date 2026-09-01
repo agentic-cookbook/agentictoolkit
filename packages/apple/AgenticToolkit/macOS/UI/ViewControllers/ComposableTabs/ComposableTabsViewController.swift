@@ -104,6 +104,10 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
 
     private var splitResizeObserver: NSObjectProtocol?
 
+    /// Keeps the gutters live: `dividerThickness` is computed from the setting,
+    /// so something has to tell AppKit the answer moved.
+    private var spacingObservers: [UserSettingObserver<Int>] = []
+
     /// Callback the host (e.g. window controller) installs on the *root*
     /// `ComposableTabsViewController` of each tab. Fires whenever a layout
     /// change happens that should be persisted, with a fresh snapshot of
@@ -160,11 +164,21 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         }
     }
 
+    /// Panes are separated by a gap the user sets, not by AppKit's seam — see
+    /// `PaneSplitView`.
+    public override func makeSplitView() -> ThemedSplitView { PaneSplitView() }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
 
         splitView.isVertical = (axis == .horizontal)
         splitView.dividerStyle = .thin
+
+        spacingObservers = PaneSpacing.gutterSettings.values.map { setting in
+            UserSettingObserver(setting) { [weak self] _ in
+                (self?.splitView as? PaneSplitView)?.spacingDidChange()
+            }
+        }
 
         for child in layoutChildren {
             addSplitViewItem(makeItem(for: child.viewController))
@@ -218,6 +232,30 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             }
             offset += thickness
         }
+    }
+
+    /// A gutter set to zero would otherwise be a divider with no grab area —
+    /// an arrangement the mouse cannot undo. The drawn gap stays exactly what
+    /// was asked for; only the region that responds to a drag is widened.
+    public override func splitView(
+        _ splitView: NSSplitView,
+        effectiveRect proposedEffectiveRect: NSRect,
+        forDrawnRect drawnRect: NSRect,
+        ofDividerAt dividerIndex: Int
+    ) -> NSRect {
+        let base = super.splitView(
+            splitView,
+            effectiveRect: proposedEffectiveRect,
+            forDrawnRect: drawnRect,
+            ofDividerAt: dividerIndex
+        )
+        let grab = PaneSpacing.minimumDividerGrab
+        if splitView.isVertical {
+            guard base.width < grab else { return base }
+            return base.insetBy(dx: -(grab - base.width) / 2, dy: 0)
+        }
+        guard base.height < grab else { return base }
+        return base.insetBy(dx: 0, dy: -(grab - base.height) / 2)
     }
 
     private func thickness(of view: NSView) -> CGFloat {

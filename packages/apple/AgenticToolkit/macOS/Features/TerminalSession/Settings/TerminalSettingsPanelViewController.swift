@@ -10,10 +10,6 @@ import AgenticToolkitCore
 @MainActor
 public final class TerminalSettingsPanelViewController: ComposableSettings.SettingsPanelViewController {
 
-    /// Width of the padding column's labels, so "Top" and "Bottom" end at the
-    /// same place and the four fields line up under each other.
-    private static let paddingLabelWidth: CGFloat = 60
-
     public init() {
         super.init(with: ComposableSettings.SettingsPanelDescriptor(
             title: "Terminal",
@@ -32,8 +28,10 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
                 body: "Space between the terminal text and the edge of its pane, in points, "
                     + "set per side. A terminal sitting under a tab bar usually wants more "
                     + "room at the top than at the bottom, which is why there are four "
-                    + "numbers and not one. Changes apply to every open terminal as you "
-                    + "type them."
+                    + "numbers and not one. Click an arrow to move that corner a point at a "
+                    + "time — hold it down to keep going — or type a number and press Return. "
+                    + "Up and down arrows adjust the field you are in. Changes apply to every "
+                    + "open terminal as you make them."
             ),
             .init(
                 title: "Font",
@@ -74,28 +72,18 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     private func createLayoutGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Padding")
 
-        let sides: [(String, UserSetting<Int>)] = [
-            ("Top", UserSettings.terminalPaddingTop),
-            ("Left", UserSettings.terminalPaddingLeading),
-            ("Bottom", UserSettings.terminalPaddingBottom),
-            ("Right", UserSettings.terminalPaddingTrailing)
-        ]
-
-        // A column, not a row: the four numbers are the four sides of one box,
-        // and stacked with right-aligned labels they read as the box.
-        let column = ComposableSettings.VerticalStackView()
-        for (title, setting) in sides {
-            let viewModel = ComposableSettings.RangeViewModel<Int>(
-                title: title,
-                setting: setting,
-                minValue: 0,
-                maxValue: 80
-            )
-            column.addArrangedSubview(ComposableSettings.IntegerFieldView(
-                viewModel: viewModel,
-                labelWidth: Self.paddingLabelWidth))
-        }
-        group.addSettingSubview(column)
+        // A picture of the terminal with the four numbers on its four edges.
+        // A stacked column of labelled fields said the same thing but left the
+        // reader to work out which edge "Top" meant with the tab bar in play.
+        group.addSettingSubview(SpacingControl.boundToSettings(
+            style: .singleView,
+            edges: [
+                .top: UserSettings.terminalPaddingTop,
+                .leading: UserSettings.terminalPaddingLeading,
+                .bottom: UserSettings.terminalPaddingBottom,
+                .trailing: UserSettings.terminalPaddingTrailing
+            ]
+        ))
 
         return group
     }

@@ -382,7 +382,7 @@ public final class ThemedSeparatorView: NSView, Themeable {
 /// the one hook AppKit gives for it. Split view *controllers* get it by
 /// subclassing `ThemedSplitViewController` rather than assigning this directly.
 @MainActor
-public final class ThemedSplitView: NSSplitView, Themeable {
+open class ThemedSplitView: NSSplitView, Themeable {
     private var observer: ThemePaletteObserver?
 
     public override init(frame frameRect: NSRect) {
@@ -399,11 +399,12 @@ public final class ThemedSplitView: NSSplitView, Themeable {
     @available(*, unavailable)
     public required init?(coder: NSCoder) { fatalError() }
 
-    private var currentPalette: SemanticPalette = ThemePaletteObserver.currentPalette
+    /// Visible to subclasses that paint more than the divider from the theme.
+    public private(set) var currentPalette: SemanticPalette = ThemePaletteObserver.currentPalette
 
-    public override var dividerColor: NSColor { currentPalette.nsColor(.divider) }
+    open override var dividerColor: NSColor { currentPalette.nsColor(.divider) }
 
-    public func applyTheme(_ palette: SemanticPalette) {
+    open func applyTheme(_ palette: SemanticPalette) {
         currentPalette = palette
         needsDisplay = true
     }
@@ -419,8 +420,15 @@ public final class ThemedSplitView: NSSplitView, Themeable {
 /// controller. Subclassing keeps that one-shot constraint in one place.
 @MainActor
 open class ThemedSplitViewController: NSSplitViewController {
+
+    /// The split view to install. Overridable because the assignment is
+    /// one-shot and happens here — a subclass that wants a different
+    /// `ThemedSplitView` (a wider divider, a differently painted one) has
+    /// nowhere else to say so.
+    open func makeSplitView() -> ThemedSplitView { ThemedSplitView() }
+
     open override func loadView() {
-        splitView = ThemedSplitView()
+        splitView = makeSplitView()
         super.loadView()
     }
 

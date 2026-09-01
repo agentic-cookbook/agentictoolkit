@@ -59,7 +59,7 @@ public final class ComposableTabsSettingsViewController: NSViewController {
         ])
 
         self.view = container
-        self.preferredContentSize = NSSize(width: 620, height: 420)
+        self.preferredContentSize = NSSize(width: 760, height: 520)
     }
 
     @objc private func close(_ sender: Any?) {
@@ -67,12 +67,12 @@ public final class ComposableTabsSettingsViewController: NSViewController {
     }
 }
 
-/// The sheet's topic list. One topic today; the class exists so the second one
-/// is an `addPanel` call.
+/// The sheet's topic list.
 @MainActor
 private final class ProjectSettingsSplitViewController: ComposableSettings.SplitViewController {
 
     private let tabsPanel: ProjectTabsSettingsPanel
+    private let spacingPanel = ProjectSpacingSettingsPanel()
 
     /// A sheet has no free edge for a drawer to slide out of, so this split
     /// presents its help in a popover off the help button instead.
@@ -93,9 +93,9 @@ private final class ProjectSettingsSplitViewController: ComposableSettings.Split
     @available(*, unavailable)
     required init?(coder: NSCoder) { fatalError() }
 
-    /// The sheet is narrower than the settings *window*, so the detail floor
-    /// has to be too or the sheet opens wider than it needs to be.
-    override var detailMinimumThickness: CGFloat { 320 }
+    /// Wide enough for the Spacing panel's diagram, which is the widest thing
+    /// either topic puts in the detail pane.
+    override var detailMinimumThickness: CGFloat { 420 }
 
     /// A sheet has no remembered geometry to restore, and a divider the user
     /// drags in a transient dialog is a setting they never asked to keep.
@@ -105,6 +105,7 @@ private final class ProjectSettingsSplitViewController: ComposableSettings.Split
         super.viewDidLoad()
         helpPresenter = help
         addPanel(tabsPanel)
+        addPanel(spacingPanel)
         selectPanel(at: 0)
     }
 }
@@ -147,7 +148,8 @@ private final class ProjectTabsSettingsPanel: ComposableSettings.SettingsPanelVi
                 title: "This Project Only",
                 body: "These edges belong to this project, not to the app — another "
                     + "project window keeps whatever edges it was given. Changes apply "
-                    + "as you make them and are saved with the project."
+                    + "as you make them and are saved with the project. Spacing, on the "
+                    + "next topic, is the opposite: it belongs to every window."
             )
         ])
     }
@@ -188,4 +190,60 @@ private final class ProjectTabsSettingsPanel: ComposableSettings.SettingsPanelVi
         setEdgeEnabled(Self.edges[sender.tag], sender.state == .on)
     }
 
+}
+
+/// How much room the panes are given: around the group of them, and between
+/// them.
+@MainActor
+private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPanelViewController {
+
+    init() {
+        super.init(with: ComposableSettings.SettingsPanelDescriptor(
+            title: "Spacing",
+            icon: NSImage(systemSymbolName: "squareshape.split.2x2", accessibilityDescription: "Spacing")
+        ))
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError() }
+
+    override var helpContent: ComposableSettings.PanelHelp? {
+        ComposableSettings.PanelHelp(topics: [
+            .init(
+                title: "Around the Panes",
+                body: "The four numbers on the outside are the room between the panes and "
+                    + "the tab bars framing them, in points. Click an arrow to move that "
+                    + "corner a point at a time — hold it down to keep going — or type a "
+                    + "number and press Return. Up and down arrows adjust the field you "
+                    + "are in."
+            ),
+            .init(
+                title: "Between the Panes",
+                body: "The two numbers in the middle are the gaps between panes: one for "
+                    + "panes side by side, one for panes stacked. Each is the whole gap, "
+                    + "not each pane's half — ten means ten points between two panes. The "
+                    + "arrows pointing inward close the gap; the ones pointing outward "
+                    + "open it. A gap of zero still drags: the divider keeps a few points "
+                    + "of grab area whatever it is drawn at."
+            ),
+            .init(
+                title: "Every Window",
+                body: "Spacing belongs to the app, not to this project — every project "
+                    + "window is spaced the same way. Changes apply to the window behind "
+                    + "this sheet as you make them."
+            )
+        ])
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+
+        let group = ComposableSettings.GroupView(withTitle: "Panes")
+        group.addSettingSubview(SpacingControl.boundToSettings(
+            style: .panes,
+            edges: PaneSpacing.edgeSettings,
+            gutters: PaneSpacing.gutterSettings
+        ))
+        addGroup(group)
+    }
 }

@@ -74,6 +74,19 @@ open class MultiTabbedViewController: NSViewController {
 
     private let centerContainer = ThemedBackgroundView(role: .windowBackground)
     private var mountedCenterController: NSViewController?
+
+    /// Space held between the centre content and the tab bars around it.
+    ///
+    /// Applied here rather than inside the content because the tab bars have to
+    /// stay flush against the window: the gap belongs between the bars and what
+    /// they frame, and this controller is the only thing that owns both.
+    public var contentInsets = NSEdgeInsetsZero {
+        didSet { applyContentInsets() }
+    }
+
+    /// The four constraints pinning the mounted content, kept so an inset
+    /// change is a constant update rather than a teardown.
+    private var centerContentConstraints: [NSLayoutConstraint] = []
     private var edgeConstraints: [NSLayoutConstraint] = []
 
     // MARK: - Lifecycle
@@ -328,6 +341,7 @@ open class MultiTabbedViewController: NSViewController {
         if let mounted = mountedCenterController {
             mounted.view.removeFromSuperview()
             mounted.removeFromParent()
+            centerContentConstraints = []
         }
         mountedCenterController = target
         guard let target else { return }
@@ -336,12 +350,25 @@ open class MultiTabbedViewController: NSViewController {
         }
         target.view.translatesAutoresizingMaskIntoConstraints = false
         centerContainer.addSubview(target.view)
-        NSLayoutConstraint.activate([
+        centerContentConstraints = [
             target.view.topAnchor.constraint(equalTo: centerContainer.topAnchor),
             target.view.leadingAnchor.constraint(equalTo: centerContainer.leadingAnchor),
             target.view.trailingAnchor.constraint(equalTo: centerContainer.trailingAnchor),
             target.view.bottomAnchor.constraint(equalTo: centerContainer.bottomAnchor)
-        ])
+        ]
+        NSLayoutConstraint.activate(centerContentConstraints)
+        applyContentInsets()
+    }
+
+    /// Order matches how the constraints were built: top, leading, trailing,
+    /// bottom — and the trailing and bottom edges count inward, so their
+    /// constants are negative.
+    private func applyContentInsets() {
+        guard centerContentConstraints.count == 4 else { return }
+        centerContentConstraints[0].constant = contentInsets.top
+        centerContentConstraints[1].constant = contentInsets.left
+        centerContentConstraints[2].constant = -contentInsets.right
+        centerContentConstraints[3].constant = -contentInsets.bottom
     }
 
     // MARK: - Sync

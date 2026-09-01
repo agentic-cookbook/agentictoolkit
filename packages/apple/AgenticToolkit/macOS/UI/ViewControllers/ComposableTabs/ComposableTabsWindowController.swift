@@ -66,6 +66,10 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     private var arrangeButton: NSButton?
     private var cancellables = Set<AnyCancellable>()
 
+    /// Keeps the room around the panes following the setting while the window
+    /// is open, so the Spacing panel previews on the window behind its sheet.
+    private var spacingObservers: [UserSettingObserver<Int>] = []
+
     public init(project: ProjectWorkspace) {
         self.project = project
         self.tabbed = MultiTabbedViewController()
@@ -82,6 +86,12 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
         self.minSize = NSSize(width: 400, height: 300)
 
         tabbed.delegate = self
+        tabbed.contentInsets = PaneSpacing.contentInsets
+        spacingObservers = PaneSpacing.edgeSettings.values.map { setting in
+            UserSettingObserver(setting) { [weak self] _ in
+                self?.tabbed.contentInsets = PaneSpacing.contentInsets
+            }
+        }
         installInitialTabs()
     }
 
