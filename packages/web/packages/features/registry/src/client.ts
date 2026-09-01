@@ -234,6 +234,22 @@ async function ok(res: Response): Promise<void> {
 }
 
 /**
+ * Guarantee `RegistryRow.tags` is an array, at the one boundary that can.
+ *
+ * `tags` joined the row on 2026-08-25, so a backend deploy older than this frontend answers
+ * without it — and `RegistryDetailsPanel` hands the value straight to `TagSetField`, which
+ * has an array's methods called on it. `json`'s `as T` is an assertion, not a check, so the
+ * required type is exactly the thing that hides the absence.
+ *
+ * Same shape and the same reason as `@agentic-toolkit/data`'s `withTags` (markdown.ts):
+ * normalize once here and every consumer stays free of `?? []`.
+ */
+function withRegistryTags<T extends { tags: string[] }>(row: T): T {
+  const tags = (row as { tags?: unknown }).tags;
+  return Array.isArray(tags) ? row : { ...row, tags: [] };
+}
+
+/**
  * The backend mounts the registry routers at `/registry/registries` (`app.ts`, backend
  * plan Tasks 3 and 4). The `/api` prefix in front of it is the **frontend's** — every hub
  * site rewrites `/api/:path*` to `${BACKEND_URL}/:path*` in its `next.config.ts`
@@ -257,11 +273,19 @@ export function createRegistryClient(fetcher: Fetcher) {
   const seg = encodeURIComponent;
 
   return {
-    listRegistries: () => send<{ items: RegistryRow[] }>(BASE, 'GET'),
-    getRegistry: (id: string) => send<RegistryRow>(`${BASE}/${seg(id)}`, 'GET'),
-    createRegistry: (body: Partial<RegistryRow>) => send<RegistryRow>(BASE, 'POST', body),
-    updateRegistry: (id: string, body: Partial<RegistryRow>) =>
-      send<RegistryRow>(`${BASE}/${seg(id)}`, 'PATCH', body),
+    // Every path a `RegistryRow` reaches a caller by goes through `withRegistryTags` —
+    // including the writes, which answer with the stored row and are therefore the same
+    // skew as the reads.
+    listRegistries: async () => {
+      const res = await send<{ items: RegistryRow[] }>(BASE, 'GET');
+      return { ...res, items: res.items.map(withRegistryTags) };
+    },
+    getRegistry: async (id: string) =>
+      withRegistryTags(await send<RegistryRow>(`${BASE}/${seg(id)}`, 'GET')),
+    createRegistry: async (body: Partial<RegistryRow>) =>
+      withRegistryTags(await send<RegistryRow>(BASE, 'POST', body)),
+    updateRegistry: async (id: string, body: Partial<RegistryRow>) =>
+      withRegistryTags(await send<RegistryRow>(`${BASE}/${seg(id)}`, 'PATCH', body)),
     // SOFT delete server-side: the row is tombstoned, which is also what frees its slug for
     // reuse. Irreversible from any client surface all the same — nothing here un-deletes —
     // so a host wiring this up owns the confirmation.

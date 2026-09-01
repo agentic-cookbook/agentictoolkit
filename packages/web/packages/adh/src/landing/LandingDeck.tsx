@@ -87,7 +87,14 @@ function renderBlock(block: LandingBlock, key: number): ReactElement {
           key={key}
           title={block.title}
           caption={block.caption}
-          media={<img src={`/screenshots/${block.src}.png`} alt={block.caption} />}
+          // The package renders the placeholder only when `media` is ABSENT, so an
+          // unconditional `<img>` is what made it unreachable. `pendingLabel` has no default
+          // by design — it is visible copy, and the kit renders no word its host did not
+          // choose — so the family chooses it here, once, for all 31 decks.
+          pendingLabel="Screenshot pending"
+          {...(block.src === undefined
+            ? {}
+            : { media: <img src={`/screenshots/${block.src}.png`} alt={block.caption} /> })}
         />
       )
     case 'Table':

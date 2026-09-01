@@ -120,7 +120,12 @@ describe('a viewport-filling page keeps the band the app shell reserves', () => 
     // band on screen. jsdom cannot lay this out, but it can answer the question the selector asks.
     const { container } = render(
       <AdhAppShell header={null} footer={<footer>F</footer>}>
-        <HierarchicalTopicDetail levels={LEVELS} />
+        {/* `children` is the innermost detail content and is required — what it holds is
+            irrelevant here: this test asks only whether `[data-fills-viewport]` ends up a
+            DESCENDANT of `main`, which is the one question the CSS `:has()` selector asks. */}
+        <HierarchicalTopicDetail levels={LEVELS}>
+          <p>detail</p>
+        </HierarchicalTopicDetail>
       </AdhAppShell>,
     )
     const main = container.querySelector('main')

@@ -182,6 +182,16 @@
   cursor: default;
 }
 
+/* `align-self: flex-start` above is about WIDTH: `.rf-def` is a flex COLUMN, so the
+ * default `stretch` would draw a button as wide as the whole panel. Inside
+ * `.rf-def__rule` the axis turns, and the same declaration stops hugging the content
+ * and starts pinning the button to the TOP of a row whose labels are two lines tall —
+ * "Always show this" floating level with the captions instead of with the selects it
+ * sits beside. Same intent, right axis. */
+.rf-def__rule button {
+  align-self: center;
+}
+
 /* The reorder pair is two glyph buttons, not two labelled ones. */
 .rf-def__order button {
   line-height: 1;
