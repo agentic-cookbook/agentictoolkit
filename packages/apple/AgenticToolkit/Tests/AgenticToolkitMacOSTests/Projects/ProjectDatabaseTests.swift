@@ -1,4 +1,5 @@
 import XCTest
+import SQLite3
 import AgenticToolkitMacOS
 
 /// The project registry's storage contract: a repository is a row, its
@@ -31,8 +32,7 @@ final class ProjectDatabaseTests: XCTestCase {
             remote: "git@github.com:someone/whippet.git",
             firstSeen: firstSeen,
             lastSeen: Date(timeIntervalSince1970: 2_000),
-            lastOpened: Date(timeIntervalSince1970: 3_000),
-            missingSince: nil
+            lastOpened: Date(timeIntervalSince1970: 3_000)
         )
         try database.insert(repo)
 
@@ -42,7 +42,6 @@ final class ProjectDatabaseTests: XCTestCase {
         XCTAssertEqual(loaded.remote, "git@github.com:someone/whippet.git")
         XCTAssertEqual(loaded.firstSeen.timeIntervalSince1970, 1_000, accuracy: 0.001)
         XCTAssertEqual(loaded.lastOpened?.timeIntervalSince1970, 3_000)
-        XCTAssertFalse(loaded.isMissing)
     }
 
     /// Both lookups have to agree, because a scan finds a repository by path
@@ -73,18 +72,43 @@ final class ProjectDatabaseTests: XCTestCase {
         XCTAssertEqual(try database.allRepos().map(\.name), ["Apple", "mango", "zebra"])
     }
 
-    /// A missing repository stays in the list: the browser decides whether to
-    /// show it, the store does not decide for it.
-    func testMissingReposAreStillListed() throws {
-        let database = try makeDatabase()
-        var repo = GitRepo(path: "/Volumes/external/thing", name: "thing")
-        try database.insert(repo)
-        repo.missingSince = Date(timeIntervalSince1970: 5_000)
-        try database.update(repo)
+    /// v1 kept a repository the scan could not find, marked `missing_since`.
+    /// v2 drops the column — and deliberately keeps every row, marked or not:
+    /// the scan that follows is what decides which of them are really gone, and
+    /// it can only keep a project's id and settings if the row is still there.
+    func testOpeningAV1DatabaseDropsMissingSinceAndKeepsEveryRow() throws {
+        let path = tempRoot.appendingPathComponent("v1.db").path
+        try writeV1Database(at: path)
 
-        let loaded = try XCTUnwrap(database.allRepos().first)
-        XCTAssertTrue(loaded.isMissing)
-        XCTAssertEqual(loaded.missingSince?.timeIntervalSince1970, 5_000)
+        let database = try ProjectDatabase(path: path)
+        let names = try database.allRepos().map(\.name)
+        XCTAssertEqual(names, ["gone", "here"])
+        // The column is gone, so every write goes through the v2 shape.
+        var repo = try XCTUnwrap(database.repo(path: "/tmp/gone"))
+        repo.name = "renamed"
+        try database.update(repo)
+        XCTAssertEqual(try database.repo(id: repo.id)?.name, "renamed")
+    }
+
+    /// v3 is what makes a reopened window look like it did: a size per pane,
+    /// and a bag of state per pane. An older file has to gain both on the way
+    /// in, or the first save writes to columns that are not there.
+    func testOpeningAnOlderDatabaseGainsPaneSizesAndPaneState() throws {
+        let path = tempRoot.appendingPathComponent("v1-to-v3.db").path
+        try writeV1Database(at: path)
+
+        let database = try ProjectDatabase(path: path)
+        let repo = try XCTUnwrap(database.repo(path: "/tmp/here"))
+        let leaf = LayoutNode.leaf(contentType: ComposableTabsViewID("test.editor"), thicknessFraction: 0.4)
+        let tab = TabRecord(title: "Code", root: leaf)
+        try database.saveTabs([tab], activeTabID: tab.id, repoID: repo.id)
+
+        let loaded = try XCTUnwrap(database.loadTabs(repoID: repo.id).tabs.first).root
+        XCTAssertEqual(try XCTUnwrap(loaded.thicknessFraction), 0.4, accuracy: 0.0001)
+
+        try database.setPaneState(repoID: repo.id, nodeID: leaf.id, key: "selected", value: "/tmp/a.swift")
+        XCTAssertEqual(try database.paneState(repoID: repo.id, nodeID: leaf.id, key: "selected"),
+                       "/tmp/a.swift")
     }
 
     func testMarkOpenedRecordsTheTimeWithoutTouchingAnythingElse() throws {
@@ -206,5 +230,95 @@ final class ProjectDatabaseTests: XCTestCase {
 
     private func makeDatabase() throws -> ProjectDatabase {
         try ProjectDatabase(path: tempRoot.appendingPathComponent("Test.db").path)
+    }
+
+    /// The v1 tables the later migrations touch — `git_repo`, and the
+    /// v1's tables, plus two repository rows: one the scan had written off and
+    /// one it had not. Hand-written rather than produced by the app, because
+    /// the app can no longer make a v1 file — which is exactly why the whole
+    /// schema is here and not just the one table a given test reads.
+    private func writeV1Database(at path: String) throws {
+        var handle: OpaquePointer?
+        XCTAssertEqual(sqlite3_open(path, &handle), SQLITE_OK)
+        defer { sqlite3_close(handle) }
+
+        for sql in [
+            """
+            CREATE TABLE schema_migrations (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """,
+            """
+            CREATE TABLE git_repo (
+                id TEXT PRIMARY KEY,
+                path TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL,
+                remote TEXT,
+                first_seen REAL NOT NULL,
+                last_seen REAL NOT NULL,
+                last_opened REAL,
+                missing_since REAL
+            )
+            """,
+            """
+            CREATE TABLE layout_nodes (
+                id TEXT PRIMARY KEY,
+                repo_id TEXT NOT NULL REFERENCES git_repo(id) ON DELETE CASCADE,
+                parent_id TEXT REFERENCES layout_nodes(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                kind TEXT NOT NULL CHECK(kind IN ('split','leaf')),
+                orientation TEXT,
+                content_type TEXT,
+                pane_label TEXT
+            )
+            """,
+            """
+            CREATE TABLE project_setting (
+                repo_id TEXT NOT NULL REFERENCES git_repo(id) ON DELETE CASCADE,
+                key TEXT NOT NULL,
+                value TEXT NOT NULL,
+                PRIMARY KEY (repo_id, key)
+            )
+            """,
+            """
+            CREATE TABLE project_tabs (
+                id TEXT PRIMARY KEY,
+                repo_id TEXT NOT NULL REFERENCES git_repo(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                edge TEXT NOT NULL DEFAULT 'top',
+                group_id TEXT,
+                root_node_id TEXT REFERENCES layout_nodes(id),
+                focused_node_id TEXT REFERENCES layout_nodes(id)
+            )
+            """,
+            """
+            CREATE TABLE project_state (
+                repo_id TEXT PRIMARY KEY REFERENCES git_repo(id) ON DELETE CASCADE,
+                active_tab_id TEXT REFERENCES project_tabs(id),
+                enabled_edges TEXT NOT NULL DEFAULT 'top'
+            )
+            """,
+            """
+            CREATE TABLE project_directories (
+                repo_id TEXT NOT NULL REFERENCES git_repo(id) ON DELETE CASCADE,
+                position INTEGER NOT NULL,
+                path TEXT NOT NULL,
+                PRIMARY KEY (repo_id, position)
+            )
+            """,
+            """
+            INSERT INTO git_repo (id, path, name, first_seen, last_seen, missing_since)
+            VALUES ('\(UUID().uuidString)', '/tmp/gone', 'gone', 1, 1, 5000)
+            """,
+            """
+            INSERT INTO git_repo (id, path, name, first_seen, last_seen)
+            VALUES ('\(UUID().uuidString)', '/tmp/here', 'here', 1, 1)
+            """,
+            "INSERT INTO schema_migrations (version) VALUES (1)"
+        ] {
+            XCTAssertEqual(sqlite3_exec(handle, sql, nil, nil, nil), SQLITE_OK, sql)
+        }
     }
 }

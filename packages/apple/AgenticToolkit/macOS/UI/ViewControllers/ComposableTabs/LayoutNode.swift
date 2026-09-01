@@ -14,21 +14,52 @@ public struct LayoutNode: Sendable {
     public let id: UUID
     public let kind: Kind
 
+    /// This node's share of the split it sits in, `0...1`, or `nil` for a node
+    /// nobody has sized — the root of a tab, or a pane the user has never
+    /// dragged a divider next to.
+    ///
+    /// Stored per *child* rather than as a divider position on the split,
+    /// because that is the form the arrangement survives a window resize in:
+    /// a position is points on the display it was saved from, a fraction is
+    /// the same arrangement on any display.
+    public var thicknessFraction: Double?
+
     public static func leaf(
         id: UUID = UUID(),
         contentType: ComposableTabsViewID,
-        paneLabel: String? = nil
+        paneLabel: String? = nil,
+        thicknessFraction: Double? = nil
     ) -> LayoutNode {
-        LayoutNode(id: id, kind: .leaf(contentType: contentType, paneLabel: paneLabel))
+        LayoutNode(
+            id: id,
+            kind: .leaf(contentType: contentType, paneLabel: paneLabel),
+            thicknessFraction: thicknessFraction
+        )
     }
 
     public static func split(
         id: UUID = UUID(),
         orientation: ComposableTabsAxis,
         first: LayoutNode,
-        second: LayoutNode
+        second: LayoutNode,
+        thicknessFraction: Double? = nil
     ) -> LayoutNode {
-        LayoutNode(id: id, kind: .split(orientation: orientation, first: first, second: second))
+        LayoutNode(
+            id: id,
+            kind: .split(orientation: orientation, first: first, second: second),
+            thicknessFraction: thicknessFraction
+        )
+    }
+
+    /// The same node, sized as whatever it is replacing.
+    ///
+    /// A fraction describes a *slot* in a split, not the subtree filling it, so
+    /// every rewrite that moves a subtree into another one's place has to carry
+    /// the slot's size across or the surrounding panes visibly jump.
+    public func occupying(_ slot: LayoutNode) -> LayoutNode {
+        var copy = self
+        copy.thicknessFraction = slot.thicknessFraction
+        return copy
     }
 }
 

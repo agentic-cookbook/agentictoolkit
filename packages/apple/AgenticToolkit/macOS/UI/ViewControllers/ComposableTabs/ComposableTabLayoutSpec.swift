@@ -322,13 +322,21 @@ public struct ComposableTabLayoutSpec: Sendable {
         switch node.kind {
         case .leaf(_, let paneLabel):
             guard leaves.contains(node.id) else { return node }
-            return LayoutNode(id: node.id, kind: .leaf(contentType: .placeholder, paneLabel: paneLabel))
+            return LayoutNode(
+                id: node.id,
+                kind: .leaf(contentType: .placeholder, paneLabel: paneLabel),
+                thicknessFraction: node.thicknessFraction
+            )
         case .split(let orientation, let first, let second):
-            return LayoutNode(id: node.id, kind: .split(
-                orientation: orientation,
-                first: demoting(first, leaves: leaves),
-                second: demoting(second, leaves: leaves)
-            ))
+            return LayoutNode(
+                id: node.id,
+                kind: .split(
+                    orientation: orientation,
+                    first: demoting(first, leaves: leaves),
+                    second: demoting(second, leaves: leaves)
+                ),
+                thicknessFraction: node.thicknessFraction
+            )
         }
     }
 

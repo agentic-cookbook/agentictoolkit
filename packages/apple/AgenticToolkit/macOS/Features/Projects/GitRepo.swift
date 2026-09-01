@@ -19,10 +19,6 @@ public struct GitRepo: Sendable, Identifiable, Equatable {
     public var lastSeen: Date
     /// When a project window was last opened for it — what the browser sorts by.
     public var lastOpened: Date?
-    /// Set when a scan no longer finds the path. The row is kept rather than
-    /// deleted: an unmounted volume or a temporarily renamed folder must not
-    /// take the project's settings with it.
-    public var missingSince: Date?
 
     public init(
         id: UUID = UUID(),
@@ -31,8 +27,7 @@ public struct GitRepo: Sendable, Identifiable, Equatable {
         remote: String? = nil,
         firstSeen: Date = Date(),
         lastSeen: Date = Date(),
-        lastOpened: Date? = nil,
-        missingSince: Date? = nil
+        lastOpened: Date? = nil
     ) {
         self.id = id
         self.path = path
@@ -41,12 +36,9 @@ public struct GitRepo: Sendable, Identifiable, Equatable {
         self.firstSeen = firstSeen
         self.lastSeen = lastSeen
         self.lastOpened = lastOpened
-        self.missingSince = missingSince
     }
 
     public var url: URL { URL(fileURLWithPath: path) }
-
-    public var isMissing: Bool { missingSince != nil }
 
     /// The default name for a repository at `path` — its directory name.
     public static func defaultName(forPath path: String) -> String {
@@ -73,31 +65,23 @@ public struct ScannedGitRepo: Sendable, Equatable {
 public struct ProjectScanSummary: Sendable, Equatable {
     public var added: Int = 0
     public var moved: Int = 0
-    public var missing: Int = 0
-    public var restored: Int = 0
+    /// Rows the scan deleted because nothing it found on disk accounts for them.
+    public var removed: Int = 0
     public var unchanged: Int = 0
 
     public init() {}
 
-    /// The projects the scan actually found on disk. Missing rows are not
-    /// among them: they are what the registry remembers and the disk no longer
-    /// has, which is the opposite of a project that is there.
-    public var found: Int { added + moved + restored + unchanged }
-
-    /// Every row in the registry afterwards, found or not.
-    public var total: Int { found + missing }
+    /// Every project in the registry once the scan has been applied. A row the
+    /// scan did not find is deleted rather than kept aside, so this is also
+    /// exactly what is on disk.
+    public var found: Int { added + moved + unchanged }
 
     /// One line for the log, and for the progress window before it closes.
-    ///
-    /// The headline is `found`, never `total`: "406 projects — 281 missing"
-    /// reads as four hundred projects, when the honest number is a hundred and
-    /// twenty-five (`principle-of-least-astonishment`).
     public var summaryText: String {
         var parts: [String] = []
         if added > 0 { parts.append("\(added) new") }
         if moved > 0 { parts.append("\(moved) moved") }
-        if restored > 0 { parts.append("\(restored) restored") }
-        if missing > 0 { parts.append("\(missing) missing") }
+        if removed > 0 { parts.append("\(removed) removed") }
         let headline = "\(found) project\(found == 1 ? "" : "s")"
         if parts.isEmpty { return headline + ", no changes" }
         return headline + " — " + parts.joined(separator: ", ")

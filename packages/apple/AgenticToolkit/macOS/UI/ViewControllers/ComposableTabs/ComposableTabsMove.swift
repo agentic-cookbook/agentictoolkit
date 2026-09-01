@@ -65,6 +65,7 @@ public enum ComposableTabsMove {
             // children, so something always survives its departure.
             guard let survivor = removing(leafID, from: node) else { return node }
             return pair(pane, survivor, axis: .horizontal, paneFirst: direction.placesNewPaneFirst)
+                .occupying(node)
         }
     }
 
@@ -85,11 +86,15 @@ public enum ComposableTabsMove {
         let newTarget = inserting(pane, into: targetSubtree, direction: direction)
         // The pane was this whole side, so the side goes with it and the split
         // collapses into the target.
-        guard let newSide = removing(pane.id, from: paneSubtree) else { return newTarget }
+        guard let newSide = removing(pane.id, from: paneSubtree) else {
+            return newTarget.occupying(split)
+        }
 
         return paneSide == 0
-            ? .split(id: split.id, orientation: axis, first: newSide, second: newTarget)
-            : .split(id: split.id, orientation: axis, first: newTarget, second: newSide)
+            ? .split(id: split.id, orientation: axis, first: newSide, second: newTarget,
+                     thicknessFraction: split.thicknessFraction)
+            : .split(id: split.id, orientation: axis, first: newTarget, second: newSide,
+                     thicknessFraction: split.thicknessFraction)
     }
 
     /// Where the pane lands inside the subtree it moved into.
@@ -106,26 +111,42 @@ public enum ComposableTabsMove {
     ) -> LayoutNode {
         guard case .split(let axis, let first, let second) = node.kind else {
             return pair(pane, node, axis: direction.axis, paneFirst: direction.placesNewPaneFirst)
+                .occupying(node)
         }
         guard axis == direction.axis else {
-            return pair(pane, node, axis: axis, paneFirst: true)
+            return pair(pane, node, axis: axis, paneFirst: true).occupying(node)
         }
         return direction.placesNewPaneFirst
             ? .split(
                 id: node.id, orientation: axis,
-                first: first, second: inserting(pane, into: second, direction: direction))
+                first: first, second: inserting(pane, into: second, direction: direction),
+                thicknessFraction: node.thicknessFraction)
             : .split(
                 id: node.id, orientation: axis,
-                first: inserting(pane, into: first, direction: direction), second: second)
+                first: inserting(pane, into: first, direction: direction), second: second,
+                thicknessFraction: node.thicknessFraction)
     }
 
+    /// Puts two subtrees side by side in a brand new split — and drops the size
+    /// each was carrying.
+    ///
+    /// A `thicknessFraction` is a share of one particular split, so it means
+    /// nothing in a split that did not exist a moment ago: the pane's came from
+    /// the arrangement it just left (often on the other axis), and `other`'s was
+    /// its share of the slot this new split now fills. Keeping either would put
+    /// two unrelated numbers on the same divider, and they would not add up.
+    /// Cleared, the descriptors' preferred fractions size the new divider; the
+    /// slot around it is preserved by the `occupying` at every call site.
     private static func pair(
         _ pane: LayoutNode,
         _ other: LayoutNode,
         axis: ComposableTabsAxis,
         paneFirst: Bool
     ) -> LayoutNode {
-        paneFirst
+        var pane = pane, other = other
+        pane.thicknessFraction = nil
+        other.thicknessFraction = nil
+        return paneFirst
             ? .split(orientation: axis, first: pane, second: other)
             : .split(orientation: axis, first: other, second: pane)
     }
@@ -174,9 +195,10 @@ public enum ComposableTabsMove {
         let newSecond = removing(id, from: second)
         switch (newFirst, newSecond) {
         case (nil, nil): return nil
-        case (let survivor?, nil), (nil, let survivor?): return survivor
+        case (let survivor?, nil), (nil, let survivor?): return survivor.occupying(node)
         case (let left?, let right?):
-            return .split(id: node.id, orientation: axis, first: left, second: right)
+            return .split(id: node.id, orientation: axis, first: left, second: right,
+                          thicknessFraction: node.thicknessFraction)
         }
     }
 
@@ -186,13 +208,14 @@ public enum ComposableTabsMove {
         in node: LayoutNode,
         with transform: (LayoutNode) -> LayoutNode
     ) -> LayoutNode {
-        if node.id == id { return transform(node) }
+        if node.id == id { return transform(node).occupying(node) }
         guard case .split(let axis, let first, let second) = node.kind else { return node }
         return .split(
             id: node.id,
             orientation: axis,
             first: replacing(id, in: first, with: transform),
-            second: replacing(id, in: second, with: transform)
+            second: replacing(id, in: second, with: transform),
+            thicknessFraction: node.thicknessFraction
         )
     }
 }

@@ -132,6 +132,112 @@ final class ProjectDatabaseLayoutTests: XCTestCase {
         XCTAssertEqual(try database.loadTabs(repoID: beta.id).enabledEdges, [.bottom])
     }
 
+    // MARK: - Pane sizes
+
+    /// The sizes are the whole point of the arrangement: a tree that comes back
+    /// with the right shape and even panes has still lost what the user did.
+    func testPaneSizesSurviveTheRoundTrip() throws {
+        let (database, repo) = try makeRegisteredRepo()
+        let root = LayoutNode.split(
+            orientation: .horizontal,
+            first: .leaf(contentType: editor, thicknessFraction: 0.28),
+            second: .split(
+                orientation: .vertical,
+                first: .leaf(contentType: terminal, thicknessFraction: 0.7),
+                second: .leaf(contentType: editor, thicknessFraction: 0.3),
+                thicknessFraction: 0.72
+            )
+        )
+        let tab = TabRecord(title: "Code", root: root)
+        try database.saveTabs([tab], activeTabID: tab.id, repoID: repo.id)
+
+        let loaded = try XCTUnwrap(database.loadTabs(repoID: repo.id).tabs.first).root
+        guard case .split(_, let left, let right) = loaded.kind,
+              case .split(_, let top, let bottom) = right.kind else {
+            return XCTFail("the stored tree keeps its shape")
+        }
+        XCTAssertEqual(try XCTUnwrap(left.thicknessFraction), 0.28, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(right.thicknessFraction), 0.72, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(top.thicknessFraction), 0.7, accuracy: 0.0001)
+        XCTAssertEqual(try XCTUnwrap(bottom.thicknessFraction), 0.3, accuracy: 0.0001)
+    }
+
+    /// A pane nobody has sized is a real state, and it has to survive as one:
+    /// storing a zero would pin the divider to the edge on the next launch.
+    func testAnUnsizedPaneComesBackUnsizedRatherThanZero() throws {
+        let (database, repo) = try makeRegisteredRepo()
+        let tab = TabRecord(title: "Code", root: .leaf(contentType: editor))
+        try database.saveTabs([tab], activeTabID: tab.id, repoID: repo.id)
+
+        let loaded = try XCTUnwrap(database.loadTabs(repoID: repo.id).tabs.first).root
+        XCTAssertNil(loaded.thicknessFraction)
+    }
+
+    // MARK: - Pane state
+
+    func testPaneStateRoundTripsAndIsScopedToItsPane() throws {
+        let (database, repo) = try makeRegisteredRepo()
+        let left = UUID()
+        let right = UUID()
+        XCTAssertNil(try database.paneState(repoID: repo.id, nodeID: left, key: "expanded"))
+
+        try database.setPaneState(repoID: repo.id, nodeID: left, key: "expanded", value: "[\"/tmp\"]")
+        try database.setPaneState(repoID: repo.id, nodeID: right, key: "expanded", value: "[\"/var\"]")
+
+        XCTAssertEqual(try database.paneState(repoID: repo.id, nodeID: left, key: "expanded"), "[\"/tmp\"]")
+        XCTAssertEqual(try database.paneState(repoID: repo.id, nodeID: right, key: "expanded"), "[\"/var\"]")
+
+        try database.setPaneState(repoID: repo.id, nodeID: left, key: "expanded", value: "[]")
+        XCTAssertEqual(try database.paneState(repoID: repo.id, nodeID: left, key: "expanded"), "[]",
+                       "a second write replaces rather than duplicates")
+
+        try database.setPaneState(repoID: repo.id, nodeID: left, key: "expanded", value: nil)
+        XCTAssertNil(try database.paneState(repoID: repo.id, nodeID: left, key: "expanded"))
+    }
+
+    /// `saveTabs` rewrites every layout row, so pane state has to be kept by id
+    /// rather than by foreign key — and pruned by the same pass, or a window
+    /// accumulates the state of every pane it has ever closed.
+    func testSavingTabsKeepsTheStateOfLivePanesAndDropsTheRest() throws {
+        let (database, repo) = try makeRegisteredRepo()
+        let kept = LayoutNode.leaf(contentType: editor)
+        let closed = LayoutNode.leaf(contentType: terminal)
+        let tab = TabRecord(title: "Code", root: .split(
+            orientation: .horizontal, first: kept, second: closed))
+        try database.saveTabs([tab], activeTabID: tab.id, repoID: repo.id)
+
+        try database.setPaneState(repoID: repo.id, nodeID: kept.id, key: "selected", value: "/tmp/a.swift")
+        try database.setPaneState(repoID: repo.id, nodeID: closed.id, key: "selected", value: "/tmp/b.swift")
+
+        // The second pane is closed: the survivor is promoted to the root.
+        let after = TabRecord(id: tab.id, title: "Code", root: kept)
+        try database.saveTabs([after], activeTabID: after.id, repoID: repo.id)
+
+        XCTAssertEqual(try database.paneState(repoID: repo.id, nodeID: kept.id, key: "selected"),
+                       "/tmp/a.swift")
+        XCTAssertNil(try database.paneState(repoID: repo.id, nodeID: closed.id, key: "selected"))
+    }
+
+    func testPaneStateIsScopedToItsProject() throws {
+        let database = try makeDatabase()
+        let alpha = try registerRepo(in: database, path: "/tmp/alpha", name: "alpha")
+        let beta = try registerRepo(in: database, path: "/tmp/beta", name: "beta")
+        let node = UUID()
+
+        try database.setPaneState(repoID: alpha.id, nodeID: node, key: "selected", value: "/tmp/a")
+        XCTAssertNil(try database.paneState(repoID: beta.id, nodeID: node, key: "selected"))
+    }
+
+    /// The rows belong to the project, so deleting it takes them with it.
+    func testDeletingAProjectTakesItsPaneStateWithIt() throws {
+        let (database, repo) = try makeRegisteredRepo()
+        let node = UUID()
+        try database.setPaneState(repoID: repo.id, nodeID: node, key: "selected", value: "/tmp/a")
+
+        try database.delete(id: repo.id)
+        XCTAssertNil(try database.paneState(repoID: repo.id, nodeID: node, key: "selected"))
+    }
+
     // MARK: - Project directories
 
     /// Only the *extra* directories are stored: the repository's own folder

@@ -303,45 +303,35 @@ extension ProjectBrowserViewController: NSOutlineViewDataSource, NSOutlineViewDe
 /// One row: an icon and a name, with the characters the filter matched picked
 /// out. The folder it lives in is the row above it, so the row itself no longer
 /// has to spell out a path — which is the whole point
-/// of showing the hierarchy. A missing project is dimmed and labelled rather
-/// than hidden: the settings are still there, and hiding the row would make a
-/// briefly-unmounted volume look like data loss.
+/// of showing the hierarchy. Every row is a project that was on disk as of the
+/// last scan; one that is not is deleted rather than dimmed, so there is no
+/// un-openable row to explain.
 @MainActor
 private final class ProjectRowView: NSView {
 
     init(node: ProjectTreeNode, query: String) {
         super.init(frame: .zero)
 
-        let missing = node.repo?.isMissing == true
         let symbol = node.isFolder ? "folder.fill" : "shippingbox.fill"
         let icon = NSImageView(image: NSImage(
             systemSymbolName: symbol,
             accessibilityDescription: node.isFolder ? "Folder" : "Project"
         ) ?? NSImage())
         icon.contentTintColor = ThemePaletteObserver.currentPalette.nsColor(
-            missing ? .tertiaryText : (node.isFolder ? .secondaryText : .accent)
+            node.isFolder ? .secondaryText : .accent
         )
         icon.setContentHuggingPriority(.required, for: .horizontal)
 
         let label = ThemedHighlightLabel(
             string: node.name,
             highlighting: ProjectFilter.ranges(of: query, in: node.name),
-            role: missing ? .tertiaryText : .primaryText,
+            role: .primaryText,
             textRole: node.isFolder ? .caption : .body
         )
         label.lineBreakMode = .byTruncatingMiddle
         label.cell?.usesSingleLineMode = true
 
-        let views: [NSView]
-        if missing {
-            let note = ThemedLabel(string: "Missing", role: .warning, textRole: .caption)
-            note.setContentHuggingPriority(.required, for: .horizontal)
-            views = [icon, label, NSView(), note]
-        } else {
-            views = [icon, label]
-        }
-
-        let stack = NSStackView(views: views)
+        let stack = NSStackView(views: [icon, label])
         stack.orientation = .horizontal
         stack.alignment = .centerY
         stack.spacing = 6

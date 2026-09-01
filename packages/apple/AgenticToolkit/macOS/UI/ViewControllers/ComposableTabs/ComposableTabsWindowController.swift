@@ -5,10 +5,13 @@ import AgenticToolkitCore
 import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
-/// A project's window. All project windows share a single `WindowManager`
-/// spec so frame geometry persists in the app preferences (not per-project) —
-/// content layout (the per-tab nested split tree, tab arrangement, active tab)
-/// lives in the project database, keyed by the project's repo id.
+/// A project's window. Its geometry persists per project, under a window id
+/// built from the repo id: two projects open side by side are two windows the
+/// user has placed differently, and one id for both would mean each remembers
+/// only where the other was closed. (`WindowRegistry` also assumes one live
+/// controller per id, which a shared id quietly broke.) Content layout — the
+/// per-tab nested split tree, tab arrangement, active tab — lives in the
+/// project database, keyed by the same repo id.
 ///
 /// The window's content view is a generic `MultiTabbedViewController` from the
 /// toolkit. Each tab hosts its own `ComposableTabsViewController` rooted at
@@ -22,7 +25,16 @@ import AgenticToolkitCoreMacOS
 @MainActor
 public final class ComposableTabsWindowController: WindowController<NSViewController>, NSMenuItemValidation {
 
-    public static let sharedWindowID = "projectWindow"
+    /// The window-id prefix, and the id every project window used before
+    /// geometry became per-project. Kept as the prefix so a stored frame is
+    /// recognisably a project window's in `UserDefaults`.
+    public static let windowIDPrefix = "projectWindow"
+
+    /// The window id for one project. Deleting the project is what deletes the
+    /// frame — see `WindowFrameManager.clearSavedState(for:)`.
+    public static func windowID(for repoID: UUID) -> String {
+        "\(windowIDPrefix).\(repoID.uuidString)"
+    }
 
     private struct TabGroup {
         let id: UUID
@@ -57,7 +69,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     public init(project: ProjectWorkspace) {
         self.project = project
         self.tabbed = MultiTabbedViewController()
-        super.init(windowID: Self.sharedWindowID, contentViewController: tabbed)
+        super.init(windowID: Self.windowID(for: project.id), contentViewController: tabbed)
 
         self.windowSpec = WindowSpec(
             defaultSize: NSSize(width: 800, height: 500),

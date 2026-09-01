@@ -10,7 +10,7 @@ import AgenticToolkitCoreMacOS
 /// screen when the question is asked (it can be asked from the menu bar with
 /// nothing open at all), and a sheet with no parent cannot be dismissed.
 @MainActor
-public final class ProjectChooserWindow: NSWindowController {
+public final class ProjectChooserWindow: NSWindowController, NSWindowDelegate {
 
     private let content: ProjectChooserContentViewController
     private var chosen: GitRepo?
@@ -44,6 +44,10 @@ public final class ProjectChooserWindow: NSWindowController {
         window.setContentSize(NSSize(width: 460, height: 480))
         window.center()
         window.accessibilityID("project-chooser.window")
+        // The title bar's close button and ⌘W bypass Cancel and Open, so the
+        // session has to be ended from the close notification too — see
+        // `windowWillClose(_:)`.
+        window.delegate = self
 
         content.onFinish = { [weak self] repo in self?.finish(with: repo) }
     }
@@ -60,6 +64,19 @@ public final class ProjectChooserWindow: NSWindowController {
         NSApp.runModal(for: window)
         window.orderOut(nil)
         return chosen
+    }
+
+    /// Closing the window is a cancel, and — more importantly — it is the one
+    /// dismissal that does not go through Cancel or Open. Without this the
+    /// modal session outlives its window: `NSApp.modalWindow` stays set to an
+    /// invisible window, and AppKit spends the rest of the run disabling Quit,
+    /// About, Settings… and every status-item command, because those are the
+    /// items a modal session is supposed to suppress.
+    public func windowWillClose(_ notification: Notification) {
+        // `orderOut` after `stopModal` does not notify, but an explicit
+        // `close()` from anywhere else would — only end a session we are in.
+        guard NSApp.modalWindow === window else { return }
+        finish(with: nil)
     }
 
     private func finish(with repo: GitRepo?) {

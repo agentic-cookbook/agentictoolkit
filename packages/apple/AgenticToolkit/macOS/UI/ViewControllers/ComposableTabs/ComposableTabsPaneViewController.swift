@@ -16,6 +16,8 @@ public final class ComposableTabsPaneViewController: NSViewController {
     public let nodeID: UUID
     public let paneNumber: Int
     public let viewID: ComposableTabsViewID
+    /// See `ComposableTabsChild.thicknessFraction`.
+    public var thicknessFraction: CGFloat?
     private weak var project: ProjectWorkspace?
 
     private var arrangeOverlay: ComposableTabsArrangeOverlayView?

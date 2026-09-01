@@ -99,6 +99,51 @@ public final class ProjectWorkspace {
         }
     }
 
+    // MARK: - Pane state
+
+    /// What the pane at `nodeID` remembered under `key`, or `nil`.
+    ///
+    /// A pane reaches this through the `nodeID` its factory is handed
+    /// (`ComposableTabsViewContext`), so remembering something new costs a key
+    /// rather than a schema change or a new path through the window controller.
+    public func paneState(nodeID: UUID, key: String) -> String? {
+        do {
+            return try database.paneState(repoID: repo.id, nodeID: nodeID, key: key)
+        } catch {
+            Self.logger.error("Failed to load pane state: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+
+    public func setPaneState(nodeID: UUID, key: String, value: String?) {
+        do {
+            try database.setPaneState(repoID: repo.id, nodeID: nodeID, key: key, value: value)
+        } catch {
+            Self.logger.error("Failed to save pane state: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    /// A list of strings, stored as JSON in one pane-state value.
+    ///
+    /// JSON rather than a separator, because the lists panes remember are file
+    /// paths and no character is illegal in one.
+    public func paneStateList(nodeID: UUID, key: String) -> [String] {
+        guard let raw = paneState(nodeID: nodeID, key: key),
+              let data = raw.data(using: .utf8),
+              let list = try? JSONDecoder().decode([String].self, from: data) else { return [] }
+        return list
+    }
+
+    public func setPaneStateList(nodeID: UUID, key: String, values: [String]) {
+        guard !values.isEmpty else {
+            setPaneState(nodeID: nodeID, key: key, value: nil)
+            return
+        }
+        guard let data = try? JSONEncoder().encode(values),
+              let json = String(data: data, encoding: .utf8) else { return }
+        setPaneState(nodeID: nodeID, key: key, value: json)
+    }
+
     // MARK: - Project directories
 
     /// The extra directories this project's file browser shows, beyond the

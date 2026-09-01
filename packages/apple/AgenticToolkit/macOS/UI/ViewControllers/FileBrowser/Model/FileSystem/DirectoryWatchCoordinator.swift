@@ -58,7 +58,18 @@ public final class DirectoryWatchCoordinator: ObservableObject {
 
             DispatchQueue.main.async {
                 guard let self = self else { return }
-                self.rootNode = tree
+                // Merged into the tree already on screen, not swapped for it.
+                // A fresh root is a fresh object for every directory beneath
+                // it, and the outline goes on holding the old ones — so a
+                // folder the user had open stayed open while the read that
+                // filled it belonged to a node nothing was showing any more,
+                // and the folder came back empty. Re-using the nodes keeps
+                // identity, and with it everything already read.
+                if let existing = self.rootNode, existing.url == rootURL {
+                    existing.merge(children: tree.children ?? [])
+                } else {
+                    self.rootNode = tree
+                }
                 self.isSyncing = false
                 self.onChangeCallback?()
                 self.logger.info("Sync complete for \(self.rootURL.lastPathComponent)")

@@ -8,6 +8,11 @@ import AgenticToolkitCore
 @MainActor
 public protocol ProjectOpening: AnyObject {
     func openProject(_ repo: GitRepo)
+
+    /// Closes the project's window, if it has one. Called when the project
+    /// stops existing: a window still bound to a row that is about to be
+    /// deleted can only fail on its next write (`fail-fast`).
+    func closeProject(repoID: UUID)
 }
 
 /// The project registry feature: one database, the list of known git
@@ -152,6 +157,19 @@ public final class ProjectsCoordinator: AppFeature {
         do {
             for repo in plan.inserts { try database.insert(repo) }
             for repo in plan.updates { try database.update(repo) }
+            // Windows close first: closing one writes to the row it belongs
+            // to, which after the delete is a foreign key that no longer
+            // resolves.
+            for repo in plan.deletes { opener?.closeProject(repoID: repo.id) }
+            for repo in plan.deletes {
+                try database.delete(id: repo.id)
+                // The rows cascade; the window frame does not — it lives in
+                // `UserDefaults` under an id nothing else will ever ask for
+                // again, so it is cleared here or it is leaked forever.
+                let windowID = ComposableTabsWindowController.windowID(for: repo.id)
+                WindowManager.shared.frames.clearSavedState(for: windowID)
+                WindowManager.shared.frames.clearVisibility(for: windowID)
+            }
         } catch {
             Self.logger.error("Could not apply scan results: \(error)")
         }

@@ -10,6 +10,7 @@ public enum ProjectReconciler {
     public struct Plan: Sendable {
         public var inserts: [GitRepo] = []
         public var updates: [GitRepo] = []
+        public var deletes: [GitRepo] = []
         public var summary = ProjectScanSummary()
     }
 
@@ -20,11 +21,14 @@ public enum ProjectReconciler {
     /// same project moved, in the overwhelming case), then by directory name.
     /// A match has to be unique — two candidates means the answer is a guess,
     /// and a guess here silently re-points a project's settings at the wrong
-    /// folder, so the row is left missing instead.
+    /// folder, so the row is deleted instead.
     ///
-    /// Nothing is ever deleted. A repository that stops being found is marked
-    /// missing and keeps its settings, because "the volume isn't mounted" and
-    /// "I deleted this project" look identical from here.
+    /// A repository the scan does not account for is **deleted**, with its
+    /// settings and layout. The registry is a picture of what is on disk now,
+    /// and a list padded with projects that are not there is a list nobody can
+    /// use — the browser would have to show rows that cannot be opened
+    /// (`principle-of-least-astonishment`). The cost is real and accepted: a
+    /// project on an unmounted volume is forgotten and comes back as new.
     public static func plan(
         existing: [GitRepo],
         scanned: [ScannedGitRepo],
@@ -43,15 +47,12 @@ public enum ProjectReconciler {
                 continue
             }
             seenIDs.insert(known.id)
-            let wasMissing = known.isMissing
-            let changed = known.remote != scan.remote || wasMissing
-            known.remote = scan.remote
-            known.lastSeen = now
-            known.missingSince = nil
-            if changed {
+            if known.remote != scan.remote {
+                known.remote = scan.remote
+                known.lastSeen = now
                 plan.updates.append(known)
             }
-            if wasMissing { plan.summary.restored += 1 } else { plan.summary.unchanged += 1 }
+            plan.summary.unchanged += 1
         }
 
         var missing = existing.filter { !seenIDs.contains($0.id) }
@@ -78,7 +79,6 @@ public enum ProjectReconciler {
             moved.path = match.path
             moved.remote = match.remote
             moved.lastSeen = now
-            moved.missingSince = nil
             plan.updates.append(moved)
             plan.summary.moved += 1
             seenIDs.insert(moved.id)
@@ -100,12 +100,9 @@ public enum ProjectReconciler {
             plan.summary.added += 1
         }
 
-        // And whatever is still unaccounted for is gone — for now.
-        for var repo in missing where !repo.isMissing {
-            repo.missingSince = now
-            plan.updates.append(repo)
-        }
-        plan.summary.missing = missing.count
+        // And whatever is still unaccounted for is gone.
+        plan.deletes = missing
+        plan.summary.removed = missing.count
 
         return plan
     }

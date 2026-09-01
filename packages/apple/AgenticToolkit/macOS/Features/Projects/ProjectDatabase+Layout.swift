@@ -100,6 +100,19 @@ extension ProjectDatabase {
                 }
             }
 
+            // A pane that is gone takes its remembered state with it. Run after
+            // the inserts above, when `layout_nodes` again holds exactly the
+            // panes that exist — which is why this needs no id list of its own
+            // (`dry`).
+            try executeBound("""
+                DELETE FROM pane_state
+                WHERE repo_id = ?
+                  AND node_id NOT IN (SELECT id FROM layout_nodes WHERE repo_id = ?)
+            """) { stmt in
+                bindText(stmt, 1, repoKey)
+                bindText(stmt, 2, repoKey)
+            }
+
             // The state row is always written so enabled edges survive even
             // when no valid active tab exists.
             let validActive = activeTabID.flatMap { id in tabs.contains(where: { $0.id == id }) ? id : nil }
@@ -121,8 +134,9 @@ extension ProjectDatabase {
     private func insertNode(_ node: LayoutNode, parentID: UUID?, position: Int, repoID: UUID) throws {
         try executeBound("""
             INSERT INTO layout_nodes
-                (id, repo_id, parent_id, position, kind, orientation, content_type, pane_label)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (id, repo_id, parent_id, position, kind, orientation, content_type, pane_label,
+                 thickness_fraction)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """) { stmt in
             bindText(stmt, 1, node.id.uuidString)
             bindText(stmt, 2, repoID.uuidString)
@@ -139,6 +153,11 @@ extension ProjectDatabase {
                 sqlite3_bind_null(stmt, 6)
                 bindText(stmt, 7, contentType.rawValue)
                 bindOptionalText(stmt, 8, paneLabel)
+            }
+            if let fraction = node.thicknessFraction {
+                sqlite3_bind_double(stmt, 9, fraction)
+            } else {
+                sqlite3_bind_null(stmt, 9)
             }
         }
         if case .split(_, let first, let second) = node.kind {
@@ -157,11 +176,13 @@ extension ProjectDatabase {
         let orientation: String?
         let contentType: String?
         let paneLabel: String?
+        let thicknessFraction: Double?
     }
 
     private func fetchNodeRows(repoID: UUID) throws -> [UUID: NodeRow] {
         let sql = """
-            SELECT id, parent_id, position, kind, orientation, content_type, pane_label
+            SELECT id, parent_id, position, kind, orientation, content_type, pane_label,
+                   thickness_fraction
             FROM layout_nodes WHERE repo_id = ?
             """
         var stmt: OpaquePointer?
@@ -180,7 +201,10 @@ extension ProjectDatabase {
                 kind: columnText(stmt, 3) ?? "",
                 orientation: columnText(stmt, 4),
                 contentType: columnText(stmt, 5),
-                paneLabel: columnText(stmt, 6)
+                paneLabel: columnText(stmt, 6),
+                thicknessFraction: sqlite3_column_type(stmt, 7) == SQLITE_NULL
+                    ? nil
+                    : sqlite3_column_double(stmt, 7)
             )
         }
         return rows
@@ -193,7 +217,11 @@ extension ProjectDatabase {
         switch row.kind {
         case "leaf":
             let contentType = row.contentType.map { ComposableTabsViewID($0) } ?? .placeholder
-            return LayoutNode(id: row.id, kind: .leaf(contentType: contentType, paneLabel: row.paneLabel))
+            return LayoutNode(
+                id: row.id,
+                kind: .leaf(contentType: contentType, paneLabel: row.paneLabel),
+                thicknessFraction: row.thicknessFraction
+            )
         case "split":
             let children = rows.values
                 .filter { $0.parentID == id }
@@ -202,13 +230,58 @@ extension ProjectDatabase {
                 throw ProjectDatabaseError.invalidSchema("split \(id) has \(children.count) children")
             }
             let orientation = row.orientation.flatMap(ComposableTabsAxis.init(rawValue:)) ?? .horizontal
-            return LayoutNode(id: row.id, kind: .split(
-                orientation: orientation,
-                first: try buildTree(id: children[0].id, rows: rows),
-                second: try buildTree(id: children[1].id, rows: rows)
-            ))
+            return LayoutNode(
+                id: row.id,
+                kind: .split(
+                    orientation: orientation,
+                    first: try buildTree(id: children[0].id, rows: rows),
+                    second: try buildTree(id: children[1].id, rows: rows)
+                ),
+                thicknessFraction: row.thicknessFraction
+            )
         default:
             throw ProjectDatabaseError.invalidSchema("unknown kind \(row.kind)")
+        }
+    }
+
+    // MARK: - Pane state
+
+    /// What one pane remembers about itself — the folders its file browser had
+    /// disclosed, the file it had selected, whatever a later pane needs.
+    ///
+    /// Keyed by the pane's `layout_nodes.id`, so a pane dragged to the other
+    /// side of the window keeps what it knew: the node id travels with the pane
+    /// through every rearrangement, while its position does not.
+    public func paneState(repoID: UUID, nodeID: UUID, key: String) throws -> String? {
+        try queryScalarString(
+            "SELECT value FROM pane_state WHERE repo_id = ? AND node_id = ? AND key = ?"
+        ) { stmt in
+            self.bindText(stmt, 1, repoID.uuidString)
+            self.bindText(stmt, 2, nodeID.uuidString)
+            self.bindText(stmt, 3, key)
+        }
+    }
+
+    /// Writes one pane's remembered value; `nil` forgets it.
+    public func setPaneState(repoID: UUID, nodeID: UUID, key: String, value: String?) throws {
+        guard let value else {
+            try executeBound(
+                "DELETE FROM pane_state WHERE repo_id = ? AND node_id = ? AND key = ?"
+            ) { stmt in
+                bindText(stmt, 1, repoID.uuidString)
+                bindText(stmt, 2, nodeID.uuidString)
+                bindText(stmt, 3, key)
+            }
+            return
+        }
+        try executeBound("""
+            INSERT INTO pane_state (repo_id, node_id, key, value) VALUES (?, ?, ?, ?)
+            ON CONFLICT(repo_id, node_id, key) DO UPDATE SET value = excluded.value
+        """) { stmt in
+            bindText(stmt, 1, repoID.uuidString)
+            bindText(stmt, 2, nodeID.uuidString)
+            bindText(stmt, 3, key)
+            bindText(stmt, 4, value)
         }
     }
 

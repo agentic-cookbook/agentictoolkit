@@ -8,6 +8,10 @@ public final class NotesSplitViewController: ThemedSplitViewController {
 
     private let notesManager: NotesManager
 
+    /// Divider-position key, distinct per pane when a host can open more than
+    /// one notes pane at a time.
+    private let splitAutosaveName: String
+
     // MARK: - Child VCs
 
     private let listVC = NotesListViewController()
@@ -15,8 +19,9 @@ public final class NotesSplitViewController: ThemedSplitViewController {
 
     // MARK: - Initialization
 
-    public init(notesManager: NotesManager) {
+    public init(notesManager: NotesManager, autosaveName: String = "notes-split") {
         self.notesManager = notesManager
+        self.splitAutosaveName = autosaveName
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -28,18 +33,26 @@ public final class NotesSplitViewController: ThemedSplitViewController {
     override public func viewDidLoad() {
         super.viewDidLoad()
 
-        splitView.isVertical = true
-        splitView.dividerStyle = .thin
-
         let listItem = NSSplitViewItem(viewController: listVC)
         listItem.minimumThickness = 180
         listItem.maximumThickness = 320
+        // The list keeps the width it was given; the editor absorbs the rest.
+        // Without this both panes share the pane's resizing, and a restored
+        // width is scaled away as the split view grows into place.
+        listItem.holdingPriority = .defaultLow + 1
 
         let editorItem = NSSplitViewItem(viewController: editorVC)
-        editorItem.minimumThickness = 300
+        editorItem.minimumThickness = Self.minimumEditorWidth
 
         addSplitViewItem(listItem)
         addSplitViewItem(editorItem)
+        splitView.isVertical = true
+        splitView.dividerStyle = .thin
+        seedDividerPositionIfUnset()
+        // Set last, and only once the items exist: NSSplitView reads the
+        // autosaved frames when the name is assigned, so a name given to an
+        // empty split view restores nothing and never tries again.
+        splitView.autosaveName = NSSplitView.AutosaveName(splitAutosaveName)
 
         listVC.delegate = self
         editorVC.delegate = self
@@ -47,10 +60,46 @@ public final class NotesSplitViewController: ThemedSplitViewController {
 
     override public func viewWillAppear() {
         super.viewWillAppear()
-        if splitView.subviews.count == 2 {
-            splitView.setPosition(240, ofDividerAt: 0)
-        }
         reload()
+    }
+
+    /// Width a notes pane opens at, the first time it is ever shown, in a pane
+    /// as wide as `defaultPaneWidth`; proportionally less in a narrower one.
+    private static let defaultListWidth: CGFloat = 240
+    private static let defaultPaneWidth: CGFloat = 969
+
+    /// Below this the note itself is narrower than the list beside it.
+    private static let minimumEditorWidth: CGFloat = 300
+
+    /// Gives a pane nobody has ever dragged a saved position to be restored
+    /// from, rather than a width set from a lifecycle callback.
+    ///
+    /// `setPosition` is not an option here: `NSSplitViewController` lays its
+    /// items out with constraints and puts the divider straight back, wherever
+    /// in the lifecycle the call is made. Restoring is the one path that
+    /// survives, so the first run takes it too — one mechanism for the default
+    /// and for every run after it.
+    private func seedDividerPositionIfUnset() {
+        guard !hasStoredDividerPosition else { return }
+        let height = splitView.bounds.height
+        let editorWidth = Self.defaultPaneWidth - Self.defaultListWidth - splitView.dividerThickness
+        UserDefaults.standard.set(
+            [
+                "0.0, 0.0, \(Self.defaultListWidth), \(height), NO, NO",
+                "\(Self.defaultListWidth + splitView.dividerThickness), 0.0, \(editorWidth), \(height), NO, NO"
+            ],
+            forKey: Self.dividerPositionKey(splitAutosaveName)
+        )
+    }
+
+    /// Where AppKit keeps an autosaved divider position. Its absence is what
+    /// "nobody has ever sized this pane" looks like.
+    private var hasStoredDividerPosition: Bool {
+        UserDefaults.standard.object(forKey: Self.dividerPositionKey(splitAutosaveName)) != nil
+    }
+
+    static func dividerPositionKey(_ autosaveName: String) -> String {
+        "NSSplitView Subview Frames \(autosaveName)"
     }
 
     // MARK: - Reload

@@ -27,6 +27,11 @@ public final class FileBrowserViewController: NSViewController {
     /// a viewer next to the tree — see `FileBrowserSplitViewController`.
     public let selection: FileBrowserSelection
 
+    /// What was open and what was selected last time. Shared rather than
+    /// private for the same reason `selection` is: the host that persists it
+    /// owns it, and a browser used alone gets one of its own that nobody reads.
+    public let restoration: FileBrowserRestorationState
+
     private let excludedURL: URL
     private let config: FileTreeConfig
     private let ignorePatterns: [String]
@@ -40,7 +45,8 @@ public final class FileBrowserViewController: NSViewController {
     private lazy var tree = FileTreeOutlineViewController(
         roots: roots,
         directories: directories,
-        selection: selection
+        selection: selection,
+        restoration: restoration
     )
 
     private let addButton = NSButton(title: "", target: nil, action: nil)
@@ -66,13 +72,15 @@ public final class FileBrowserViewController: NSViewController {
         excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
-        selection: FileBrowserSelection = FileBrowserSelection()
+        selection: FileBrowserSelection = FileBrowserSelection(),
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
     ) {
         self.directories = directories
         self.excludedURL = excludedURL
         self.config = config
         self.ignorePatterns = ignorePatterns
         self.selection = selection
+        self.restoration = restoration
         super.init(nibName: nil, bundle: nil)
 
         rebuildManagers()
@@ -88,14 +96,16 @@ public final class FileBrowserViewController: NSViewController {
         excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
-        selection: FileBrowserSelection = FileBrowserSelection()
+        selection: FileBrowserSelection = FileBrowserSelection(),
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
     ) {
         self.init(
             directories: FileBrowserDirectories(primary: rootURL),
             excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
-            selection: selection
+            selection: selection,
+            restoration: restoration
         )
     }
 

@@ -25,7 +25,7 @@ public final class ProjectDatabase {
     var database: OpaquePointer?
     public let databasePath: String
 
-    public static let currentSchemaVersion = 1
+    public static let currentSchemaVersion = 3
 
     /// `~/.<app>/<App>.db` — e.g. `~/.whippet/Whippet.db`.
     ///
@@ -86,6 +86,12 @@ public final class ProjectDatabase {
         if try schemaVersion() < 1 {
             try migration001_createSchema()
         }
+        if try schemaVersion() < 2 {
+            try migration002_dropMissingSince()
+        }
+        if try schemaVersion() < 3 {
+            try migration003_paneSizesAndState()
+        }
     }
 
     private func schemaVersion() throws -> Int {
@@ -99,10 +105,9 @@ public final class ProjectDatabase {
         return Int(sqlite3_column_int(stmt, 0))
     }
 
-    /// The whole schema in one migration. There is no earlier version of this
-    /// database to carry forward: the `.whiproj` packages it replaces were a
-    /// different shape in a different place, and pretending otherwise would
-    /// mean shipping migrations nothing can ever have run (`yagni`).
+    /// The original schema, left exactly as it shipped. Migrations are
+    /// append-only — a fresh database runs this and then every later one, so
+    /// this stays the description of v1 rather than of the current shape.
     private func migration001_createSchema() throws {
         try execute("""
             CREATE TABLE git_repo (
@@ -176,13 +181,58 @@ public final class ProjectDatabase {
         try execute("INSERT INTO schema_migrations (version) VALUES (1)")
     }
 
+    /// Drops `missing_since`.
+    ///
+    /// v1 kept a repository the scan could not find, on the theory that an
+    /// unmounted volume must not cost a project its settings. In practice a
+    /// registry built from a whole home directory fills with rows that cannot
+    /// be opened and that no scan ever clears. The scan now deletes what it
+    /// does not find (`ProjectReconciler.plan`), so nothing writes the column.
+    ///
+    /// Deliberately does not delete the rows that were marked missing: the
+    /// scan that runs moments later is the thing qualified to judge them, and
+    /// it keeps — id, settings and layout intact — the ones that turn out to
+    /// be on disk after all.
+    private func migration002_dropMissingSince() throws {
+        try execute("ALTER TABLE git_repo DROP COLUMN missing_since")
+        try execute("INSERT INTO schema_migrations (version) VALUES (2)")
+    }
+
+    /// The two things a reopened window used to forget: how big each pane was,
+    /// and everything a pane knew about itself.
+    ///
+    /// `thickness_fraction` is nullable because a node nobody has sized is a
+    /// real state, distinct from one sized at zero — the descriptor's preferred
+    /// fraction is what fills in for it.
+    ///
+    /// `pane_state` is a bag rather than a column per feature, for the same
+    /// reason `project_setting` is: a pane that gains a remembered detail
+    /// (a scroll position, a sort order) should not cost a schema migration.
+    /// `node_id` is not a foreign key into `layout_nodes` — `saveTabs` deletes
+    /// and rewrites that whole table on every layout change, which would
+    /// cascade the state away seconds after it was written. `saveTabs` prunes
+    /// by node id instead, so state outlives the rewrite but not the pane.
+    private func migration003_paneSizesAndState() throws {
+        try execute("ALTER TABLE layout_nodes ADD COLUMN thickness_fraction REAL")
+        try execute("""
+            CREATE TABLE pane_state (
+                repo_id TEXT NOT NULL REFERENCES git_repo(id) ON DELETE CASCADE,
+                node_id TEXT NOT NULL,
+                key TEXT NOT NULL,
+                value TEXT NOT NULL,
+                PRIMARY KEY (repo_id, node_id, key)
+            )
+        """)
+        try execute("INSERT INTO schema_migrations (version) VALUES (3)")
+    }
+
     // MARK: - Repositories
 
     private static let repoColumns =
-        "id, path, name, remote, first_seen, last_seen, last_opened, missing_since"
+        "id, path, name, remote, first_seen, last_seen, last_opened"
 
-    /// Every known repository, missing ones included — the browser decides what
-    /// to show, the store does not decide for it (`separation-of-concerns`).
+    /// Every known repository. They are all repositories the last scan found:
+    /// one it did not is deleted, not filtered out here.
     public func allRepos() throws -> [GitRepo] {
         try queryRepos("SELECT \(Self.repoColumns) FROM git_repo ORDER BY name COLLATE NOCASE")
     }
@@ -202,7 +252,7 @@ public final class ProjectDatabase {
     public func insert(_ repo: GitRepo) throws {
         try executeBound("""
             INSERT INTO git_repo (\(Self.repoColumns))
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
         """) { stmt in
             bindText(stmt, 1, repo.id.uuidString)
             bindText(stmt, 2, repo.path)
@@ -211,7 +261,6 @@ public final class ProjectDatabase {
             sqlite3_bind_double(stmt, 5, repo.firstSeen.timeIntervalSince1970)
             sqlite3_bind_double(stmt, 6, repo.lastSeen.timeIntervalSince1970)
             bindOptionalDate(stmt, 7, repo.lastOpened)
-            bindOptionalDate(stmt, 8, repo.missingSince)
         }
     }
 
@@ -222,7 +271,7 @@ public final class ProjectDatabase {
         try executeBound("""
             UPDATE git_repo
             SET path = ?, name = ?, remote = ?, first_seen = ?, last_seen = ?,
-                last_opened = ?, missing_since = ?
+                last_opened = ?
             WHERE id = ?
         """) { stmt in
             bindText(stmt, 1, repo.path)
@@ -231,8 +280,7 @@ public final class ProjectDatabase {
             sqlite3_bind_double(stmt, 4, repo.firstSeen.timeIntervalSince1970)
             sqlite3_bind_double(stmt, 5, repo.lastSeen.timeIntervalSince1970)
             bindOptionalDate(stmt, 6, repo.lastOpened)
-            bindOptionalDate(stmt, 7, repo.missingSince)
-            bindText(stmt, 8, repo.id.uuidString)
+            bindText(stmt, 7, repo.id.uuidString)
         }
     }
 
@@ -246,9 +294,6 @@ public final class ProjectDatabase {
     }
 
     /// Deletes the repository and, by cascade, its settings, tabs and layout.
-    /// Only reached from an explicit user action — a scan marks a repository
-    /// missing instead, so a detached volume cannot silently discard a
-    /// project's configuration.
     public func delete(id: UUID) throws {
         try executeBound("DELETE FROM git_repo WHERE id = ?") { stmt in
             bindText(stmt, 1, id.uuidString)
@@ -277,8 +322,7 @@ public final class ProjectDatabase {
                 remote: columnText(stmt, 3),
                 firstSeen: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
                 lastSeen: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 5)),
-                lastOpened: columnDate(stmt, 6),
-                missingSince: columnDate(stmt, 7)
+                lastOpened: columnDate(stmt, 6)
             ))
         }
         return repos

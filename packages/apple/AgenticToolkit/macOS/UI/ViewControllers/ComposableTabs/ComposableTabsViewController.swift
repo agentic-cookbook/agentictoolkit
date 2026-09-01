@@ -85,9 +85,24 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     private weak var project: ProjectWorkspace?
     private let isRoot: Bool
 
+    /// See `ComposableTabsChild.thicknessFraction`.
+    public var thicknessFraction: CGFloat?
+
     /// One-shot: after the first real layout the user owns the dividers, and
-    /// re-imposing a fraction on every layout pass would fight them.
+    /// re-imposing a fraction on every layout pass would fight them. Reset
+    /// whenever the children change, because the stored fractions then
+    /// describe an arrangement that is no longer on screen.
     private var hasAppliedPreferredThicknesses = false
+
+    /// Root only: the pending write for a divider the user is still dragging.
+    private var pendingThicknessPersist: DispatchWorkItem?
+    /// Root only: the sizes last written, so a window resize that ends where it
+    /// began — or the layout passes AppKit runs while a tab is switched — do
+    /// not each cost a transaction (`idempotency`).
+    private var lastPersistedThicknesses = ""
+    private static let thicknessPersistDelay: DispatchTimeInterval = .milliseconds(300)
+
+    private var splitResizeObserver: NSObjectProtocol?
 
     /// Callback the host (e.g. window controller) installs on the *root*
     /// `ComposableTabsViewController` of each tab. Fires whenever a layout
@@ -139,6 +154,12 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         project?.layout ?? ComposableTabsLayout.placeholderOnly()
     }
 
+    isolated deinit {
+        if let splitResizeObserver {
+            NotificationCenter.default.removeObserver(splitResizeObserver)
+        }
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -147,6 +168,20 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
 
         for child in layoutChildren {
             addSplitViewItem(makeItem(for: child.viewController))
+        }
+
+        // Where a dragged divider becomes a saved layout. AppKit has no "the
+        // user let go" notification, so the write is debounced instead — see
+        // `scheduleThicknessPersist()`.
+        splitResizeObserver = NotificationCenter.default.addObserver(
+            forName: NSSplitView.didResizeSubviewsNotification,
+            object: splitView,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.hasAppliedPreferredThicknesses else { return }
+                self.rootSplit()?.scheduleThicknessPersist()
+            }
         }
     }
 
@@ -165,15 +200,20 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         guard !hasAppliedPreferredThicknesses else { return }
         let total = splitView.isVertical ? splitView.bounds.width : splitView.bounds.height
         // A zero-thickness pass carries no information; wait for a real one.
-        guard total > 1 else { return }
+        guard total > 1, splitViewItems.count == layoutChildren.count else { return }
         hasAppliedPreferredThicknesses = true
 
         var offset: CGFloat = 0
         for index in 0..<max(splitViewItems.count - 1, 0) {
             let item = splitViewItems[index]
             var thickness = self.thickness(of: item.viewController.view)
-            if item.preferredThicknessFraction > 0 {
-                thickness = max(item.minimumThickness, total * item.preferredThicknessFraction)
+            // A size the user dragged to outranks the one the view registered:
+            // the fraction in the descriptor is only ever a first guess, and
+            // re-imposing it over a saved layout is exactly the bug where a
+            // window "forgets" how it was arranged.
+            let fraction = layoutChildren[index].thicknessFraction ?? item.preferredThicknessFraction
+            if fraction > 0 {
+                thickness = max(item.minimumThickness, total * fraction)
                 splitView.setPosition(offset + thickness, ofDividerAt: index)
             }
             offset += thickness
@@ -182,6 +222,63 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
 
     private func thickness(of view: NSView) -> CGFloat {
         splitView.isVertical ? view.frame.width : view.frame.height
+    }
+
+    /// Reads the live divider positions into the tree, so the next snapshot
+    /// describes what is on screen rather than what was last restored.
+    ///
+    /// Recursive, because one gesture — a window resize, a tab appearing — is
+    /// felt by every split at once, and the root is the only one that saves.
+    /// A split whose view has never loaded is left alone: it keeps the sizes it
+    /// was restored with, which is the whole point of storing them on the child.
+    func captureThicknessFractions() {
+        if isViewLoaded, layoutChildren.count > 1, splitViewItems.count == layoutChildren.count {
+            let total = splitView.isVertical ? splitView.bounds.width : splitView.bounds.height
+            if total > 1 {
+                for (child, item) in zip(layoutChildren, splitViewItems) where !item.isCollapsed {
+                    child.thicknessFraction = thickness(of: item.viewController.view) / total
+                }
+            }
+        }
+        for child in layoutChildren {
+            (child as? ComposableTabsViewController)?.captureThicknessFractions()
+        }
+    }
+
+    /// Saves the dividers once they have stopped moving.
+    ///
+    /// A drag posts a resize notification per mouse event and a window resize
+    /// posts one per frame, so writing on each would put the database in the
+    /// middle of a gesture. The delay collapses the gesture into one write, and
+    /// the signature check drops the ones that changed nothing.
+    private func scheduleThicknessPersist() {
+        guard isRoot else { return }
+        pendingThicknessPersist?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.persistThicknessesIfChanged()
+        }
+        pendingThicknessPersist = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.thicknessPersistDelay, execute: work)
+    }
+
+    private func persistThicknessesIfChanged() {
+        captureThicknessFractions()
+        let node = snapshotNode()
+        let signature = Self.thicknessSignature(of: node)
+        guard signature != lastPersistedThicknesses else { return }
+        lastPersistedThicknesses = signature
+        onLayoutDidChange?(node)
+    }
+
+    /// The sizes in a tree, rounded to where a pixel could tell them apart.
+    private static func thicknessSignature(of node: LayoutNode) -> String {
+        let own = "\(node.id.uuidString):\(((node.thicknessFraction ?? -1) * 1000).rounded())"
+        switch node.kind {
+        case .leaf:
+            return own
+        case .split(_, let first, let second):
+            return "\(own)(\(thicknessSignature(of: first)),\(thicknessSignature(of: second)))"
+        }
     }
 
     // MARK: - Mutation
@@ -198,6 +295,11 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     ) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === child }),
               let project = project else { return }
+
+        // Before anything moves: what is on screen now is the last chance to
+        // read the sizes the user set, and the arrangement is about to change
+        // under them.
+        rootSplit()?.captureThicknessFractions()
 
         let sibling = ComposableTabsPaneViewController(
             nodeID: UUID(),
@@ -230,9 +332,15 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             project: project,
             isRoot: false
         )
+        // The inner split takes over the slot the pane held, so it inherits its
+        // size; the two panes inside it start out sharing that slot evenly.
+        inner.thicknessFraction = child.thicknessFraction
+        child.thicknessFraction = nil
+
         layoutChildren[index] = inner
         if isViewLoaded {
             insertSplitViewItem(makeItem(for: inner), at: index)
+            hasAppliedPreferredThicknesses = false
         }
 
         // Propagate to root, which persists the full tree.
@@ -254,6 +362,9 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         // spec requires — lives in the spec, so the tree asks it rather than
         // trusting whichever UI happened to call in.
         guard (root ?? self).canRemoveLeaf(child) else { return }
+        // Same reason as `split(_:adding:direction:)`: read the sizes off the
+        // screen while the arrangement they describe is still on it.
+        root?.captureThicknessFractions()
         let hadFocus = child.containsFirstResponder
 
         layoutChildren.remove(at: index)
@@ -265,8 +376,16 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         // on until the last reference happens to drop.
         child.paneWillBeRemoved()
 
+        // The survivors divide up the space the pane was using; whatever
+        // fractions they were carrying describe a split that no longer exists.
+        for remaining in layoutChildren { remaining.thicknessFraction = nil }
+        if isViewLoaded { hasAppliedPreferredThicknesses = false }
+
         if layoutChildren.count == 1, !isRoot, let parentSplit = parent as? ComposableTabsViewController {
             let survivor = layoutChildren[0]
+            // The survivor is promoted into this split's slot, so it is that
+            // slot's size it now has to fill.
+            survivor.thicknessFraction = thicknessFraction
             if isViewLoaded,
                let item = splitViewItems.first(where: { $0.viewController === survivor.viewController }) {
                 removeSplitViewItem(item)
@@ -286,11 +405,13 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         with replacement: any ComposableTabsChild
     ) {
         guard let index = layoutChildren.firstIndex(where: { $0.viewController === old }) else { return }
+        replacement.thicknessFraction = old.thicknessFraction
         layoutChildren[index] = replacement
         guard isViewLoaded,
               let item = splitViewItems.first(where: { $0.viewController === old }) else { return }
         removeSplitViewItem(item)
         insertSplitViewItem(makeItem(for: replacement.viewController), at: index)
+        hasAppliedPreferredThicknesses = false
     }
 
     // MARK: - Moving a pane
@@ -394,9 +515,10 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         reusing leaves: [UUID: ComposableTabsPaneViewController],
         project: ProjectWorkspace
     ) -> any ComposableTabsChild {
+        let child: any ComposableTabsChild
         switch node.kind {
         case .split(let axis, let first, let second):
-            return ComposableTabsViewController(
+            child = ComposableTabsViewController(
                 nodeID: node.id,
                 axis: axis,
                 first: rebuildChild(first, reusing: leaves, project: project),
@@ -405,13 +527,15 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
                 isRoot: false
             )
         case .leaf(let viewID, _):
-            return leaves[node.id] ?? ComposableTabsPaneViewController(
+            child = leaves[node.id] ?? ComposableTabsPaneViewController(
                 nodeID: node.id,
                 paneNumber: project.allocatePaneNumber(),
                 viewID: viewID,
                 project: project
             )
         }
+        child.thicknessFraction = node.thicknessFraction.map { CGFloat($0) }
+        return child
     }
 
     // MARK: - Spec-driven legal moves
@@ -490,7 +614,8 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
                 id: nodeID,
                 orientation: axis,
                 first: snapshots[0],
-                second: snapshots[1]
+                second: snapshots[1],
+                thicknessFraction: thicknessFraction.map(Double.init)
             )
         }
     }
@@ -500,7 +625,11 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             return split.snapshotNode()
         }
         if let leaf = child as? ComposableTabsPaneViewController {
-            return LayoutNode.leaf(id: leaf.nodeID, contentType: leaf.viewID)
+            return LayoutNode.leaf(
+                id: leaf.nodeID,
+                contentType: leaf.viewID,
+                thicknessFraction: leaf.thicknessFraction.map(Double.init)
+            )
         }
         // Fallback — should not occur under the current class hierarchy.
         return LayoutNode.leaf(id: UUID(), contentType: .placeholder)
@@ -602,17 +731,22 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         _ node: LayoutNode,
         project: ProjectWorkspace
     ) -> any ComposableTabsChild {
+        let child: any ComposableTabsChild
         switch node.kind {
         case .split:
-            return buildSplit(node, project: project, isRoot: false)
+            child = buildSplit(node, project: project, isRoot: false)
         case .leaf(let viewID, _):
-            return ComposableTabsPaneViewController(
+            child = ComposableTabsPaneViewController(
                 nodeID: node.id,
                 paneNumber: project.allocatePaneNumber(),
                 viewID: viewID,
                 project: project
             )
         }
+        // The saved size travels with the child, so the first layout pass can
+        // hand each pane the share it had when the window was last closed.
+        child.thicknessFraction = node.thicknessFraction.map { CGFloat($0) }
+        return child
     }
 }
 
@@ -621,6 +755,15 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
 @MainActor
 public protocol ComposableTabsChild: AnyObject {
     var viewController: NSViewController { get }
+    var nodeID: UUID { get }
+
+    /// This child's share of the split holding it, `0...1`, or `nil` for one
+    /// nobody has sized yet.
+    ///
+    /// Kept on the child rather than in a map on the parent so it survives
+    /// every rearrangement for free: a pane carried into a new inner split, or
+    /// promoted when its sibling closes, arrives with the size it had.
+    var thicknessFraction: CGFloat? { get set }
 }
 
 extension ComposableTabsPaneViewController: ComposableTabsChild {

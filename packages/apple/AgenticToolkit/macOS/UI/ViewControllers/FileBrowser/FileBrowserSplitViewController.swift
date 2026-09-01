@@ -23,6 +23,10 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     /// What the tree selects and the viewer shows.
     public let selection: FileBrowserSelection
 
+    /// The folders that were open and the file that was selected. Forwarded so
+    /// a host can hand in what it stored without reaching through the tree.
+    public var restoration: FileBrowserRestorationState { browserViewController.restoration }
+
     /// The roots the tree shows. Forwarded so a host does not have to reach
     /// through `browserViewController` to add or remove one.
     public var directories: FileBrowserDirectories { browserViewController.directories }
@@ -46,7 +50,8 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
-        autosaveName: String = "file-browser-split"
+        autosaveName: String = "file-browser-split",
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
     ) {
         let selection = FileBrowserSelection()
         self.selection = selection
@@ -55,7 +60,8 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
             excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
-            selection: selection
+            selection: selection,
+            restoration: restoration
         )
         self.viewerViewController = FileViewerViewController(selection: selection)
         self.splitAutosaveName = autosaveName
@@ -68,14 +74,16 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
-        autosaveName: String = "file-browser-split"
+        autosaveName: String = "file-browser-split",
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
     ) {
         self.init(
             directories: FileBrowserDirectories(primary: rootURL),
             excludedURL: excludedURL,
             config: config,
             ignorePatterns: ignorePatterns,
-            autosaveName: autosaveName
+            autosaveName: autosaveName,
+            restoration: restoration
         )
     }
 

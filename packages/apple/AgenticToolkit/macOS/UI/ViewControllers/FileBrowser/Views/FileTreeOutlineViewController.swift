@@ -27,6 +27,10 @@ final class FileTreeOutlineViewController: NSViewController {
     /// What the user has clicked.
     private let selection: FileBrowserSelection
 
+    /// The folders that should be open and the file that should be selected —
+    /// what the browser looked like last time.
+    private let restoration: FileBrowserRestorationState
+
     private let outline = ThemedOutlineView(role: .windowBackground)
     private let scrollView = ThemedScrollView()
 
@@ -46,14 +50,31 @@ final class FileTreeOutlineViewController: NSViewController {
     /// the model, so the resulting delegate callback does not write it back.
     private var isSyncingSelection = false
 
+    /// The same guard for disclosure: an expansion this controller performs to
+    /// restore what was stored must not be reported back as the user opening a
+    /// folder.
+    private var isSyncingExpansion = false
+
+    /// The file still waiting to be selected, if the row it lives on has not
+    /// been drawn yet. Cleared the moment it is found — a restore happens once,
+    /// and after that the selection is the user's.
+    private var pendingSelectionPath: String?
+
+    /// One-shot, so the "a lone root opens showing its contents" default cannot
+    /// re-open a root the user has deliberately collapsed.
+    private var hasAppliedDefaultExpansion = false
+
     init(
         roots: FileBrowserRootsModel,
         directories: FileBrowserDirectories,
-        selection: FileBrowserSelection
+        selection: FileBrowserSelection,
+        restoration: FileBrowserRestorationState
     ) {
         self.roots = roots
         self.directories = directories
         self.selection = selection
+        self.restoration = restoration
+        self.pendingSelectionPath = restoration.selectedPath
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -108,9 +129,20 @@ final class FileTreeOutlineViewController: NSViewController {
             .sink { [weak self] _ in self?.reloadPreservingSelection() }
             .store(in: &cancellables)
 
+        // Every change of selection lands here — the user's clicks, a reload
+        // that lost the row, a host restoring one — so this is the single place
+        // that records it (`dry`).
         selection.$selectedNode
             .receive(on: RunLoop.main)
-            .sink { [weak self] node in self?.showSelection(node) }
+            .sink { [weak self] node in
+                guard let self else { return }
+                self.showSelection(node)
+                // While a restore is still outstanding the tree is not yet
+                // showing what was stored, and its empty selection is not news.
+                if self.pendingSelectionPath == nil {
+                    self.restoration.setSelectedPath(node?.url.path)
+                }
+            }
             .store(in: &cancellables)
     }
 
@@ -153,6 +185,10 @@ final class FileTreeOutlineViewController: NSViewController {
                 if wasExpanded { self.outline.expandItem(node) }
                 self.reselect(selected)
                 self.isSyncingSelection = false
+                // The rows that just arrived may be the ones a stored path was
+                // waiting for — this is where a deep restore takes its next
+                // step down the tree.
+                self.restoreDisclosure()
             }
     }
 
@@ -170,11 +206,63 @@ final class FileTreeOutlineViewController: NSViewController {
         outline.reloadData()
         // A single root shows its contents straight away: a tree that opens
         // onto one collapsed header makes the user click to see anything.
-        if roots.managers.count == 1, let only = roots.managers.first {
-            outline.expandItem(only)
+        //
+        // Only for a browser with nothing stored, and only once: a default is
+        // what fills in for an answer, never what overrules one.
+        if !hasAppliedDefaultExpansion {
+            hasAppliedDefaultExpansion = true
+            if restoration.expandedPaths.isEmpty,
+               roots.managers.count == 1,
+               let only = roots.managers.first {
+                outline.expandItem(only)
+            }
         }
         reselect(selected)
         isSyncingSelection = false
+        restoreDisclosure()
+    }
+
+    /// Re-opens the folders that were open, and re-selects the file that was
+    /// selected, as far as the rows currently drawn allow.
+    ///
+    /// One pass is deliberately not enough. Expanding a folder only *starts*
+    /// the read of its contents (`outlineViewItemWillExpand` →
+    /// `loadChildrenIfNeeded`), so a path four levels deep is restored one
+    /// level per pass, each pass run by the reload that the arriving children
+    /// trigger. The loop terminates because a pass that expands nothing
+    /// triggers no reload.
+    private func restoreDisclosure() {
+        isSyncingExpansion = true
+        var row = 0
+        while row < outline.numberOfRows {
+            if let item = outline.item(atRow: row),
+               let path = path(of: item),
+               restoration.isExpanded(path),
+               !outline.isItemExpanded(item) {
+                outline.expandItem(item)
+            }
+            row += 1
+        }
+        isSyncingExpansion = false
+
+        guard let wanted = pendingSelectionPath else { return }
+        for row in 0..<outline.numberOfRows {
+            guard let node = outline.item(atRow: row) as? FileTreeNode, node.url.path == wanted else { continue }
+            pendingSelectionPath = nil
+            selection.selectedNode = node
+            return
+        }
+    }
+
+    /// How a row is named in stored state: its path on disk, the one identity
+    /// it keeps across launches. Placeholder rows have none — they are not
+    /// somewhere the user can be.
+    private func path(of item: Any) -> String? {
+        switch item {
+        case let manager as FileTreeManager: return manager.repoRootURL.path
+        case let node as FileTreeNode: return node.url.path
+        default: return nil
+        }
     }
 
     /// Puts the outline back on `item` after a reload, if it is still drawn.
@@ -296,6 +384,23 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
         guard let node = notification.userInfo?["NSObject"] as? FileTreeNode else { return }
         watchChildren(of: node)
         node.loadChildrenIfNeeded()
+    }
+
+    /// A folder opening or closing is the whole of what "disclosed" means, so
+    /// it is recorded here rather than at each of the several places that can
+    /// cause one — a click, a double-click, an arrow key, a restore.
+    func outlineViewItemDidExpand(_ notification: Notification) {
+        guard !isSyncingExpansion,
+              let item = notification.userInfo?["NSObject"],
+              let path = path(of: item) else { return }
+        restoration.setExpanded(true, path: path)
+    }
+
+    func outlineViewItemDidCollapse(_ notification: Notification) {
+        guard !isSyncingExpansion,
+              let item = notification.userInfo?["NSObject"],
+              let path = path(of: item) else { return }
+        restoration.setExpanded(false, path: path)
     }
 
     func outlineView(_ outlineView: NSOutlineView, rowViewForItem item: Any) -> NSTableRowView? {

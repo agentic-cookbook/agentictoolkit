@@ -12,6 +12,12 @@ public final class ProjectWindowManager: ProjectOpening {
 
     public static let shared = ProjectWindowManager()
 
+    /// `project_setting` key marking a project whose window was open when the
+    /// app last quit. It lives with the project row rather than in app
+    /// preferences so it cascades away with the project — a forgotten registry
+    /// row can't leave a "reopen me" behind pointing at nothing.
+    private static let openWindowKey = "window.open"
+
     private var controllers: [UUID: ComposableTabsWindowController] = [:]
     private var closeObservers: [UUID: NSObjectProtocol] = [:]
     private weak var coordinator: ProjectsCoordinator?
@@ -63,6 +69,50 @@ public final class ProjectWindowManager: ProjectOpening {
         controller.showWindow(nil)
         controller.window?.makeKeyAndOrderFront(nil)
         observeClose(of: controller, repoID: repo.id)
+        setWindowOpen(true, repoID: repo.id)
+    }
+
+    public func closeProject(repoID: UUID) {
+        controllers[repoID]?.close()
+    }
+
+    // MARK: - Restore
+
+    /// Reopens every project whose window was open when the app last quit.
+    /// Hosts call this once at launch, after the registry exists.
+    ///
+    /// Deliberately not routed through `ProjectsCoordinator.openProject(_:)`:
+    /// restoring a window is not the user opening a project, and must not
+    /// rewrite `lastOpened` and re-sort the browser on every launch.
+    ///
+    /// A project window is the app's workspace, not a document, so this does
+    /// not consult `reopenOnLaunchPolicy` — that setting governs the recent-
+    /// documents reopen in `WindowManager`. Closing the window is how you tell
+    /// this to stop reopening it.
+    public func restoreOpenProjects() {
+        guard let coordinator else { return }
+        for repo in coordinator.repos where isWindowOpen(repoID: repo.id) {
+            openProject(repo)
+        }
+    }
+
+    private func isWindowOpen(repoID: UUID) -> Bool {
+        guard let database = coordinator?.database else { return false }
+        do {
+            return try database.setting(repoID: repoID, key: Self.openWindowKey) == "1"
+        } catch {
+            Self.logger.error("Could not read window state for \(repoID.uuidString, privacy: .public): \(error)")
+            return false
+        }
+    }
+
+    private func setWindowOpen(_ isOpen: Bool, repoID: UUID) {
+        guard let database = coordinator?.database else { return }
+        do {
+            try database.setSetting(repoID: repoID, key: Self.openWindowKey, value: isOpen ? "1" : nil)
+        } catch {
+            Self.logger.error("Could not record window state for \(repoID.uuidString, privacy: .public): \(error)")
+        }
     }
 
     /// Drops the controller when its window closes, so reopening the project
@@ -76,6 +126,13 @@ public final class ProjectWindowManager: ProjectOpening {
         ) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
+                // AppKit closes still-open windows on the way out of the app.
+                // Recording that as "the user closed it" would stop every open
+                // project from reopening next launch, which is the opposite of
+                // what quitting with windows open means.
+                if !WindowManager.shared.isTerminating {
+                    self.setWindowOpen(false, repoID: repoID)
+                }
                 self.controllers.removeValue(forKey: repoID)
                 if let observer = self.closeObservers.removeValue(forKey: repoID) {
                     NotificationCenter.default.removeObserver(observer)

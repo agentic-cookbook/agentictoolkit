@@ -42,6 +42,12 @@ public final class NotesListViewController: NSViewController {
         field.placeholderString = "Search notes"
         field.delegate = self
         field.translatesAutoresizingMaskIntoConstraints = false
+        field.accessibilityID("notes.search")
+        // The magnifier and the clear "x" are cells of their own in the
+        // accessibility tree, and they do not inherit the field's identifier.
+        let cell = field.cell as? NSSearchFieldCell
+        cell?.searchButtonCell?.setAccessibilityIdentifier("notes.search.magnifier")
+        cell?.cancelButtonCell?.setAccessibilityIdentifier("notes.search.clear")
         return field
     }()
 

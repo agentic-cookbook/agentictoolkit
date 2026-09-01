@@ -233,6 +233,9 @@ private final class TabButton: NSView {
         closeButton.bezelStyle = .inline
         closeButton.isBordered = false
         closeButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Close Tab")
+        // Per tab: several bars can be on screen at once, so "the close button"
+        // is only an address if it names which tab it closes.
+        closeButton.accessibilityID("tab-bar.close.\(id.uuidString)")
         closeButton.imagePosition = .imageOnly
         closeButton.symbolConfiguration = .init(pointSize: 10, weight: .regular)
         closeButton.target = self

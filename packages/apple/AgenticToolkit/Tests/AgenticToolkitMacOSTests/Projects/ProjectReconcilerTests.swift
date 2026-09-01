@@ -22,7 +22,6 @@ final class ProjectReconcilerTests: XCTestCase {
         XCTAssertEqual(inserted.remote, "git@example.com:someone/whippet.git")
         XCTAssertEqual(inserted.firstSeen, now)
         XCTAssertEqual(inserted.lastSeen, now)
-        XCTAssertNil(inserted.missingSince)
         XCTAssertEqual(plan.summary.added, 1)
     }
 
@@ -77,22 +76,6 @@ final class ProjectReconcilerTests: XCTestCase {
         XCTAssertEqual(plan.summary.unchanged, 1)
     }
 
-    /// A repository that comes back — the volume was remounted — is un-marked
-    /// rather than re-added, so it keeps its id and its settings.
-    func testARepoThatComesBackIsRestoredNotReAdded() throws {
-        let existing = [
-            repo(path: "/Volumes/ext/alpha", name: "alpha", missingSince: Date(timeIntervalSince1970: 1))
-        ]
-        let plan = ProjectReconciler.plan(existing: existing, scanned: [scan("/Volumes/ext/alpha")], now: now)
-
-        XCTAssertTrue(plan.inserts.isEmpty)
-        let restored = try XCTUnwrap(plan.updates.first)
-        XCTAssertEqual(restored.id, existing[0].id)
-        XCTAssertNil(restored.missingSince)
-        XCTAssertEqual(plan.summary.restored, 1)
-        XCTAssertEqual(plan.summary.missing, 0)
-    }
-
     // MARK: - Moves
 
     func testAMovedRepoIsMatchedByItsRemote() throws {
@@ -107,9 +90,8 @@ final class ProjectReconcilerTests: XCTestCase {
         XCTAssertEqual(moved.id, existing[0].id)
         XCTAssertEqual(moved.path, "/Users/someone/new/renamed-folder")
         XCTAssertEqual(moved.name, "My Alpha", "the user's name for a project survives a move")
-        XCTAssertNil(moved.missingSince)
         XCTAssertEqual(plan.summary.moved, 1)
-        XCTAssertEqual(plan.summary.missing, 0)
+        XCTAssertTrue(plan.deletes.isEmpty)
     }
 
     /// A repository with no remote — never pushed anywhere — can still be
@@ -129,7 +111,7 @@ final class ProjectReconcilerTests: XCTestCase {
 
     /// Two candidates means the answer is a guess, and a guess here silently
     /// re-points a project's settings at the wrong folder.
-    func testAnAmbiguousMoveLeavesTheRowMissing() throws {
+    func testAnAmbiguousMoveDeletesTheRow() throws {
         let existing = [repo(path: "/Users/someone/old/alpha", name: "My Alpha", remote: "git@example.com:a.git")]
         let plan = ProjectReconciler.plan(
             existing: existing,
@@ -140,10 +122,9 @@ final class ProjectReconcilerTests: XCTestCase {
             now: now
         )
         XCTAssertEqual(plan.summary.moved, 0)
-        XCTAssertEqual(plan.summary.missing, 1)
+        XCTAssertEqual(plan.summary.removed, 1)
         XCTAssertEqual(plan.inserts.count, 2, "both copies are new projects in their own right")
-        let missing = try XCTUnwrap(plan.updates.first { $0.id == existing[0].id })
-        XCTAssertEqual(missing.missingSince, now)
+        XCTAssertEqual(plan.deletes.map(\.id), [existing[0].id])
     }
 
     /// A move has to claim its new path before the adoption pass turns that
@@ -159,30 +140,19 @@ final class ProjectReconcilerTests: XCTestCase {
         XCTAssertEqual(plan.updates.count, 1)
     }
 
-    // MARK: - Missing
+    // MARK: - Removal
 
-    /// Nothing is ever deleted: "the volume isn't mounted" and "I deleted this
-    /// project" look identical from here.
-    func testAVanishedRepoIsMarkedMissingRatherThanDeleted() throws {
+    /// The registry is a picture of what is on disk now. A row nothing on disk
+    /// accounts for is deleted, settings and all, rather than kept as a project
+    /// that cannot be opened.
+    func testAVanishedRepoIsDeleted() {
         let existing = [repo(path: "/tmp/alpha", name: "alpha", remote: "git@example.com:a.git")]
         let plan = ProjectReconciler.plan(existing: existing, scanned: [], now: now)
 
         XCTAssertTrue(plan.inserts.isEmpty)
-        let marked = try XCTUnwrap(plan.updates.first)
-        XCTAssertEqual(marked.id, existing[0].id)
-        XCTAssertEqual(marked.missingSince, now)
-        XCTAssertEqual(plan.summary.missing, 1)
-    }
-
-    /// The timestamp says when the repository was *first* found to be gone, so
-    /// a second scan must not move it forward.
-    func testARepoThatIsStillMissingIsNotRewritten() {
-        let vanishedAt = Date(timeIntervalSince1970: 1)
-        let existing = [repo(path: "/tmp/alpha", name: "alpha", missingSince: vanishedAt)]
-        let plan = ProjectReconciler.plan(existing: existing, scanned: [], now: now)
-
         XCTAssertTrue(plan.updates.isEmpty)
-        XCTAssertEqual(plan.summary.missing, 1)
+        XCTAssertEqual(plan.deletes.map(\.id), [existing[0].id])
+        XCTAssertEqual(plan.summary.removed, 1)
     }
 
     // MARK: - Summary
@@ -204,13 +174,12 @@ final class ProjectReconcilerTests: XCTestCase {
         )
         XCTAssertEqual(plan.summary.unchanged, 1)
         XCTAssertEqual(plan.summary.moved, 1)
-        XCTAssertEqual(plan.summary.missing, 1)
+        XCTAssertEqual(plan.summary.removed, 1)
         XCTAssertEqual(plan.summary.added, 1)
-        XCTAssertEqual(plan.summary.total, 4)
-        // Three of the four are on disk; the fourth is a row the scan did not
-        // see. Counting it as a project found would be a lie the user notices.
+        // Three of the four are on disk, and the fourth is deleted rather than
+        // counted — the registry afterwards holds exactly those three.
         XCTAssertEqual(plan.summary.found, 3)
-        XCTAssertEqual(plan.summary.summaryText, "3 projects — 1 new, 1 moved, 1 missing")
+        XCTAssertEqual(plan.summary.summaryText, "3 projects — 1 new, 1 moved, 1 removed")
     }
 
     func testAQuietScanSaysSo() {
@@ -224,13 +193,8 @@ final class ProjectReconcilerTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private func repo(
-        path: String,
-        name: String,
-        remote: String? = nil,
-        missingSince: Date? = nil
-    ) -> GitRepo {
-        GitRepo(path: path, name: name, remote: remote, missingSince: missingSince)
+    private func repo(path: String, name: String, remote: String? = nil) -> GitRepo {
+        GitRepo(path: path, name: name, remote: remote)
     }
 
     private func scan(_ path: String, remote: String? = nil) -> ScannedGitRepo {
