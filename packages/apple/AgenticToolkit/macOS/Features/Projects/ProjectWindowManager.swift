@@ -91,9 +91,37 @@ public final class ProjectWindowManager: ProjectOpening {
     /// this to stop reopening it.
     public func restoreOpenProjects() {
         guard let coordinator else { return }
-        for repo in coordinator.repos where isWindowOpen(repoID: repo.id) {
+        let plan = Self.restorePlan(
+            repos: coordinator.repos,
+            wasOpen: { [weak self] in self?.isWindowOpen(repoID: $0.id) ?? false },
+            existsOnDisk: { FileManager.default.fileExists(atPath: $0.path) }
+        )
+        for repo in plan.forget {
+            Self.logger.info("Not reopening \(repo.name, privacy: .public): its folder is gone")
+            setWindowOpen(false, repoID: repo.id)
+        }
+        for repo in plan.reopen {
             openProject(repo)
         }
+    }
+
+    /// Which of the projects flagged open at quit are worth reopening, and
+    /// which should have the flag cleared instead.
+    ///
+    /// A folder deleted or renamed since the last run would reopen as a
+    /// workspace with an empty tree and a terminal in `/` — a window that looks
+    /// broken rather than absent. Deleting the row is the scan's job; restore
+    /// only declines to resurrect it, and forgets the flag so it stops trying
+    /// every launch.
+    ///
+    /// Pure, so the rule can be tested without opening a window.
+    static func restorePlan(
+        repos: [GitRepo],
+        wasOpen: (GitRepo) -> Bool,
+        existsOnDisk: (GitRepo) -> Bool
+    ) -> (reopen: [GitRepo], forget: [GitRepo]) {
+        let open = repos.filter(wasOpen)
+        return (open.filter(existsOnDisk), open.filter { !existsOnDisk($0) })
     }
 
     private func isWindowOpen(repoID: UUID) -> Bool {
