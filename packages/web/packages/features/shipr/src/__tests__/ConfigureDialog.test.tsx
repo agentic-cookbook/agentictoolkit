@@ -85,6 +85,7 @@ function mirror(envBranches: Partial<Record<Environment, string>>): RepoItem {
 function draw(items: RepoItem[] = []) {
   const onClose = vi.fn();
   const onSaveSettings = vi.fn(() => Promise.resolve());
+  const onImport = vi.fn(() => Promise.resolve());
   render(
     <ConfigureDialog
       open
@@ -96,9 +97,10 @@ function draw(items: RepoItem[] = []) {
       onRegister={() => Promise.resolve()}
       onRemove={() => Promise.resolve()}
       onSaveSettings={onSaveSettings}
+      onImport={onImport}
     />,
   );
-  return { onClose, onSaveSettings };
+  return { onClose, onSaveSettings, onImport };
 }
 
 /** The dialog with this title, of however many are open. */
@@ -162,5 +164,41 @@ describe('the Configure dialog frame', () => {
     ).toBeInTheDocument();
     // And it is a second dialog, not a pane: Configure is still open behind it.
     expect(dialog('Configure')).toBeTruthy();
+  });
+});
+
+describe('the fleet as a file', () => {
+  it('offers nothing to export when nothing is registered', () => {
+    draw();
+    const button = screen.getByRole('button', { name: 'Export' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('title', 'Nothing is registered yet.');
+  });
+
+  it('writes a file of the rows on the screen', async () => {
+    // Every part of the export is stubbed except the one thing worth pinning here: that the
+    // button reaches the file at all. What goes IN the file is `buildDocument`'s, and is
+    // pinned against the CLI's own output in exchange.test.ts.
+    const createObjectURL = vi.fn(() => 'blob:configure');
+    const revokeObjectURL = vi.fn();
+    Object.assign(URL, { createObjectURL, revokeObjectURL });
+    const click = vi
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+
+    draw([mirror({})]);
+    await userEvent.click(screen.getByRole('button', { name: 'Export' }));
+
+    expect(click).toHaveBeenCalled();
+    expect(createObjectURL).toHaveBeenCalled();
+    click.mockRestore();
+  });
+
+  it('opens the import dialog rather than importing anything on the press', async () => {
+    const { onImport } = draw([mirror({})]);
+    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    expect(await waitFor(() => dialog('Import configuration'))).toBeTruthy();
+    // The bar button opens a plan; it never applies one.
+    expect(onImport).not.toHaveBeenCalled();
   });
 });

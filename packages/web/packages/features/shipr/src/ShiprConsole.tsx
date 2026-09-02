@@ -8,6 +8,8 @@ import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
 import { useRunningRepos } from './activity/useRunningRepos';
 import { isFinished, useRuns } from './activity/useRuns';
 import { ConfigureDialog } from './configure/ConfigureDialog';
+import { applyImport, ImportError } from './exchange/apply';
+import type { ImportPlan } from './exchange/plan';
 import { GroupDetailPane } from './GroupDetailPane';
 import { RepoView } from './RepoView';
 import {
@@ -335,16 +337,57 @@ function Console({
     [start],
   );
 
+  /** Registrations that have been started, into the queue every other run goes into. One
+   *  helper because there are now two ways to start them — the wizard's one, and an import's
+   *  nine — and they must land in exactly the same place. */
+  const queueRegistrations = React.useCallback(
+    (runIds: readonly string[]) => {
+      if (runIds.length === 0) return;
+      setQueue((prev) => [...prev, ...runIds]);
+      setActiveAction('register');
+      runs.refresh();
+    },
+    [runs],
+  );
+
   const onRegister = React.useCallback(
     async (body: RegisterRequest) => {
       setPressed((n) => n + 1);
       const { runId } = await client.register(body);
-      setQueue((prev) => [...prev, runId]);
-      setActiveAction('register');
-      runs.refresh();
+      queueRegistrations([runId]);
       refreshAll();
     },
-    [client, runs, refreshAll],
+    [client, queueRegistrations, refreshAll],
+  );
+
+  /**
+   * Run an import plan: the folders it needs, the registrations it asks for, the settings it
+   * changes — {@link applyImport} walks them, this queues what walking them started.
+   *
+   * A REGISTRATION FROM A FILE IS A REGISTRATION. Each one is the same run `onRegister`
+   * queues, so they go in the same queue: the rail spins, the bar stands down, and Cancel
+   * stops the lot. An import that quietly started nine runs the console was not watching
+   * would be the one place in this feature where work happens off-screen.
+   *
+   * A FAILURE HALFWAY STILL QUEUES WHAT WENT OUT. `ImportError` carries the partial result
+   * for exactly this: the runs already started are on the forge whether or not the tenth
+   * call succeeded, and the error is re-thrown afterwards so the dialog stays open on the
+   * sentence that says which project it stopped at.
+   */
+  const onImport = React.useCallback(
+    async (plan: ImportPlan, connectionId?: string) => {
+      setPressed((n) => n + 1);
+      try {
+        const result = await applyImport({ client, plan, groups, connectionId });
+        queueRegistrations(result.registered.map((r) => r.runId));
+      } catch (e) {
+        if (e instanceof ImportError) queueRegistrations(e.result.registered.map((r) => r.runId));
+        refreshAll();
+        throw e;
+      }
+      refreshAll();
+    },
+    [client, groups, queueRegistrations, refreshAll],
   );
 
   /**
@@ -778,6 +821,7 @@ function Console({
         onRegister={onRegister}
         onRemove={onRemove}
         onSaveSettings={onSaveSettings}
+        onImport={onImport}
       />
 
       <DeployDialog

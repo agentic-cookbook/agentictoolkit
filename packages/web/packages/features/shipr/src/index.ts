@@ -64,6 +64,41 @@ export type { RegisterWizardProps } from './toolbar/RegisterWizard';
 export { ConfigureDialog } from './configure/ConfigureDialog';
 export type { ConfigureDialogProps } from './configure/ConfigureDialog';
 
+// The fleet as one file, in both directions. `document`/`plan`/`apply` are pure and could
+// live outside this barrel, but the dialog above them cannot ('use client' is hoisted here),
+// and splitting one small feature across two entry points would be a boundary drawn by the
+// bundler rather than by the subject.
+export { ImportDialog } from './exchange/ImportDialog';
+export type { ImportDialogProps } from './exchange/ImportDialog';
+export {
+  CONFIG_VERSION,
+  DEFAULT_FILENAME,
+  DocumentError,
+  EXPORTED_BY,
+  SCHEMA,
+  SCHEMA_VERSION,
+  buildDocument,
+  displayName,
+  parseDocument,
+  repoName,
+  repoOwner,
+  serializeDocument,
+  writtenBy,
+} from './exchange/document';
+export type {
+  ExportableGroup,
+  ExportableRepo,
+  ExportedConfig,
+  ExportedProject,
+  ExportedRemote,
+  ShiprDocument,
+} from './exchange/document';
+export { downloadDocument, readTextFile } from './exchange/files';
+export { planImport, registerBodyOf } from './exchange/plan';
+export type { ImportPlan, ImportPlanOptions, PlanRow, RowState } from './exchange/plan';
+export { applyImport, ImportError } from './exchange/apply';
+export type { ApplyOptions, ApplyResult, ImportClient } from './exchange/apply';
+
 export { SettingsDialog } from './settings/SettingsDialog';
 export type {
   RepoSettingsPatch,
