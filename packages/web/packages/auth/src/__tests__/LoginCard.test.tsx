@@ -271,3 +271,70 @@ describe('LoginCard provider buttons', () => {
     Object.defineProperty(window, 'location', { configurable: true, value: original })
   })
 })
+
+// Every method on this card is a GATE, so a host whose feature flags are still in
+// flight hands down the same "hidden" answer as a host that has them all switched
+// off — and on THIS card the gated methods are the entire body. Rendered as a bare
+// heading over an empty card, that reads as "there is no way to log in", which is
+// the report `methodsPending` exists to answer.
+describe('LoginCard while the sign-in methods are still unknown', () => {
+  it('says it is still loading rather than rendering an empty card', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        postLoginRedirect="/home"
+        methodsPending
+        showGithub={false}
+        showEmail={false}
+        oauthProviders={[]}
+      />,
+    )
+    // role=status, not alert: it stands in for content a screen reader is waiting on.
+    expect(screen.getByRole('status').textContent).toMatch(/loading sign-in options/i)
+  })
+
+  it('renders no method while pending, even with every one switched on', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        postLoginRedirect="/home"
+        methodsPending
+        oauthProviders={[{ id: 'google', label: 'Continue with Google' }]}
+      />,
+    )
+    expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull()
+    expect(screen.queryByRole('button', { name: /continue with github/i })).toBeNull()
+    expect(screen.queryByLabelText(/email/i)).toBeNull()
+    expect(screen.queryByLabelText(/password/i)).toBeNull()
+    expect(screen.queryByRole('button', { name: /log in with email/i })).toBeNull()
+  })
+
+  it('takes the pending copy from the host', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        postLoginRedirect="/home"
+        methodsPending
+        methodsPendingLabel="Checking what you can sign in with…"
+        oauthProviders={[]}
+      />,
+    )
+    expect(screen.getByRole('status').textContent).toBe('Checking what you can sign in with…')
+  })
+
+  // The state is opt-in: a host that knows its methods up front (every self-enclosed
+  // app in the fleet) must render exactly as it did before the prop existed.
+  it('is off by default, leaving the ordinary render untouched', () => {
+    render(
+      <LoginCard
+        clientId="adh"
+        postLoginRedirect="/home"
+        oauthProviders={[{ id: 'google', label: 'Continue with Google' }]}
+      />,
+    )
+    expect(screen.queryByRole('status')).toBeNull()
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeTruthy()
+    expect(screen.getByLabelText(/email/i)).toBeTruthy()
+    expect(screen.getByRole('button', { name: /log in with email/i })).toBeTruthy()
+  })
+})

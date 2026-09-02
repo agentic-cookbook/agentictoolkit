@@ -86,6 +86,17 @@ export interface LoginCardProps {
   callbackPath?: string
   /** Show the email/password form (default true). */
   showEmail?: boolean
+  /**
+   * The set of sign-in methods is not KNOWN yet (default false).
+   *
+   * `showEmail` / `showGithub` / `oauthProviders` are gates, so each answers "hidden"
+   * both when a method is off and while its feature flag is still in flight. On a card
+   * whose gated methods ARE the entire body, those two produce the same render — a
+   * heading over an empty card, with nothing to sign in with and no reason given. A
+   * host that reads its flags asynchronously passes the in-flight case here instead, and
+   * the card says it is still loading rather than silently claiming there is no way in.
+   */
+  methodsPending?: boolean
   /** Show the "Continue with GitHub" button (default true). */
   showGithub?: boolean
   /** Optional explicit list of OAuth providers to render. Each routes through the
@@ -138,6 +149,9 @@ export interface LoginCardProps {
   signupLinkLabel?: string
   /** Label shown inside the submit button while logging in. Default: "Logging in…" */
   loadingLabel?: string
+  /** Body copy while {@link LoginCardProps.methodsPending} is true.
+   *  Default: "Loading sign-in options…" */
+  methodsPendingLabel?: string
   /** Error shown when passkey sign-in is attempted without an identifier.
    *  Defaults per identifierMode. */
   passkeyEmailRequiredLabel?: string
@@ -158,6 +172,7 @@ export function LoginCard({
   callbackPath = '/auth/callback',
   showEmail = true,
   showGithub = true,
+  methodsPending = false,
   oauthProviders,
   showSignup = false,
   signupHref = '/signup',
@@ -175,6 +190,7 @@ export function LoginCard({
   signupPromptLabel = "Don't have an account?",
   signupLinkLabel = 'Sign up',
   loadingLabel = 'Logging in…',
+  methodsPendingLabel = 'Loading sign-in options…',
   passkeyEmailRequiredLabel,
   passkeyFailedLabel = 'Passkey sign-in failed.',
 }: LoginCardProps): ReactElement {
@@ -383,7 +399,14 @@ export function LoginCard({
 
       {notice && <div className="auth-card__error" role="alert">{notice}</div>}
 
-      {oauthProviders && oauthProviders.length > 0 ? (
+      {/* The methods are the card's whole body, so "not known yet" gets said out loud
+          rather than rendering as "there are none". `role="status"` because it replaces
+          content a screen reader is waiting on. */}
+      {methodsPending && (
+        <p className="auth-card__pending" role="status">{methodsPendingLabel}</p>
+      )}
+
+      {!methodsPending && (oauthProviders && oauthProviders.length > 0 ? (
         <div className="auth-card__providers">
           {oauthProviders.map((p) => (
             <button
@@ -404,9 +427,9 @@ export function LoginCard({
             {githubButtonLabel}
           </button>
         </div>
-      ) : null}
+      ) : null)}
 
-      {((oauthProviders && oauthProviders.length > 0) || showGithub) && showEmail && (
+      {!methodsPending && ((oauthProviders && oauthProviders.length > 0) || showGithub) && showEmail && (
         <div className="auth-card__divider">
           <span className="auth-card__divider-line" />
           <span className="auth-card__divider-text">{dividerLabel}</span>
@@ -414,7 +437,7 @@ export function LoginCard({
         </div>
       )}
 
-      {showEmail && (
+      {!methodsPending && showEmail && (
         <form onSubmit={handleSubmit} className="auth-card__form">
           {error && <div className="auth-card__error">{error}</div>}
           <div className="auth-card__field">

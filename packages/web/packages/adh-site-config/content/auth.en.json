@@ -40,6 +40,7 @@
     "emailButton": "Log in with email",
     "passkeyButton": "Sign in with a passkey",
     "loadingLabel": "Logging in…",
+    "methodsPendingLabel": "Loading sign-in options…",
     "passkeyEmailRequired": "Enter your email, user ID, or phone to sign in with a passkey.",
     "passkeyFailed": "Passkey sign-in failed.",
     "accountLinkNotice": "You already have an account — sign in with your password to connect {provider}.",

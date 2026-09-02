@@ -49,6 +49,17 @@
   color: var(--auth-text-muted);
 }
 
+/* Stands in for the whole methods body while the host is still resolving which
+   sign-in methods exist. Sized to roughly the space they will occupy, so the card
+   does not jump when they arrive. */
+.auth-card__pending {
+  margin: 0;
+  padding: 2rem 0;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--auth-text-dim);
+}
+
 .auth-card__providers {
   display: flex;
   flex-direction: column;
