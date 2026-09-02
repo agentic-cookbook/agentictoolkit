@@ -132,6 +132,13 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         }
     }
 
+    /// Makes the input field the window's first responder. Returns `false` when the
+    /// view is not in a window yet, or the window declined the change.
+    @discardableResult
+    public func focusInput() -> Bool {
+        window?.makeFirstResponder(inputField) ?? false
+    }
+
     private func bindViewModel() {
         viewModel.$messages
             .receive(on: DispatchQueue.main)
