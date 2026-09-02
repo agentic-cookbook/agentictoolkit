@@ -25,6 +25,7 @@ export const SITE_ROUTES_SHIPR: Partial<Record<SiteId, readonly string[]>> = {
     '/[workspace]/profile',
     '/auth/callback',
     '/home',
+    '/integrations/oauth-callback',
     '/privacy',
     '/terms',
   ],
