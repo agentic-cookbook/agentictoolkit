@@ -505,4 +505,18 @@ public extension SingletonWindowController {
     static func ensureCurrent() {
         if current == nil { current = makeShared() }
     }
+
+    /// Bring the shared window forward, making it first if it does not exist
+    /// yet, and activate the app so the window is actually in front of the
+    /// user — what every "Show <Window>" menu item and shortcut wants.
+    static func present() {
+        ensureCurrent()
+        current?.showWindow()
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    /// True while the shared window exists and is on screen. Never creates it.
+    static func isOpen() -> Bool {
+        current?.isVisible ?? false
+    }
 }
