@@ -405,6 +405,10 @@ targets:
       - target: AgenticToolkitCore
         embed: true
         codeSign: true
+      # The refit-seam tests name `ContentRefittingWindowController`, which
+      # lives a layer down in the developer toolkit alongside the popover that
+      # drives it.
+      - target: AgenticDeveloperToolkit/AgenticDeveloperToolkitUI-macOS
 
 aggregateTargets:
   AgenticToolkitMacOSAll:

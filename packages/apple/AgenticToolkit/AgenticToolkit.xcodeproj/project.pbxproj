@@ -137,6 +137,7 @@
 		1CF724EAAFCA775665D6C36B /* LogColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = 783F11D016705C92E0829D05 /* LogColumn.swift */; };
 		1D2114724A90DE6BE9935894 /* TypingIndicatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B07B6ADDBA75DF064352068 /* TypingIndicatorView.swift */; };
 		1E4EABB8FF94531E61DE077A /* ProjectsSettingsPanelViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB01151A6C6EB1B1B8A1679E /* ProjectsSettingsPanelViewController.swift */; };
+		1E539429B5706E9C5A315910 /* AgenticDeveloperToolkitUI-macOS.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 12692636CB83EBEA82DE2F7C /* AgenticDeveloperToolkitUI-macOS.framework */; };
 		1EC4280CDDFA44DEAE40811C /* ProjectWorkspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECDE8A61C9B5FD8D1CC15D6B /* ProjectWorkspace.swift */; };
 		1EEFE431083CCF3925C185D3 /* ViewLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9319B761DD5270D28B8481E2 /* ViewLayout.swift */; };
 		1F762A1296F59D124018F8ED /* push-response.json in Resources */ = {isa = PBXBuildFile; fileRef = 143C755D06213BB388725A7E /* push-response.json */; };
@@ -194,7 +195,6 @@
 		39BB3DB32C5BE56ECAE5F37F /* ProjectReconciler.swift in Sources */ = {isa = PBXBuildFile; fileRef = EEB56C08E03EB52BF42DB82A /* ProjectReconciler.swift */; };
 		3A9F7E9837216316A434A162 /* PersistedWindowState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AC870990D2D1C5B720CEE15 /* PersistedWindowState.swift */; };
 		3AA5608A715B68B29C10DD7D /* AIProviderMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC959528CF23522D84FE859F /* AIProviderMigration.swift */; };
-		3BCAB27C3DCCEB6494F84DC8 /* WindowConfigPopoverTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */; };
 		3C1CFAA23B69766F1848AD74 /* PopupMenuChoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C5ED7659A9B0B9B315F084B /* PopupMenuChoiceView.swift */; };
 		3C22269B016718B690F889F1 /* InMemorySyncStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D84EF4A4E5F9F11026827540 /* InMemorySyncStoreTests.swift */; };
 		3C4A0010264689EDB4ED93F3 /* SystemWindowContextNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5EF0B59F7D7ADED790C9F9B /* SystemWindowContextNotifications.swift */; };
@@ -456,9 +456,9 @@
 		9F173A2DD1B90807959C4F6D /* ColorSetting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26D3B50946944B1C6A884F9F /* ColorSetting.swift */; };
 		9F95153742FDE3319D0AE504 /* VerticalStackView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C83086F9AA30ABF344231CA8 /* VerticalStackView.swift */; };
 		9FCD2ABDE5A5AE4E51402734 /* RadioButtonChoiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDE81A0A5A28045A2DF62BF /* RadioButtonChoiceView.swift */; };
-		9FDD36A100F90A9656BF852B /* WindowConfigPopover.swift in Sources */ = {isa = PBXBuildFile; fileRef = 894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */; };
 		A014AF7FEA5FF7D75ADF7FC1 /* ConnectivityTriggerSource.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1F9FF57A343BC690CE7EE0C /* ConnectivityTriggerSource.swift */; };
 		A04C641D01BE2D44A9AE5856 /* TerminalSessionRowCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 140B7E5133EF9E3212A9A543 /* TerminalSessionRowCellView.swift */; };
+		A0BEADA084EE06216C75E0E6 /* SingleWindowControllerRefitSeamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B90D88AC28BC23DCD8CB4FD2 /* SingleWindowControllerRefitSeamTests.swift */; };
 		A110D72A83C87D315C47F704 /* MockChatSessionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 211A3E3EDFCDC7EDA2F4601C /* MockChatSessionTests.swift */; };
 		A14295124F9E66E8A5533E6A /* ScriptingRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2C71C9CB4C83289BC8FB988 /* ScriptingRouter.swift */; };
 		A222622FEA398F5ED0CDDB37 /* ContentViewerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDA65482B1211A93412EC507 /* ContentViewerView.swift */; };
@@ -472,6 +472,7 @@
 		A550F3AD5FC8720B890E7CEB /* SessionWatcherSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C23A1B3C60DB4DF13266CE /* SessionWatcherSession.swift */; };
 		A5CD1A859949D8841386DF39 /* FileBrowserSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18DC25BF65F07B100575E0E2 /* FileBrowserSelection.swift */; };
 		A5D1CAD9A0175C0B47256631 /* ProjectDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50521AF5F88C835BEE200B38 /* ProjectDatabase.swift */; };
+		A613C5F2D328BBE242EAF7CA /* AgenticDeveloperToolkitUI-macOS.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 12692636CB83EBEA82DE2F7C /* AgenticDeveloperToolkitUI-macOS.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		A66C1C82523C06ADD2917478 /* FileBrowserRestorationStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1B1F0239679848C60E329A25 /* FileBrowserRestorationStateTests.swift */; };
 		A66F75512582A9198D0402EB /* SystemWindowContextManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A3684C3A0440E061B80E868 /* SystemWindowContextManager.swift */; };
 		A68B6F745019C14AFC2FB782 /* SettingsPanelListViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9A1E913777AA53295489FAA /* SettingsPanelListViewController.swift */; };
@@ -1045,6 +1046,13 @@
 			remoteGlobalIDString = 365680A3AF7F55383EB7E763;
 			remoteInfo = AgenticToolkitMacOS;
 		};
+		CA03E49C39E04F7A4FD8FD23 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 25DF1BCBF8C9EECC86E6FDE3 /* AgenticDeveloperToolkit */;
+			proxyType = 1;
+			remoteGlobalIDString = E942FC656BE172D5543DE2B5;
+			remoteInfo = "AgenticDeveloperToolkitUI-macOS";
+		};
 		D2D9AABD1BEEA234E4128EE3 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 7964E913AD06611688C0B3A6 /* Project object */;
@@ -1209,6 +1217,7 @@
 				8B70D5F596F7057696305B0D /* AgenticToolkitCoreMacOS.framework in Embed Frameworks */,
 				1AC1EFD9A6ED45A8731489D0 /* AgenticToolkitCoreUI.framework in Embed Frameworks */,
 				45EAA5980E86BE9C855B3245 /* AgenticToolkitCore.framework in Embed Frameworks */,
+				A613C5F2D328BBE242EAF7CA /* AgenticDeveloperToolkitUI-macOS.framework in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1593,7 +1602,6 @@
 		86AADA6CE6B185B5BA934378 /* AIChatContext.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatContext.swift; sourceTree = "<group>"; };
 		86FEFB54F5560AB6533F4379 /* NotesCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotesCommands.swift; sourceTree = "<group>"; };
 		88CC81802D37F9BE7A21B1E7 /* AIPluginDescriptor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIPluginDescriptor.swift; sourceTree = "<group>"; };
-		894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopover.swift; sourceTree = "<group>"; };
 		896AEE008F661A1C4FAA1A23 /* ChoiceViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoiceViewModel.swift; sourceTree = "<group>"; };
 		899F3580FEE03CB7C0B10586 /* OllamaModelPageStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OllamaModelPageStoreTests.swift; sourceTree = "<group>"; };
 		8A7158A513E09687795B6C47 /* PanelScrollView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PanelScrollView.swift; sourceTree = "<group>"; };
@@ -1678,7 +1686,6 @@
 		AF83EC0036A5B9DE88298D63 /* ChatSessionState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSessionState.swift; sourceTree = "<group>"; };
 		B0CEA61B4F75C3A8F70A9459 /* PickerKeyboardController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickerKeyboardController.swift; sourceTree = "<group>"; };
 		B1B799587637B5B9D60F9F14 /* SystemWindowMatcherTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowMatcherTests.swift; sourceTree = "<group>"; };
-		B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowConfigPopoverTests.swift; sourceTree = "<group>"; };
 		B2DBBC96379BEBF4C59726ED /* UserSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSettings.swift; sourceTree = "<group>"; };
 		B34A549A9DB4762084ACA258 /* ProviderPickerInfo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProviderPickerInfo.swift; sourceTree = "<group>"; };
 		B3D112853E30CE786A73B192 /* UserSetting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserSetting.swift; sourceTree = "<group>"; };
@@ -1692,6 +1699,7 @@
 		B778B8D9F7C5605505C85761 /* ProjectDatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectDatabaseTests.swift; sourceTree = "<group>"; };
 		B80E4CA204954CD2D5B64C67 /* CheckboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckboxView.swift; sourceTree = "<group>"; };
 		B8C6F25D5AEDC37D45C4D7D3 /* ActivateAppCommand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivateAppCommand.swift; sourceTree = "<group>"; };
+		B90D88AC28BC23DCD8CB4FD2 /* SingleWindowControllerRefitSeamTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleWindowControllerRefitSeamTests.swift; sourceTree = "<group>"; };
 		B96CF5B3737039A880292A4F /* AIProviderConfigSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIProviderConfigSyncTests.swift; sourceTree = "<group>"; };
 		B97C55C1933FDB066F01BA7C /* ThemeTerminalTopicPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeTerminalTopicPanel.swift; sourceTree = "<group>"; };
 		B9D78EBD9C75F8215D809DC3 /* ThemePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePickerView.swift; sourceTree = "<group>"; };
@@ -1935,6 +1943,7 @@
 				51578BA7C20D9CFB9B1D2576 /* AgenticToolkitCoreMacOS.framework in Frameworks */,
 				88DAB42889ADB5CFCB3DC774 /* AgenticToolkitCoreUI.framework in Frameworks */,
 				EA95597BAA2E246EBAB3D5C8 /* AgenticToolkitCore.framework in Frameworks */,
+				1E539429B5706E9C5A315910 /* AgenticDeveloperToolkitUI-macOS.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3044,8 +3053,8 @@
 				EA0CDF0223338F1A986F66B0 /* ScreenManagerTests.swift */,
 				8D21F8F899C4B44436BA0F07 /* ScreenMatcherTests.swift */,
 				C739791754B51B423D9CDB07 /* SingleWindowControllerMoveRefitTests.swift */,
+				B90D88AC28BC23DCD8CB4FD2 /* SingleWindowControllerRefitSeamTests.swift */,
 				5053D246C0FFEFF52911D3B9 /* SingleWindowControllerTests.swift */,
-				B24A218901947264BBB09AAC /* WindowConfigPopoverTests.swift */,
 				8F32D28A8E0199C82E8216B0 /* WindowManagerRecentsTests.swift */,
 				0E574D92FE93D15A12138FEB /* WindowManagerSimulatedRelaunchTests.swift */,
 				626FECFD2A90654F819760B3 /* WindowManagerTerminationTests.swift */,
@@ -3217,7 +3226,6 @@
 			isa = PBXGroup;
 			children = (
 				69D0314BEF2FB056EE285DB7 /* SingleWindowController.swift */,
-				894A759A4AB0981A7946D093 /* WindowConfigPopover.swift */,
 				86A0358BA20B02FF69A28CFF /* WindowController.swift */,
 				F92FB7BCCF9327A97360842B /* WindowSpec.swift */,
 			);
@@ -4055,6 +4063,7 @@
 				A9F124BF2DC6F670CDA8B492 /* PBXTargetDependency */,
 				F0B3B5C4936B3D39A62FC1E7 /* PBXTargetDependency */,
 				CBABE418AD9501582B55226D /* PBXTargetDependency */,
+				9D1436B5D12D2E1F94AABF31 /* PBXTargetDependency */,
 			);
 			name = AgenticToolkitMacOSTests;
 			packageProductDependencies = (
@@ -4875,7 +4884,6 @@
 				A7CB53AD9111F5F7F7884E40 /* WindowActivationStrategy.swift in Sources */,
 				E79A585CE11E7583105060F3 /* WindowActivationTarget.swift in Sources */,
 				353E0DB26D7C74F4E6830A16 /* WindowActivationTester.swift in Sources */,
-				9FDD36A100F90A9656BF852B /* WindowConfigPopover.swift in Sources */,
 				648501CD6BD93DC814CBB89D /* WindowController.swift in Sources */,
 				85688183AD85E15F0910A82B /* WindowDiscoveryView.swift in Sources */,
 				4309FE28C9A1B19B47425ED6 /* WindowDiscoveryViewModel.swift in Sources */,
@@ -5146,6 +5154,7 @@
 				83EE05B5B7E9A3A0A8496A0D /* SessionListViewTests.swift in Sources */,
 				51A658B855BF4E5349B6940F /* SingleConfigurationChatConfigProviderTests.swift in Sources */,
 				7B8B9A6164DDB230C9EF1139 /* SingleWindowControllerMoveRefitTests.swift in Sources */,
+				A0BEADA084EE06216C75E0E6 /* SingleWindowControllerRefitSeamTests.swift in Sources */,
 				697B4C220C6BF3D7B33BB1F7 /* SingleWindowControllerTests.swift in Sources */,
 				BE23794732928232D0D54DD7 /* SpacingTests.swift in Sources */,
 				14BC4E01EF0E54BD7BC654B0 /* SystemWindowContextManagerTests.swift in Sources */,
@@ -5156,7 +5165,6 @@
 				3026B15B7983DC1A60A293F0 /* ThemeUITests.swift in Sources */,
 				4635DCB7F3A90EBADC0E8A8C /* ThemedSplitViewOrientationTests.swift in Sources */,
 				0AFF0852BB6191797F3F6795 /* TopicListViewControllerTests.swift in Sources */,
-				3BCAB27C3DCCEB6494F84DC8 /* WindowConfigPopoverTests.swift in Sources */,
 				D9939A0FD1FD9ADD1190A5AA /* WindowDiscoveryMatchingTests.swift in Sources */,
 				D151BBED553E914325BF6AD7 /* WindowManagerRecentsTests.swift in Sources */,
 				A40602C3E4F3794E607D81EC /* WindowManagerSimulatedRelaunchTests.swift in Sources */,
@@ -5445,6 +5453,11 @@
 			isa = PBXTargetDependency;
 			target = 5BFCF4EF9B6A3F62F3599C61 /* AgenticToolkitDatabase */;
 			targetProxy = FED7091536087E29AC90D61D /* PBXContainerItemProxy */;
+		};
+		9D1436B5D12D2E1F94AABF31 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "AgenticDeveloperToolkitUI-macOS";
+			targetProxy = CA03E49C39E04F7A4FD8FD23 /* PBXContainerItemProxy */;
 		};
 		A18E4CCEAB0AC38ED7AACBBD /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;

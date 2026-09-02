@@ -1,6 +1,7 @@
 import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
+import AgenticDeveloperToolkitUI
 
 /// A reusable `NSWindowController` base that lazily builds a single
 /// `NSWindow` from subclass-supplied configuration and persists its frame
@@ -26,7 +27,8 @@ import AgenticToolkitCoreMacOS
 /// NSViewController lifecycle fires correctly. Override `makeContentView()`
 /// if you only need an `NSView`.
 @MainActor
-open class SingleWindowController: NSWindowController, NSWindowDelegate {
+open class SingleWindowController: NSWindowController, NSWindowDelegate,
+                                   ContentRefittingWindowController {
 
     public static let defaultSize = NSSize(width: 600, height: 480)
 
