@@ -13,9 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@agenticdevelopertoolkit/ui/components/dialog';
-import { Minus, Plug, Plus } from 'lucide-react';
+import { Download, Minus, Plug, Plus, Upload } from 'lucide-react';
 
 import { ConnectionsDialog } from './ConnectionsDialog';
+import { buildDocument } from '../exchange/document';
+import { downloadDocument } from '../exchange/files';
+import { ImportDialog } from '../exchange/ImportDialog';
+import type { ImportPlan } from '../exchange/plan';
 import { SettingsForm, type RepoSettingsPatch } from '../settings/SettingsForm';
 import { toolbarState } from '../toolbar/actions';
 import { TypeToConfirmDialog } from '../toolbar/dialogs';
@@ -104,6 +108,10 @@ export interface ConfigureDialogProps {
    *  loop in this file would strand the rest. */
   onRemove: (devRepo: DevRepo) => Promise<void>;
   onSaveSettings: (patches: RepoSettingsPatch[]) => Promise<void>;
+  /** Run an import plan. The plan is built here (it is a comparison against the rows this
+   *  dialog is already showing); the writes it describes belong to the console, like every
+   *  other one on this screen. */
+  onImport: (plan: ImportPlan, connectionId?: string) => Promise<void>;
 }
 
 export function ConfigureDialog(props: ConfigureDialogProps): React.ReactElement {
@@ -141,9 +149,11 @@ function ConfigureBody({
   onRegister,
   onRemove,
   onSaveSettings,
+  onImport,
 }: ConfigureDialogProps): React.ReactElement {
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [wizard, setWizard] = React.useState(false);
+  const [importing, setImporting] = React.useState(false);
   const [connectionsOpen, setConnectionsOpen] = React.useState(false);
   const [removing, setRemoving] = React.useState<Row | null>(null);
 
@@ -247,6 +257,24 @@ function ConfigureBody({
           destructive
           onClick={() => selected && setRemoving(selected)}
         />
+
+        {/* THE FLEET AS A FILE, both directions, on the bar that already owns the repository
+            list — because that list is exactly what the file holds. Import is gated by the
+            same permission as Add, since every `+` row in its plan IS an Add. Export is not
+            gated at all: it writes nothing, and it is built from rows already on the screen,
+            so anyone who can read this list can already read everything in the file. */}
+        <BarButton
+          label="Import"
+          icon={<Upload />}
+          state={buttons.register}
+          onClick={() => setImporting(true)}
+        />
+        <BarButton
+          label="Export"
+          icon={<Download />}
+          state={{ enabled: items.length > 0, reason: 'Nothing is registered yet.' }}
+          onClick={() => downloadDocument(buildDocument({ groups, items }))}
+        />
         <div className="flex-1" />
         <Button
           type="button"
@@ -313,6 +341,15 @@ function ConfigureBody({
           setConnectionsOpen(true);
         }}
         onSubmit={onRegister}
+      />
+
+      <ImportDialog
+        open={importing}
+        onClose={() => setImporting(false)}
+        groups={groups}
+        items={items}
+        connections={connections}
+        onImport={onImport}
       />
 
       <ConnectionsDialog
