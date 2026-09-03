@@ -183,7 +183,6 @@
 		329018C1665E96A3DBEED01F /* ProjectWindowRestoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F67E456C9D40ADA6FDECEC30 /* ProjectWindowRestoreTests.swift */; };
 		331EE8F2A046A8848422BAF1 /* DividerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB783DDA1E4AB17256866125 /* DividerView.swift */; };
 		353E0DB26D7C74F4E6830A16 /* WindowActivationTester.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2C0881BC97904A9D6EF4A7B6 /* WindowActivationTester.swift */; };
-		35732306035EF5B56FC5E046 /* ProjectsSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42228EABD8F12F7E2A3F70C3 /* ProjectsSettingsView.swift */; };
 		36011BD68A054397C2E87F77 /* CheckboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B80E4CA204954CD2D5B64C67 /* CheckboxView.swift */; };
 		371CA289D649C85620E0EA06 /* AppearanceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 449C339E5C58DC7C8A39A14D /* AppearanceManager.swift */; };
 		38019B307616D6D724C972AB /* ToolDefinition.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B5FFC62731DADB19C5D55C4 /* ToolDefinition.swift */; };
@@ -1457,7 +1456,6 @@
 		41C03A7CF1937C3EC7B28B05 /* GeneralSettingsPanelViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsPanelViewController.swift; sourceTree = "<group>"; };
 		4213086A8F37452116EC183A /* UserSettings+Recents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "UserSettings+Recents.swift"; sourceTree = "<group>"; };
 		421A8DD0B0A598874BE929C0 /* SystemWindowContextPickerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemWindowContextPickerPanel.swift; sourceTree = "<group>"; };
-		42228EABD8F12F7E2A3F70C3 /* ProjectsSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectsSettingsView.swift; sourceTree = "<group>"; };
 		4227F1507971AE3E5EE59F2E /* ScriptedSyncTransport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScriptedSyncTransport.swift; sourceTree = "<group>"; };
 		423A4C891F5C97976111EDF5 /* SyncEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncEngineTests.swift; sourceTree = "<group>"; };
 		426B8225A1D8E3C1C86F547B /* TextEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditView.swift; sourceTree = "<group>"; };
@@ -2746,7 +2744,6 @@
 			isa = PBXGroup;
 			children = (
 				CB01151A6C6EB1B1B8A1679E /* ProjectsSettingsPanelViewController.swift */,
-				42228EABD8F12F7E2A3F70C3 /* ProjectsSettingsView.swift */,
 			);
 			path = Settings;
 			sourceTree = "<group>";
@@ -4786,7 +4783,6 @@
 				1EC4280CDDFA44DEAE40811C /* ProjectWorkspace.swift in Sources */,
 				CAB4C0A78F902FFC3F5C46D3 /* ProjectsCoordinator.swift in Sources */,
 				1E4EABB8FF94531E61DE077A /* ProjectsSettingsPanelViewController.swift in Sources */,
-				35732306035EF5B56FC5E046 /* ProjectsSettingsView.swift in Sources */,
 				4345E97716EE9DB61E631898 /* ProviderPickerInfo.swift in Sources */,
 				1A581A42A5CF674ACA0F59BE /* ProviderPickerViewController.swift in Sources */,
 				8C3D3E6807319411A808ABB5 /* QuickLookPreview.swift in Sources */,
