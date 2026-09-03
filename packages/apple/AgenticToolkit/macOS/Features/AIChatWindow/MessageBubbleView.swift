@@ -4,6 +4,14 @@ import AgenticToolkitCoreUI
 import AgenticToolkitCoreMacOS
 
 /// A chat message bubble with text and inline timestamp.
+///
+/// The explicit Objective-C name is not decoration. `AgenticDeveloperToolkitUI`
+/// ships a `MessageBubbleView` of its own, and this framework `@_exported`
+/// imports it — two Swift types in different modules, but one Objective-C
+/// class name, and the generated compatibility headers collide the moment an
+/// Objective-C translation unit sees both. The toolkit that ships to customers
+/// keeps the plain name; this one, an app feature, takes the qualified one.
+@objc(AgenticToolkitMessageBubbleView)
 public final class MessageBubbleView: NSView {
 
     private static let timeFormatter: DateFormatter = {

@@ -41,7 +41,14 @@ public final class AppearanceManager: AppFeature {
     }
 
     private func applyAppearance(_ mode: AppearanceMode) {
-        guard drivesApplicationAppearance else { return }
+        guard drivesApplicationAppearance else {
+            // A `ThemeManager` is writing `NSApp.appearance` instead — but an
+            // `.auto` theme resolves through this very setting, so it has to be
+            // told the mode moved. Nothing else would: the palette did not
+            // change, so no themed view has anything new to draw.
+            ThemeManager.shared?.refreshApplicationAppearance()
+            return
+        }
         NSApp.appearance = mode.nsAppearance
         Self.logger.info("Appearance mode: \(mode.rawValue, privacy: .public)")
     }

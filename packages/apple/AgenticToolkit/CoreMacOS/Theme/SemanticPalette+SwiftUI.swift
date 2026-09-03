@@ -1,5 +1,6 @@
 import SwiftUI
 import AgenticToolkitCore
+import AgenticDeveloperToolkitUI
 
 /// SwiftUI accessors for a `SemanticPalette`, mirroring the AppKit ones in
 /// `SemanticPalette+NSColor.swift` role for role.
