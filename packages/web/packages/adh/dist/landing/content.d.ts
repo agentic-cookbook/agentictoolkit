@@ -98,10 +98,17 @@ export type LandingBlock = {
 }
 /** `src` is a screenshot id, not a URL. The deck resolves it against the hub's own
  *  origin (`/screenshots/<id>.png`) so one image set serves the brochure and the help
- *  site, whose Markdown sanitizer accepts only absolute http/https sources. */
+ *  site, whose Markdown sanitizer accepts only absolute http/https sources.
+ *
+ *  OPTIONAL, because the landing kit's `Shot` calls the placeholder its primary state:
+ *  "until a real capture exists, every feature section renders one". Required, the deck
+ *  could only ever emit an `<img>` — and with no `public/screenshots/` anywhere in the
+ *  fleet that was a broken image every time, with the frame the package draws for exactly
+ *  this case unreachable. Omit `src` until the capture exists; `caption` still says what
+ *  the shot will show. */
  | {
     kind: 'Shot';
-    src: string;
+    src?: string;
     title: string;
     caption: string;
 } | {
