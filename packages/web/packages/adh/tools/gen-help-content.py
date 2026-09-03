@@ -125,8 +125,12 @@ def _mcp_catalog_path() -> Path:
     So it is an explicit input now, exactly like `ADH_OPENAPI_SPEC` in this repo's
     adh-api-types package, and for the same reason stated there: this repo is
     consumed standalone by repos that have no catalog at all, and there is no
-    relative location it could honestly derive. adh's CI passes the path from its
-    `.peer-adhbackend` checkout; by hand, name the adhbackend checkout.
+    relative location it could honestly derive. Every consumer names it: adh's CI
+    passes the path from its own workspace, and by hand you name whichever
+    checkout holds `src/adh/src/mcp/catalog.generated.json`. Naming no particular
+    checkout here is deliberate — the file has already changed repositories once,
+    and a docstring that hard-codes where it lives this month is the thing that
+    goes quietly wrong next time.
     """
     raw = os.environ.get("ADH_MCP_CATALOG")
     if not raw:
