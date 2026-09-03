@@ -95,6 +95,73 @@ export function oauthCallbackUrl(): string {
   return `${window.location.origin}${OAUTH_CALLBACK_PATH}`;
 }
 
+/**
+ * The claims the backend signs into an integration OAuth `state`.
+ *
+ * The backend mints `state` as `base64url(JSON(claims)) + "." + base64url(HMAC)` — the
+ * claims travel IN the token, in the clear, and the signature is what makes them
+ * trustworthy (`integration/oauthState.ts`). That shape is what lets
+ * {@link decodeOAuthStateClaims} exist at all.
+ */
+export interface IntegrationOAuthStateClaims {
+  /** The user the flow was started by; the backend re-checks it against the caller. */
+  customerId: string;
+  providerId: string;
+  serviceType: string;
+  /** The ecosystem uuid the connect must be filed under. */
+  ecosystemId: string;
+  /** Issued-at, epoch-ms. */
+  iat: number;
+}
+
+/**
+ * Read (never TRUST) the claims a `state` carries, or null when it is not one of ours.
+ *
+ * It decodes the payload half and ignores the signature ON PURPOSE, because nothing here is
+ * a security decision: every value it recovers goes straight back to
+ * `POST /integrations/connect`, which re-verifies the signature, that the state was minted
+ * for THIS caller, and that it names this ecosystem, before it writes anything. A forged
+ * state gets the same 400 it would have got without this function.
+ *
+ * It exists because a GitHub App has ONE Setup URL for the whole app: an installation
+ * started on any origin in the family returns to the SAME origin, where the pending-connect
+ * stash — `sessionStorage`, which is per-origin — is empty. The state is the only thing
+ * that crosses that boundary, and it already names the provider, the service type and the
+ * ecosystem, which is everything the connect needs.
+ */
+export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClaims | null {
+  const dot = state.indexOf(".");
+  if (dot <= 0 || dot === state.length - 1) return null;
+  let json: string;
+  try {
+    // base64url → base64: atob is the only decoder guaranteed present in every browser,
+    // and it rejects the url-safe alphabet.
+    json = atob(state.slice(0, dot).replace(/-/g, "+").replace(/_/g, "/"));
+  } catch {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json) as unknown;
+  } catch {
+    return null;
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  const c = parsed as Record<string, unknown>;
+  const str = (v: unknown): v is string => typeof v === "string" && v.length > 0;
+  if (!str(c.customerId) || !str(c.providerId) || !str(c.serviceType) || !str(c.ecosystemId)) {
+    return null;
+  }
+  if (typeof c.iat !== "number" || !Number.isFinite(c.iat)) return null;
+  return {
+    customerId: c.customerId,
+    providerId: c.providerId,
+    serviceType: c.serviceType,
+    ecosystemId: c.ecosystemId,
+    iat: c.iat,
+  };
+}
+
 const configPath = (ecosystemId: string, providerId?: string) =>
   providerId
     ? `${BASE}/ecosystems/${enc(ecosystemId)}/provider-configs/${enc(providerId)}`

@@ -23,12 +23,33 @@ import { dirname, join } from "node:path";
  */
 const checkedSites = new Set<string>();
 
-/** Walk up from `dir` looking for adh's isolate script; `undefined` outside adh. */
+/**
+ * The two places a fleet repo keeps the isolate script, nearest ancestor first.
+ *
+ * adh is a monorepo whose sites live under `frontend/src/websites/`, so its tools sit at
+ * `frontend/src/tools/`. Every repo split out of it since drops that prefix: the sites are
+ * under `websites/` and the tools are `websites/tools/`, byte-identical members of the
+ * closure fanned out from adh-tools.
+ *
+ * Both spellings are checked because a split repo that matched neither did not FAIL — it
+ * returned `undefined` and took the "outside adh, nothing to check" path, which is the same
+ * answer a legitimate non-fleet consumer gets. So the gate that exists to catch an
+ * undeclared cross-workspace `link:` silently stopped running in exactly the repos whose
+ * `link:` paths had just been rewritten by the split.
+ */
+const ISOLATE_SCRIPT_PATHS: readonly (readonly string[])[] = [
+  ["frontend", "src", "tools", "vercel-isolate-deps.py"],
+  ["websites", "tools", "vercel-isolate-deps.py"],
+];
+
+/** Walk up from `dir` looking for a fleet repo's isolate script; `undefined` outside one. */
 function findIsolateScript(dir: string): string | undefined {
   let d = dir;
   for (;;) {
-    const p = join(d, "frontend", "src", "tools", "vercel-isolate-deps.py");
-    if (existsSync(p)) return p;
+    for (const parts of ISOLATE_SCRIPT_PATHS) {
+      const p = join(d, ...parts);
+      if (existsSync(p)) return p;
+    }
     const parent = dirname(d);
     if (parent === d) return undefined;
     d = parent;

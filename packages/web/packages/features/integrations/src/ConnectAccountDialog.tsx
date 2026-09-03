@@ -20,7 +20,7 @@ import {
   type MaskedProviderConfig,
   type ProviderCatalogEntry,
 } from "@agentic-toolkit/data/integrations";
-import { stashPendingConnect } from "./oauth-callback-store";
+import { currentReturnTo, stashPendingConnect } from "./oauth-callback-store";
 import { PlaidLinkLauncher } from "./PlaidLinkLauncher";
 import { errMsg } from "@agentic-toolkit/data";
 
@@ -168,7 +168,7 @@ export function ConnectAccountDialog({
   // then hand the browser to the provider. The page leaves, so `busy` stays set.
   const onOAuth = () => {
     const redirectUri = oauthCallbackUrl();
-    const returnTo = window.location.pathname;
+    const returnTo = currentReturnTo();
     return run(
       () => integrationsApi.getAuthUrl(providerId, { ecosystemId, redirectUri, serviceType }),
       ({ url, state }) => {
@@ -192,7 +192,7 @@ export function ConnectAccountDialog({
   // on the provider's own installation page, which is the picker we would otherwise be
   // rebuilding. The page leaves, so `busy` stays set.
   const onGithubApp = () => {
-    const returnTo = window.location.pathname;
+    const returnTo = currentReturnTo();
     return run(
       () => integrationsApi.getInstallUrl(providerId, { ecosystemId, serviceType }),
       ({ url, state }) => {
@@ -217,7 +217,7 @@ export function ConnectAccountDialog({
     // is the belt-and-braces guard, not the user-facing message (renderBody carries that).
     if (!providerConfigId || !configInstanceUrl) return;
     const redirectUri = oauthCallbackUrl();
-    const returnTo = window.location.pathname;
+    const returnTo = currentReturnTo();
     return run(
       () =>
         integrationsApi.registerInstance(providerId, {

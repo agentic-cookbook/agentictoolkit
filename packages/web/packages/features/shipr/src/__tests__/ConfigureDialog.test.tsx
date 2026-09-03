@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as React from 'react';
 
 import { useStackLevel } from '@agentic-toolkit/resource';
 
-import type { DevRepo, Environment, RepoItem } from '../types';
+import type { AccessVerb, DevRepo, Environment, RepoItem } from '../types';
 
 /**
  * The Configure dialog's FRAME — the three things that are true of it before any of its
@@ -212,5 +212,71 @@ describe('the fleet as a file', () => {
     expect(await waitFor(() => dialog('Import configuration'))).toBeTruthy();
     // The bar button opens a plan; it never applies one.
     expect(onImport).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * Connections is the one modal in this console whose open-ness is in the URL, and the reason
+ * is that it is the one an operator can LEAVE THE APP from. Connecting a GitHub App sends the
+ * browser to github.com; `/integrations/oauth-callback` returns it to the URL the connect
+ * started on. Every other dialog here is React state and can be, because nothing ever unmounts
+ * the page beneath it — this one has to survive a document that was thrown away and rebuilt.
+ *
+ * Without the hash the operator came back to a bare tree with every dialog closed and their
+ * new connection nowhere in sight, which reads as the connect having failed. Nothing about
+ * that is visible to a type checker, and no other test in this package ever leaves the page.
+ */
+describe('Connections is the one dialog the address bar knows about', () => {
+  const at = (url: string) => window.history.replaceState(null, '', url);
+
+  beforeEach(() => at('/acme/repos?workspace=acme'));
+  afterEach(() => at('/'));
+
+  it('writes the hash when Connections opens, leaving the path and query alone', async () => {
+    draw();
+    await userEvent.click(await screen.findByRole('button', { name: 'Connections' }));
+    await waitFor(() => expect(window.location.hash).toBe('#connections'));
+    // `?workspace=` is what the console reads its tree with, so a round-trip that dropped it
+    // would come back to someone else's workspace — or to none.
+    expect(window.location.pathname).toBe('/acme/repos');
+    expect(window.location.search).toBe('?workspace=acme');
+  });
+
+  it('opens Connections straight away when the address already names it', async () => {
+    // The shape of the return leg: the callback routed here, and this body mounts fresh.
+    at('/acme/repos?workspace=acme#connections');
+    draw();
+    expect(await waitFor(() => dialog('Connections'))).toBeTruthy();
+  });
+
+  it('takes the hash back out when Connections closes', async () => {
+    at('/acme/repos?workspace=acme#connections');
+    draw();
+    const connections = await waitFor(() => dialog('Connections'));
+    await userEvent.click(within(connections).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(window.location.hash).toBe(''));
+    expect(window.location.pathname).toBe('/acme/repos');
+  });
+
+  it('takes the hash back out when Configure itself closes', async () => {
+    at('/acme/repos?workspace=acme#connections');
+    // Configure closing unmounts the body, so its own effect can never see the change — the
+    // cleanup is what clears the address. A stale `#connections` would reopen Connections on
+    // the next Configure, over and over, with no way to make it stop.
+    const props = {
+      onClose: () => {},
+      client: { workspace: 'acme' } as never,
+      groups: [],
+      items: [],
+      verbs: ['C', 'R', 'U', 'D', 'M'] as AccessVerb[],
+      onRegister: () => Promise.resolve(),
+      onRemove: () => Promise.resolve(),
+      onSaveSettings: () => Promise.resolve(),
+      onImport: () => Promise.resolve(),
+    };
+    const { rerender } = render(<ConfigureDialog open {...props} />);
+    await waitFor(() => dialog('Connections'));
+    rerender(<ConfigureDialog open={false} {...props} />);
+    await waitFor(() => expect(window.location.hash).toBe(''));
   });
 });

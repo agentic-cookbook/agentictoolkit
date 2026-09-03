@@ -37,7 +37,10 @@ beforeEach(() => {
   mkdirSync(site, { recursive: true });
   mockSpawnSync.mockReset();
   mockExistsSync.mockReset();
-  mockExistsSync.mockImplementation(realExistsSyncBox.fn);
+  // Non-null: the box is filled by the `node:fs` mock factory, which vitest runs before
+  // this file's imports resolve — so it is populated by the time any hook can run. Typed
+  // optional because the factory is what assigns it, and nothing else can prove that to tsc.
+  mockExistsSync.mockImplementation(realExistsSyncBox.fn!);
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -101,6 +104,36 @@ describe("assertHoistableDeps", () => {
       new RegExp(missing.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")),
     );
     expect(mockSpawnSync).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The split repos keep the same script at `websites/tools/`, because their sites are
+   * directly under `websites/` rather than under adh's `frontend/src/`.
+   *
+   * This is the one place that difference could disable the gate INVISIBLY: a layout matching
+   * neither spelling does not fail, it returns `undefined` and takes the "outside a fleet
+   * repo, nothing to check" path — the same answer a legitimate non-fleet consumer gets. So
+   * the check stopped running in exactly the repos whose `link:` paths had just been rewritten
+   * by a split, and the only symptom was a Vercel build failing on a dependency that had been
+   * green locally the whole time.
+   */
+  it("finds the isolate script at a split repo's websites/tools, not just adh's frontend/src/tools", () => {
+    const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "websites", "tools"), { recursive: true });
+    mockExistsSync.mockImplementation((p) => String(p) === script);
+    mockSpawnSync.mockReturnValue({
+      status: 1,
+      signal: null,
+      stdout: "undeclared: @agentic-toolkit/integrations",
+      stderr: "",
+      pid: 0,
+      output: [null, "undeclared: @agentic-toolkit/integrations", ""],
+    } as ReturnType<typeof spawnSync>);
+
+    // Throwing at all is the assertion: a gate that had not found the script would have
+    // returned silently, and the site would build.
+    expect(() => assertHoistableDeps(site)).toThrowError(/undeclared/);
+    expect(mockSpawnSync.mock.calls[0]?.[1]).toContain(script);
   });
 
   it("returns without throwing when no isolate script is found on any ancestor, and does not spawn", () => {

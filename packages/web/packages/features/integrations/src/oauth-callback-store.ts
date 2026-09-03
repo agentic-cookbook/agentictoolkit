@@ -42,6 +42,20 @@ export type PendingOAuthConnect =
 
 const keyFor = (state: string) => `int-oauth-connect:${state}`;
 
+/**
+ * The URL to come back to — the WHOLE of it below the origin, not just the pathname.
+ *
+ * The search and the hash are where a host puts the state a bare path cannot carry, and on a
+ * console that shows connections in a DIALOG that is the only record that a dialog was open
+ * at all. Dropping them sent the visitor back to a page with every dialog closed and no sign
+ * the connect had succeeded. What a host does not encode in its URL is still unrecoverable —
+ * that is the host's to fix — but nothing is lost here on the way past.
+ */
+export function currentReturnTo(): string {
+  const { pathname, search, hash } = window.location;
+  return `${pathname}${search}${hash}`;
+}
+
 /** Stash the pending-connect context under its `state` before redirecting away. */
 export function stashPendingConnect(state: string, ctx: PendingOAuthConnect): void {
   try {
@@ -65,12 +79,17 @@ export function readPendingConnect(state: string): PendingOAuthConnect | null {
     const parsed = JSON.parse(raw) as Partial<PendingOAuthConnect> & { redirectUri?: unknown };
     const method = parsed.authMethod;
     if (!method || !REDIRECT_METHODS.includes(method)) return null;
+    // Every field is checked NON-EMPTY, not merely present: each one is sent verbatim to
+    // `POST /integrations/connect` (or handed to `router.replace`), where a blank is not a
+    // default but a request that cannot succeed — and a stash written with one is corrupt in
+    // exactly the way a stash missing the key is. `ecosystemId` was the only one spelled out
+    // this way, which made the other three look deliberately laxer than it.
+    const filled = (v: unknown): v is string => typeof v === "string" && v.length > 0;
     if (
-      typeof parsed.providerId !== "string" ||
-      typeof parsed.serviceType !== "string" ||
-      typeof parsed.ecosystemId !== "string" ||
-      parsed.ecosystemId.length === 0 ||
-      typeof parsed.returnTo !== "string"
+      !filled(parsed.providerId) ||
+      !filled(parsed.serviceType) ||
+      !filled(parsed.ecosystemId) ||
+      !filled(parsed.returnTo)
     ) {
       return null;
     }
@@ -81,9 +100,10 @@ export function readPendingConnect(state: string): PendingOAuthConnect | null {
       returnTo: parsed.returnTo,
     };
     if (method === "github_app") return { ...base, authMethod: method };
-    // The OAuth pair must carry the exact redirect_uri they sent, so a stash missing it is
+    // The OAuth pair must carry the exact redirect_uri they sent, so a stash missing it —
+    // or carrying a blank one, which the token exchange would reject as a mismatch — is
     // corrupt rather than merely incomplete.
-    if (typeof parsed.redirectUri !== "string") return null;
+    if (!filled(parsed.redirectUri)) return null;
     return { ...base, authMethod: method, redirectUri: parsed.redirectUri };
   } catch {
     // fall through

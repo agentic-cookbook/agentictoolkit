@@ -27,11 +27,17 @@ export {
 // The provider redirect landing. `oauthCallbackUrl()` is ORIGIN-RELATIVE, so every site that
 // starts an OAuth connect must mount this at its own `/integrations/oauth-callback` — the
 // provider returns to the origin the connect began on, not to a shared one.
+//
+// A route that mounts ONLY this should import it from the ./oauth-callback subpath instead:
+// the callback is a leaf, but this barrel is the whole feature, so mounting it from here
+// makes a page whose entire job is a spinner and a fetch ship the panes, the dialogs and the
+// tables as well. The re-export stays for the hosts that render the feature anyway.
 export { IntegrationsOAuthCallback } from "./IntegrationsOAuthCallback";
 
 // The sessionStorage stash the callback reads: the connect context can't survive the provider
 // round-trip in React state, so it is keyed by the signed `state` parameter.
 export {
+  currentReturnTo,
   stashPendingConnect,
   readPendingConnect,
   clearPendingConnect,

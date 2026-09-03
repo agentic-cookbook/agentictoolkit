@@ -43,6 +43,42 @@ import type { ShiprClient } from '../client';
  *  operator a Stripe key on a screen about pushing branches. */
 const PROVIDERS = ['github-app', 'vercel', 'railway'] as const;
 
+/**
+ * THE ONE PIECE OF CONSOLE STATE THAT IS IN THE URL, and the reason is that this dialog is
+ * the only place in the console an operator can LEAVE THE APP from and come back.
+ *
+ * Connecting a GitHub App sends the browser to github.com and the provider returns it to
+ * `/integrations/oauth-callback`, which navigates on to `returnTo` — the full URL the connect
+ * started on, captured by `currentReturnTo()`. Every other modal here is React state and can
+ * be, because nothing ever unmounts the page under it. This one has to survive a document
+ * that was thrown away and rebuilt, so the only carrier is the address bar.
+ *
+ * A hash rather than a query parameter: it is a position within this page, it never reaches
+ * the server, and it cannot collide with `?workspace=`, which the console reads its tree
+ * with and which must survive the round-trip unchanged.
+ *
+ * Written with `replaceState`, not `pushState`. Opening a dialog is not a navigation, and a
+ * Back button that closed a dialog instead of leaving the console would be a worse lie than
+ * a URL that is one step behind.
+ */
+export const CONNECTIONS_HASH = '#connections';
+
+/** True when the current address names {@link CONNECTIONS_HASH}. Guarded for SSR: this file
+ *  is `'use client'`, but a client component still renders once on the server. */
+export function connectionsHashPresent(): boolean {
+  return typeof window !== 'undefined' && window.location.hash === CONNECTIONS_HASH;
+}
+
+/** Put the address in agreement with whether Connections is showing, without adding history
+ *  entries and without disturbing the path or the query. */
+export function syncConnectionsHash(open: boolean): void {
+  if (typeof window === 'undefined') return;
+  const { pathname, search, hash } = window.location;
+  if (open === (hash === CONNECTIONS_HASH)) return;
+  const next = open ? `${pathname}${search}${CONNECTIONS_HASH}` : `${pathname}${search}`;
+  window.history.replaceState(window.history.state, '', next);
+}
+
 export interface ConnectionsDialogProps {
   open: boolean;
   onClose: () => void;

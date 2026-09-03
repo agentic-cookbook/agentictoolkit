@@ -13,7 +13,7 @@
   "sideEffects": [
     "**/*.css"
   ],
-  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once.",
+  "comment:exports": "`development` → src for `next dev` (HMR); prod skips it → dist. `./sources.css` is the Tailwind @source self-registration a host @imports once. `./oauth-callback` is the redirect landing alone — the one export a site mounts without rendering the feature, so it gets an entry rather than the whole barrel. `./parse` is the server-safe URL grammar (see tsup.preset).",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -21,6 +21,11 @@
       "import": "./dist/index.js"
     },
     "./sources.css": "./sources.css",
+    "./oauth-callback": {
+      "types": "./dist/IntegrationsOAuthCallback.d.ts",
+      "development": "./src/IntegrationsOAuthCallback.tsx",
+      "import": "./dist/IntegrationsOAuthCallback.js"
+    },
     "./parse": {
       "types": "./dist/parse-path.d.ts",
       "development": "./src/parse-path.ts",

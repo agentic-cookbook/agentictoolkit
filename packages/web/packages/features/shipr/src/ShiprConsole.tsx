@@ -8,6 +8,7 @@ import { AlertModal } from '@agenticdevelopertoolkit/ui/components/alert-modal';
 import { useRunningRepos } from './activity/useRunningRepos';
 import { isFinished, useRuns } from './activity/useRuns';
 import { ConfigureDialog } from './configure/ConfigureDialog';
+import { connectionsHashPresent } from './configure/ConnectionsDialog';
 import { applyImport, ImportError } from './exchange/apply';
 import type { ImportPlan } from './exchange/plan';
 import { GroupDetailPane } from './GroupDetailPane';
@@ -179,6 +180,22 @@ function Console({
     | { kind: 'settings'; ref: NodeRef };
   const [modal, setModal] = React.useState<Modal>({ kind: 'none' });
   const close = React.useCallback(() => setModal({ kind: 'none' }), []);
+
+  /**
+   * Reopen Configure when the address names Connections — the return leg of a forge connect.
+   *
+   * Connecting a GitHub App leaves the app entirely, so the document that held this state is
+   * gone by the time the operator comes back; `/integrations/oauth-callback` returns them to
+   * the URL the connect started on, and `CONNECTIONS_HASH` is the part of it that says where
+   * in the console they were. Without this the new connection lands on a bare tree with every
+   * dialog closed, which reads as the connect having failed.
+   *
+   * Once, on mount, and only to OPEN: Configure's own body owns the hash from then on, and a
+   * console that re-asserted it would fight the operator closing the dialog.
+   */
+  React.useEffect(() => {
+    if (connectionsHashPresent()) setModal({ kind: 'configure' });
+  }, []);
 
   const groups = tree.data?.groups ?? [];
   const items = tree.data?.items ?? [];

@@ -177,6 +177,32 @@ describe('ShiprConsole — the gear menu', () => {
       await screen.findByRole('button', { name: 'Configure' }),
     ).not.toBeDisabled();
   });
+
+  /**
+   * The far end of a forge connect. Connecting a GitHub App leaves the app entirely, so this
+   * console is torn down and rebuilt; `/integrations/oauth-callback` routes back to the URL
+   * the connect started on, and `#connections` is the part of it that says where in here the
+   * operator was. Without this the new connection lands on a bare tree with every dialog
+   * closed, which reads as the connect having failed rather than succeeded.
+   */
+  it('reopens Configure when the address comes back naming Connections', async () => {
+    window.history.replaceState(null, '', '/acme?workspace=acme#connections');
+    try {
+      render(<ShiprConsole client={stubClient()} />);
+      expect(await screen.findByText('Configure', { selector: '[data-slot="dialog-title"]' }))
+        .toBeTruthy();
+    } finally {
+      window.history.replaceState(null, '', '/');
+    }
+  });
+
+  it('leaves Configure shut on an ordinary load', async () => {
+    render(<ShiprConsole client={stubClient()} />);
+    await screen.findByRole('button', { name: 'Configure' });
+    expect(
+      screen.queryByText('Configure', { selector: '[data-slot="dialog-title"]' }),
+    ).toBeNull();
+  });
 });
 
 describe('ShiprConsole — deploy asks first', () => {

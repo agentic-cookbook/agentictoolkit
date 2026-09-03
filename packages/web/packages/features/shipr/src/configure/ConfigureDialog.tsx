@@ -16,7 +16,11 @@ import {
 } from '@agenticdevelopertoolkit/ui/components/dialog';
 import { Download, Minus, Plug, Plus, Upload } from 'lucide-react';
 
-import { ConnectionsDialog } from './ConnectionsDialog';
+import {
+  ConnectionsDialog,
+  connectionsHashPresent,
+  syncConnectionsHash,
+} from './ConnectionsDialog';
 import { buildDocument } from '../exchange/document';
 import { downloadDocument } from '../exchange/files';
 import { ImportDialog } from '../exchange/ImportDialog';
@@ -155,7 +159,17 @@ function ConfigureBody({
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [wizard, setWizard] = React.useState(false);
   const [importing, setImporting] = React.useState(false);
-  const [connectionsOpen, setConnectionsOpen] = React.useState(false);
+  /* Seeded from the address, and written back to it — see `CONNECTIONS_HASH`. This body is
+     mounted only while Configure is open, and Configure is what the console opens when it
+     finds that hash, so reading it here is reading it once per arrival rather than racing
+     the console's own effect. */
+  const [connectionsOpen, setConnectionsOpen] = React.useState(connectionsHashPresent);
+  React.useEffect(() => {
+    syncConnectionsHash(connectionsOpen);
+  }, [connectionsOpen]);
+  /* Configure closing takes Connections with it, so the hash has to go too — the effect
+     above cannot see it, because this whole body unmounts. */
+  React.useEffect(() => () => syncConnectionsHash(false), []);
   const [removing, setRemoving] = React.useState<Row | null>(null);
 
   /** Why the bar just refused a press — see `BarButton`. Null when nothing was refused. */
