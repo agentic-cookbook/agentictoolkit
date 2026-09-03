@@ -71,7 +71,16 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// clears the field beside it.
     private static let fieldGap: CGFloat = 26
     private static let arrowSize: CGFloat = 15
-    private static let gutterButtonSize: CGFloat = 18
+    /// A gutter arrow is a pair of arrows either side of a line, so its glyph
+    /// is twice as long as it is thick. A square box scaled it to fit the long
+    /// side and left it half the height of a corner arrow; a box shaped like
+    /// the glyph lets it draw at full size. The thickness is what the layout
+    /// below is spaced on, so it stays where it was — only the long side grew.
+    private static let gutterButtonLength: CGFloat = 40
+    private static let gutterButtonThickness: CGFloat = 18
+    /// Drawn a size up from the corner arrows: these two are the buttons that
+    /// move the setting most people came here for.
+    private static let gutterSymbolPointSize: CGFloat = 15
     /// How far each arrow of a cluster sits from the corner it moves.
     private static let clusterRadius: CGFloat = 15
 
@@ -172,12 +181,14 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             let narrower = makeArrowButton(
                 symbol: Self.gutterSymbol(gutter, narrower: true),
                 accessibility: "spacing.gutter.\(gutter.rawValue).narrower",
-                tooltip: "Less space between panes"
+                tooltip: "Less space between panes",
+                pointSize: Self.gutterSymbolPointSize
             )
             let wider = makeArrowButton(
                 symbol: Self.gutterSymbol(gutter, narrower: false),
                 accessibility: "spacing.gutter.\(gutter.rawValue).wider",
-                tooltip: "More space between panes"
+                tooltip: "More space between panes",
+                pointSize: Self.gutterSymbolPointSize
             )
             arrowActions[ObjectIdentifier(narrower)] = .gutter(gutter, -1)
             arrowActions[ObjectIdentifier(wider)] = .gutter(gutter, 1)
@@ -234,8 +245,19 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     /// The button is sized in `layout()`, so the caller passes only what the
     /// button *is*, never how big it is.
-    private func makeArrowButton(symbol: String, accessibility: String, tooltip: String) -> NSButton {
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)
+    private func makeArrowButton(
+        symbol: String,
+        accessibility: String,
+        tooltip: String,
+        pointSize: CGFloat? = nil
+    ) -> NSButton {
+        var image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)
+        if let pointSize {
+            // `scaleProportionallyDown` never scales *up*, so a bigger box on
+            // its own buys nothing — the symbol has to be asked for at the size
+            // it is meant to be drawn.
+            image = image?.withSymbolConfiguration(.init(pointSize: pointSize, weight: .regular))
+        }
         let button = NSButton(image: image ?? NSImage(), target: self, action: #selector(arrowClicked(_:)))
         button.isBordered = false
         button.setButtonType(.momentaryChange)
@@ -293,10 +315,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         case .gutter(let gutter):
             apply(value.adjusting(gutter, by: delta, in: range))
         }
-        // The field is mid-edit and holds the old text; `sync` has replaced the
-        // value under it, so the editor has to be told to catch up.
-        textView.string = field.stringValue
-        textView.setSelectedRange(NSRange(location: textView.string.count, length: 0))
+        // `sync` has already caught the field editor up — see `show`.
         return true
     }
 
@@ -321,19 +340,28 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     // MARK: - Sync and layout
 
     private func sync() {
-        for (edge, field) in edgeFields where !isEditing(field) {
-            field.integerValue = value[edge]
+        for (edge, field) in edgeFields {
+            show(value[edge], in: field)
         }
-        for (gutter, field) in gutterFields where !isEditing(field) {
-            field.integerValue = value[gutter]
+        for (gutter, field) in gutterFields {
+            show(value[gutter], in: field)
         }
         needsLayout = true
         needsDisplay = true
     }
 
-    /// A field the user is typing in owns its own text until they are done.
-    private func isEditing(_ field: NSTextField) -> Bool {
-        field.currentEditor() != nil
+    /// A field being typed in keeps its text in the window's field editor, not
+    /// in the field, so assigning the value alone leaves the old number on
+    /// screen. Every arrow is that case: a borderless momentary button never
+    /// takes focus, so whichever field the user last clicked in is still
+    /// editing when the arrow changes its number — and the number is the whole
+    /// point of pressing the arrow. So the editor is told too, whenever there
+    /// is one.
+    private func show(_ number: Int, in field: NSTextField) {
+        field.integerValue = number
+        guard let editor = field.currentEditor(), editor.string != field.stringValue else { return }
+        editor.string = field.stringValue
+        editor.selectedRange = NSRange(location: field.stringValue.count, length: 0)
     }
 
     private var diagramRect: CGRect {
@@ -376,26 +404,38 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             place(field, at: origin)
             guard let buttons = gutterButtons[gutter] else { continue }
             let step = gutterButtonOffset(for: gutter)
+            let box = gutterBox(for: gutter)
             switch gutter {
             case .betweenColumns:
-                place(buttons.narrower, at: CGPoint(x: origin.x, y: origin.y + step), size: gutterBox)
-                place(buttons.wider, at: CGPoint(x: origin.x, y: origin.y - step), size: gutterBox)
+                place(buttons.narrower, at: CGPoint(x: origin.x, y: origin.y + step), size: box)
+                place(buttons.wider, at: CGPoint(x: origin.x, y: origin.y - step), size: box)
             case .betweenRows:
-                place(buttons.narrower, at: CGPoint(x: origin.x - step, y: origin.y), size: gutterBox)
-                place(buttons.wider, at: CGPoint(x: origin.x + step, y: origin.y), size: gutterBox)
+                place(buttons.narrower, at: CGPoint(x: origin.x - step, y: origin.y), size: box)
+                place(buttons.wider, at: CGPoint(x: origin.x + step, y: origin.y), size: box)
             }
         }
     }
 
     private var arrowBox: CGSize { CGSize(width: Self.arrowSize, height: Self.arrowSize) }
-    private var gutterBox: CGSize { CGSize(width: Self.gutterButtonSize, height: Self.gutterButtonSize) }
+
+    /// Shaped like the glyph in it: the column pair points across, the row pair
+    /// points up and down.
+    private func gutterBox(for gutter: SpacingGutter) -> CGSize {
+        switch gutter {
+        case .betweenColumns:
+            return CGSize(width: Self.gutterButtonLength, height: Self.gutterButtonThickness)
+        case .betweenRows:
+            return CGSize(width: Self.gutterButtonThickness, height: Self.gutterButtonLength)
+        }
+    }
 
     /// Far enough from the field that the two do not touch. The column pair
     /// stacks above and below it, so it clears the field's height; the row pair
-    /// sits either side, so it clears the width.
+    /// sits either side, so it clears the width. Either way it is the button's
+    /// *thickness* that stacks against the field, never its length.
     private func gutterButtonOffset(for gutter: SpacingGutter) -> CGFloat {
         let extent = gutter == .betweenColumns ? Self.fieldSize.height : Self.fieldSize.width
-        return extent / 2 + Self.gutterButtonSize / 2 + 2
+        return extent / 2 + Self.gutterButtonThickness / 2 + 2
     }
 
     private static func offset(_ point: CGPoint, towards arrow: SpacingArrow, by distance: CGFloat) -> CGPoint {
