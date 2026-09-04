@@ -6,7 +6,7 @@ import XCTest
 /// control moving the wrong edge, so it is pinned here.
 final class SpacingEditRulesTests: XCTestCase {
 
-    private let range = 0...80
+    private let range = 0...40
 
     func testTheGrowingArrowAddsRoomAndTheShrinkingArrowTakesItAway() {
         let start = Spacing(uniform: 10)
@@ -33,6 +33,36 @@ final class SpacingEditRulesTests: XCTestCase {
         }
     }
 
+    /// A pair of arrows is also a handle, and dragging it moves the line under
+    /// the pointer. So a drag has to obey the same rule the arrows do: the
+    /// number goes up when the line travels the way growing sends it. Getting
+    /// the sign wrong here is the drag equivalent of the arrows pointing the
+    /// wrong way, and looks exactly as wrong.
+    func testDraggingAnEdgeAddsRoomTheWayThatEdgeTravels() {
+        XCTAssertEqual(SpacingEdge.top.dragGain, -1, "the top line travels down, and down is -y")
+        XCTAssertEqual(SpacingEdge.bottom.dragGain, 1)
+        XCTAssertEqual(SpacingEdge.leading.dragGain, 1)
+        XCTAssertEqual(SpacingEdge.trailing.dragGain, -1)
+
+        for edge in SpacingEdge.allCases {
+            XCTAssertEqual(abs(edge.dragGain), 1, "\(edge) drags one to one, like the diagram")
+            XCTAssertEqual(
+                edge.dragAxis,
+                edge.isHorizontal ? .vertical : .horizontal,
+                "\(edge) is dragged across the line, not along it"
+            )
+        }
+    }
+
+    /// A gutter opens either side of its centre, so the pane edge the pointer
+    /// grabbed moves half as far as the number — two points of gap per point
+    /// dragged is what keeps that edge under the finger.
+    func testDraggingADividerKeepsTheGrabbedPaneEdgeUnderThePointer() {
+        XCTAssertEqual(SpacingGutter.outwardDragGain, 2)
+        XCTAssertEqual(SpacingGutter.betweenColumns.dragAxis, .horizontal)
+        XCTAssertEqual(SpacingGutter.betweenRows.dragAxis, .vertical)
+    }
+
     func testAnArrowLeavesEveryOtherEdgeAlone() {
         let moved = Spacing(uniform: 10).adjusting(.trailing, by: -1, in: range)
 
@@ -44,7 +74,7 @@ final class SpacingEditRulesTests: XCTestCase {
 
     func testAnArrowStopsAtTheEndsOfTheRange() {
         XCTAssertEqual(Spacing(top: 0).adjusting(.top, by: -1, in: range).top, 0, "no negative padding")
-        XCTAssertEqual(Spacing(top: 80).adjusting(.top, by: 1, in: range).top, 80)
+        XCTAssertEqual(Spacing(top: 40).adjusting(.top, by: 1, in: range).top, 40)
     }
 
     func testAGutterOpensAndClosesByTheWholeGapNotHalfOfIt() {
@@ -59,9 +89,9 @@ final class SpacingEditRulesTests: XCTestCase {
     func testATypedNumberIsClampedRatherThanRefused() {
         let start = Spacing()
 
-        XCTAssertEqual(start.setting(.top, to: 500, in: range).top, 80)
+        XCTAssertEqual(start.setting(.top, to: 500, in: range).top, 40)
         XCTAssertEqual(start.setting(.top, to: -20, in: range).top, 0)
-        XCTAssertEqual(start.setting(.betweenColumns, to: 500, in: range).betweenColumns, 80)
+        XCTAssertEqual(start.setting(.betweenColumns, to: 500, in: range).betweenColumns, 40)
     }
 }
 
@@ -71,12 +101,14 @@ final class SpacingEditRulesTests: XCTestCase {
 final class SpacingControlLayoutTests: XCTestCase {
 
     /// The rectangle **both** flavors draw their diagram in: one control size
-    /// (420 × 250) less the chrome that hangs off it — an arrow's length and a
-    /// number beyond that, on each side — so a panel showing a frame control
-    /// above a divider control gets two pictures that line up.
+    /// (420 wide, and 250 tall plus the footer Reset stands in) less the chrome
+    /// that hangs off it — an arrow's length and a number-plus-stepper beyond
+    /// that, on each side, and the footer off the bottom only — so a panel
+    /// showing a frame control above a divider control gets two pictures that
+    /// line up.
     private let diagram = CGRect(
         x: SpacingControlLayout.chrome.width,
-        y: SpacingControlLayout.chrome.height,
+        y: SpacingControlLayout.chrome.height + SpacingControlLayout.footer,
         width: 420 - SpacingControlLayout.chrome.width * 2,
         height: 250 - SpacingControlLayout.chrome.height * 2
     )
@@ -127,7 +159,9 @@ final class SpacingControlLayoutTests: XCTestCase {
     /// arrow reaches furthest past the frame — so that is the case to measure.
     func testEachNumberStandsOutsideTheContainerClearOfItsArrows() {
         let plan = frame(Spacing())
-        let field = SpacingControlLayout.fieldSize
+        // The whole block — number and stepper — is what has to clear the
+        // arrows, not the digits alone.
+        let field = SpacingControlLayout.fieldGroupSize
         let reach = SpacingControlLayout.arrowLength
 
         let top = plan.fieldPosition(of: .top)
@@ -153,12 +187,12 @@ final class SpacingControlLayoutTests: XCTestCase {
         for edge in SpacingEdge.allCases {
             XCTAssertEqual(
                 frame(Spacing()).fieldPosition(of: edge),
-                frame(Spacing(uniform: 80)).fieldPosition(of: edge),
+                frame(Spacing(uniform: 40)).fieldPosition(of: edge),
                 "\(edge)'s number moved"
             )
             XCTAssertNotEqual(
                 frame(Spacing()).position(of: edge),
-                frame(Spacing(uniform: 80)).position(of: edge),
+                frame(Spacing(uniform: 40)).position(of: edge),
                 "\(edge)'s arrows did not"
             )
         }
@@ -193,22 +227,39 @@ final class SpacingControlLayoutTests: XCTestCase {
         )
     }
 
-    /// An arrow standing against the line it moves travels with that line, so
-    /// the picture only works while that travel stays under half an arrow: past
-    /// that, an arrow held down slides out from under the pointer and the
-    /// repeat stops. That is why the *displayed* inset is capped far below the
-    /// range the number itself covers.
-    func testAHeldArrowCannotTravelOutFromUnderThePointer() {
-        XCTAssertLessThan(
+    /// The diagram moves one point per point, over the **whole** range — so
+    /// every number the user can reach changes the picture, and the picture is
+    /// a measurement rather than a hint.
+    ///
+    /// It used to be a fraction of that, capped well short of the range, and
+    /// the arrows were the reason: each stands against the line it moves, so a
+    /// held arrow that travelled past half its own length slid out from under
+    /// the pointer and the repeat stopped. The control froze a pressed arrow's
+    /// seat instead (`ArrowButton`), which is what let this rise to meet the
+    /// range — so the two facts below are the whole of the fix, and a cap that
+    /// stopped short of the range again would be the bug coming back.
+    func testTheDiagramMovesOverTheWholeRangeNotJustTheBottomOfIt() {
+        XCTAssertEqual(
+            SpacingControlLayout.displayed(40),
             SpacingControlLayout.maximumDisplayedInset,
-            SpacingControlLayout.arrowLength / 2,
-            "an arrow can travel further than half its own length"
+            "the top of the range is drawn at full size"
         )
 
         let travel = frame(Spacing()).position(of: .top).y
-            - frame(Spacing(uniform: 80)).position(of: .top).y
+            - frame(Spacing(uniform: 40)).position(of: .top).y
         XCTAssertEqual(travel, SpacingControlLayout.maximumDisplayedInset)
-        XCTAssertLessThan(travel, SpacingControlLayout.arrowLength / 2)
+
+        // And nothing in between is standing still: 25 was where the old cap
+        // had already saturated, so the picture stopped answering the number.
+        XCTAssertLessThan(
+            frame(Spacing(uniform: 40)).position(of: .top).y,
+            frame(Spacing(uniform: 25)).position(of: .top).y,
+            "the diagram stops moving before the range does"
+        )
+        XCTAssertLessThan(
+            frame(Spacing(uniform: 25)).position(of: .top).y,
+            frame(Spacing(uniform: 10)).position(of: .top).y
+        )
     }
 
     func testTheFrameDiagramHasOnePaneAndNoDividers() {
@@ -222,7 +273,7 @@ final class SpacingControlLayoutTests: XCTestCase {
     /// The pane diagram's margin is fixed: the room around the grid is the
     /// frame control's number, and this diagram does not edit it.
     func testThePaneDiagramsMarginIgnoresTheInsets() {
-        XCTAssertEqual(panes(Spacing()).content, panes(Spacing(uniform: 80)).content)
+        XCTAssertEqual(panes(Spacing()).content, panes(Spacing(uniform: 40)).content)
     }
 
     func testPanesAreTheFourQuadrantsLeftByTheDividers() {
@@ -266,7 +317,7 @@ final class SpacingControlLayoutTests: XCTestCase {
     /// two middles — change size with the gap, and because each control is now
     /// four arrows wide rather than two.
     func testTheTwoDividerControlsNeverOverlap() {
-        for gap in [0, 10, 40, 80] {
+        for gap in [0, 10, 25, 40] {
             let plan = panes(Spacing(betweenColumns: gap, betweenRows: gap))
 
             XCTAssertFalse(

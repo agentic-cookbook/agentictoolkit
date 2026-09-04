@@ -31,25 +31,42 @@ public struct SpacingControlLayout: Equatable {
 
     // MARK: - Chrome metrics
 
-    /// A number chip.
+    /// A number chip, and the stepper that stands against its right edge.
     public static let fieldSize = CGSize(width: 40, height: 21)
+    public static let stepperSize = CGSize(width: 13, height: 21)
 
-    /// An arrow is drawn in a box shaped like the glyph on it: `length` runs
-    /// the way the arrow points, `breadth` across. Deliberately large — these
-    /// are the controls, not annotations on a drawing, and a 22-point chip read
-    /// as the latter.
-    public static let arrowLength: CGFloat = 28
-    public static let arrowBreadth: CGFloat = 20
-
-    /// Between a chip and whatever sits next to it.
+    /// Between a chip and whatever sits next to it — its stepper, or an arrow.
     public static let arrowGap: CGFloat = 2
 
-    /// Room the diagram leaves outside itself for what hangs off it: an arrow
-    /// standing against an edge, and the number beyond it.
-    public static let chrome = CGSize(
-        width: arrowLength + arrowGap + fieldSize.width,
-        height: arrowLength + arrowGap + fieldSize.height
+    /// A number and its stepper are placed as one block, because what has to
+    /// line up with an edge is the pair. Centring the digits alone would hang
+    /// the stepper off to one side of the edge it belongs to.
+    public static let fieldGroupSize = CGSize(
+        width: fieldSize.width + arrowGap + stepperSize.width,
+        height: max(fieldSize.height, stepperSize.height)
     )
+
+    /// An arrow is drawn in a box shaped like the glyph on it: `length` runs
+    /// the way the arrow points, `breadth` across. Small, and outlined rather
+    /// than filled: four of them now meet on each line, and a chip big enough
+    /// to read as a button on its own crowded the picture they are drawn on.
+    public static let arrowLength: CGFloat = 18
+    public static let arrowBreadth: CGFloat = 14
+
+    /// Room the diagram leaves outside itself for what hangs off it: an arrow
+    /// standing against an edge, and the number and stepper beyond it.
+    public static let chrome = CGSize(
+        width: arrowLength + arrowGap + fieldGroupSize.width,
+        height: arrowLength + arrowGap + fieldGroupSize.height
+    )
+
+    /// Reset stands below the bottom number rather than inside the diagram, so
+    /// the room it needs comes off the diagram's bottom and nowhere else — the
+    /// picture stays centred left to right, which is what keeps the two flavors
+    /// drawing the same rectangle.
+    public static let resetSize = CGSize(width: 58, height: 20)
+    public static let resetGap: CGFloat = 8
+    public static let footer: CGFloat = resetGap + resetSize.height
 
     /// From the container's edge out to the centre of a number sitting beyond
     /// it, given how far that number reaches across the gap.
@@ -63,23 +80,25 @@ public struct SpacingControlLayout: Equatable {
         arrowLength + arrowGap + extent / 2
     }
 
-    /// Diagram points per point of real spacing.
+    /// Diagram points per point of real spacing: **one to one**.
     ///
-    /// Not 1:1, and capped: at 1:1 an 80-point inset would swallow a diagram
-    /// this size, and the cap is what keeps the content visible at the top of
-    /// the range. The preview says *more* or *less*, not *how many* — that is
-    /// the number's job.
-    private static let displayScale: CGFloat = 0.7
+    /// It was a fraction while the range ran to 80, because 80 points a side
+    /// would have swallowed a diagram this size. The range now stops at 40,
+    /// which this diagram has room for, so the preview can say *how many*
+    /// rather than merely *more* or *less* — ten points of spacing is ten
+    /// points of picture.
+    private static let displayScale: CGFloat = 1
 
-    /// How far anything anchored to a moving line can travel over the whole
-    /// range — and so the reason this number is small.
+    /// The furthest the drawing ever moves — the top of the range, drawn at
+    /// full size, so every number the user can reach changes the picture.
     ///
-    /// The arrows stand against the edges they move, which means they move
-    /// too. An arrow held down would slide out from under the pointer, and
-    /// stop repeating, the moment it travelled half its own length; the cap is
-    /// kept under that. See ``arrowLength`` and
-    /// `testAHeldArrowCannotTravelOutFromUnderThePointer`.
-    public static let maximumDisplayedInset: CGFloat = 12
+    /// This used to be a small fraction of the range, and the arrows were the
+    /// reason: they stand against the edges they move, so they move too, and
+    /// one held past half its own length slid out from under the pointer and
+    /// stopped repeating. A pressed arrow now keeps its seat until it is
+    /// released (`ArrowButton`), which is what let the cap rise to meet the
+    /// range instead of holding the diagram still above 17.
+    public static let maximumDisplayedInset: CGFloat = 40
 
     /// A divider narrower than this is still drawn as a hairline, so the
     /// diagram reads as four panes rather than one at zero.
@@ -190,13 +209,13 @@ public struct SpacingControlLayout: Equatable {
     public func fieldPosition(of edge: SpacingEdge) -> CGPoint {
         switch edge {
         case .top:
-            return CGPoint(x: outerFrame.midX, y: outerFrame.maxY + Self.outward(Self.fieldSize.height))
+            return CGPoint(x: outerFrame.midX, y: outerFrame.maxY + Self.outward(Self.fieldGroupSize.height))
         case .bottom:
-            return CGPoint(x: outerFrame.midX, y: outerFrame.minY - Self.outward(Self.fieldSize.height))
+            return CGPoint(x: outerFrame.midX, y: outerFrame.minY - Self.outward(Self.fieldGroupSize.height))
         case .leading:
-            return CGPoint(x: outerFrame.minX - Self.outward(Self.fieldSize.width), y: outerFrame.midY)
+            return CGPoint(x: outerFrame.minX - Self.outward(Self.fieldGroupSize.width), y: outerFrame.midY)
         case .trailing:
-            return CGPoint(x: outerFrame.maxX + Self.outward(Self.fieldSize.width), y: outerFrame.midY)
+            return CGPoint(x: outerFrame.maxX + Self.outward(Self.fieldGroupSize.width), y: outerFrame.midY)
         }
     }
 
@@ -211,9 +230,9 @@ public struct SpacingControlLayout: Equatable {
     public func fieldPosition(of gutter: SpacingGutter) -> CGPoint {
         switch gutter {
         case .betweenColumns:
-            return CGPoint(x: columnGutter.midX, y: outerFrame.maxY + Self.outward(Self.fieldSize.height))
+            return CGPoint(x: columnGutter.midX, y: outerFrame.maxY + Self.outward(Self.fieldGroupSize.height))
         case .betweenRows:
-            return CGPoint(x: outerFrame.minX - Self.outward(Self.fieldSize.width), y: rowGutter.midY)
+            return CGPoint(x: outerFrame.minX - Self.outward(Self.fieldGroupSize.width), y: rowGutter.midY)
         }
     }
 }

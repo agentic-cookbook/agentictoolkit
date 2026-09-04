@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 /// How much room sits around a view — and, when the thing being spaced is a
@@ -65,6 +66,14 @@ public enum SpacingDiagram: String, CaseIterable, Sendable {
     case paneDividers
 }
 
+/// Which way a drag has to travel to move a line. Both flavors of the control
+/// have lines that move on one axis only, so this is the whole of what a
+/// handle needs to know about the thing it is dragging.
+public enum SpacingAxis: Sendable {
+    case horizontal
+    case vertical
+}
+
 /// One of the four insets, named so a control can talk about "the edge this
 /// field edits" without four near-identical code paths.
 public enum SpacingEdge: String, CaseIterable, Sendable {
@@ -103,6 +112,26 @@ public enum SpacingEdge: String, CaseIterable, Sendable {
 
     /// The way the edge travels when its inset shrinks.
     public var shrinking: SpacingArrow { growing.opposite }
+
+    /// The way the pointer travels when this edge's line is dragged: up and
+    /// down for the top and the bottom, across for the two sides.
+    public var dragAxis: SpacingAxis { isHorizontal ? .vertical : .horizontal }
+
+    /// Points of inset per point of drag along ``dragAxis``, sign included.
+    ///
+    /// A drag has to move the number the way the line under the pointer
+    /// travels, which is the rule the arrows already follow: growing the top
+    /// inset sends the top line *down*, and down is negative in the control's
+    /// own y-up coordinates — so dragging down is what adds room at the top.
+    /// One to one, because the diagram is drawn one to one.
+    public var dragGain: CGFloat {
+        switch self {
+        case .top: return -1
+        case .bottom: return 1
+        case .leading: return 1
+        case .trailing: return -1
+        }
+    }
 }
 
 /// One of the two gutters. Only the pane-divider flavor has them.
@@ -119,6 +148,23 @@ public enum SpacingGutter: String, CaseIterable, Sendable {
         case .betweenRows: return "stacked panes"
         }
     }
+
+    /// The way the pointer travels when this divider is dragged: across the
+    /// gutter, which is the direction the gap is measured in.
+    public var dragAxis: SpacingAxis {
+        switch self {
+        case .betweenColumns: return .horizontal
+        case .betweenRows: return .vertical
+        }
+    }
+
+    /// Points of gap per point of drag **away from the divider's centre**.
+    ///
+    /// A gutter opens either side of its centre line, so the pane edge the
+    /// pointer grabbed moves only half as far as the number does. Two points
+    /// of gap per point dragged is what keeps that edge under the finger —
+    /// the same one-to-one feel the frame flavor gets for free.
+    public static let outwardDragGain: CGFloat = 2
 }
 
 /// Which way one arrow points.

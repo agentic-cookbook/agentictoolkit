@@ -83,7 +83,7 @@ extension SpacingControl {
         style: Style,
         edges: [SpacingEdge: UserSetting<Int>] = [:],
         gutters: [SpacingGutter: UserSetting<Int>] = [:],
-        range: ClosedRange<Int> = 0...80
+        range: ClosedRange<Int> = 0...40
     ) -> SpacingControl {
         let control = SpacingControl(style: style, range: range)
         control.retainedBinding = SpacingSettingsBinding(control: control, edges: edges, gutters: gutters)
