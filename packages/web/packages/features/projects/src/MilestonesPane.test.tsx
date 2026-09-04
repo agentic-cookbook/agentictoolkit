@@ -340,7 +340,20 @@ describe("MilestonesPane", () => {
 // renders — what matters is which FACTS it commits to, and "overdue" is the one that could be
 // wrong in a way nobody notices.
 describe("milestoneSublabel", () => {
-  const today = new Date().toISOString().slice(0, 10);
+  // THE CLOCK IS FROZEN, because "overdue" is a fact about now while the fixture's date is a
+  // literal. Left to the real clock these assertions passed until 2026-09-01 and then failed
+  // every run after it — a test that dates itself eventually reports a bug that is not there,
+  // in a package nobody was touching.
+  const NOW = "2026-08-20";
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(`${NOW}T12:00:00Z`));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const today = NOW;
 
   it("leads with the date, then the progress", () => {
     expect(milestoneSublabel(milestone({ counts: counts({ todo: 1, done: 1 }) }))).toBe(
