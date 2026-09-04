@@ -168,11 +168,23 @@ describe('the Configure dialog frame', () => {
 });
 
 describe('the fleet as a file', () => {
-  it('offers nothing to export when nothing is registered', () => {
+  /**
+   * A refused bar button SAYS SO WHEN PRESSED. It is `aria-disabled`, never natively
+   * `disabled`: Chrome dispatches no hover over a disabled button and shows no `title`
+   * tooltip for one, so the old contract — the reason on `title` — could only be read by
+   * someone who already knew what it said. "The import button does nothing" (Mike) was
+   * exactly that, on the sibling control.
+   */
+  it('says why when a refused bar button is pressed', async () => {
+    const user = userEvent.setup();
     draw();
     const button = screen.getByRole('button', { name: 'Export' });
-    expect(button).toBeDisabled();
-    expect(button).toHaveAttribute('title', 'Nothing is registered yet.');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    // Not `disabled` — that is what swallowed the press and the explanation with it.
+    expect(button).not.toBeDisabled();
+
+    await user.click(button);
+    expect(await screen.findByText('Nothing is registered yet.')).toBeInTheDocument();
   });
 
   it('writes a file of the rows on the screen', async () => {

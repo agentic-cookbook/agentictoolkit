@@ -5,6 +5,7 @@ import * as React from 'react';
 import { StackLevels, StandaloneRailHost } from '@agentic-toolkit/resource';
 import type { TopicLevel } from '@agenticdevelopertoolkit/ui/blocks';
 import { TopicSelectHint } from '@agenticdevelopertoolkit/ui/blocks';
+import { AlertModal } from '@agenticdevelopertoolkit/ui/components/alert-modal';
 import { Button } from '@agenticdevelopertoolkit/ui/components/button';
 import {
   Dialog,
@@ -157,6 +158,9 @@ function ConfigureBody({
   const [connectionsOpen, setConnectionsOpen] = React.useState(false);
   const [removing, setRemoving] = React.useState<Row | null>(null);
 
+  /** Why the bar just refused a press — see `BarButton`. Null when nothing was refused. */
+  const [refused, setRefused] = React.useState<string | null>(null);
+
   /**
    * One row per SOURCE repository, sorted by slug.
    *
@@ -249,6 +253,7 @@ function ConfigureBody({
           icon={<Plus />}
           state={buttons.register}
           onClick={() => setWizard(true)}
+          onRefused={setRefused}
         />
         <BarButton
           label="Remove"
@@ -256,6 +261,7 @@ function ConfigureBody({
           state={buttons.unregister}
           destructive
           onClick={() => selected && setRemoving(selected)}
+          onRefused={setRefused}
         />
 
         {/* THE FLEET AS A FILE, both directions, on the bar that already owns the repository
@@ -268,12 +274,14 @@ function ConfigureBody({
           icon={<Upload />}
           state={buttons.register}
           onClick={() => setImporting(true)}
+          onRefused={setRefused}
         />
         <BarButton
           label="Export"
           icon={<Download />}
           state={{ enabled: items.length > 0, reason: 'Nothing is registered yet.' }}
           onClick={() => downloadDocument(buildDocument({ groups, items }))}
+          onRefused={setRefused}
         />
         <div className="flex-1" />
         <Button
@@ -388,34 +396,63 @@ function ConfigureBody({
           setSelectedId(null);
         }}
       />
+
+      {/* The bar's refusal, said out loud — the click a greyed-out control used to swallow.
+          `tone="info"` and not `"error"`: nothing went wrong, the operator asked for
+          something this workspace does not let them have. */}
+      <AlertModal
+        open={refused !== null}
+        tone="info"
+        title="Not available"
+        description={refused ?? ''}
+        onConfirm={() => setRefused(null)}
+      />
     </>
   );
 }
 
-/** One button on the bar, drawn from `toolbarState` — including its refusal, which becomes
- *  the tooltip. A disabled control with no explanation is indistinguishable from a broken
- *  one, and this bar's controls are disabled most of the time. */
+/**
+ * One button on the bar, drawn from `toolbarState` — including its refusal, which is the
+ * whole point of this component. This bar's controls are refused most of the time, and a
+ * refused control that swallows the click is indistinguishable from a broken one: "the
+ * import button does nothing" (Mike) was Import correctly refusing a viewer who could not
+ * register, with nothing on screen to say so.
+ *
+ * SO IT IS NEVER `disabled`. The reason used to ride on `title`, and Chrome does not
+ * dispatch hover — or show a tooltip — over a natively disabled button, so the explanation
+ * could only be read by someone who already knew it was there. `aria-disabled` keeps the
+ * refusal for assistive tech and the greyed-out look for everyone else, while leaving the
+ * button a real target: pressing it hands `state.reason` to `onRefused`, which says out
+ * loud what the tooltip never got to.
+ */
 function BarButton({
   label,
   icon,
   state,
   destructive = false,
   onClick,
+  onRefused,
 }: {
   label: string;
   icon: React.ReactNode;
   state: { enabled: boolean; reason: string };
   destructive?: boolean;
   onClick: () => void;
+  /** Pressed while refused. Gets `state.reason`, or a stand-in when the gate named none. */
+  onRefused: (reason: string) => void;
 }): React.ReactElement {
   return (
     <Button
       type="button"
       size="xs"
       variant={destructive ? 'destructive-ghost' : 'ghost'}
-      disabled={!state.enabled}
-      title={state.reason || undefined}
-      onClick={onClick}
+      aria-disabled={!state.enabled}
+      className={state.enabled ? undefined : 'opacity-50'}
+      onClick={() =>
+        state.enabled
+          ? onClick()
+          : onRefused(state.reason || `${label} is not available here.`)
+      }
     >
       {icon}
       {label}

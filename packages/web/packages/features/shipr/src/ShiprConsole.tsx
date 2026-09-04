@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { HierarchicalTopicDetail } from '@agenticdevelopertoolkit/ui/blocks';
-import { ErrorText } from '@agenticdevelopertoolkit/ui/components/error-text';
+import { AlertModal } from '@agenticdevelopertoolkit/ui/components/alert-modal';
 
 import { useRunningRepos } from './activity/useRunningRepos';
 import { isFinished, useRuns } from './activity/useRuns';
@@ -666,10 +666,34 @@ function Console({
     [focusedGroup, items, groups],
   );
 
+  /**
+   * FAULTS ARE ALERTS, NOT FURNITURE (Mike). A failed read or a refused run used to print
+   * the backend's own prose into a line above the toolbar. Two things were wrong with that:
+   * it reads as a label on the bar rather than as something that went wrong, and `tree.error`
+   * survives for as long as the poll keeps failing — so `Internal Server Error` became part
+   * of the console's chrome, sitting over the controls until the server came back.
+   *
+   * RAISED ONCE PER DISTINCT FAULT. The poll re-sets the same message every few seconds, so
+   * opening on truthiness alone would re-open this dialog under the operator's cursor for as
+   * long as the outage lasted. `raised` holds the message already shown and is cleared the
+   * moment a read succeeds — which is what lets the SAME message raise again after a
+   * recovery, instead of being swallowed forever as a duplicate.
+   */
+  const problem = error ?? tree.error;
+  const [alert, setAlert] = React.useState<string | null>(null);
+  const raised = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (problem === null) {
+      raised.current = null;
+      return;
+    }
+    if (problem === raised.current) return;
+    raised.current = problem;
+    setAlert(problem);
+  }, [problem]);
+
   return (
     <div className={`flex min-h-0 min-w-0 flex-1 flex-col ${className ?? ''}`}>
-      <ErrorText error={error ?? tree.error} className="px-4 pt-2" />
-
       <HierarchicalTopicDetail
         levels={levels}
         // The stack keeps memory outside React — pins, hover, and the outgoing detail pane it
@@ -836,6 +860,14 @@ function Console({
         target={settingsTarget}
         onClose={close}
         onSave={onSaveSettings}
+      />
+
+      <AlertModal
+        open={alert !== null}
+        tone="error"
+        title="shipr hit a problem"
+        description={alert ?? ''}
+        onConfirm={() => setAlert(null)}
       />
     </div>
   );

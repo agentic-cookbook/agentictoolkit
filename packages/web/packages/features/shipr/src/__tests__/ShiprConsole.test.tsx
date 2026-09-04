@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { ShiprConsole } from '../ShiprConsole';
@@ -339,5 +339,35 @@ describe('ShiprConsole — the rail gives way on a phone', () => {
     expect(isNarrow()).toBe(true);
     harness.resizeTo(1200);
     expect(isNarrow()).toBe(false);
+  });
+});
+
+/**
+ * A FAULT IS AN ALERT, NOT PART OF THE BAR (Mike: "do not randomly show error messages in
+ * thing like toolbars, create alerts or something"). A failed read used to print the
+ * backend's own prose — `Internal Server Error` — into a line directly above the toolbar,
+ * where it read as a label on the controls and, because a failing poll re-sets it forever,
+ * stayed there for the length of the outage.
+ */
+describe('ShiprConsole — faults are raised, not printed into the chrome', () => {
+  it('raises the failure as a dismissable alert', async () => {
+    render(
+      <ShiprConsole
+        client={stubClient({
+          tree: vi.fn().mockRejectedValue(new Error('Internal Server Error')),
+        })}
+      />,
+    );
+
+    const alert = await screen.findByRole('dialog', { name: /shipr hit a problem/ });
+    expect(alert).toHaveTextContent('Internal Server Error');
+
+    await userEvent.click(within(alert).getByRole('button', { name: 'OK' }));
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: /shipr hit a problem/ })).toBeNull(),
+    );
+    // And it is GONE, not moved into the frame: the message must not survive the dismissal
+    // anywhere on screen.
+    expect(screen.queryByText('Internal Server Error')).toBeNull();
   });
 });
