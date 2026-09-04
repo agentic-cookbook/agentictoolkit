@@ -3,7 +3,7 @@
 import * as React from 'react';
 
 import { useWorkspaceDefaultEcosystemId } from '@agentic-toolkit/data/ecosystems';
-import { IntegrationsPane } from '@agentic-toolkit/integrations';
+import { CONNECTIONS_HASH, IntegrationsPane } from '@agentic-toolkit/integrations';
 import { StandaloneRailHost } from '@agentic-toolkit/resource';
 import { Button } from '@agenticdevelopertoolkit/ui/components/button';
 import {
@@ -60,8 +60,14 @@ const PROVIDERS = ['github-app', 'vercel', 'railway'] as const;
  * Written with `replaceState`, not `pushState`. Opening a dialog is not a navigation, and a
  * Back button that closed a dialog instead of leaving the console would be a worse lie than
  * a URL that is one step behind.
+ *
+ * The STRING itself is `@agentic-toolkit/integrations`', re-exported here so this console
+ * keeps naming it from the file that writes it. Both ends of the round-trip need the same
+ * fragment — this file puts it in the address, and the callback appends it to the return it
+ * has to invent when nothing was stashed on the origin it landed on — and a second spelling
+ * would be wrong in exactly one direction, with nothing to catch it.
  */
-export const CONNECTIONS_HASH = '#connections';
+export { CONNECTIONS_HASH } from '@agentic-toolkit/integrations';
 
 /** True when the current address names {@link CONNECTIONS_HASH}. Guarded for SSR: this file
  *  is `'use client'`, but a client component still renders once on the server. */
@@ -70,13 +76,28 @@ export function connectionsHashPresent(): boolean {
 }
 
 /** Put the address in agreement with whether Connections is showing, without adding history
- *  entries and without disturbing the path or the query. */
+ *  entries and without disturbing the path, the query, or a fragment that isn't ours. */
 export function syncConnectionsHash(open: boolean): void {
   if (typeof window === 'undefined') return;
   const { pathname, search, hash } = window.location;
-  if (open === (hash === CONNECTIONS_HASH)) return;
+  const ours = hash === CONNECTIONS_HASH;
+  if (open === ours) return;
+  // Opening over SOMEBODY ELSE'S fragment leaves the address alone. A fragment names a
+  // position within the page — an anchor a deep link aimed at, a scroll target a shared URL
+  // carried — and this one is a convenience that lets a return leg re-open a dialog. Trading
+  // the first for the second is a bad trade, and the return leg has a fallback either way.
+  // The closing direction needs no such guard: a foreign hash and `open === false` agree
+  // above and return before reaching here, so only a hash this function wrote is ever cleared.
+  if (open && hash) return;
   const next = open ? `${pathname}${search}${CONNECTIONS_HASH}` : `${pathname}${search}`;
-  window.history.replaceState(window.history.state, '', next);
+  // `null`, NOT `window.history.state`. Next patches `replaceState` and forwards any call
+  // whose state carries its `__NA` / `_N` marker straight to the native implementation —
+  // which is every entry Next itself stamped, i.e. this one. Handing back the state we just
+  // read therefore skips the router's own bookkeeping, so `canonicalUrl` never learns about
+  // the fragment and the next render that touches history puts the old address back. Passing
+  // `null` is the shape the patch is written for: it copies Next's internal fields across
+  // itself (`copyNextJsInternalHistoryState`) and updates the router with the new URL.
+  window.history.replaceState(null, '', next);
 }
 
 export interface ConnectionsDialogProps {

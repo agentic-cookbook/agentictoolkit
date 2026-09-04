@@ -53,8 +53,8 @@ afterEach(() => {
  * repeated verbatim.
  */
 function installScript(): string {
-  const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
-  mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+  const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
+  mkdirSync(join(root, "websites", "tools"), { recursive: true });
   mockExistsSync.mockImplementation((p) => String(p) === script);
   return script;
 }
@@ -107,19 +107,21 @@ describe("assertHoistableDeps", () => {
   });
 
   /**
-   * The split repos keep the same script at `websites/tools/`, because their sites are
-   * directly under `websites/` rather than under adh's `frontend/src/`.
+   * adh keeps its sites one directory deeper — `frontend/websites/` — so its copy of the
+   * script is at `frontend/websites/tools/`. That is the SAME relative path, matched one level
+   * further down the ancestor walk, which is why one spelling covers both layouts.
    *
-   * This is the one place that difference could disable the gate INVISIBLY: a layout matching
-   * neither spelling does not fail, it returns `undefined` and takes the "outside a fleet
-   * repo, nothing to check" path — the same answer a legitimate non-fleet consumer gets. So
-   * the check stopped running in exactly the repos whose `link:` paths had just been rewritten
-   * by a split, and the only symptom was a Vercel build failing on a dependency that had been
-   * green locally the whole time.
+   * The walk is the one place a layout difference could disable this gate INVISIBLY: a layout
+   * the probe does not match returns `undefined` and takes the "outside a fleet repo, nothing
+   * to check" path — the same answer a legitimate non-fleet consumer gets. The gate would then
+   * be off in exactly the repos whose `link:` paths had just been rewritten by a split, and the
+   * only symptom is a Vercel build failing on a dependency that was green locally throughout.
    */
-  it("finds the isolate script at a split repo's websites/tools, not just adh's frontend/src/tools", () => {
-    const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
-    mkdirSync(join(root, "websites", "tools"), { recursive: true });
+  it("finds adh's script at frontend/websites/tools, from a site under frontend/websites", () => {
+    const adhSite = join(root, "frontend", "websites", "registries");
+    mkdirSync(adhSite, { recursive: true });
+    const script = join(root, "frontend", "websites", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "frontend", "websites", "tools"), { recursive: true });
     mockExistsSync.mockImplementation((p) => String(p) === script);
     mockSpawnSync.mockReturnValue({
       status: 1,
@@ -132,21 +134,53 @@ describe("assertHoistableDeps", () => {
 
     // Throwing at all is the assertion: a gate that had not found the script would have
     // returned silently, and the site would build.
-    expect(() => assertHoistableDeps(site)).toThrowError(/undeclared/);
+    expect(() => assertHoistableDeps(adhSite)).toThrowError(/undeclared/);
+    expect(mockSpawnSync.mock.calls[0]?.[1]).toContain(script);
+  });
+
+  /**
+   * The walk stops at the repo it started in.
+   *
+   * A fleet repo vendors its toolkits as git submodules under `websites/external/`, and those
+   * carry sites of their own. Without a boundary the walk climbs straight out of the submodule
+   * and resolves the OUTER repo's isolate script, which then checks the submodule's demo site
+   * against a worklist built from manifests it has nothing to do with — five cross-workspace
+   * requirements reported against a site that declares none of them, and no edit to that site
+   * that can make it pass. `undefined` is the correct answer there: the demo site is not a
+   * fleet site, and "nothing to check" is exactly what a non-fleet consumer gets.
+   */
+  it("stops at a .git boundary rather than answering from the enclosing repo", () => {
+    const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "websites", "tools"), { recursive: true });
+    const inner = join(root, "websites", "external", "agentictoolkit");
+    const innerSite = join(inner, "websites", "site");
+    mkdirSync(innerSite, { recursive: true });
+    // A submodule's `.git` is a FILE, not a directory — `existsSync` answers for both, which
+    // is the whole reason the boundary is probed that way rather than with a stat on a dir.
+    const innerGit = join(inner, ".git");
+    mockExistsSync.mockImplementation((p) => String(p) === script || String(p) === innerGit);
+
+    expect(() => assertHoistableDeps(innerSite)).not.toThrow();
+    expect(mockSpawnSync).not.toHaveBeenCalled();
+
+    // …and the same outer script is still found from a site that really is the outer repo's,
+    // so the boundary has not simply turned the gate off.
+    mockSpawnSync.mockReturnValue(cleanRun());
+    assertHoistableDeps(site);
     expect(mockSpawnSync.mock.calls[0]?.[1]).toContain(script);
   });
 
   it("returns without throwing when no isolate script is found on any ancestor, and does not spawn", () => {
-    // `root` is a fresh tmpdir with no `frontend/src/tools/vercel-isolate-deps.py`
-    // anywhere above it (up to the real filesystem root), so the ancestor walk
-    // in `findIsolateScript` exhausts without a hit.
+    // `root` is a fresh tmpdir with no `websites/tools/vercel-isolate-deps.py` anywhere
+    // above it (up to the real filesystem root) and no `.git` to stop at, so the ancestor
+    // walk in `findIsolateScript` exhausts without a hit.
     expect(() => assertHoistableDeps(site)).not.toThrow();
     expect(mockSpawnSync).not.toHaveBeenCalled();
   });
 
   it("throws, with the script's stdout in the message, when --check exits non-zero", () => {
-    const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
-    mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+    const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "websites", "tools"), { recursive: true });
     mockExistsSync.mockImplementation((p) => String(p) === script);
     mockSpawnSync.mockReturnValue({
       status: 1,
@@ -211,8 +245,8 @@ describe("assertHoistableDeps", () => {
     // read as indistinguishable from a clean pass. Keeping it non-fatal is right — a
     // signal-killed interpreter must not fail a build — but it must be VISIBLE in the
     // build log instead of silently identical to success.
-    const script = join(root, "frontend", "src", "tools", "vercel-isolate-deps.py");
-    mkdirSync(join(root, "frontend", "src", "tools"), { recursive: true });
+    const script = join(root, "websites", "tools", "vercel-isolate-deps.py");
+    mkdirSync(join(root, "websites", "tools"), { recursive: true });
     mockExistsSync.mockImplementation((p) => String(p) === script);
     mockSpawnSync.mockReturnValue({
       error: undefined,

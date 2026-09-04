@@ -24,32 +24,40 @@ import { dirname, join } from "node:path";
 const checkedSites = new Set<string>();
 
 /**
- * The two places a fleet repo keeps the isolate script, nearest ancestor first.
+ * Where a fleet repo keeps the isolate script, relative to the directory holding its sites.
  *
- * adh is a monorepo whose sites live under `frontend/src/websites/`, so its tools sit at
- * `frontend/src/tools/`. Every repo split out of it since drops that prefix: the sites are
- * under `websites/` and the tools are `websites/tools/`, byte-identical members of the
- * closure fanned out from adh-tools.
+ * ONE spelling covers the whole fleet, and that is a fact about the walk rather than a
+ * coincidence. A split repo keeps its sites in `websites/` at the repo root, so the script is
+ * `<root>/websites/tools/`; adh keeps its sites in `frontend/websites/`, so the script is
+ * `<root>/frontend/websites/tools/` — which is this same relative path, matched one level
+ * further down the ancestor walk, at `<root>/frontend`. The two are byte-identical members of
+ * the closure fanned out from adh-tools.
  *
- * Both spellings are checked because a split repo that matched neither did not FAIL — it
- * returned `undefined` and took the "outside adh, nothing to check" path, which is the same
- * answer a legitimate non-fleet consumer gets. So the gate that exists to catch an
- * undeclared cross-workspace `link:` silently stopped running in exactly the repos whose
- * `link:` paths had just been rewritten by the split.
+ * A second entry naming `frontend/src/tools/` used to sit above this one. It described a
+ * layout adh has never had (there is no `frontend/src`), so it matched nothing, anywhere —
+ * and matched nothing SILENTLY, because a walk that finds no script does not fail: it returns
+ * `undefined` and takes the "outside adh, nothing to check" path, the same answer a legitimate
+ * non-fleet consumer gets. Both halves of that bug are the same shape, which is why the fix is
+ * to delete the dead spelling rather than repair it: a probe that can only ever fail open is
+ * indistinguishable from a probe that is working.
  */
-const ISOLATE_SCRIPT_PATHS: readonly (readonly string[])[] = [
-  ["frontend", "src", "tools", "vercel-isolate-deps.py"],
-  ["websites", "tools", "vercel-isolate-deps.py"],
-];
+const ISOLATE_SCRIPT_PATH: readonly string[] = ["websites", "tools", "vercel-isolate-deps.py"];
 
 /** Walk up from `dir` looking for a fleet repo's isolate script; `undefined` outside one. */
 function findIsolateScript(dir: string): string | undefined {
   let d = dir;
   for (;;) {
-    for (const parts of ISOLATE_SCRIPT_PATHS) {
-      const p = join(d, ...parts);
-      if (existsSync(p)) return p;
-    }
+    const p = join(d, ...ISOLATE_SCRIPT_PATH);
+    if (existsSync(p)) return p;
+    // A repo boundary the walk did not find a script at is the end of the search, not a step
+    // in it. Without this the walk climbs OUT of the repo it started in and answers from an
+    // enclosing one — which is not hypothetical here: a fleet repo vendors its toolkits as
+    // submodules under `websites/external/`, so a site inside one of those submodules resolves
+    // the OUTER repo's isolate script and is then checked against a worklist built from
+    // manifests it has nothing to do with. That reproduces as five cross-workspace requirements
+    // reported against a demo site that declares none of them, and no way to make it pass.
+    // Checked AFTER the match so a repo whose script sits at its own root still resolves.
+    if (existsSync(join(d, ".git"))) return undefined;
     const parent = dirname(d);
     if (parent === d) return undefined;
     d = parent;

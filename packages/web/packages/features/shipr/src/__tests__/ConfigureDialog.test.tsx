@@ -38,7 +38,15 @@ vi.mock('@agentic-toolkit/data/ecosystems', () => ({
   }),
 }));
 
-vi.mock('@agentic-toolkit/integrations', () => ({
+// `IntegrationsPane` is stubbed — it is the whole integrations feature, and this file is about
+// the frame around it — but `CONNECTIONS_HASH` is taken from the REAL module rather than spelled
+// again here. It is the one string both ends of the OAuth round-trip have to agree on, and a
+// fixture that declares its own would keep passing through exactly the divergence that breaks
+// the return leg.
+vi.mock('@agentic-toolkit/integrations', async (importOriginal) => ({
+  CONNECTIONS_HASH: (
+    await importOriginal<typeof import('@agentic-toolkit/integrations')>()
+  ).CONNECTIONS_HASH,
   IntegrationsPane: ({ levelTitle }: { levelTitle?: string }) => {
     useStackLevel({
       id: 'integrations-list',
@@ -278,5 +286,43 @@ describe('Connections is the one dialog the address bar knows about', () => {
     await waitFor(() => dialog('Connections'));
     rerender(<ConfigureDialog open={false} {...props} />);
     await waitFor(() => expect(window.location.hash).toBe(''));
+  });
+
+  it("leaves somebody else's fragment where it is, and still opens", async () => {
+    // A fragment names a position within the page — an anchor a deep link aimed at, a scroll
+    // target a shared URL carried. This one is a convenience that lets a return leg reopen a
+    // dialog, and the return leg has a fallback; trading the first for the second is a bad
+    // trade. So the dialog opens either way and the address is simply not claimed.
+    at('/acme/repos?workspace=acme#pricing');
+    draw();
+    await userEvent.click(await screen.findByRole('button', { name: 'Connections' }));
+    const connections = await waitFor(() => dialog('Connections'));
+    expect(window.location.hash).toBe('#pricing');
+    // And closing does not clear it either: only a hash this console wrote is ever removed.
+    await userEvent.click(within(connections).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(1));
+    expect(window.location.hash).toBe('#pricing');
+  });
+
+  it('hands Next a null history state, not the entry Next itself stamped', async () => {
+    // Next patches `replaceState` and forwards any call whose state carries its `__NA` / `_N`
+    // marker — which is every entry Next wrote, i.e. the one we would be reading back —
+    // straight to the native implementation, skipping the router's own bookkeeping. The
+    // fragment then never reaches `canonicalUrl`, and the next render that touches history
+    // puts the old address back. `null` is the shape the patch is written for: it copies
+    // Next's internal fields across itself and updates the router with the new URL.
+    const spy = vi.spyOn(window.history, 'replaceState');
+    try {
+      draw();
+      await userEvent.click(await screen.findByRole('button', { name: 'Connections' }));
+      await waitFor(() => expect(window.location.hash).toBe('#connections'));
+      const wroteTheHash = spy.mock.calls.find(([, , url]) =>
+        String(url).endsWith('#connections'),
+      );
+      expect(wroteTheHash).toBeTruthy();
+      expect(wroteTheHash![0]).toBeNull();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

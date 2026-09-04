@@ -21,9 +21,14 @@ import type { MaskedProviderConfig, ProviderCatalogEntry } from "@agentic-toolki
  * key, so "GitHub is connected" is the load-bearing precondition of every run.
  */
 
-vi.mock("@agentic-toolkit/auth", () => ({
-  reportUnexpectedAuthError: vi.fn(),
-}));
+// PARTIAL: a factory returning a bare object replaces the whole module, and this package reads
+// `currentReturnTo` and `safeReturnTo` from it too — both on the path this file exercises, since
+// stashing a pending connect captures the address to come back to. Stubbing the module flat left
+// those undefined, which surfaced as an empty stash rather than as a missing mock.
+vi.mock("@agentic-toolkit/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@agentic-toolkit/auth")>();
+  return { ...actual, reportUnexpectedAuthError: vi.fn() };
+});
 
 const { getInstallUrl, updateProviderConfig, createProviderConfig } = vi.hoisted(() => ({
   getInstallUrl: vi.fn(),

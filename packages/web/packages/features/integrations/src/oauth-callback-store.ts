@@ -8,6 +8,8 @@
 // `state` (not a fixed key) keeps two in-flight connects from clobbering each other and
 // ties the stash to the exact CSRF token the provider echoes back.
 
+import { currentReturnTo as addressNow, safeReturnTo } from "@agentic-toolkit/auth";
+
 /** The auth methods that use the browser-redirect round-trip. */
 export type RedirectAuthMethod = "oauth" | "oauth_instance" | "github_app";
 
@@ -43,6 +45,30 @@ export type PendingOAuthConnect =
 const keyFor = (state: string) => `int-oauth-connect:${state}`;
 
 /**
+ * The fragment a host writes when its connections surface is open, and therefore the one part
+ * of a return address that can be reconstructed without ever having seen it.
+ *
+ * It lives in THIS package rather than in the console that writes it, because both ends of the
+ * round-trip need the same string: the console puts it in the address so `currentReturnTo`
+ * captures it, and the callback appends it to the fallback it has to invent when the return
+ * arrives on an origin that stashed nothing. `@agentic-toolkit/shipr` re-exports it — the
+ * dependency points down, and a second spelling of it would fail silently in exactly one
+ * direction.
+ */
+export const CONNECTIONS_HASH = "#connections";
+
+/**
+ * Where to send someone whose return context we had to rebuild — the one path every site in
+ * the family mounts and resolves a workspace from, plus {@link CONNECTIONS_HASH} so the
+ * console it lands on opens the surface the connect was started from instead of a bare tree.
+ *
+ * On a site whose `/home` has no connections surface the fragment is simply inert, which is
+ * the right failure: it names a position within a page, and a page without that position
+ * ignores it.
+ */
+export const FALLBACK_RETURN_TO = `/home${CONNECTIONS_HASH}`;
+
+/**
  * The URL to come back to — the WHOLE of it below the origin, not just the pathname.
  *
  * The search and the hash are where a host puts the state a bare path cannot carry, and on a
@@ -50,10 +76,15 @@ const keyFor = (state: string) => `int-oauth-connect:${state}`;
  * at all. Dropping them sent the visitor back to a page with every dialog closed and no sign
  * the connect had succeeded. What a host does not encode in its URL is still unrecoverable —
  * that is the host's to fix — but nothing is lost here on the way past.
+ *
+ * The address read itself is `@agentic-toolkit/auth`'s, which is the tier the SSO round-trip
+ * asks the same question from; this wrapper only supplies the one thing that is local — what
+ * a connect should do when there is no address to name (server render, or a stash written
+ * from somewhere without a `window`), which is to come back to the family's own entry point
+ * rather than to the string `"undefined"`.
  */
 export function currentReturnTo(): string {
-  const { pathname, search, hash } = window.location;
-  return `${pathname}${search}${hash}`;
+  return addressNow() ?? FALLBACK_RETURN_TO;
 }
 
 /** Stash the pending-connect context under its `state` before redirecting away. */
@@ -93,11 +124,24 @@ export function readPendingConnect(state: string): PendingOAuthConnect | null {
     ) {
       return null;
     }
+    // `returnTo` is the ONE stashed field that becomes a navigation, and `sessionStorage` is
+    // writable by anything that runs on this origin — an injected script, a third-party widget,
+    // a stale entry written by an older build. Everything else here is echoed to an API that
+    // authorizes it; this one is handed to `router.replace`, so an absolute URL in it is an
+    // open redirect at the end of a flow the visitor already trusts.
+    //
+    // `safeReturnTo` is `@agentic-toolkit/auth`'s, the same choke point the SSO round-trip
+    // sends its `returnTo` through: it resolves against this origin and returns only the part
+    // below it, so a foreign origin, a protocol-relative `//evil.example`, and a `javascript:`
+    // URL all come back null. A stash that fails it is corrupt in exactly the way one with a
+    // blank field is — the caller falls back to the address it can rebuild.
+    const returnTo = safeReturnTo(parsed.returnTo);
+    if (!returnTo) return null;
     const base: PendingConnectBase = {
       providerId: parsed.providerId,
       serviceType: parsed.serviceType,
       ecosystemId: parsed.ecosystemId,
-      returnTo: parsed.returnTo,
+      returnTo,
     };
     if (method === "github_app") return { ...base, authMethod: method };
     // The OAuth pair must carry the exact redirect_uri they sent, so a stash missing it —
@@ -111,7 +155,68 @@ export function readPendingConnect(state: string): PendingOAuthConnect | null {
   return null;
 }
 
-/** Clear a consumed entry so a replayed callback can't re-fire it. */
+/**
+ * Whether a stash was WRITTEN for this `state`, regardless of whether it can be read back.
+ *
+ * {@link readPendingConnect} answers one question with two very different causes: nothing was
+ * ever stored here (a connect begun on another origin — the ordinary case a GitHub App's single
+ * Setup URL guarantees), or something was stored and is unusable (a half-written entry, a shape
+ * from an older build, a `returnTo` that failed origin validation). The first is recoverable
+ * from the signed state and the second is not, and reporting the second as the first sends the
+ * visitor round a rebuilt flow that will fail again the same way with no clue why.
+ *
+ * The raw `getItem` is deliberately unvalidated: presence of the KEY is the whole question.
+ */
+export function hasPendingConnect(state: string): boolean {
+  try {
+    return sessionStorage.getItem(keyFor(state)) !== null;
+  } catch {
+    // No sessionStorage at all — nothing was written here, which is the honest answer.
+    return false;
+  }
+}
+
+const consumedKeyFor = (state: string) => `int-oauth-consumed:${state}`;
+
+/**
+ * Record that this `state` was actually SPENT on a connect — a tombstone, left where the stash
+ * used to be.
+ *
+ * Clearing the stash alone cannot distinguish "this callback already ran" from "this callback
+ * arrived on an origin that never stashed anything", and the two want opposite handling. A
+ * refresh of the callback URL is the common way to reach the first: the backend rejects the
+ * second POST of a one-shot credential with a 409, which surfaced to the operator as a raw API
+ * error — and to Sentry as an event — for doing nothing more than reloading a page that had
+ * already succeeded.
+ *
+ * The tombstone is a fixed string rather than the context, because nothing needs the context
+ * again: the only question left is "was this one already used", and storing less means a
+ * replay cannot resurrect anything to re-send.
+ */
+export function markPendingConnectConsumed(state: string): void {
+  try {
+    sessionStorage.setItem(consumedKeyFor(state), "1");
+  } catch {
+    // Without storage a replay is simply unrecognizable — the same position as before.
+  }
+}
+
+/** Whether {@link markPendingConnectConsumed} already ran for this `state`. */
+export function wasPendingConnectConsumed(state: string): boolean {
+  try {
+    return sessionStorage.getItem(consumedKeyFor(state)) !== null;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Clear a consumed entry so a replayed callback can't re-fire it.
+ *
+ * The tombstone is deliberately NOT cleared here — it is what a replay is recognized by, and it
+ * outlives the entry it replaces. Both die with the tab, which is the right lifetime: a signed
+ * state is good for ten minutes and a `sessionStorage` origin lives at most as long as the tab.
+ */
 export function clearPendingConnect(state: string): void {
   try {
     sessionStorage.removeItem(keyFor(state));

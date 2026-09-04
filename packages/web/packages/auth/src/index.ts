@@ -23,6 +23,7 @@ export {
   stashReturnTo,
   takeReturnTo,
   safeReturnTo,
+  currentReturnTo,
   centralLoginTarget,
   centralEmailLogin,
   centralSendMfaSms,

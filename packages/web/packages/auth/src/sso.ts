@@ -519,6 +519,30 @@ export function ssoLogout(opts: SsoLogoutOptions = {}): void {
 }
 
 /**
+ * Where the visitor is NOW, as a return-to — the whole address below the origin, not just the
+ * pathname.
+ *
+ * The search and the hash are where a page puts the state a bare path cannot carry: a shared
+ * deep link's query, a scroll anchor, and — on a console that shows a surface in a DIALOG —
+ * the only record that the dialog was open at all. Dropping them sends the visitor back to a
+ * page with every dialog closed and no sign that whatever they left to do had succeeded.
+ *
+ * It lives HERE, beside {@link stashReturnTo} and {@link safeReturnTo}, because "where am I,
+ * to come back to" is one question and every round-trip in the family asks it: the SSO bounce
+ * ({@link HomeGate}) and the integrations connect round-trip both, and `auth` is the tier
+ * beneath both. Two spellings of it drift, and the half that drops the hash is the half that
+ * looks correct.
+ *
+ * SSR-guarded, and returns `undefined` off the browser: a caller that has no address to name
+ * must send none rather than the string `"undefined"`.
+ */
+export function currentReturnTo(): string | undefined {
+  if (typeof window === 'undefined') return undefined
+  const { pathname, search, hash } = window.location
+  return `${pathname}${search}${hash}`
+}
+
+/**
  * Resolve a stashed return-to value to a SAME-ORIGIN, purely-relative path, or null (SEC-M8). The
  * stashed value is frequently the raw page pathname, and the WHATWG URL parser resolves a
  * protocol-relative `//evil.com/x` (or control-char-obfuscated) form to a CROSS-ORIGIN URL — which,

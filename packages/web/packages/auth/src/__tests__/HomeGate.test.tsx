@@ -27,7 +27,15 @@ vi.mock('../context', () => ({
     return <div data-testid="auth-provider">{children}</div>
   },
 }))
-vi.mock('../sso', () => ({ beginLogin: mocks.beginLogin }))
+// PARTIAL: only `beginLogin` is stood in for. `currentReturnTo` is the real one, because what
+// these specs are about is WHICH address survives the round-trip — a stub would have this file
+// assert the return address against itself. It reads `window.location` directly, so each spec
+// below sets the real address rather than only `mocks.pathname` (which the gate still consults,
+// as the dependency that makes the callback stale on a route change).
+vi.mock('../sso', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../sso')>()),
+  beginLogin: mocks.beginLogin,
+}))
 
 beforeEach(() => {
   mocks.auth = { isAuthenticated: false, isLoading: true }
@@ -65,6 +73,7 @@ describe('HomeGate', () => {
   it('starts the SSO flow for unauthenticated visitors, returning to the gated path', () => {
     mocks.auth = { isAuthenticated: false, isLoading: false }
     mocks.pathname = '/home'
+    window.history.replaceState({}, '', '/home')
     render(
       <HomeGate>
         <div>feature</div>
@@ -95,6 +104,26 @@ describe('HomeGate', () => {
       clientId: 'adh',
       authApiBase: undefined,
       returnTo: '/home?q=agents&tag=llm',
+    })
+  })
+
+  it('preserves the fragment too, which is where a dialog records that it was open', () => {
+    // The integrations console puts `#connections` in the address precisely so a return leg
+    // can reopen the dialog, and SSO is a return leg. A returnTo built from pathname+search
+    // drops it, and the visitor comes back to a console with everything shut — which reads
+    // as the sign-in having lost their place.
+    mocks.auth = { isAuthenticated: false, isLoading: false }
+    mocks.pathname = '/acme'
+    window.history.replaceState({}, '', '/acme?workspace=acme#connections')
+    render(
+      <HomeGate>
+        <div>feature</div>
+      </HomeGate>,
+    )
+    expect(mocks.beginLogin).toHaveBeenCalledWith({
+      clientId: 'adh',
+      authApiBase: undefined,
+      returnTo: '/acme?workspace=acme#connections',
     })
   })
 
@@ -139,6 +168,7 @@ describe('HomeAuthGate', () => {
   it('forwards the gate config through to HomeGate (SSO with the gated path)', () => {
     mocks.auth = { isAuthenticated: false, isLoading: false }
     mocks.pathname = '/home/deep'
+    window.history.replaceState({}, '', '/home/deep')
     render(
       <HomeAuthGate clientId="acme" authApiBase="https://as.example">
         <div>feature</div>

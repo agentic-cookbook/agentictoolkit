@@ -6,14 +6,22 @@ import { Loader2, Plug } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { Button } from "@agenticdevelopertoolkit/ui/components/button";
-import { decodeOAuthStateClaims, integrationsApi } from "@agentic-toolkit/data/integrations";
 import {
+  decodeOAuthStateClaims,
+  integrationsApi,
+  isOAuthStateFresh,
+} from "@agentic-toolkit/data/integrations";
+import {
+  FALLBACK_RETURN_TO,
   clearPendingConnect,
+  hasPendingConnect,
+  markPendingConnectConsumed,
   readPendingConnect,
+  wasPendingConnectConsumed,
   type PendingOAuthConnect,
 } from "./oauth-callback-store";
 
-type Phase = "working" | "error";
+type Phase = "working" | "error" | "done";
 
 /**
  * Where a connect that left the app comes back to. Every site that starts one mounts this
@@ -33,7 +41,7 @@ type Phase = "working" | "error";
  */
 export function IntegrationsOAuthCallback() {
   const router = useRouter();
-  const { isLoading, isAuthenticated } = useAuth();
+  const { isLoading, isAuthenticated, user } = useAuth();
   const [phase, setPhase] = useState<Phase>("working");
   const [message, setMessage] = useState("Finishing your connection…");
   const [returnTo, setReturnTo] = useState<string | null>(null);
@@ -55,55 +63,125 @@ export function IntegrationsOAuthCallback() {
     };
   }, []);
 
+  const userId = user?.id;
+
   useEffect(() => {
     if (ran.current) return;
+
+    // The query is parsed, and every SYNCHRONOUS verdict below is reached, BEFORE `ran` is
+    // set. The latch exists to stop the connect happening twice; placed at the top it also
+    // swallowed the only thing the dependency array is for — a session that settles after
+    // this effect's first pass — which made `isAuthenticated` decorative and parked the
+    // operator on "your session isn't active" with no route back but a reload.
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const installationId = params.get("installation_id");
+    const setupAction = params.get("setup_action");
+    const state = params.get("state");
+    const oauthError = params.get("error");
+
+    const fail = (text: string) => {
+      if (!alive.current) return;
+      setPhase("error");
+      setMessage(text);
+    };
+    /** A verdict no dependency can overturn — latch, so later passes don't re-litigate it. */
+    const settle = (text: string) => {
+      ran.current = true;
+      fail(text);
+    };
+
+    if (oauthError) {
+      return settle(`Authorization was cancelled or failed (${oauthError}).`);
+    }
+    // `state` is checked first and alone: it is the one parameter every flow returns, and
+    // the context it keys is what says which credential the rest of the query owed us.
+    if (!state) {
+      return settle("This callback is missing its round-trip state, so there's nothing to finish.");
+    }
+    if (wasPendingConnectConsumed(state)) {
+      // A reload — or a session restore, or a back-button — onto a callback that already
+      // succeeded. The signed state is stateless, with no consumption record anywhere, and
+      // the recovery path below rebuilds a context happily from the URL, so without this
+      // tombstone the second pass POSTs again and the backend answers 409 "already connected
+      // to …". That reached the operator as raw API prose and Sentry as an event, for the
+      // ordinary act of refreshing a page that had worked.
+      ran.current = true;
+      if (alive.current) {
+        setPhase("done");
+        setMessage("This connection is already set up — nothing left to finish.");
+      }
+      return;
+    }
+
+    // Which context finishes this callback — and, just as load-bearing, WHY there isn't one.
+    // "Nothing was stashed on this origin" is the ordinary cross-origin arrival that a GitHub
+    // App's single Setup URL guarantees, and it is recoverable from the signed state.
+    // "Something was stashed and cannot be read" is corruption, and rebuilding over it
+    // silently reclassifies the flow: an `oauth` connect has a stash precisely because it has
+    // a redirect_uri only the stash carries, so a github_app context invented in its place
+    // fails at the provider instead of reporting the stash that is actually broken.
+    if (!readPendingConnect(state) && hasPendingConnect(state)) {
+      return settle(
+        "This connection's saved details are unreadable, so it can't be finished. Start again" +
+          " from Integrations.",
+      );
+    }
+    const ctx =
+      readPendingConnect(state) ?? recoverFromState({ state, installationId, setupAction, code });
+    if (!ctx) {
+      return settle(
+        "This connection link has expired or was already used. Start again from Integrations.",
+      );
+    }
+    if (alive.current) setReturnTo(ctx.returnTo);
+
     if (isLoading) return; // wait for the session to hydrate before an authed connect
+    if (!isAuthenticated) {
+      // Deliberately NOT latched. `isLoading` settles false with no user whenever a silent SSO
+      // probe is declined or `/auth/me` returns a transient 5xx with nothing cached, and the
+      // user object can arrive afterwards. That transition is exactly what this effect's
+      // dependencies are for.
+      return fail("Your session isn't active. Sign in, then reconnect from Integrations.");
+    }
+
+    // The claims name the caller and the moment the flow began, and the backend re-checks
+    // both before it writes anything. Answering them here costs nothing and is the difference
+    // between a sentence the operator can act on and the backend's own rejection text
+    // arriving as an unexpected error — with a Sentry event attached.
+    const claims = decodeOAuthStateClaims(state);
+    if (claims && !isOAuthStateFresh(claims)) {
+      // Not hypothetical, and not an edge: `setup_action=request` tells the operator that an
+      // org owner has to approve the install, and an approval that lands after the ten-minute
+      // window returns a state the backend is certain to refuse.
+      return settle(
+        "This connection request has expired. Start again from Integrations to get a fresh one.",
+      );
+    }
+    if (claims && userId && claims.customerId !== userId) {
+      // Unlatched for the same reason as the sign-in message above: signing in as the account
+      // that started the flow is a thing the operator can do from here, and `userId` is in the
+      // dependency array so that it takes effect.
+      return fail(
+        "This connection was started from a different account. Sign in as that account, or" +
+          " start again from Integrations.",
+      );
+    }
+
     ran.current = true;
+    // A pass that reached here after an earlier one reported something recoverable — no
+    // session yet, the wrong account — must not leave that message standing over a connect
+    // that is now actually running.
+    if (alive.current) {
+      setPhase("working");
+      setMessage("Finishing your connection…");
+    }
 
     void (async () => {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-      const installationId = params.get("installation_id");
-      const setupAction = params.get("setup_action");
-      const state = params.get("state");
-      const oauthError = params.get("error");
-
-      const fail = (text: string) => {
-        if (!alive.current) return;
-        setPhase("error");
-        setMessage(text);
-      };
-
-      if (oauthError) {
-        return fail(`Authorization was cancelled or failed (${oauthError}).`);
-      }
-      // `state` is checked first and alone: it is the one parameter every flow returns, and
-      // the context it keys is what says which credential the rest of the query owed us.
-      if (!state) {
-        return fail("This callback is missing its round-trip state, so there's nothing to finish.");
-      }
-
-      // Everything past this point has a `state` to clear, and EVERY exit clears it — the
-      // provider `code` is single-use and the signed `state` is one-shot either way, so a
-      // replay of this callback cannot succeed and a stash left behind is only something for
-      // a later flow to trip over. That is why this is a `finally` and not a line repeated at
-      // each of the seven exits, one of which used to forget it.
-      // Hoisted out of the try so the catch below can still name which flow was being
-      // finished — the report is most useful for the connect call, which is the only thing in
-      // here that can throw for a reason worth a Sentry event.
-      let step: PendingOAuthConnect["authMethod"] | undefined;
+      // Whether the credential was actually SPENT — i.e. whether a connect was issued — which
+      // is the only thing that makes the stash safe to destroy. See the `finally`.
+      let spent = false;
       try {
-        const ctx = readPendingConnect(state) ?? recoverFromState(state, installationId);
-        if (!ctx) {
-          return fail(
-            "This connection link has expired or was already used. Start again from Integrations.",
-          );
-        }
-        step = ctx.authMethod;
-        if (alive.current) setReturnTo(ctx.returnTo);
-        if (!isAuthenticated) {
-          return fail("Your session isn't active. Sign in, then reconnect from Integrations.");
-        }
         const missing = (what: string) =>
           fail(`This callback is missing its ${what}, so there's nothing to finish.`);
 
@@ -115,6 +193,7 @@ export function IntegrationsOAuthCallback() {
             );
           }
           if (!installationId) return missing("installation id");
+          spent = true;
           await integrationsApi.connect({
             type: "github_app",
             providerId: ctx.providerId,
@@ -126,6 +205,7 @@ export function IntegrationsOAuthCallback() {
         } else if (!code) {
           return missing("authorization code");
         } else if (ctx.authMethod === "oauth") {
+          spent = true;
           await integrationsApi.connect({
             type: "oauth",
             providerId: ctx.providerId,
@@ -136,6 +216,7 @@ export function IntegrationsOAuthCallback() {
             state,
           });
         } else {
+          spent = true;
           await integrationsApi.connect({
             type: "oauth_instance",
             providerId: ctx.providerId,
@@ -145,15 +226,28 @@ export function IntegrationsOAuthCallback() {
             state,
           });
         }
+        // The tombstone goes down only on a connect that SUCCEEDED: a failed one leaves
+        // nothing filed at the provider's end of this app, so a retry is the right answer and
+        // must not be met with "already set up".
+        markPendingConnectConsumed(state);
         if (alive.current) router.replace(ctx.returnTo);
       } catch (err) {
-        reportUnexpectedAuthError(err, { feature: "integration-oauth-callback", step });
+        reportUnexpectedAuthError(err, {
+          feature: "integration-oauth-callback",
+          step: ctx.authMethod,
+        });
         fail(err instanceof Error && err.message ? err.message : "Couldn't finish the connection.");
       } finally {
-        clearPendingConnect(state);
+        // Cleared on the exits that spent the credential, and ONLY those. The four above it
+        // consume nothing — an approval still pending, a missing installation id, a missing
+        // code, and (before the async even starts) no session — and every one of them tells
+        // the operator to try again from here. A blanket clear took the stash away on all
+        // four, so the retry the message invited then reported an expired link: `redirectUri`
+        // exists nowhere but the stash, and the recovery path cannot invent one.
+        if (spent) clearPendingConnect(state);
       }
     })();
-  }, [isLoading, isAuthenticated, router]);
+  }, [isLoading, isAuthenticated, userId, router]);
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-6 py-16">
@@ -166,7 +260,13 @@ export function IntegrationsOAuthCallback() {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
-            <h1 className="text-base font-semibold text-apt-text">Connection not completed</h1>
+            {/* The heading names the OUTCOME, and a replay is not a failure: a refreshed
+                callback that already succeeded said "Connection not completed" over a
+                connection that was, in fact, completed — which is the one reading that makes
+                an operator start the whole flow again. */}
+            <h1 className="text-base font-semibold text-apt-text">
+              {phase === "done" ? "Already connected" : "Connection not completed"}
+            </h1>
             <p className="text-sm text-apt-text-muted">{message}</p>
             {/* "Back", not "Back to Integrations": where this lands is whatever URL the visitor
                 left from, which on a console that shows connections in a DIALOG is a workspace
@@ -180,10 +280,6 @@ export function IntegrationsOAuthCallback() {
   );
 }
 
-/** Where to send someone whose return context we had to rebuild — the one path every site in
- *  the family mounts and resolves a workspace from. */
-const FALLBACK_RETURN_TO = "/home";
-
 /**
  * Rebuild a `github_app` context from the `state` alone, for the return that arrives on an
  * origin that never stashed one.
@@ -193,15 +289,35 @@ const FALLBACK_RETURN_TO = "/home";
  * per-origin and therefore empty there. Without this, "connect" on any site but the one
  * holding the Setup URL ends on "this link has expired", every time, with nothing wrong.
  *
- * Only `github_app` can be rebuilt, and only when an `installation_id` says that is the flow:
- * it is the one method that needs no `redirect_uri` to echo, and the one whose credential is
- * an id rather than a single-use code. The OAuth pair still requires its stash — an exchange
- * that echoes a redirect_uri it has to guess is a mismatch, not a recovery.
+ * Only `github_app` can be rebuilt: it is the one method that needs no `redirect_uri` to echo,
+ * and the one whose credential is an id rather than a single-use code.
  *
- * `returnTo` is the one thing the state cannot carry, so it falls back to `/home`.
+ * `returnTo` is the one thing the state cannot carry, so it falls back to the family entry
+ * point — WITH the connections fragment, because this is the arrival the fragment was added
+ * for: the operator started the connect from a dialog on another origin, and landing them on
+ * a bare tree with every dialog shut is the exact symptom that reads as the connect having
+ * failed.
  */
-function recoverFromState(state: string, installationId: string | null): PendingOAuthConnect | null {
-  if (!installationId) return null;
+function recoverFromState(params: {
+  state: string;
+  installationId: string | null;
+  setupAction: string | null;
+  code: string | null;
+}): PendingOAuthConnect | null {
+  const { state, installationId, setupAction, code } = params;
+  // A `code` present means an OAuth authorization came back, and the OAuth pair is precisely
+  // what cannot be rebuilt: the token exchange must echo the exact `redirect_uri` that was
+  // sent, and that lives only in the stash. Refusing here also closes a misroute — the claims
+  // name no auth method at all, and `installation_id` is an unsigned query parameter, so
+  // without this a genuine `oauth` state paired with an arbitrary `?installation_id=` would be
+  // rebuilt as a github_app connect against an OAuth provider.
+  if (code) return null;
+  // `setup_action` on its own is enough, and has to be: `setup_action=request` — an org owner
+  // has yet to approve the install — arrives with NO `installation_id`, and it is a return to
+  // the app-wide Setup URL, i.e. exactly the arrival this function exists for. Requiring an id
+  // here reported that case as an expired link on the one origin the recovery was written for,
+  // with the approval message it needed sitting unreachable inside the branch below.
+  if (!installationId && !setupAction) return null;
   const claims = decodeOAuthStateClaims(state);
   if (!claims) return null;
   return {

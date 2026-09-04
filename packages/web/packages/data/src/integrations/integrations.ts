@@ -136,7 +136,18 @@ export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClai
   try {
     // base64url → base64: atob is the only decoder guaranteed present in every browser,
     // and it rejects the url-safe alphabet.
-    json = atob(state.slice(0, dot).replace(/-/g, "+").replace(/_/g, "/"));
+    //
+    // atob yields BYTES, one per code unit, not text — so the result is read back through a
+    // UTF-8 decoder rather than used as a string. The backend serializes these claims with
+    // `JSON.stringify` and base64s the utf-8 bytes, so any non-ASCII in a serviceType or an
+    // ecosystem id arrives here as multiple bytes that atob hands back as separate Latin-1
+    // characters. Parsing that directly yields mojibake in the very fields that are then
+    // echoed to `POST /integrations/connect`, where they no longer match anything. Today's
+    // ids are ASCII, which is exactly why this would be found by a customer and not by us.
+    const bytes = Uint8Array.from(atob(state.slice(0, dot).replace(/-/g, "+").replace(/_/g, "/")), (ch) =>
+      ch.charCodeAt(0),
+    );
+    json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
   } catch {
     return null;
   }
@@ -160,6 +171,40 @@ export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClai
     ecosystemId: c.ecosystemId,
     iat: c.iat,
   };
+}
+
+/**
+ * How long a minted `state` stays valid, and how far ahead of us an issuer's clock may be.
+ *
+ * These MIRROR `OAUTH_STATE_TTL_MS` and `FUTURE_SKEW_MS` in the hub backend's
+ * `integration/oauthState.ts`, which is the authority — the backend re-checks freshness on
+ * every connect and this copy can only ever refuse EARLIER than it does, never later. That is
+ * the safe direction to be wrong in: an over-eager client says "start again" to a state the
+ * backend might still have taken, while an over-generous one sends a POST that is already
+ * decided and returns the backend's raw rejection text to an operator who did nothing wrong.
+ *
+ * They live here, beside the claims they judge, because the claims are the only reason a
+ * client can ask the question at all.
+ */
+export const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+/** @see {@link OAUTH_STATE_TTL_MS} */
+export const OAUTH_STATE_FUTURE_SKEW_MS = 60_000;
+
+/**
+ * Whether a decoded `state` is still within the window the backend will accept.
+ *
+ * The case this exists for is not an edge: `setup_action=request` tells the operator that an
+ * org owner has to approve the installation, and an approval that arrives more than ten
+ * minutes later comes back with a state the backend is certain to reject. Without this the
+ * callback POSTs anyway and reports the rejection as an unexpected error — a Sentry event and
+ * a line of backend prose — for the outcome its own message told the operator to expect.
+ */
+export function isOAuthStateFresh(
+  claims: Pick<IntegrationOAuthStateClaims, "iat">,
+  now: number = Date.now(),
+): boolean {
+  const age = now - claims.iat;
+  return age <= OAUTH_STATE_TTL_MS && age >= -OAUTH_STATE_FUTURE_SKEW_MS;
 }
 
 const configPath = (ecosystemId: string, providerId?: string) =>

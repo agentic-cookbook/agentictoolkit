@@ -37,9 +37,14 @@ export { IntegrationsOAuthCallback } from "./IntegrationsOAuthCallback";
 // The sessionStorage stash the callback reads: the connect context can't survive the provider
 // round-trip in React state, so it is keyed by the signed `state` parameter.
 export {
+  CONNECTIONS_HASH,
+  FALLBACK_RETURN_TO,
   currentReturnTo,
   stashPendingConnect,
+  hasPendingConnect,
   readPendingConnect,
+  markPendingConnectConsumed,
+  wasPendingConnectConsumed,
   clearPendingConnect,
   type PendingOAuthConnect,
   type RedirectAuthMethod,

@@ -2,9 +2,14 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 
 import {
+  CONNECTIONS_HASH,
+  FALLBACK_RETURN_TO,
   currentReturnTo,
   stashPendingConnect,
   readPendingConnect,
+  hasPendingConnect,
+  markPendingConnectConsumed,
+  wasPendingConnectConsumed,
   clearPendingConnect,
   type PendingOAuthConnect,
 } from "./oauth-callback-store";
@@ -155,5 +160,95 @@ describe("currentReturnTo", () => {
   it("is origin-relative, so it can never send the visitor to another site", () => {
     atLocation({ pathname: "/home", search: "?a=1", hash: "" });
     expect(currentReturnTo().startsWith("/")).toBe(true);
+  });
+});
+
+describe("the returnTo is a navigation, so it is validated as one", () => {
+  // `sessionStorage` is writable by anything running on this origin, and this is the one
+  // stashed field that becomes `router.replace()`. Everything else is echoed to an API that
+  // authorizes it; a foreign URL here is an open redirect at the end of a flow the visitor
+  // has already been asked to trust, arriving as the last step of a successful connect.
+  it.each([
+    ["an absolute URL on another origin", "https://evil.example/pwned"],
+    ["a protocol-relative URL", "//evil.example/pwned"],
+    ["a javascript: URL", "javascript:alert(1)"],
+    ["a data: URL", "data:text/html,<script>alert(1)</script>"],
+  ])("refuses %s", (_label, returnTo) => {
+    sessionStorage.setItem(KEY, JSON.stringify({ ...GITHUB_APP, returnTo }));
+    expect(readPendingConnect(STATE)).toBeNull();
+  });
+
+  it("keeps a same-origin absolute URL, reduced to the part below the origin", () => {
+    // Not a refusal: it names this very page. `safeReturnTo` returns the relative remainder,
+    // which is what `router.replace` wants and what makes the two forms indistinguishable
+    // downstream.
+    const returnTo = `${window.location.origin}/acme/repos?tab=all#connections`;
+    sessionStorage.setItem(KEY, JSON.stringify({ ...GITHUB_APP, returnTo }));
+    expect(readPendingConnect(STATE)?.returnTo).toBe("/acme/repos?tab=all#connections");
+  });
+});
+
+describe("telling 'nothing was stashed' from 'the stash is unusable'", () => {
+  // The two are one `null` from `readPendingConnect` and want opposite handling: the first is
+  // the ordinary case a GitHub App's single Setup URL guarantees, and is recoverable from the
+  // signed state; the second is not, and reporting it as the first sends the operator round a
+  // rebuilt flow that fails again the same way with nothing new to see.
+  it("is true for a key that was written but cannot be read back", () => {
+    sessionStorage.setItem(KEY, "{not json");
+    expect(readPendingConnect(STATE)).toBeNull();
+    expect(hasPendingConnect(STATE)).toBe(true);
+  });
+
+  it("is true for a stash rejected only by the returnTo check", () => {
+    sessionStorage.setItem(KEY, JSON.stringify({ ...GITHUB_APP, returnTo: "https://evil.example" }));
+    expect(readPendingConnect(STATE)).toBeNull();
+    expect(hasPendingConnect(STATE)).toBe(true);
+  });
+
+  it("is false for a state this origin never stashed anything under", () => {
+    expect(hasPendingConnect("never-seen")).toBe(false);
+  });
+
+  it("is false again once the entry is cleared", () => {
+    stashPendingConnect(STATE, GITHUB_APP);
+    clearPendingConnect(STATE);
+    expect(hasPendingConnect(STATE)).toBe(false);
+  });
+});
+
+describe("the tombstone a spent state leaves behind", () => {
+  it("outlives the stash it replaces, which is what makes a replay recognizable", () => {
+    // A refresh of the callback URL is the ordinary way to arrive here twice. Without the
+    // tombstone the second visit is indistinguishable from a first one on an origin that
+    // stashed nothing, so it re-POSTs a one-shot credential and shows the operator the 409
+    // — and Sentry an event — for reloading a page that had already succeeded.
+    stashPendingConnect(STATE, GITHUB_APP);
+    markPendingConnectConsumed(STATE);
+    clearPendingConnect(STATE);
+    expect(readPendingConnect(STATE)).toBeNull();
+    expect(hasPendingConnect(STATE)).toBe(false);
+    expect(wasPendingConnectConsumed(STATE)).toBe(true);
+  });
+
+  it("is false for a state that was never spent", () => {
+    stashPendingConnect(STATE, GITHUB_APP);
+    expect(wasPendingConnectConsumed(STATE)).toBe(false);
+  });
+
+  it("is per state, so one spent connect does not silence another in flight", () => {
+    markPendingConnectConsumed("a");
+    expect(wasPendingConnectConsumed("a")).toBe(true);
+    expect(wasPendingConnectConsumed("b")).toBe(false);
+  });
+});
+
+describe("the address a rebuilt context comes back to", () => {
+  it("names the family entry point and the fragment that reopens the surface", () => {
+    // Both halves matter: `/home` is the one path every site in the family mounts and
+    // resolves a workspace from, and the fragment is what a console reads to reopen the
+    // dialog the connect was started from. A site whose /home has no such surface simply
+    // ignores it, which is the right way for a fragment to fail.
+    expect(FALLBACK_RETURN_TO).toBe(`/home${CONNECTIONS_HASH}`);
+    expect(FALLBACK_RETURN_TO.startsWith("/")).toBe(true);
   });
 });

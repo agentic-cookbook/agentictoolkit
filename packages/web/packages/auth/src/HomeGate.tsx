@@ -3,7 +3,7 @@
 import { useCallback, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { RequireAuth } from './RequireAuth'
-import { beginLogin } from './sso'
+import { beginLogin, currentReturnTo } from './sso'
 
 export type HomeGateProps = {
   children: ReactNode
@@ -48,11 +48,12 @@ export function HomeGate({
 }: HomeGateProps) {
   const pathname = usePathname()
   const onUnauthenticated = useCallback(() => {
-    // Preserve pathname + query so a shared deep link (e.g. /home?q=agents&tag=llm)
-    // survives the SSO round-trip — usePathname() drops the query. Read the search
-    // at click time, SSR-guarded exactly as makeSmartHeaderAuth's currentPath() does.
-    const search = typeof window === 'undefined' ? '' : window.location.search
-    const returnTo = pathname ? `${pathname}${search}` : undefined
+    // The WHOLE address, so a shared deep link (e.g. /home?q=agents&tag=llm) and a fragment
+    // that says which dialog was open (e.g. /acme#connections) both survive the SSO
+    // round-trip — usePathname() drops both. Read at click time and SSR-guarded, which is
+    // what currentReturnTo does; `pathname` stays in the deps because a route change is what
+    // makes this callback stale.
+    const returnTo = pathname ? currentReturnTo() : undefined
     beginLogin({ clientId, authApiBase, returnTo })
   }, [clientId, authApiBase, pathname])
 
