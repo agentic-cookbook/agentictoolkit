@@ -214,21 +214,22 @@ private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPane
     override var helpContent: ComposableSettings.PanelHelp? {
         ComposableSettings.PanelHelp(topics: [
             .init(
-                title: "Around the Panes",
-                body: "The four numbers on the outside are the room between the panes and "
-                    + "the tab bars framing them, in points. Click an arrow to move that "
-                    + "corner a point at a time — hold it down to keep going — or type a "
-                    + "number and press Return. Up and down arrows adjust the field you "
-                    + "are in."
+                title: "Frame Spacing",
+                body: "The room between the panes and the tab bars framing them, in points, "
+                    + "set per side. Each number sits on the edge it belongs to, with an "
+                    + "arrow either side of it: the arrow pointing out of the frame adds "
+                    + "space, the one pointing inward takes it away. Hold an arrow down to "
+                    + "keep going, or type a number and press Return. Up and down arrows "
+                    + "adjust the field you are in."
             ),
             .init(
-                title: "Between the Panes",
-                body: "The two numbers in the middle are the gaps between panes: one for "
-                    + "panes side by side, one for panes stacked. Each is the whole gap, "
-                    + "not each pane's half — ten means ten points between two panes. The "
-                    + "arrows pointing inward close the gap; the ones pointing outward "
-                    + "open it. A gap of zero still drags: the divider keeps a few points "
-                    + "of grab area whatever it is drawn at."
+                title: "Pane Divider Spacing",
+                body: "The gaps between panes: one number for panes side by side, one for "
+                    + "panes stacked, each sitting on the divider it opens. The arrows "
+                    + "pointing at the divider close the gap; the ones pointing away open "
+                    + "it. Each number is the whole gap, not each pane's half — ten means "
+                    + "ten points between two panes. A gap of zero still drags: the divider "
+                    + "keeps a few points of grab area whatever it is drawn at."
             ),
             .init(
                 title: "Every Window",
@@ -242,12 +243,18 @@ private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPane
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let group = ComposableSettings.GroupView(withTitle: "Panes")
-        group.addSettingSubview(SpacingControl.boundToSettings(
-            style: .panes,
-            edges: PaneSpacing.edgeSettings,
+        let frame = ComposableSettings.GroupView(withTitle: "Frame Spacing")
+        frame.addSettingSubview(SpacingControl.boundToSettings(
+            style: .frame,
+            edges: PaneSpacing.edgeSettings
+        ))
+        addGroup(frame)
+
+        let dividers = ComposableSettings.GroupView(withTitle: "Pane Divider Spacing")
+        dividers.addSettingSubview(SpacingControl.boundToSettings(
+            style: .paneDividers,
             gutters: PaneSpacing.gutterSettings
         ))
-        addGroup(group)
+        addGroup(dividers)
     }
 }

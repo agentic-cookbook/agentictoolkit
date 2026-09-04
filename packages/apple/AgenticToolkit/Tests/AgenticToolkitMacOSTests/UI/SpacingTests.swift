@@ -1,30 +1,38 @@
 import XCTest
 @testable import AgenticToolkitMacOS
 
-/// The whole point of the four-arrow cluster is that the same arrow means
-/// different things at different corners — "down" at the top edge is more top
-/// inset, and at the bottom edge it is less bottom inset. Getting that wrong
-/// looks like the control moving the wrong edge, so it is pinned here.
+/// Each edge carries two arrows, and which number each one moves — and which
+/// way — is the whole of the control's meaning. Getting it wrong looks like the
+/// control moving the wrong edge, so it is pinned here.
 final class SpacingEditRulesTests: XCTestCase {
 
     private let range = 0...80
 
-    func testAnArrowAtACornerMovesThatCornerNotAFixedEdge() {
+    func testTheOutwardArrowAddsRoomAndTheInwardArrowTakesItAway() {
         let start = Spacing(uniform: 10)
 
-        XCTAssertEqual(start.moving(.topLeading, .down, in: range).top, 11, "down at the top is more top inset")
-        XCTAssertEqual(start.moving(.topLeading, .up, in: range).top, 9, "up at the top is less top inset")
-        XCTAssertEqual(start.moving(.bottomLeading, .down, in: range).bottom, 9, "down at the bottom is less")
-        XCTAssertEqual(start.moving(.bottomLeading, .up, in: range).bottom, 11, "up at the bottom is more")
+        for edge in SpacingEdge.allCases {
+            XCTAssertEqual(start.adjusting(edge, by: 1, in: range)[edge], 11, "\(edge) grows")
+            XCTAssertEqual(start.adjusting(edge, by: -1, in: range)[edge], 9, "\(edge) shrinks")
+        }
+    }
 
-        XCTAssertEqual(start.moving(.topLeading, .right, in: range).leading, 11)
-        XCTAssertEqual(start.moving(.topLeading, .left, in: range).leading, 9)
-        XCTAssertEqual(start.moving(.topTrailing, .right, in: range).trailing, 9)
-        XCTAssertEqual(start.moving(.topTrailing, .left, in: range).trailing, 11)
+    /// Which way each arrow points is derived from the edge, not looked up, so
+    /// what is pinned is that the pair are opposites and that the growing one
+    /// points out of the frame.
+    func testEachEdgesArrowsPointOutOfAndIntoTheFrame() {
+        XCTAssertEqual(SpacingEdge.top.outward, .up)
+        XCTAssertEqual(SpacingEdge.bottom.outward, .down)
+        XCTAssertEqual(SpacingEdge.leading.outward, .left)
+        XCTAssertEqual(SpacingEdge.trailing.outward, .right)
+
+        for edge in SpacingEdge.allCases {
+            XCTAssertEqual(edge.inward, edge.outward.opposite, "\(edge)'s two arrows are opposites")
+        }
     }
 
     func testAnArrowLeavesEveryOtherEdgeAlone() {
-        let moved = Spacing(uniform: 10).moving(.bottomTrailing, .right, in: range)
+        let moved = Spacing(uniform: 10).adjusting(.trailing, by: -1, in: range)
 
         XCTAssertEqual(moved.trailing, 9)
         XCTAssertEqual(moved.top, 10)
@@ -33,11 +41,8 @@ final class SpacingEditRulesTests: XCTestCase {
     }
 
     func testAnArrowStopsAtTheEndsOfTheRange() {
-        let atFloor = Spacing(top: 0)
-        XCTAssertEqual(atFloor.moving(.topLeading, .up, in: range).top, 0, "no negative padding")
-
-        let atCeiling = Spacing(top: 80)
-        XCTAssertEqual(atCeiling.moving(.topLeading, .down, in: range).top, 80)
+        XCTAssertEqual(Spacing(top: 0).adjusting(.top, by: -1, in: range).top, 0, "no negative padding")
+        XCTAssertEqual(Spacing(top: 80).adjusting(.top, by: 1, in: range).top, 80)
     }
 
     func testAGutterOpensAndClosesByTheWholeGapNotHalfOfIt() {
@@ -58,55 +63,75 @@ final class SpacingEditRulesTests: XCTestCase {
     }
 }
 
-/// The diagram is the control, so its geometry is behaviour: a cluster that
-/// does not ride its corner, or two gutter controls drawn on top of each other,
-/// are bugs a compile cannot catch.
+/// The diagram is the control, so its geometry is behaviour: a number that does
+/// not sit on the edge it edits, or two divider controls drawn on top of each
+/// other, are bugs a compile cannot catch.
 final class SpacingControlLayoutTests: XCTestCase {
 
-    private let diagram = CGRect(x: 44 + 26, y: 21 + 26, width: 240, height: 150)
+    /// The two diagrams the control draws, at the sizes it draws them: the pane
+    /// grid fills the control, and the frame is inset to leave room for the
+    /// numbers straddling its edges.
+    private let paneDiagram = CGRect(x: 0, y: 0, width: 300, height: 170)
+    private let frameDiagram = CGRect(x: 22, y: 16, width: 256, height: 138)
 
-    private func layout(_ spacing: Spacing, panes: Bool = true) -> SpacingControlLayout {
-        SpacingControlLayout(diagram: diagram, spacing: spacing, showsGutters: panes)
+    private func frame(_ spacing: Spacing) -> SpacingControlLayout {
+        SpacingControlLayout(diagram: frameDiagram, spacing: spacing, style: .frame)
+    }
+
+    private func panes(_ spacing: Spacing) -> SpacingControlLayout {
+        SpacingControlLayout(diagram: paneDiagram, spacing: spacing, style: .paneDividers)
     }
 
     func testWithNoInsetsTheContentFillsTheFrame() {
-        XCTAssertEqual(layout(Spacing()).content, diagram)
+        XCTAssertEqual(frame(Spacing()).content, frameDiagram)
     }
 
     func testEachInsetTakesFromItsOwnEdge() {
-        let content = layout(Spacing(top: 10, leading: 20)).content
+        let content = frame(Spacing(top: 10, leading: 20)).content
 
-        XCTAssertEqual(content.minX, diagram.minX + SpacingControlLayout.displayed(20))
-        XCTAssertEqual(content.maxX, diagram.maxX, "trailing was not set")
-        XCTAssertEqual(content.maxY, diagram.maxY - SpacingControlLayout.displayed(10))
-        XCTAssertEqual(content.minY, diagram.minY, "bottom was not set")
+        XCTAssertEqual(content.minX, frameDiagram.minX + SpacingControlLayout.displayed(20))
+        XCTAssertEqual(content.maxX, frameDiagram.maxX, "trailing was not set")
+        XCTAssertEqual(content.maxY, frameDiagram.maxY - SpacingControlLayout.displayed(10))
+        XCTAssertEqual(content.minY, frameDiagram.minY, "bottom was not set")
     }
 
-    func testAClusterRidesTheCornerItMoves() {
-        let plan = layout(Spacing(top: 10, leading: 20, bottom: 30, trailing: 40))
+    func testEachNumberSitsOnTheMiddleOfTheEdgeItEdits() {
+        let plan = frame(Spacing(top: 10, leading: 20, bottom: 30, trailing: 40))
 
-        XCTAssertEqual(plan.position(of: .topLeading), CGPoint(x: plan.content.minX, y: plan.content.maxY))
-        XCTAssertEqual(plan.position(of: .bottomTrailing), CGPoint(x: plan.content.maxX, y: plan.content.minY))
+        XCTAssertEqual(plan.position(of: .top), CGPoint(x: frameDiagram.midX, y: frameDiagram.maxY))
+        XCTAssertEqual(plan.position(of: .bottom), CGPoint(x: frameDiagram.midX, y: frameDiagram.minY))
+        XCTAssertEqual(plan.position(of: .leading), CGPoint(x: frameDiagram.minX, y: frameDiagram.midY))
+        XCTAssertEqual(plan.position(of: .trailing), CGPoint(x: frameDiagram.maxX, y: frameDiagram.midY))
     }
 
-    func testMoreInsetMovesTheClusterInward() {
-        let none = layout(Spacing()).position(of: .topLeading)
-        let some = layout(Spacing(top: 10, leading: 10)).position(of: .topLeading)
-
-        XCTAssertGreaterThan(some.x, none.x, "the left edge moved right")
-        XCTAssertLessThan(some.y, none.y, "the top edge moved down")
+    /// The reason the controls hang off the frame rather than off the content:
+    /// an arrow held down would otherwise walk out from under the pointer.
+    func testAnEdgesControlsDoNotMoveWhenItsNumberChanges() {
+        for edge in SpacingEdge.allCases {
+            XCTAssertEqual(
+                frame(Spacing()).position(of: edge),
+                frame(Spacing(uniform: 40)).position(of: edge),
+                "\(edge)'s controls moved with its value"
+            )
+        }
     }
 
-    func testASingleViewHasOnePaneAndNoGutters() {
-        let plan = layout(Spacing(uniform: 10), panes: false)
+    func testTheFrameDiagramHasOnePaneAndNoDividers() {
+        let plan = frame(Spacing(uniform: 10))
 
         XCTAssertEqual(plan.panes.count, 1)
         XCTAssertEqual(plan.panes[0], plan.content)
         XCTAssertEqual(plan.columnGutter, .zero)
     }
 
-    func testPanesAreTheFourQuadrantsLeftByTheGutters() {
-        let plan = layout(Spacing(betweenColumns: 10, betweenRows: 10))
+    /// The pane diagram's margin is fixed: the room around the grid is the
+    /// frame control's number, and this diagram does not edit it.
+    func testThePaneDiagramsMarginIgnoresTheInsets() {
+        XCTAssertEqual(panes(Spacing()).content, panes(Spacing(uniform: 80)).content)
+    }
+
+    func testPanesAreTheFourQuadrantsLeftByTheDividers() {
+        let plan = panes(Spacing(betweenColumns: 10, betweenRows: 10))
 
         XCTAssertEqual(plan.panes.count, 4)
         for pane in plan.panes {
@@ -117,33 +142,50 @@ final class SpacingControlLayoutTests: XCTestCase {
         }
     }
 
-    func testAZeroGutterStillDrawsAsAHairlineSoTheDiagramReadsAsPanes() {
-        let plan = layout(Spacing())
+    func testAZeroDividerStillDrawsAsAHairlineSoTheDiagramReadsAsPanes() {
+        let plan = panes(Spacing())
 
         XCTAssertGreaterThan(plan.columnGutter.width, 0)
         XCTAssertGreaterThan(plan.rowGutter.height, 0)
     }
 
-    /// The two gutter controls sit on gutters that cross, so the only thing
-    /// keeping them apart is where along each gutter they are put. Checked at
-    /// both ends of the inset range, because the content rect — and so the
-    /// distance between them — is smallest when the insets are largest.
-    func testTheTwoGutterControlsNeverOverlap() {
-        for inset in [0, 40, 80] {
-            let plan = layout(Spacing(uniform: inset))
+    /// Each divider's number is centred on the panes it separates — the column
+    /// divider halfway down the top row, the row divider halfway across the
+    /// left column.
+    func testADividersNumberSitsInTheMiddleOfThePanesItSeparates() {
+        let plan = panes(Spacing(betweenColumns: 10, betweenRows: 10))
+        let topLeft = plan.panes[0]
+
+        let columns = plan.position(of: .betweenColumns)
+        XCTAssertEqual(columns.x, plan.columnGutter.midX)
+        XCTAssertEqual(columns.y, topLeft.midY, accuracy: 0.001)
+
+        let rows = plan.position(of: .betweenRows)
+        XCTAssertEqual(rows.y, plan.rowGutter.midY)
+        XCTAssertEqual(rows.x, topLeft.midX, accuracy: 0.001)
+    }
+
+    /// The two divider controls sit on gutters that cross, so the only thing
+    /// keeping them apart is where along each gutter they are put. Checked
+    /// across the range, because the panes — and so the distance between the
+    /// two middles — change size with the gap.
+    func testTheTwoDividerControlsNeverOverlap() {
+        for gap in [0, 10, 40, 80] {
+            let plan = panes(Spacing(betweenColumns: gap, betweenRows: gap))
             let columns = box(around: plan.position(of: .betweenColumns), stacked: true)
             let rows = box(around: plan.position(of: .betweenRows), stacked: false)
 
-            XCTAssertFalse(columns.intersects(rows), "gutter controls overlap at inset \(inset)")
+            XCTAssertFalse(columns.intersects(rows), "divider controls overlap at gap \(gap)")
         }
     }
 
-    /// The control's own metrics: a 44 × 21 field, and an 18-point button
-    /// offset past it.
+    /// The control's own metrics: a 44 × 21 field, flanked along the divider by
+    /// two buttons 18 points thick and 40 long, offset half a field plus half a
+    /// button plus half the arrow gap.
     private func box(around centre: CGPoint, stacked: Bool) -> CGRect {
         let reach = stacked
-            ? CGSize(width: 44 / 2, height: 21 / 2 + 18 + 2)
-            : CGSize(width: 44 / 2 + 18 + 2, height: 21 / 2)
+            ? CGSize(width: 44 / 2, height: 21 / 2 + 18 / 2 + 3 + 18 / 2)
+            : CGSize(width: 44 / 2 + 18 / 2 + 3 + 18 / 2, height: 40 / 2)
         return CGRect(
             x: centre.x - reach.width,
             y: centre.y - reach.height,

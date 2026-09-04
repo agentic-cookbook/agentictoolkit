@@ -46,21 +46,23 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     public override var helpContent: ComposableSettings.PanelHelp? {
         ComposableSettings.PanelHelp(topics: [
             .init(
-                title: "Around the Panes",
-                body: "The four numbers on the outside are the room between the panes and "
-                    + "the tab bars framing them, in points. Click an arrow to move that "
-                    + "corner a point at a time — hold it down to keep going — or type a "
-                    + "number and press Return. Up and down arrows adjust the field you "
-                    + "are in."
+                title: "Frame Spacing",
+                body: "The room between the panes and the tab bars framing them, in points, "
+                    + "set per side. Each number sits on the edge it belongs to, with an "
+                    + "arrow either side of it: the arrow pointing out of the frame adds "
+                    + "space, the one pointing inward takes it away. Hold an arrow down to "
+                    + "keep going, or type a number and press Return. Up and down arrows "
+                    + "adjust the field you are in."
             ),
             .init(
-                title: "Between the Panes",
-                body: "The two numbers in the middle are the gaps between panes: one for "
-                    + "panes side by side, one for panes stacked. Each is the whole gap, "
-                    + "not each pane's half — ten means ten points between two panes. A gap "
-                    + "of zero still drags: the divider keeps a few points of grab area "
-                    + "whatever it is drawn at. Spacing belongs to the app, so every "
-                    + "project window is spaced the same way."
+                title: "Pane Divider Spacing",
+                body: "The gaps between panes: one number for panes side by side, one for "
+                    + "panes stacked, each sitting on the divider it opens. The arrows "
+                    + "pointing at the divider close the gap; the ones pointing away open "
+                    + "it. Each number is the whole gap, not each pane's half — ten means "
+                    + "ten points between two panes. A gap of zero still drags: the divider "
+                    + "keeps a few points of grab area whatever it is drawn at. Spacing "
+                    + "belongs to the app, so every project window is spaced the same way."
             ),
             .init(
                 title: "Active Pane",
@@ -97,7 +99,8 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     public override func viewDidLoad() {
         super.viewDidLoad()
 
-        addGroup(createPanesGroup())
+        addGroup(createFrameGroup())
+        addGroup(createDividerGroup())
         addGroup(createActivePaneGroup())
         addGroup(createSkippedFoldersGroup())
 
@@ -109,13 +112,27 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
 
     // MARK: - Groups
 
-    /// The same picture the project window's own Spacing sheet shows, bound to
-    /// the same app-wide keys — one control, two places it is reachable from.
-    private func createPanesGroup() -> ComposableSettings.GroupView {
-        let group = ComposableSettings.GroupView(withTitle: "Panes")
+    /// The same two pictures the project window's own Spacing sheet shows,
+    /// bound to the same app-wide keys — one pair of controls, two places they
+    /// are reachable from.
+    ///
+    /// Two groups rather than one, because they answer two questions: how much
+    /// room around the panes, and how much room between them. One diagram
+    /// carrying both put six numbers on one picture and made the reader work
+    /// out which four were the outside.
+    private func createFrameGroup() -> ComposableSettings.GroupView {
+        let group = ComposableSettings.GroupView(withTitle: "Frame Spacing")
         group.addSettingSubview(SpacingControl.boundToSettings(
-            style: .panes,
-            edges: PaneSpacing.edgeSettings,
+            style: .frame,
+            edges: PaneSpacing.edgeSettings
+        ))
+        return group
+    }
+
+    private func createDividerGroup() -> ComposableSettings.GroupView {
+        let group = ComposableSettings.GroupView(withTitle: "Pane Divider Spacing")
+        group.addSettingSubview(SpacingControl.boundToSettings(
+            style: .paneDividers,
             gutters: PaneSpacing.gutterSettings
         ))
         return group

@@ -2,11 +2,11 @@ import CoreGraphics
 
 /// Where every piece of a `SpacingControl`'s diagram goes for a given value:
 /// the content rect the insets leave behind, the panes inside it, the two
-/// gutters, and the points the arrow clusters ride.
+/// dividers, and the points the numbers and their arrows ride.
 ///
-/// Pure, and in the view's own (y-up) coordinates, so the placement rules —
-/// a cluster sits on its corner, a gutter control sits on its gutter — are
-/// testable without a window.
+/// Pure, and in the view's own (y-up) coordinates, so the placement rules — a
+/// number sits on the edge it changes, a divider's number sits in the middle
+/// of the panes it separates — are testable without a window.
 public struct SpacingControlLayout: Equatable {
 
     /// The container being spaced: the outer rectangle of the diagram.
@@ -15,8 +15,8 @@ public struct SpacingControlLayout: Equatable {
     /// What is left of it once the four insets are taken off.
     public let content: CGRect
 
-    /// The gutter between the two columns, and the one between the two rows.
-    /// Empty when the diagram shows a single view.
+    /// The divider between the two columns, and the one between the two rows.
+    /// Empty when the diagram shows a single view inside its frame.
     public let columnGutter: CGRect
     public let rowGutter: CGRect
 
@@ -27,46 +27,43 @@ public struct SpacingControlLayout: Equatable {
     /// Diagram points per point of real spacing.
     ///
     /// Not 1:1, and capped: at 1:1 an 80-point inset would swallow a diagram
-    /// this size, and the cap is what keeps the panes visible at the top of the
-    /// range. The preview says *more* or *less*, not *how many* — that is the
-    /// number's job.
+    /// this size, and the cap is what keeps the content visible at the top of
+    /// the range. The preview says *more* or *less*, not *how many* — that is
+    /// the number's job.
     private static let displayScale: CGFloat = 0.7
     private static let maximumDisplayedInset: CGFloat = 20
 
-    /// A gutter narrower than this is still drawn as a hairline, so the
-    /// diagram reads as two panes rather than one at zero.
+    /// A divider narrower than this is still drawn as a hairline, so the
+    /// diagram reads as four panes rather than one at zero.
     private static let minimumDisplayedGutter: CGFloat = 1
 
-    /// How far in from the content's edge a gutter control sits.
-    ///
-    /// The two of them ride the same crossing, so each is pushed to the far end
-    /// of its own gutter: the column control to the top, the row control to the
-    /// left. With the diagram at its designed size that keeps their boxes
-    /// clear of each other at every value in range — which is why the diagram
-    /// is as wide as it is.
-    private static let gutterControlInset: CGFloat = 24
+    /// The margin the pane diagram leaves around its grid. Deliberately fixed:
+    /// the space around the grid is the *frame* control's number, and a margin
+    /// that moved here would read as one this diagram edits.
+    public static let paneGridMargin: CGFloat = 8
 
     public static func displayed(_ value: Int) -> CGFloat {
         min(CGFloat(value) * displayScale, maximumDisplayedInset)
     }
 
-    public init(diagram: CGRect, spacing: Spacing, showsGutters: Bool) {
+    public init(diagram: CGRect, spacing: Spacing, style: SpacingDiagram) {
         self.outerFrame = diagram
 
-        let content = CGRect(
-            x: diagram.minX + Self.displayed(spacing.leading),
-            y: diagram.minY + Self.displayed(spacing.bottom),
-            width: max(diagram.width - Self.displayed(spacing.leading) - Self.displayed(spacing.trailing), 0),
-            height: max(diagram.height - Self.displayed(spacing.top) - Self.displayed(spacing.bottom), 0)
-        )
-        self.content = content
-
-        guard showsGutters else {
+        guard style == .paneDividers else {
+            self.content = CGRect(
+                x: diagram.minX + Self.displayed(spacing.leading),
+                y: diagram.minY + Self.displayed(spacing.bottom),
+                width: max(diagram.width - Self.displayed(spacing.leading) - Self.displayed(spacing.trailing), 0),
+                height: max(diagram.height - Self.displayed(spacing.top) - Self.displayed(spacing.bottom), 0)
+            )
             self.columnGutter = .zero
             self.rowGutter = .zero
             self.panes = [content]
             return
         }
+
+        let content = diagram.insetBy(dx: Self.paneGridMargin, dy: Self.paneGridMargin)
+        self.content = content
 
         let columnWidth = max(Self.displayed(spacing.betweenColumns), Self.minimumDisplayedGutter)
         let rowHeight = max(Self.displayed(spacing.betweenRows), Self.minimumDisplayedGutter)
@@ -99,23 +96,36 @@ public struct SpacingControlLayout: Equatable {
         ]
     }
 
-    /// Where the four-arrow cluster for `corner` is centred: on the corner of
-    /// the content rect, so the cluster travels with the edge it moves.
-    public func position(of corner: SpacingCorner) -> CGPoint {
-        CGPoint(
-            x: corner.isLeading ? content.minX : content.maxX,
-            y: corner.isTop ? content.maxY : content.minY
-        )
+    /// Where an edge's number and its two arrows are centred: on the middle of
+    /// that edge of the frame, straddling the line.
+    ///
+    /// The frame is the one rectangle that does not move as the numbers change,
+    /// which is exactly what a control wants to be attached to — the alternative
+    /// is a row of arrows that slide out from under the pointer as they are
+    /// pressed.
+    public func position(of edge: SpacingEdge) -> CGPoint {
+        switch edge {
+        case .top: return CGPoint(x: outerFrame.midX, y: outerFrame.maxY)
+        case .bottom: return CGPoint(x: outerFrame.midX, y: outerFrame.minY)
+        case .leading: return CGPoint(x: outerFrame.minX, y: outerFrame.midY)
+        case .trailing: return CGPoint(x: outerFrame.maxX, y: outerFrame.midY)
+        }
     }
 
-    /// Where a gutter's field and its two buttons are centred: on the gutter,
-    /// at the far end of it from where the two gutters cross.
+    /// Where a divider's number and its two buttons are centred: on the
+    /// divider, and in the middle of the panes it separates — the column
+    /// divider halfway down the top row, the row divider halfway across the
+    /// left column.
+    ///
+    /// The two dividers cross, so something has to keep their controls apart;
+    /// putting each in the middle of a *different* pane does that as a
+    /// by-product of putting it where it belongs.
     public func position(of gutter: SpacingGutter) -> CGPoint {
         switch gutter {
         case .betweenColumns:
-            return CGPoint(x: columnGutter.midX, y: content.maxY - Self.gutterControlInset)
+            return CGPoint(x: columnGutter.midX, y: (rowGutter.maxY + content.maxY) / 2)
         case .betweenRows:
-            return CGPoint(x: content.minX + Self.gutterControlInset, y: rowGutter.midY)
+            return CGPoint(x: (content.minX + columnGutter.minX) / 2, y: rowGutter.midY)
         }
     }
 }

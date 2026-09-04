@@ -3,9 +3,9 @@ import Foundation
 /// How much room sits around a view — and, when the thing being spaced is a
 /// grid of panes, between them.
 ///
-/// One type serves both flavors of `SpacingControl`. The single-view flavor
-/// leaves the two gutters alone and never shows them; a second type differing
-/// by two fields would make every caller convert between the two for no gain
+/// One type serves both flavors of `SpacingControl`. The frame flavor leaves
+/// the two gutters alone and never shows them; a second type differing by two
+/// fields would make every caller convert between the two for no gain
 /// (`simplicity`).
 public struct Spacing: Equatable, Sendable, Codable {
 
@@ -51,6 +51,20 @@ public struct Spacing: Equatable, Sendable, Codable {
     }
 }
 
+/// Which picture a `SpacingControl` draws, and so which of the six numbers it
+/// edits.
+///
+/// The two are separate controls rather than one control with an optional half:
+/// they answer different questions — how much room *around* the thing, how much
+/// room *between* the things — and a panel that cares about both wants to say
+/// so twice, with a heading over each.
+public enum SpacingDiagram: String, CaseIterable, Sendable {
+    /// One view inside its container: the four insets around it.
+    case frame
+    /// Four panes and the two dividers between them.
+    case paneDividers
+}
+
 /// One of the four insets, named so a control can talk about "the edge this
 /// field edits" without four near-identical code paths.
 public enum SpacingEdge: String, CaseIterable, Sendable {
@@ -65,25 +79,44 @@ public enum SpacingEdge: String, CaseIterable, Sendable {
         case .trailing: return "Right"
         }
     }
+
+    /// True for the two edges whose controls stand in a row.
+    public var isHorizontal: Bool { self == .top || self == .bottom }
+
+    /// The way out of the frame across this edge — which is the way the arrow
+    /// that *adds* space points. Every arrow in the frame control is one of
+    /// these two, so "which number, which direction" never needs a table.
+    public var outward: SpacingArrow {
+        switch self {
+        case .top: return .up
+        case .bottom: return .down
+        case .leading: return .left
+        case .trailing: return .right
+        }
+    }
+
+    /// The way into the content across this edge: the arrow that takes room
+    /// away.
+    public var inward: SpacingArrow { outward.opposite }
 }
 
-/// One of the two gutters. Only the pane flavor has them.
+/// One of the two gutters. Only the pane-divider flavor has them.
 public enum SpacingGutter: String, CaseIterable, Sendable {
     /// Between panes side by side — a vertical gutter, measured across.
     case betweenColumns
     /// Between panes stacked — a horizontal gutter, measured down.
     case betweenRows
+
+    /// How a tooltip names the gap this divider makes.
+    public var displayName: String {
+        switch self {
+        case .betweenColumns: return "side-by-side panes"
+        case .betweenRows: return "stacked panes"
+        }
+    }
 }
 
-/// A corner of the content rect, where a four-arrow cluster sits.
-public enum SpacingCorner: String, CaseIterable, Sendable {
-    case topLeading, topTrailing, bottomLeading, bottomTrailing
-
-    var isTop: Bool { self == .topLeading || self == .topTrailing }
-    var isLeading: Bool { self == .topLeading || self == .bottomLeading }
-}
-
-/// Which way one arrow of a cluster points.
+/// Which way one arrow points.
 public enum SpacingArrow: String, CaseIterable, Sendable {
     // The raw values are the SF Symbol suffixes, so "up" is the name the
     // symbol has; a three-letter synonym would only be there to satisfy a
@@ -93,6 +126,15 @@ public enum SpacingArrow: String, CaseIterable, Sendable {
 
     /// The SF Symbol drawn on the button.
     public var symbolName: String { "arrow.\(rawValue)" }
+
+    public var opposite: SpacingArrow {
+        switch self {
+        case .up: return .down
+        case .down: return .up
+        case .left: return .right
+        case .right: return .left
+        }
+    }
 }
 
 extension Spacing {
@@ -131,17 +173,17 @@ extension Spacing {
         }
     }
 
-    /// The value after clicking `arrow` of the cluster at `corner`.
+    /// The value after adding or taking away `delta` points of room on `edge`.
     ///
-    /// The arrow says where the *corner* goes, not which way a number counts:
-    /// at the top-left, "down" is more top inset, and at the bottom-left the
-    /// same arrow is less bottom inset. That is the whole reason a corner
-    /// carries four arrows instead of two.
-    public func moving(_ corner: SpacingCorner, _ arrow: SpacingArrow, in range: ClosedRange<Int>) -> Spacing {
-        let change = corner.change(for: arrow)
-        var moved = self
-        moved[change.edge] = (self[change.edge] + change.delta).clamped(to: range)
-        return moved
+    /// One edge, one number, either direction — the arrow beside the number
+    /// says which. (An earlier design hung four arrows off each *corner*, where
+    /// "up" meant more room at the top and less at the bottom; two arrows on
+    /// the edge they move say the same thing without the reader having to work
+    /// out which corner they are looking at.)
+    public func adjusting(_ edge: SpacingEdge, by delta: Int, in range: ClosedRange<Int>) -> Spacing {
+        var adjusted = self
+        adjusted[edge] = (self[edge] + delta).clamped(to: range)
+        return adjusted
     }
 
     /// The value after opening or closing `gutter` by `delta` points.
@@ -164,23 +206,6 @@ extension Spacing {
         var updated = self
         updated[gutter] = value.clamped(to: range)
         return updated
-    }
-}
-
-extension SpacingCorner {
-
-    /// Which inset an arrow at this corner moves, and which way.
-    public func change(for arrow: SpacingArrow) -> (edge: SpacingEdge, delta: Int) {
-        switch arrow {
-        case .up:
-            return (isTop ? .top : .bottom, isTop ? -1 : 1)
-        case .down:
-            return (isTop ? .top : .bottom, isTop ? 1 : -1)
-        case .left:
-            return (isLeading ? .leading : .trailing, isLeading ? -1 : 1)
-        case .right:
-            return (isLeading ? .leading : .trailing, isLeading ? 1 : -1)
-        }
     }
 }
 

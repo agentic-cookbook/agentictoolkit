@@ -76,7 +76,7 @@ extension SpacingControl {
     /// panel can build it in a single expression and forget about it.
     public static func boundToSettings(
         style: Style,
-        edges: [SpacingEdge: UserSetting<Int>],
+        edges: [SpacingEdge: UserSetting<Int>] = [:],
         gutters: [SpacingGutter: UserSetting<Int>] = [:],
         range: ClosedRange<Int> = 0...80
     ) -> SpacingControl {

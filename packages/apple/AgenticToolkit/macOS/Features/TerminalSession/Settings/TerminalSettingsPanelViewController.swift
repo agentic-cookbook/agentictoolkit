@@ -24,14 +24,16 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     public override var helpContent: ComposableSettings.PanelHelp? {
         ComposableSettings.PanelHelp(topics: [
             .init(
-                title: "Padding",
+                title: "Frame Spacing",
                 body: "Space between the terminal text and the edge of its pane, in points, "
                     + "set per side. A terminal sitting under a tab bar usually wants more "
                     + "room at the top than at the bottom, which is why there are four "
-                    + "numbers and not one. Click an arrow to move that corner a point at a "
-                    + "time — hold it down to keep going — or type a number and press Return. "
-                    + "Up and down arrows adjust the field you are in. Changes apply to every "
-                    + "open terminal as you make them."
+                    + "numbers and not one. Each number sits on the edge it belongs to, with "
+                    + "an arrow either side of it: the arrow pointing out of the frame adds "
+                    + "space, the one pointing into the terminal takes it away. Hold an arrow "
+                    + "down to keep going, or type a number and press Return. Up and down "
+                    + "arrows adjust the field you are in. Changes apply to every open "
+                    + "terminal as you make them."
             ),
             .init(
                 title: "Font",
@@ -70,13 +72,14 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
     }
 
     private func createLayoutGroup() -> ComposableSettings.GroupView {
-        let group = ComposableSettings.GroupView(withTitle: "Padding")
+        let group = ComposableSettings.GroupView(withTitle: "Frame Spacing")
 
-        // A picture of the terminal with the four numbers on its four edges.
-        // A stacked column of labelled fields said the same thing but left the
-        // reader to work out which edge "Top" meant with the tab bar in play.
+        // A picture of the terminal with each number, and the two arrows that
+        // move it, sitting on the edge it belongs to. A stacked column of
+        // labelled fields said the same thing but left the reader to work out
+        // which edge "Top" meant with the tab bar in play.
         group.addSettingSubview(SpacingControl.boundToSettings(
-            style: .singleView,
+            style: .frame,
             edges: [
                 .top: UserSettings.terminalPaddingTop,
                 .leading: UserSettings.terminalPaddingLeading,
