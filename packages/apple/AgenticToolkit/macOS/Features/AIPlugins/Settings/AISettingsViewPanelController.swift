@@ -152,7 +152,7 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     /// "test chat" verbs now reach it through its own window — the surface a user
     /// would drive by hand.
     @discardableResult
-    public func presentChat() -> ChatViewModel? {
+    public func presentChat() -> AIChatViewModel? {
         guard let id = viewModel.selectedId,
               let config = viewModel.configuration(for: id) else { return nil }
         LLMChatWindowController.present(pluginManager: pluginManager, configuration: config)
@@ -171,7 +171,7 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
     /// The chat already open on the selected configuration, or `nil` when there is
     /// no chat window, nothing is selected, or the open window is pointed at a
     /// different provider. Never opens or switches one — this is the read side.
-    private func openChatViewModel() -> ChatViewModel? {
+    private func openChatViewModel() -> AIChatViewModel? {
         guard let id = viewModel.selectedId,
               let controller = LLMChatWindowController.current,
               controller.window?.isVisible == true,

@@ -5,7 +5,7 @@ import AgenticToolkitCoreMacOS
 
 /// A chat view with transcript, message bubbles, typing indicator, and input field.
 public final class ChatView: NSView, NSTextFieldDelegate {
-    private let viewModel: ChatViewModel
+    private let viewModel: AIChatViewModel
     private var cancellables = Set<AnyCancellable>()
 
     private let transcriptScroll = NSScrollView()
@@ -23,7 +23,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
     /// bubbles and grow/shrink with the window rather than spanning it.
     private static let maxBubbleWidthFraction: CGFloat = 0.75
 
-    public init(viewModel: ChatViewModel) {
+    public init(viewModel: AIChatViewModel) {
         self.viewModel = viewModel
         super.init(frame: .zero)
         setupViews()
@@ -178,7 +178,7 @@ public final class ChatView: NSView, NSTextFieldDelegate {
         transcriptStack.addArrangedSubview(topSpacer)
 
         for message in viewModel.messages {
-            let bubble = MessageBubbleView(message: message, maxWidth: maxBubbleWidth)
+            let bubble = AIChatBubbleView(message: message, maxWidth: maxBubbleWidth)
             bubble.setContentHuggingPriority(.required, for: .horizontal)
 
             if message.role == .user {

@@ -1,16 +1,16 @@
-// Tests/AgenticToolkitMacOSTests/Chat/ChatViewModelTests.swift
+// Tests/AgenticToolkitMacOSTests/Chat/AIChatViewModelTests.swift
 import Testing
 import Foundation
 @testable import AgenticToolkitCore
 @testable import AgenticToolkitMacOS
 
-@Suite("ChatViewModel")
+@Suite("AIChatViewModel")
 @MainActor
-struct ChatViewModelTests {
+struct AIChatViewModelTests {
 
     @Test("folds a mock session's stream into a growing transcript")
     func foldsMockStream() async {
-        let viewModel = ChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
+        let viewModel = AIChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
         try? await Task.sleep(for: .milliseconds(20))
         viewModel.sendMessage("hi")
 
@@ -35,7 +35,7 @@ struct ChatViewModelTests {
 
     @Test("noteModelChanged appends a notice once a chat is under way")
     func noteModelChangedWhenActive() async {
-        let viewModel = ChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
+        let viewModel = AIChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
         try? await Task.sleep(for: .milliseconds(20))
         viewModel.sendMessage("hi")
 
@@ -53,7 +53,7 @@ struct ChatViewModelTests {
 
     @Test("noteModelChanged stays silent before any messages")
     func noteModelChangedWhenIdle() {
-        let viewModel = ChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
+        let viewModel = AIChatViewModel(session: MockChatSession(reply: "Hello", chunkSize: 2))
         viewModel.noteModelChanged(to: "opus")
         #expect(viewModel.messages.isEmpty)
     }

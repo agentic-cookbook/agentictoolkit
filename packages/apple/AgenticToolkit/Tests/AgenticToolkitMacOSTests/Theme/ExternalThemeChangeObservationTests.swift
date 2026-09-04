@@ -40,30 +40,55 @@ struct ExternalThemeChangeObservationTests {
     /// the one `UserSettingObserver` is listening to, so the redraw would
     /// never fire and the test would look like the pre-fix bug even after
     /// the fix.
-    private func freshDefaults() -> UserDefaults {
+    /// Returns the isolated store and the closure that puts the process back
+    /// the way it was found. **Both halves matter.** All three things reassigned
+    /// here are process-wide `static var`s, so a suite that only wipes its own
+    /// defaults domain still leaves every later test in the bundle pointed at a
+    /// `UserSettings` whose backing domain has just been deleted — a failure
+    /// that lands somewhere else and looks like anything but this file.
+    private func freshDefaults() -> (defaults: UserDefaults, restore: () -> Void) {
+        let previousShared = UserSettings.shared
+        let previousActiveThemeID = UserSettings.activeThemeID
+        let previousCustomThemes = UserSettings.customThemes
+
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         UserSettings.shared = UserSettings(with: UserDefaultsSettingsStorageProvider(defaults: defaults))
         UserSettings.activeThemeID = UserSetting<String>("theme.active_theme_id", default: BuiltInThemes.defaultID)
         UserSettings.customThemes = UserSetting<[ColorTheme]>("theme.custom_themes", default: [])
-        return defaults
+
+        let suiteName = self.suiteName
+        return (defaults, {
+            UserSettings.customThemes = previousCustomThemes
+            UserSettings.activeThemeID = previousActiveThemeID
+            UserSettings.shared = previousShared
+            defaults.removePersistentDomain(forName: suiteName)
+        })
     }
 
-    private func drain() {
-        // `UserSettingObserver` hops to the next runloop tick before firing
-        // `onChange` (see `UserSetting.swift`), so a synchronous assertion
-        // right after the write would see the pre-fix state even with the
-        // fix applied. Give the runloop a beat to deliver it.
-        RunLoop.current.run(until: Date().addingTimeInterval(0.2))
+    /// Waits for the observer's delivery, which lands on the next turn of the
+    /// **main queue** (see `UserSetting.swift`).
+    ///
+    /// It has to suspend, and a nested `RunLoop.run(until:)` will not do. This
+    /// test body is itself a block executing on the main queue, and a serial
+    /// queue does not re-enter: spinning a nested runloop from inside it drains
+    /// runloop sources but never the queue, so the observer's block cannot run
+    /// until this function *returns*. Awaiting does hand control back, and the
+    /// queue is FIFO — the hop below was enqueued after the observer's, so by
+    /// the time it resumes, the observer has already fired.
+    private func drain() async {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.main.async { continuation.resume() }
+        }
     }
 
     // MARK: - 1. UserSettings.activeThemeID written directly (the
     // ThemeChoiceViewModel path)
 
     @Test("writing UserSettings.activeThemeID.value directly posts didChangeNotification and updates currentPalette")
-    func directActiveThemeWritePropagates() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func directActiveThemeWritePropagates() async {
+        let (_, restore) = freshDefaults()
+        defer { restore() }
 
         let manager = ThemeManager()
         #expect(manager.currentTheme.id == BuiltInThemes.defaultID)
@@ -78,7 +103,7 @@ struct ExternalThemeChangeObservationTests {
         // Exactly what ThemeChoiceViewModel's ChoiceViewModel<String> does:
         // write the setting directly, never touching ThemeManager.
         UserSettings.activeThemeID.value = BuiltInThemes.dracula.id
-        drain()
+        await drain()
 
         #expect(flag.fired)
         #expect(manager.currentTheme.id == BuiltInThemes.dracula.id)
@@ -89,9 +114,9 @@ struct ExternalThemeChangeObservationTests {
     // of the active custom theme, e.g. from a sync or another panel)
 
     @Test("writing UserSettings.customThemes directly posts didChangeNotification when it redefines the active theme")
-    func directCustomThemesWritePropagates() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func directCustomThemesWritePropagates() async {
+        let (_, restore) = freshDefaults()
+        defer { restore() }
 
         let original = ThemeStore().duplicate(BuiltInThemes.nord, nameSuffix: " Custom")
         UserSettings.activeThemeID.value = original.id
@@ -113,7 +138,7 @@ struct ExternalThemeChangeObservationTests {
         var edited = original
         edited.name = "Nord Custom (edited)"
         UserSettings.customThemes.value = [edited]
-        drain()
+        await drain()
 
         #expect(flag.fired)
         #expect(manager.currentTheme.name == "Nord Custom (edited)")
@@ -122,9 +147,9 @@ struct ExternalThemeChangeObservationTests {
     // MARK: - 3. selectTheme(id:) must not double-post
 
     @Test("selectTheme(id:) posts didChangeNotification exactly once, not twice")
-    func selectThemePostsExactlyOnce() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+    func selectThemePostsExactlyOnce() async {
+        let (_, restore) = freshDefaults()
+        defer { restore() }
 
         let manager = ThemeManager()
 
@@ -140,7 +165,7 @@ struct ExternalThemeChangeObservationTests {
         // reload() synchronously itself. Without the re-entrancy guard in
         // reload(), that's two posts for one selection.
         manager.selectTheme(id: BuiltInThemes.dracula.id)
-        drain()
+        await drain()
 
         #expect(counter.count == 1)
         #expect(manager.currentTheme.id == BuiltInThemes.dracula.id)

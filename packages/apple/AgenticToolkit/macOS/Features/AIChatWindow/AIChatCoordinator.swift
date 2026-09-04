@@ -10,7 +10,7 @@ import AgenticToolkitCore
 public final class AIChatCoordinator: AppFeature {
 
     private let makeSession: () -> any ChatSession
-    public private(set) var viewModel: ChatViewModel?
+    public private(set) var viewModel: AIChatViewModel?
     public private(set) var windowController: AIChatWindowController?
 
     public init(makeSession: @escaping () -> any ChatSession) {
@@ -42,7 +42,7 @@ public final class AIChatCoordinator: AppFeature {
     /// Idempotent — safe to call before reading `viewModel` from scripting.
     public func ensureWindow() {
         guard windowController == nil else { return }
-        let chatViewModel = ChatViewModel(session: makeSession())
+        let chatViewModel = AIChatViewModel(session: makeSession())
         viewModel = chatViewModel
         windowController = AIChatWindowController(viewModel: chatViewModel)
     }

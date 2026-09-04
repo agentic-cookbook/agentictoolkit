@@ -39,12 +39,6 @@ public enum PaneSpacing {
         .betweenRows: UserSettings.paneSpacingBetweenRows
     ]
 
-    /// Every key above, so one observer can recognize a change to any of them
-    /// from `UserSettings.shared.changes`.
-    public static let settingKeys: Set<String> = Set(
-        edgeSettings.values.map(\.name) + gutterSettings.values.map(\.name)
-    )
-
     /// The insets, as AppKit wants them.
     public static var contentInsets: NSEdgeInsets {
         let spacing = current

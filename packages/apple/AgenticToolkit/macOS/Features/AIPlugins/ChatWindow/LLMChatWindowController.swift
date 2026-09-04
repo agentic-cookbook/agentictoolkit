@@ -39,7 +39,7 @@ public final class LLMChatWindowController: SingleWindowController {
 
     /// The transcript being driven, so automation can send/read messages the chat's
     /// own text field won't take synthetically.
-    public var chatViewModel: ChatViewModel? { content.chatViewModel }
+    public var chatViewModel: AIChatViewModel? { content.chatViewModel }
 
     /// The provider + model the window is currently pointed at.
     public var selection: LLMChatViewController.Selection? { content.selection }

@@ -3,16 +3,16 @@ import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
 /// Manages a standalone AI Chat window. Callers build their own
-/// `ChatViewModel` with whichever backend is appropriate (stub, live
+/// `AIChatViewModel` with whichever backend is appropriate (stub, live
 /// plugin-backed, etc.) and hand it off at init.
 @MainActor
 public final class AIChatWindowController: WindowController<WindowContentViewController<ChatView>> {
 
-    private let viewModel: ChatViewModel
+    private let viewModel: AIChatViewModel
 
     public static let windowID = "aiChat"
 
-    public init(viewModel: ChatViewModel) {
+    public init(viewModel: AIChatViewModel) {
 
         self.viewModel = viewModel
         super.init(

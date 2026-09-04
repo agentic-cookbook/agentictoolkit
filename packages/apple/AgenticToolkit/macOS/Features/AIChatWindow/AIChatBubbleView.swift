@@ -5,14 +5,16 @@ import AgenticToolkitCoreMacOS
 
 /// A chat message bubble with text and inline timestamp.
 ///
-/// The explicit Objective-C name is not decoration. `AgenticDeveloperToolkitUI`
-/// ships a `MessageBubbleView` of its own, and this framework `@_exported`
-/// imports it — two Swift types in different modules, but one Objective-C
-/// class name, and the generated compatibility headers collide the moment an
-/// Objective-C translation unit sees both. The toolkit that ships to customers
-/// keeps the plain name; this one, an app feature, takes the qualified one.
-@objc(AgenticToolkitMessageBubbleView)
-public final class MessageBubbleView: NSView {
+/// The name is not the obvious one, and that is the point. This framework
+/// `@_exported import`s `AgenticDeveloperToolkitUI`, which declares its own
+/// `MessageBubbleView` — so a consumer importing both saw two Swift types of
+/// that name and had no way to say which it meant. An `@objc(...)` alias fixed
+/// only the Objective-C half of that (one runtime class name, colliding
+/// compatibility headers) and left every Swift reference ambiguous. The toolkit
+/// that ships to customers keeps the plain name; this one, an app feature of
+/// ours, takes a qualified one — at Swift level, where the ambiguity actually
+/// was. Same reasoning renamed `ChatViewModel` to ``AIChatViewModel``.
+public final class AIChatBubbleView: NSView {
 
     private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()

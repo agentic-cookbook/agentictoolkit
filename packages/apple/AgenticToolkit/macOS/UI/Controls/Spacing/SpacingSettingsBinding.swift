@@ -16,13 +16,14 @@ import AgenticToolkitCore
 @MainActor
 public final class SpacingSettingsBinding {
 
-    private let control: SpacingControl
+    /// Weak, and it has to be: the control owns this binding
+    /// (`SpacingControl.retainedBinding`), so a strong reference back would be
+    /// a cycle and neither object would ever be freed — taking the settings
+    /// observers, and their live subscriptions, with them.
+    private weak var control: SpacingControl?
     private let edges: [SpacingEdge: UserSetting<Int>]
     private let gutters: [SpacingGutter: UserSetting<Int>]
     private var observers: [UserSettingObserver<Int>] = []
-    /// Set while writing our own change back, so the observers that fire in
-    /// response do not re-seed the control mid-edit.
-    private var isWriting = false
 
     public init(
         control: SpacingControl,
@@ -38,10 +39,16 @@ public final class SpacingSettingsBinding {
             self?.write(value)
         }
 
+        // No "am I the one writing?" flag guards these. The observers are
+        // delivered on a later main-queue turn, by which point every key this
+        // binding wrote has landed — so re-seeding assigns exactly the value
+        // the control already holds, `value.didSet`'s inequality guard returns
+        // early, and nothing is re-published. A flag cleared by a `defer` could
+        // not have suppressed an async delivery anyway.
         for setting in edges.values.map({ $0 }) + gutters.values.map({ $0 }) {
             observers.append(UserSettingObserver(setting) { [weak self] _ in
-                guard let self, !self.isWriting else { return }
-                self.control.value = self.currentValue()
+                guard let self else { return }
+                self.control?.value = self.currentValue()
             })
         }
     }
@@ -58,8 +65,6 @@ public final class SpacingSettingsBinding {
     }
 
     private func write(_ value: Spacing) {
-        isWriting = true
-        defer { isWriting = false }
         for (edge, setting) in edges where setting.value != value[edge] {
             setting.value = value[edge]
         }

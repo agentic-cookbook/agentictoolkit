@@ -24,13 +24,25 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
 
     let context: ThemeEditorContext
 
-    private var colorWells: [(slot: Slot, well: NSColorWell)] = []
+    /// One well, and the colour it was last *told* to show.
+    ///
+    /// A class so `colorWellChanged` can update that record through the array
+    /// rather than searching for an index to write back into.
+    private final class WellEntry {
+        let slot: Slot
+        let well: NSColorWell
+        /// What this well was last set to by us. An action carrying this exact
+        /// colour is the well telling us what we just told it, not an edit.
+        var shown: RGBAColor
 
-    /// Set while a well is being put back on a resolved value rather than
-    /// edited. `NSColorWell` sends its action for a programmatic assignment too,
-    /// so without this a topic clearing its overrides would immediately record
-    /// them again from the colors it had just stopped using.
-    private var isRestoringWells = false
+        init(slot: Slot, well: NSColorWell, shown: RGBAColor) {
+            self.slot = slot
+            self.well = well
+            self.shown = shown
+        }
+    }
+
+    private var colorWells: [WellEntry] = []
 
     init(context: ThemeEditorContext, title: String, symbol: String) {
         self.context = context
@@ -81,25 +93,39 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
             well.widthAnchor.constraint(equalToConstant: size.width),
             well.heightAnchor.constraint(equalToConstant: size.height)
         ])
-        colorWells.append((slot, well))
+        colorWells.append(WellEntry(slot: slot, well: well, shown: rgba))
         return well
     }
 
     /// Put a well back on a color without recording an edit — what a topic needs
     /// after dropping its overrides, since the wells show *resolved* values and
     /// the resolution has just changed underneath them.
+    ///
+    /// The "without recording an edit" half is carried by `shown`, not by a flag
+    /// held across the assignment. An **active** well is bound to the shared
+    /// `NSColorPanel`: assigning its colour updates the panel, and the panel
+    /// sends the colour back on a later runloop turn — long after any flag a
+    /// `defer` could clear. So "Clear overrides" with a well open re-recorded
+    /// both overrides it had just dropped. Remembering the value survives the
+    /// round trip, whenever it arrives.
     func showColor(_ rgba: RGBAColor, in slot: Slot) {
         guard let entry = colorWells.first(where: { $0.slot == slot }) else { return }
-        isRestoringWells = true
+        entry.shown = rgba
         entry.well.color = NSColor(rgba)
-        isRestoringWells = false
     }
 
     @objc private func colorWellChanged(_ sender: NSColorWell) {
-        guard !isRestoringWells else { return }
         guard let entry = colorWells.first(where: { $0.well === sender }) else { return }
         let srgb = sender.color.usingColorSpace(.sRGB) ?? sender.color
-        apply(RGBAColor(srgb), to: entry.slot)
+        let edited = RGBAColor(srgb)
+        // Identical to what the well was last told to show, so there is nothing
+        // to record. This also means picking, by hand, the exact colour a slot
+        // already resolves to writes no override — which is the right answer
+        // anyway: an override equal to the fallback changes nothing but would
+        // survive a later change to the fallback and quietly pin the old value.
+        guard edited != entry.shown else { return }
+        entry.shown = edited
+        apply(edited, to: entry.slot)
     }
 
     private func apply(_ rgba: RGBAColor, to slot: Slot) {

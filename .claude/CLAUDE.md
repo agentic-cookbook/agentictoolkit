@@ -171,11 +171,17 @@ changing either orphans them silently.
 
 Two consequences worth knowing before you debug them:
 
-- The re-export publishes **all** of ADT, not just the theme model. `Permission`
-  and `ChatViewModel` are declared in both toolkits; `Permission` genuinely
-  collides and its references are module-qualified as
-  `AgenticToolkitPermissions.Permission`. A new name added to ADT can make an
-  unrelated file here ambiguous.
+- The re-export publishes **all** of ADT, not just the theme model, so a new
+  name added to ADT can make an unrelated file here ambiguous. Two fixes are in
+  use, and which one applies is decided by who owns the name. `Permission` is
+  genuinely both toolkits' word for the same idea, so its references here are
+  module-qualified as `AgenticToolkitPermissions.Permission`. `ChatViewModel`
+  and `MessageBubbleView` were not: ADT ships those to customers under the plain
+  names, and ours were app features that happened to pick the same words — so
+  ours were renamed to `AIChatViewModel` and `AIChatBubbleView` and the
+  ambiguity is gone rather than pushed onto every consumer. Prefer the rename
+  when the name is ours to give up; qualification is for a name both toolkits
+  have a real claim to.
 - The cross-project reference climbs out of this repo to a *sibling* checkout
   of agenticdevelopertoolkit, not to this repo's own submodule copy. The
   reason, and what it costs a standalone clone, is in the comment on

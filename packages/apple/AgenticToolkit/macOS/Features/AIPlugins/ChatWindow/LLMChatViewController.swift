@@ -98,7 +98,7 @@ public final class LLMChatViewController: NSViewController, Themeable {
 
     /// The transcript being driven, so automation can send/read messages the chat's
     /// own text field won't take synthetically.
-    public var chatViewModel: ChatViewModel? { chatSession?.viewModel }
+    public var chatViewModel: AIChatViewModel? { chatSession?.viewModel }
 
     private var selectedConfiguration: AIProviderConfiguration? {
         guard selectedIndex >= 0, selectedIndex < configurations.count else { return nil }

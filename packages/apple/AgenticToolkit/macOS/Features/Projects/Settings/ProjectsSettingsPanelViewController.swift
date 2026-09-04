@@ -30,7 +30,19 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     /// The visible folders of the home directory — the only things a root-only
     /// pattern can ever match. Read once: the panel is not a file browser, and
     /// a scan on every keystroke would be a disk hit per character.
-    private let homeFolders: [String] = ProjectsSettingsPanelViewController.homeFolderNames()
+    ///
+    /// Empty until the read lands, and the read happens off the main thread.
+    /// This panel is constructed while the app is still launching, and listing
+    /// the home directory is a directory read plus a stat per entry — cheap on
+    /// a warm local disk, and not cheap at all on a cold one or a network home
+    /// directory, where it would be the launch that waited for it.
+    private var homeFolders: [String] = []
+
+    /// Whether `homeFolders` is an answer or just its starting value. The two
+    /// are indistinguishable otherwise — an empty list is also what a home
+    /// directory of nothing but files returns — and they say opposite things
+    /// to the user about what a pattern matches.
+    private var homeFoldersLoaded = false
 
     private var patterns: [String] { UserSettings.projectScanSkipPatterns.currentValue }
 
@@ -109,6 +121,21 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
             self?.reloadPatterns()
         }
         reloadPatterns()
+        loadHomeFolders()
+    }
+
+    /// Reads the home directory off the main thread, then redraws the rows so
+    /// each pattern's caption swaps from "still looking" to what it matches.
+    private func loadHomeFolders() {
+        Task { [weak self] in
+            let names = await Task.detached(priority: .utility) {
+                ProjectsSettingsPanelViewController.homeFolderNames()
+            }.value
+            guard let self else { return }
+            self.homeFolders = names
+            self.homeFoldersLoaded = true
+            self.reloadPatterns()
+        }
     }
 
     // MARK: - Groups
@@ -200,22 +227,26 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
                 ComposableSettings.ExplanationView(withText: "Nothing is being skipped.")
             )
         } else {
-            for (index, pattern) in current.enumerated() {
-                patternList.addArrangedSubview(makeRow(for: pattern, at: index))
+            for pattern in current {
+                patternList.addArrangedSubview(makeRow(for: pattern))
             }
         }
 
         updateButtons()
     }
 
-    private func makeRow(for pattern: String, at index: Int) -> NSView {
+    private func makeRow(for pattern: String) -> NSView {
         let remove = NSButton(
             image: NSImage(systemSymbolName: "minus.circle", accessibilityDescription: "Remove") ?? NSImage(),
             target: self,
             action: #selector(removePattern(_:))
         )
         remove.isBordered = false
-        remove.tag = index
+        // The pattern itself, not its row number. A row number is read when the
+        // button is pressed and written when the list was last drawn, and those
+        // are different lists the moment anything else edits the setting — the
+        // button would then remove whatever pattern had moved into its old slot.
+        remove.identifier = NSUserInterfaceItemIdentifier(pattern)
         remove.toolTip = "Stop skipping folders matching \(pattern)"
         remove.accessibilityID("settings.projects.remove-skip-pattern.\(pattern)")
         remove.observeTheme { button, palette in
@@ -261,9 +292,14 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     }
 
     @objc private func removePattern(_ sender: NSButton) {
-        let current = patterns
-        guard current.indices.contains(sender.tag) else { return }
-        store(current.filter { $0 != current[sender.tag] })
+        guard let pattern = sender.identifier?.rawValue else { return }
+        var current = patterns
+        // One occurrence, the one this row stands for. Filtering by equality
+        // would take every copy, so a list that somehow held a duplicate would
+        // lose both rows to one click.
+        guard let index = current.firstIndex(of: pattern) else { return }
+        current.remove(at: index)
+        store(current)
     }
 
     @objc private func restoreDefaults(_ sender: Any?) {
@@ -280,6 +316,7 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     // MARK: - What a pattern actually excludes
 
     private func matchDescription(for pattern: String) -> String {
+        guard homeFoldersLoaded else { return "Checking which of your folders this matches…" }
         let matched = homeFolders.filter { GitRepoScanner.name($0, matches: pattern) }
         switch matched.count {
         case 0:
@@ -291,7 +328,9 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
         }
     }
 
-    private static func homeFolderNames() -> [String] {
+    /// `nonisolated` so the read above can run off the main actor — the whole
+    /// point of doing it there.
+    nonisolated private static func homeFolderNames() -> [String] {
         let home = FileManager.default.homeDirectoryForCurrentUser
         let contents = (try? FileManager.default.contentsOfDirectory(
             at: home,

@@ -60,12 +60,21 @@ public class UserSettingObserver<Value: Codable & Sendable> {
 
         // `@Published` emits inside `willSet`, so subscribers reading
         // `setting.currentValue` synchronously would still see the prior
-        // value. Hop to the next runloop tick so the assignment has landed
+        // value. Hop to the next main-queue turn so the assignment has landed
         // before observers fire — matters for UI views that rebind from
         // `viewModel.value` instead of using the `newValue` parameter.
+        //
+        // The main *queue*, not `RunLoop.main`. A `RunLoop.main` scheduler
+        // enqueues in `.default` mode only, and AppKit runs the whole of a
+        // mouse-down in `.eventTracking` — so while a spacing arrow is held
+        // down, or a slider dragged, nothing is delivered until the mouse
+        // comes back up and the live preview the observer exists to drive
+        // does not happen. The main dispatch queue is drained in every mode.
+        // `ThemePaletteObserver` hit this first and documents the same
+        // failure.
         self.cancellable = setting.$currentValue
             .dropFirst()
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] newValue in
                 guard let self else { return }
                 self.onChange?(newValue)

@@ -6,8 +6,14 @@ import AgenticToolkitCore
 /// Drives the chat window by folding a `ChatSession`'s event stream into an
 /// observable transcript. All chat logic (turns, tools, transport) lives in the
 /// session; this type only owns UI state and the reducer pump.
+///
+/// Named `AIChatViewModel`, not `ChatViewModel`, because
+/// `AgenticDeveloperToolkitUI` declares a `ChatViewModel` protocol and this
+/// framework `@_exported import`s it: two Swift types of one name, ambiguous
+/// for any consumer that imports both. See ``AIChatBubbleView`` for the same
+/// decision.
 @MainActor
-public final class ChatViewModel: ObservableObject {
+public final class AIChatViewModel: ObservableObject {
 
     @Published public private(set) var messages: [ChatMessage] = []
     @Published public private(set) var state: ChatSessionState = .connecting
@@ -67,6 +73,6 @@ public final class ChatViewModel: ObservableObject {
     }
 }
 
-extension ChatViewModel: Loggable {
+extension AIChatViewModel: Loggable {
     public static nonisolated let logger = makeLogger()
 }

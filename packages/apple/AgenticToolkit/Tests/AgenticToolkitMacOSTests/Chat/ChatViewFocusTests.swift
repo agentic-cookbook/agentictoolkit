@@ -15,7 +15,7 @@ final class ChatViewFocusTests: XCTestCase {
     }
 
     func testFocusInputOutsideAWindowReturnsFalse() {
-        let viewModel = ChatViewModel(session: MockChatSession())
+        let viewModel = AIChatViewModel(session: MockChatSession())
         let view = ChatView(viewModel: viewModel)
 
         XCTAssertNil(view.window)
@@ -23,7 +23,7 @@ final class ChatViewFocusTests: XCTestCase {
     }
 
     func testFocusInputMakesTheFieldEditorFirstResponder() {
-        let viewModel = ChatViewModel(session: MockChatSession())
+        let viewModel = AIChatViewModel(session: MockChatSession())
         let view = ChatView(viewModel: viewModel)
 
         let window = NSWindow(

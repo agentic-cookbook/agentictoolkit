@@ -364,7 +364,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             apply(value.setting(gutter, to: field.integerValue, in: range))
         }
         // A typed value out of range was clamped; show what was actually taken.
-        sync()
+        sync(forcing: field)
     }
 
     private func apply(_ newValue: Spacing) {
@@ -375,16 +375,26 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     // MARK: - Sync and layout
 
-    private func sync() {
+    /// `forced` is the field whose text has just been committed: it is shown
+    /// again even when its number did not change, because a typed value that
+    /// was clamped back to the number already held is the one case where the
+    /// text on screen and the value disagree without the value moving.
+    private func sync(forcing forced: NSTextField? = nil) {
         for (edge, field) in edgeFields {
-            show(value[edge], in: field)
+            show(value[edge], in: field, force: field === forced)
         }
         for (gutter, field) in gutterFields {
-            show(value[gutter], in: field)
+            show(value[gutter], in: field, force: field === forced)
         }
         needsLayout = true
         needsDisplay = true
     }
+
+    /// The number each field was last shown, so `show` can tell "this field's
+    /// value changed" from "some other field's did". `field.integerValue` cannot
+    /// answer that: while a field is being edited it reports what is in the
+    /// field editor, which is whatever the user has typed so far.
+    private var shownNumbers: [ObjectIdentifier: Int] = [:]
 
     /// A field being typed in keeps its text in the window's field editor, not
     /// in the field, so assigning the value alone leaves the old number on
@@ -393,24 +403,67 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// editing when the arrow changes its number — and the number is the whole
     /// point of pressing the arrow. So the editor is told too, whenever there
     /// is one.
-    private func show(_ number: Int, in field: NSTextField) {
+    ///
+    /// **Only when this field's own number moved.** One arrow press re-shows
+    /// all six fields, and writing the editor of a field whose number did not
+    /// change would throw away what the user is halfway through typing in it —
+    /// click into Top, type `1`, press Left's arrow, and the `1` is gone.
+    private func show(_ number: Int, in field: NSTextField, force: Bool = false) {
+        let id = ObjectIdentifier(field)
+        let moved = shownNumbers[id] != number
+        shownNumbers[id] = number
+        guard let editor = field.currentEditor() else {
+            field.integerValue = number
+            return
+        }
+        guard moved || force else { return }
         field.integerValue = number
-        guard let editor = field.currentEditor(), editor.string != field.stringValue else { return }
+        guard editor.string != field.stringValue else { return }
         editor.string = field.stringValue
         editor.selectedRange = NSRange(location: field.stringValue.count, length: 0)
     }
 
+    /// Below this the picture stops being readable and the arrows start to
+    /// overlap; the control clips rather than shrinking further, which is a
+    /// legible failure instead of an illegible one.
+    private static let minimumSize = CGSize(
+        width: diagramInset.width * 2 + fieldSize.width * 3,
+        height: diagramInset.height * 2 + fieldSize.height * 3
+    )
+
+    /// Measured from `bounds`, not from `controlSize`.
+    ///
+    /// `intrinsicContentSize` *asks* for `controlSize`, but asking is all it
+    /// does: a settings panel pins its content to the panel width with a
+    /// required constraint, and default compression resistance loses to that.
+    /// A diagram drawn to a box wider than `bounds` puts the right-hand number
+    /// and its arrows outside the view, where `hitTest` refuses them — so they
+    /// are not merely clipped, they cannot be clicked at all, and a pinned
+    /// scroll view means there is no scrolling to them either. A slightly
+    /// smaller picture is the better failure.
     private var diagramRect: CGRect {
-        CGRect(
+        let size = CGSize(
+            width: max(bounds.width, Self.minimumSize.width),
+            height: max(bounds.height, Self.minimumSize.height)
+        )
+        return CGRect(
             x: Self.diagramInset.width,
             y: Self.diagramInset.height,
-            width: Self.controlSize.width - Self.diagramInset.width * 2,
-            height: Self.controlSize.height - Self.diagramInset.height * 2
+            width: size.width - Self.diagramInset.width * 2,
+            height: size.height - Self.diagramInset.height * 2
         )
     }
 
     private var layoutPlan: SpacingControlLayout {
         SpacingControlLayout(diagram: diagramRect, spacing: value, style: style)
+    }
+
+    /// The diagram is measured from `bounds`, so a resize moves every subview
+    /// and repaints the drawing under them.
+    public override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        needsLayout = true
+        needsDisplay = true
     }
 
     public override func layout() {
