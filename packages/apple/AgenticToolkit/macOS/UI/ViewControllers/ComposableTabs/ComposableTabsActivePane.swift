@@ -49,6 +49,31 @@ public final class ComposableTabsActivePane {
         return activeByWindow[ObjectIdentifier(window)]
     }
 
+    /// Whether `view` sits inside the pane the user is working in.
+    ///
+    /// A view in no pane at all — the standalone terminal window, the quick
+    /// note panel — counts as active: "not the active pane" has to mean
+    /// *another* pane holds the user, not that there are no panes to hold them.
+    /// Same for a window no pane has claimed yet, which is a state that lasts
+    /// until the first backdrop reaches a window.
+    ///
+    /// Deliberately blind to whether the window is key. What it answers is
+    /// which pane the user is working in, and that does not change because a
+    /// settings window came forward — a pane content that dimmed itself every
+    /// time the user opened Settings would be reporting the wrong thing at
+    /// exactly the moment they were looking.
+    public func isInActivePane(_ view: NSView) -> Bool {
+        var candidate: NSView? = view
+        while let current = candidate {
+            if let background = current as? ComposableTabsPaneBackgroundView {
+                guard let active = activeNodeID(in: view.window) else { return true }
+                return active == background.nodeID
+            }
+            candidate = current.superview
+        }
+        return true
+    }
+
     public func activate(nodeID: UUID, in window: NSWindow) {
         let key = ObjectIdentifier(window)
         guard activeByWindow[key] != nodeID else { return }

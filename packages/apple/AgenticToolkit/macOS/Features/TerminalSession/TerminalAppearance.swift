@@ -115,9 +115,10 @@ public enum TerminalAppearance {
         // SwiftTerm's caret ignores its style entirely while the view is
         // unfocused — it strokes a hollow rectangle and returns. Which meant the
         // shape setting looked broken exactly when the user was looking at it:
-        // picking a shape in Settings takes focus off the terminal. Whippet says
-        // which pane is active with its own outline, so the caret does not need
-        // to say it too.
+        // picking a shape in Settings takes focus off the terminal. The caret
+        // does say which pane the user is working in, but keyed to Whippet's
+        // own active pane rather than to AppKit focus, so that opening Settings
+        // does not hollow out every caret on screen at once.
         terminalView.caretViewTracksFocus = false
 
         let terminal = terminalView.getTerminal()
@@ -125,17 +126,23 @@ public enum TerminalAppearance {
         terminalView.cursorStyleChanged(source: terminal, newStyle: style)
 
         let cursorColor = palette.nsColor(.cursor)
-        let hollow = cursor.shape == .hollowBlock
-
-        // In hollow mode SwiftTerm's own fill has to disappear, and the glyph
-        // under the caret has to keep reading as ordinary text rather than as
-        // reversed-out caret text.
-        terminalView.caretColor = hollow ? .clear : cursorColor
-        terminalView.caretTextColor = hollow ? palette.nsColor(.primaryText) : nil
 
         if let themed = terminalView as? ThemedTerminalView {
-            themed.hollowCaretColor = cursorColor
-            themed.usesHollowCaret = hollow
+            // A full block is the shape that says which pane you are in: solid
+            // in the active one, an outline elsewhere. An outline caret is
+            // already an outline everywhere, and a bar or an underline is too
+            // thin for fill to say anything.
+            themed.caretAppearance = ThemedTerminalView.CaretAppearance(
+                color: cursorColor,
+                textColor: palette.nsColor(.primaryText),
+                isAlwaysHollow: cursor.shape == .hollowBlock,
+                marksActivePane: cursor.shape == .block)
+        } else {
+            // No outline to draw without the subclass, so the shape is all
+            // there is: fill it, unless it asked to be hollow.
+            let hollow = cursor.shape == .hollowBlock
+            terminalView.caretColor = hollow ? .clear : cursorColor
+            terminalView.caretTextColor = hollow ? palette.nsColor(.primaryText) : nil
         }
     }
 
