@@ -61,13 +61,12 @@ const PROVIDERS = ['github-app', 'vercel', 'railway'] as const;
  * Back button that closed a dialog instead of leaving the console would be a worse lie than
  * a URL that is one step behind.
  *
- * The STRING itself is `@agentic-toolkit/integrations`', re-exported here so this console
- * keeps naming it from the file that writes it. Both ends of the round-trip need the same
- * fragment — this file puts it in the address, and the callback appends it to the return it
- * has to invent when nothing was stashed on the origin it landed on — and a second spelling
- * would be wrong in exactly one direction, with nothing to catch it.
+ * The STRING itself is `@agentic-toolkit/integrations`', IMPORTED rather than spelled again
+ * here. Both ends of the round-trip need the same fragment — this file puts it in the address,
+ * and the callback appends it to the return it has to invent when nothing was stashed on the
+ * origin it landed on — and a second spelling would be wrong in exactly one direction, with
+ * nothing to catch it.
  */
-export { CONNECTIONS_HASH } from '@agentic-toolkit/integrations';
 
 /** True when the current address names {@link CONNECTIONS_HASH}. Guarded for SSR: this file
  *  is `'use client'`, but a client component still renders once on the server. */
@@ -75,21 +74,39 @@ export function connectionsHashPresent(): boolean {
   return typeof window !== 'undefined' && window.location.hash === CONNECTIONS_HASH;
 }
 
+/**
+ * The fragment this dialog displaced when it opened over one, so closing PUTS IT BACK instead
+ * of throwing it away.
+ *
+ * Module scope rather than React state, for the same reason the fragment is in the URL at all:
+ * the thing it describes is the address, of which there is exactly one, and it has to outlive
+ * a dialog body that unmounts every time it closes. It does NOT outlive the document, and so
+ * is deliberately not consulted on the return leg from a provider — that arrival has
+ * `#connections` in the address and nothing else, which is the whole point of putting it there.
+ */
+let displacedHash: string | null = null;
+
 /** Put the address in agreement with whether Connections is showing, without adding history
- *  entries and without disturbing the path, the query, or a fragment that isn't ours. */
+ *  entries and without disturbing the path or the query. */
 export function syncConnectionsHash(open: boolean): void {
   if (typeof window === 'undefined') return;
   const { pathname, search, hash } = window.location;
   const ours = hash === CONNECTIONS_HASH;
   if (open === ours) return;
-  // Opening over SOMEBODY ELSE'S fragment leaves the address alone. A fragment names a
-  // position within the page — an anchor a deep link aimed at, a scroll target a shared URL
-  // carried — and this one is a convenience that lets a return leg re-open a dialog. Trading
-  // the first for the second is a bad trade, and the return leg has a fallback either way.
-  // The closing direction needs no such guard: a foreign hash and `open === false` agree
-  // above and return before reaching here, so only a hash this function wrote is ever cleared.
-  if (open && hash) return;
-  const next = open ? `${pathname}${search}${CONNECTIONS_HASH}` : `${pathname}${search}`;
+  // Opening over SOMEBODY ELSE'S fragment REMEMBERS it and takes the address anyway.
+  // Declining instead — which is what this did — was a trade that looked conservative and was
+  // not: an operator who arrived by a deep link to an anchor got a Connections dialog whose
+  // GitHub round-trip could never reopen it, because the one carrier that survives a document
+  // being thrown away and rebuilt is the address, and this branch had refused to write it.
+  // Both fragments are kept instead — ours while the dialog is up, theirs again when it closes.
+  //
+  // The closing direction needs no guard of its own: a foreign hash and `open === false` agree
+  // above and return before reaching here, so the only hash ever REPLACED here is ours.
+  if (open) displacedHash = hash || null;
+  const next = open
+    ? `${pathname}${search}${CONNECTIONS_HASH}`
+    : `${pathname}${search}${displacedHash ?? ''}`;
+  if (!open) displacedHash = null;
   // `null`, NOT `window.history.state`. Next patches `replaceState` and forwards any call
   // whose state carries its `__NA` / `_N` marker straight to the native implementation —
   // which is every entry Next itself stamped, i.e. this one. Handing back the state we just

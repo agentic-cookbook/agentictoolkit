@@ -82,9 +82,17 @@ export const FALLBACK_RETURN_TO = `/home${CONNECTIONS_HASH}`;
  * a connect should do when there is no address to name (server render, or a stash written
  * from somewhere without a `window`), which is to come back to the family's own entry point
  * rather than to the string `"undefined"`.
+ *
+ * Sent through `safeReturnTo` on the way OUT as well as on the way in. The read side already
+ * validates, so this is not the only guard — but the two sides are a round-trip through
+ * storage anything on this origin can write, and validating only where the value is consumed
+ * makes the invariant a property of one caller instead of of the value itself. It is the same
+ * function on both sides, so a same-origin address is unchanged by it and there is no second
+ * notion of "safe" to keep in agreement.
  */
 export function currentReturnTo(): string {
-  return addressNow() ?? FALLBACK_RETURN_TO;
+  const here = addressNow();
+  return (here && safeReturnTo(here)) || FALLBACK_RETURN_TO;
 }
 
 /** Stash the pending-connect context under its `state` before redirecting away. */
@@ -189,13 +197,18 @@ const consumedKeyFor = (state: string) => `int-oauth-consumed:${state}`;
  * error — and to Sentry as an event — for doing nothing more than reloading a page that had
  * already succeeded.
  *
- * The tombstone is a fixed string rather than the context, because nothing needs the context
- * again: the only question left is "was this one already used", and storing less means a
- * replay cannot resurrect anything to re-send.
+ * The tombstone carries the `returnTo` and NOTHING ELSE of the context. The credential half —
+ * the provider, the ecosystem, the service type — is deliberately not kept: the only question
+ * left about a spent state is whether it was spent, and storing less means a replay cannot
+ * resurrect anything to re-send. The destination is the exception because it is not part of
+ * what gets re-sent; it is where the operator was standing when they left, and a replay that
+ * recognizes itself but cannot say where to go sends them to the family fallback instead of
+ * back to the dialog they started in. Which is the same wrong answer the tombstone exists to
+ * stop being given.
  */
-export function markPendingConnectConsumed(state: string): void {
+export function markPendingConnectConsumed(state: string, returnTo?: string): void {
   try {
-    sessionStorage.setItem(consumedKeyFor(state), "1");
+    sessionStorage.setItem(consumedKeyFor(state), returnTo ?? "");
   } catch {
     // Without storage a replay is simply unrecognizable — the same position as before.
   }
@@ -208,6 +221,28 @@ export function wasPendingConnectConsumed(state: string): boolean {
   } catch {
     return false;
   }
+}
+
+/**
+ * Where the connect that spent this `state` came from, or null when the tombstone does not
+ * name one.
+ *
+ * Null covers three cases that want the same answer — no tombstone, a tombstone from a
+ * `markPendingConnectConsumed` that had no address to record, and a tombstone left by an
+ * OLDER BUILD, whose value was the fixed string `"1"`. That last one is why the leading `/`
+ * is required rather than merely preferred: `safeReturnTo("1")` resolves against this origin
+ * and hands back `/1` — a real-looking path to a page that does not exist. A tab open across
+ * a deploy is the ordinary way to meet one.
+ */
+export function consumedReturnTo(state: string): string | null {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(consumedKeyFor(state));
+  } catch {
+    return null;
+  }
+  if (!raw || !raw.startsWith("/")) return null;
+  return safeReturnTo(raw) ?? null;
 }
 
 /**

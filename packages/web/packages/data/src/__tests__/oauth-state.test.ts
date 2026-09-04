@@ -2,6 +2,7 @@
 import { describe, it, expect } from "vitest";
 
 import {
+  OAUTH_STATE_CLOCK_GRACE_MS,
   OAUTH_STATE_FUTURE_SKEW_MS,
   OAUTH_STATE_TTL_MS,
   decodeOAuthStateClaims,
@@ -109,16 +110,31 @@ describe("isOAuthStateFresh", () => {
     expect(isOAuthStateFresh({ iat: now - OAUTH_STATE_TTL_MS }, now)).toBe(true);
   });
 
-  it("refuses one a millisecond past it", () => {
+  it("refuses one a millisecond past the window plus the grace", () => {
     // The case this exists for is not an edge: `setup_action=request` means an org owner has
     // to approve the installation, and an approval that lands eleven minutes later carries a
     // state the backend is certain to reject.
-    expect(isOAuthStateFresh({ iat: now - OAUTH_STATE_TTL_MS - 1 }, now)).toBe(false);
+    const age = OAUTH_STATE_TTL_MS + OAUTH_STATE_CLOCK_GRACE_MS + 1;
+    expect(isOAuthStateFresh({ iat: now - age }, now)).toBe(false);
   });
 
-  it("tolerates an issuer clock a little ahead of ours", () => {
+  // The property, not the numbers: this check is a courtesy in front of the backend's own
+  // verdict, so its window must strictly CONTAIN the backend's. Mirrored bounds do not,
+  // because the two clocks are a browser's and a server's — at equal bounds a client running
+  // a second fast refuses a state the backend would have taken, and tells the operator to
+  // redo an installation that was about to succeed. Being wider only ever costs the POST
+  // that used to happen unconditionally, which the backend answers as it always did.
+  it("still accepts a state the backend's own bound has just expired", () => {
+    expect(OAUTH_STATE_CLOCK_GRACE_MS).toBeGreaterThan(0);
+    expect(isOAuthStateFresh({ iat: now - OAUTH_STATE_TTL_MS - 1 }, now)).toBe(true);
+  });
+
+  it("tolerates an issuer clock a little ahead of ours, plus the same grace", () => {
     expect(isOAuthStateFresh({ iat: now + OAUTH_STATE_FUTURE_SKEW_MS }, now)).toBe(true);
-    expect(isOAuthStateFresh({ iat: now + OAUTH_STATE_FUTURE_SKEW_MS + 1 }, now)).toBe(false);
+    // Past the backend's mirrored skew, and still accepted here for the same reason.
+    expect(isOAuthStateFresh({ iat: now + OAUTH_STATE_FUTURE_SKEW_MS + 1 }, now)).toBe(true);
+    const ahead = OAUTH_STATE_FUTURE_SKEW_MS + OAUTH_STATE_CLOCK_GRACE_MS + 1;
+    expect(isOAuthStateFresh({ iat: now + ahead }, now)).toBe(false);
   });
 
   it("reads iat as milliseconds, the unit the backend stamps", () => {

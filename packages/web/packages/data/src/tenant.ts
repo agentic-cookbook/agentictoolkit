@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { readAccessToken } from "@agentic-toolkit/auth/client";
+import { decodeBase64UrlJson, readAccessToken } from "@agentic-toolkit/auth/client";
 
 interface JwtClaims {
   /** The adh backend mints `ecosystem_id` — the real tenant claim; `tenant_id`
@@ -15,13 +15,9 @@ export function decodeJwtClaims(token: string): JwtClaims | null {
   const parts = token.split(".");
   const body = parts[1];
   if (parts.length !== 3 || !body) return null;
-  try {
-    const payload = body.replace(/-/g, "+").replace(/_/g, "/");
-    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
-    return JSON.parse(atob(padded)) as JwtClaims;
-  } catch {
-    return null;
-  }
+  // Shared with the OAuth state decoder and with auth's own `sub` read: a JWT payload is
+  // base64url-encoded UTF-8, and `atob` alone decodes it as bytes (see decodeBase64UrlJson).
+  return decodeBase64UrlJson(body) as JwtClaims | null;
 }
 
 export function tenantIdFromToken(token: string | null): string | null {

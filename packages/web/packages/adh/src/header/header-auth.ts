@@ -16,7 +16,14 @@ import type { AvatarMenuUser } from './AvatarMenu'
 // through the site's own toolkit-auth import would read as signed out here, in production
 // builds only (dev/vitest/tsc all resolve the `development` condition to src). The other
 // half of the remedy is the matching `@agentic-toolkit/auth` entry in tsup's `external`.
-import { useAuth, beginLogin, isAdmin, ssoSwitchUrl, type AuthUser } from '@agentic-toolkit/auth'
+import {
+  useAuth,
+  beginLogin,
+  isAdmin,
+  ssoSwitchUrl,
+  currentReturnTo,
+  type AuthUser,
+} from '@agentic-toolkit/auth'
 // The site table, for the post-login landing rule below. Same package specifier
 // SiteHeader (this entry's sibling) already uses — `siteHomePath` is a pure lookup
 // over a static table, so it carries no module state to fork.
@@ -168,11 +175,6 @@ export interface SmartHeaderAuthConfig {
   avatarFallback?: string
 }
 
-/** Current in-site path + query. '/' on the server. */
-function currentPath(): string {
-  if (typeof window === 'undefined') return '/'
-  return `${window.location.pathname}${window.location.search}`
-}
 
 /**
  * The default post-login destination for a satellite's header Login / Sign up —
@@ -188,13 +190,22 @@ function currentPath(): string {
  *
  * Read at CLICK time (inside the handler), so `/home` hangs off the click and
  * nothing else: an already-signed-in visitor who arrives at `/` on their own is
- * never redirected. SSR-guarded via {@link currentPath}; with no `siteId` (a source
- * built outside SiteHeader) it degrades to the current path rather than guessing a
- * landing.
+ * never redirected. With no `siteId` (a source built outside SiteHeader) it degrades
+ * to the current address rather than guessing a landing.
+ *
+ * That address is `currentReturnTo()` — auth's, the SAME one the SSO bounce and the
+ * integrations connect round-trip come back to — and NOT a local `pathname + search`,
+ * which is what this read used to be. The two differ by the hash, and the hash is not
+ * decoration on a console: it is the only record that a surface shown in a DIALOG was
+ * open. Dropping it sent a visitor who clicked Login from inside Connections back to a
+ * page with the dialog closed and nothing saying the login had worked. Its `undefined`
+ * off the browser is this function's SSR guard, and `'/'` is the site root a header
+ * rendered on the server can honestly name.
  */
 export function defaultReturnTo(siteId?: SiteId): string {
-  if (typeof window === 'undefined' || !siteId) return currentPath()
-  return window.location.pathname === '/' ? siteHomePath(siteId) : currentPath()
+  const here = currentReturnTo()
+  if (here === undefined || !siteId) return here ?? '/'
+  return window.location.pathname === '/' ? siteHomePath(siteId) : here
 }
 
 /**

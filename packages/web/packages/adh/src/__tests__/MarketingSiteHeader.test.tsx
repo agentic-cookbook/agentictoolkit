@@ -27,7 +27,13 @@ const mocks = vi.hoisted(() => ({
 // file and `@agentic-toolkit/adh/header-auth` resolve `@agentic-toolkit/auth` to the same
 // workspace package, so the mock binds. Do not reintroduce a path form — it would pin the
 // mock to one submodule layout and break the moment the package is consumed standalone.
-vi.mock('@agentic-toolkit/auth', () => ({
+// PARTIAL, and `currentReturnTo` in particular is the REAL one. What these specs assert is
+// which address a Login started here comes back to, and `defaultReturnTo` now reads it through
+// auth's own `currentReturnTo` rather than re-spelling `pathname + search` locally — so a stub
+// would have this file assert the return address against itself. It reads `window.location`
+// directly, which each spec below sets.
+vi.mock('@agentic-toolkit/auth', async (importOriginal) => ({
+  currentReturnTo: (await importOriginal<typeof import('@agentic-toolkit/auth')>()).currentReturnTo,
   useAuth: () => mocks.auth,
   beginLogin: mocks.beginLogin,
   ssoSwitchUrl: mocks.ssoSwitchUrl,

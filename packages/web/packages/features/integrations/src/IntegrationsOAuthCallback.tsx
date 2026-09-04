@@ -6,6 +6,7 @@ import { Loader2, Plug } from "lucide-react";
 
 import { reportUnexpectedAuthError, useAuth } from "@agentic-toolkit/auth";
 import { Button } from "@agenticdevelopertoolkit/ui/components/button";
+import { httpStatus } from "@agentic-toolkit/data";
 import {
   decodeOAuthStateClaims,
   integrationsApi,
@@ -14,6 +15,7 @@ import {
 import {
   FALLBACK_RETURN_TO,
   clearPendingConnect,
+  consumedReturnTo,
   hasPendingConnect,
   markPendingConnectConsumed,
   readPendingConnect,
@@ -39,7 +41,25 @@ type Phase = "working" | "error" | "done";
  *     but a thing that now exists at the provider and has an id. `setup_action=request`
  *     means an org owner still has to approve it, so there is no installation to file yet.
  */
-export function IntegrationsOAuthCallback() {
+export interface IntegrationsOAuthCallbackProps {
+  /**
+   * Where to send someone whose return context could not be recovered, and where the Back
+   * button goes when there is no address to name.
+   *
+   * Defaults to {@link FALLBACK_RETURN_TO}, which is the FAMILY's entry point — `/home` plus
+   * the connections fragment — because a GitHub App has one Setup URL for the whole app and
+   * this component therefore fields arrivals from siblings that share nothing but that
+   * convention. A site whose console does not live at `/home`, or which shows its
+   * connections somewhere the fragment means nothing, would otherwise land its own operators
+   * on a page it never mounted, with no way to say so from the outside. Naming the
+   * destination is the host's job because the destination is the host's fact.
+   */
+  fallbackReturnTo?: string;
+}
+
+export function IntegrationsOAuthCallback({
+  fallbackReturnTo = FALLBACK_RETURN_TO,
+}: IntegrationsOAuthCallbackProps = {}) {
   const router = useRouter();
   const { isLoading, isAuthenticated, user } = useAuth();
   const [phase, setPhase] = useState<Phase>("working");
@@ -110,6 +130,13 @@ export function IntegrationsOAuthCallback() {
       if (alive.current) {
         setPhase("done");
         setMessage("This connection is already set up — nothing left to finish.");
+        // The tombstone carries where the connect came from, and this branch is the one place
+        // that address exists nowhere else: the stash was cleared when the credential was
+        // spent, and the recovery path can only invent the family fallback. Without it the
+        // operator who refreshed a page that had already worked is offered a Back button to
+        // somebody else's `/home` rather than to the dialog they were standing in.
+        const home = consumedReturnTo(state);
+        if (home) setReturnTo(home);
       }
       return;
     }
@@ -128,7 +155,8 @@ export function IntegrationsOAuthCallback() {
       );
     }
     const ctx =
-      readPendingConnect(state) ?? recoverFromState({ state, installationId, setupAction, code });
+      readPendingConnect(state) ??
+      recoverFromState({ state, installationId, setupAction, code, fallbackReturnTo });
     if (!ctx) {
       return settle(
         "This connection link has expired or was already used. Start again from Integrations.",
@@ -178,8 +206,16 @@ export function IntegrationsOAuthCallback() {
     }
 
     void (async () => {
-      // Whether the credential was actually SPENT — i.e. whether a connect was issued — which
-      // is the only thing that makes the stash safe to destroy. See the `finally`.
+      // Whether the credential was actually SPENT — i.e. whether the BACKEND SAW IT — which is
+      // the only thing that makes the stash safe to destroy. See the `finally`.
+      //
+      // It is therefore set from what came back, never before the call: a rejection with no
+      // numeric status never reached the backend at all (offline, DNS, a dropped connection,
+      // CORS), so the installation is still unfiled and the credential is still good. Setting
+      // it beforehand destroyed the stash on exactly those failures, and the retry the error
+      // message invites then reports an expired link — `redirectUri` lives nowhere but the
+      // stash, and nothing can invent one. A status means the backend answered, and an
+      // answered connect may well have written before it failed, so that one is spent.
       let spent = false;
       try {
         const missing = (what: string) =>
@@ -193,7 +229,6 @@ export function IntegrationsOAuthCallback() {
             );
           }
           if (!installationId) return missing("installation id");
-          spent = true;
           await integrationsApi.connect({
             type: "github_app",
             providerId: ctx.providerId,
@@ -205,7 +240,6 @@ export function IntegrationsOAuthCallback() {
         } else if (!code) {
           return missing("authorization code");
         } else if (ctx.authMethod === "oauth") {
-          spent = true;
           await integrationsApi.connect({
             type: "oauth",
             providerId: ctx.providerId,
@@ -216,7 +250,6 @@ export function IntegrationsOAuthCallback() {
             state,
           });
         } else {
-          spent = true;
           await integrationsApi.connect({
             type: "oauth_instance",
             providerId: ctx.providerId,
@@ -226,12 +259,38 @@ export function IntegrationsOAuthCallback() {
             state,
           });
         }
+        spent = true;
         // The tombstone goes down only on a connect that SUCCEEDED: a failed one leaves
         // nothing filed at the provider's end of this app, so a retry is the right answer and
         // must not be met with "already set up".
-        markPendingConnectConsumed(state);
+        markPendingConnectConsumed(state, ctx.returnTo);
         if (alive.current) router.replace(ctx.returnTo);
       } catch (err) {
+        // A response, of any status, means the backend read the credential. Never DOWNgraded:
+        // the success path has already set it before anything that can throw after the connect
+        // returned, and such a throw is not evidence the credential went unspent.
+        spent = spent || httpStatus(err) !== undefined;
+        if (isAlreadyConnectedConflict(err, ctx.providerId)) {
+          // The connect that this callback was going to make has ALREADY HAPPENED, and
+          // succeeded — this document just is not the one that made it. Two tabs on the same
+          // callback URL is the ordinary way to get here (Duplicate Tab clones
+          // `sessionStorage`, so the loser sees no tombstone), and a session restore that
+          // reopens the tab alongside a live one is the other.
+          //
+          // Reported as the outcome it is rather than as the backend's own prose, which named
+          // an internal provider id at an operator whose connection is, in fact, set up. The
+          // tombstone goes down so a further reload of THIS document recognizes itself, and
+          // nothing navigates: the tab that won the race is doing that, and two documents
+          // racing to `router.replace` the same address is how one of them loses a scroll
+          // position for no reason.
+          spent = true;
+          markPendingConnectConsumed(state, ctx.returnTo);
+          if (alive.current) {
+            setPhase("done");
+            setMessage("This connection is already set up — nothing left to finish.");
+          }
+          return;
+        }
         reportUnexpectedAuthError(err, {
           feature: "integration-oauth-callback",
           step: ctx.authMethod,
@@ -247,14 +306,26 @@ export function IntegrationsOAuthCallback() {
         if (spent) clearPendingConnect(state);
       }
     })();
-  }, [isLoading, isAuthenticated, userId, router]);
+  }, [isLoading, isAuthenticated, userId, router, fallbackReturnTo]);
 
   return (
     <div className="flex min-h-[60vh] items-center justify-center px-6 py-16">
-      <div className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border border-apt-border bg-apt-surface p-8 text-center">
+      {/* ONE live region, spanning every phase, because the announcement that matters is the
+          TRANSITION out of "Finishing your connection…" — and a region mounted only on the
+          working branch is unmounted at the exact moment there is something to say. A screen
+          reader then hears the spinner's message and never hears the outcome; the page simply
+          goes quiet, on a route whose entire content is that outcome. Politeness rises with
+          the phase: a failure interrupts, because it is the one state that asks the operator
+          to do something and the one they can otherwise sit in indefinitely. */}
+      <div
+        className="flex w-full max-w-md flex-col items-center gap-4 rounded-lg border border-apt-border bg-apt-surface p-8 text-center"
+        role="status"
+        aria-live={phase === "error" ? "assertive" : "polite"}
+        aria-atomic="true"
+      >
         <Plug className="size-6 text-apt-gold" aria-hidden />
         {phase === "working" ? (
-          <div className="flex flex-col items-center gap-3" role="status" aria-live="polite">
+          <div className="flex flex-col items-center gap-3">
             <Loader2 className="size-5 animate-spin text-apt-text-muted" aria-hidden />
             <p className="text-sm text-apt-text-muted">{message}</p>
           </div>
@@ -264,7 +335,18 @@ export function IntegrationsOAuthCallback() {
                 callback that already succeeded said "Connection not completed" over a
                 connection that was, in fact, completed — which is the one reading that makes
                 an operator start the whole flow again. */}
-            <h1 className="text-base font-semibold text-apt-text">
+            {/* Told apart by more than the words: "Already connected" and "Connection not
+                completed" are the same shape, the same weight and the same colour, so the two
+                outcomes are one glance apart for anyone who reads the layout before the
+                sentence. Only the failure is coloured — a success that shouted would be the
+                same mistake in the other direction. */}
+            <h1
+              className={
+                phase === "done"
+                  ? "text-base font-semibold text-apt-text"
+                  : "text-base font-semibold text-apt-red"
+              }
+            >
               {phase === "done" ? "Already connected" : "Connection not completed"}
             </h1>
             <p className="text-sm text-apt-text-muted">{message}</p>
@@ -272,7 +354,7 @@ export function IntegrationsOAuthCallback() {
                 left from, which on a console that shows connections in a DIALOG is a workspace
                 page, not a page called Integrations. Naming a destination the button may not
                 have is worse than naming none. */}
-            <Button onClick={() => router.replace(returnTo ?? FALLBACK_RETURN_TO)}>Back</Button>
+            <Button onClick={() => router.replace(returnTo ?? fallbackReturnTo)}>Back</Button>
           </div>
         )}
       </div>
@@ -292,19 +374,20 @@ export function IntegrationsOAuthCallback() {
  * Only `github_app` can be rebuilt: it is the one method that needs no `redirect_uri` to echo,
  * and the one whose credential is an id rather than a single-use code.
  *
- * `returnTo` is the one thing the state cannot carry, so it falls back to the family entry
- * point — WITH the connections fragment, because this is the arrival the fragment was added
- * for: the operator started the connect from a dialog on another origin, and landing them on
- * a bare tree with every dialog shut is the exact symptom that reads as the connect having
- * failed.
+ * `returnTo` is the one thing the state cannot carry, so it falls back to the address the
+ * host named — by default the family entry point WITH the connections fragment, because this
+ * is the arrival the fragment was added for: the operator started the connect from a dialog
+ * on another origin, and landing them on a bare tree with every dialog shut is the exact
+ * symptom that reads as the connect having failed.
  */
 function recoverFromState(params: {
   state: string;
   installationId: string | null;
   setupAction: string | null;
   code: string | null;
+  fallbackReturnTo: string;
 }): PendingOAuthConnect | null {
-  const { state, installationId, setupAction, code } = params;
+  const { state, installationId, setupAction, code, fallbackReturnTo } = params;
   // A `code` present means an OAuth authorization came back, and the OAuth pair is precisely
   // what cannot be rebuilt: the token exchange must echo the exact `redirect_uri` that was
   // sent, and that lives only in the stash. Refusing here also closes a misroute — the claims
@@ -325,6 +408,30 @@ function recoverFromState(params: {
     providerId: claims.providerId,
     serviceType: claims.serviceType,
     ecosystemId: claims.ecosystemId,
-    returnTo: FALLBACK_RETURN_TO,
+    returnTo: fallbackReturnTo,
   };
+}
+
+/**
+ * The ONE 409 from `POST /integrations/connect` that means the operator got what they came
+ * for. The backend throws two, and they want opposite screens:
+ *
+ *   • `already connected to '<providerId>' (<serviceType>)` — an earlier connect for THIS
+ *     provider succeeded. The work is done; saying so is the whole point.
+ *   • `installation <id> is already connected elsewhere; disconnect it there first` — a
+ *     genuine refusal, naming a step only the operator can take. Reporting that as success
+ *     would leave them believing a connection exists that does not.
+ *
+ * Both contain the substring "already connected", so the provider id is what tells them
+ * apart — and matching the id keeps this from ever widening to the second: the message that
+ * refuses names an INSTALLATION id there, never the provider. This is prose coupling to
+ * another repo, and it is written to fail in the safe direction: if the backend rewords its
+ * conflict, this stops matching and the operator is back to seeing the raw 409 — which is
+ * exactly where they were before this existed. The alternative, a broad "already connected"
+ * match, fails the other way.
+ */
+function isAlreadyConnectedConflict(err: unknown, providerId: string): boolean {
+  if (httpStatus(err) !== 409) return false;
+  const message = err instanceof Error ? err.message : "";
+  return message.includes(`already connected to '${providerId}'`);
 }

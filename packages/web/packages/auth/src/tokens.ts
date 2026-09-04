@@ -95,6 +95,36 @@ export function readAccessToken(): string | null {
   return readTokens()?.accessToken ?? null
 }
 
+/**
+ * Decode a base64url-encoded JSON segment — a JWT payload, or the claims half of the
+ * self-describing state token the backend mints for an OAuth round-trip. Returns null for
+ * anything that is not decodable JSON, which is the one answer every caller has a screen for.
+ *
+ * THE UTF-8 STEP IS THE WHOLE POINT. `atob` yields a binary string with one code unit per
+ * BYTE, so `JSON.parse(atob(...))` reads every multi-byte character as its separate bytes: a
+ * name, a workspace slug or a provider label with an accent in it comes back mojibake, and a
+ * byte pair that happens to land on a quote or a backslash makes the parse throw outright —
+ * which each caller then reports as a malformed token, i.e. as a sign-out or an
+ * expired-link screen for a token that was perfectly valid. Decoding the bytes as UTF-8
+ * first is the fix, and `fatal: true` refuses an invalid sequence rather than substituting
+ * U+FFFD: these segments are covered by a signature computed over the original bytes, so a
+ * claim silently rewritten to replacement characters is a value nothing ever signed.
+ *
+ * It lives HERE, in the package with no `@agentic-toolkit` dependency of its own, because
+ * three copies of this decode existed in two packages and all three had the same bug — the
+ * shape of a defect that is fixed once and returns in the copies nobody grepped for.
+ */
+export function decodeBase64UrlJson(segment: string): unknown {
+  try {
+    const b64 = segment.replace(/-/g, '+').replace(/_/g, '/')
+    const padded = b64 + '='.repeat((4 - (b64.length % 4)) % 4)
+    const bytes = Uint8Array.from(atob(padded), (ch) => ch.charCodeAt(0))
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)) as unknown
+  } catch {
+    return null
+  }
+}
+
 /** The current access token's `sub` claim — the signed-in principal — or null when
  *  signed out / the token is malformed. Parsed locally WITHOUT verification: this is
  *  identity for CACHE SCOPING (keying react-query data to the tenant so an account
@@ -105,14 +135,8 @@ export function readTokenSubject(): string | null {
   const token = readAccessToken()
   const payload = token?.split('.')[1]
   if (!payload) return null
-  try {
-    const claims = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as {
-      sub?: unknown
-    }
-    return typeof claims.sub === 'string' ? claims.sub : null
-  } catch {
-    return null
-  }
+  const claims = decodeBase64UrlJson(payload) as { sub?: unknown } | null
+  return typeof claims?.sub === 'string' ? claims.sub : null
 }
 
 /** The last user the backend confirmed for this session, cached so a returning

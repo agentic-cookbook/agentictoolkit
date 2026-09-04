@@ -11,6 +11,7 @@ export {
   tokensFromResponse,
   readAccessToken,
   readTokenSubject,
+  decodeBase64UrlJson,
   type BackendTokenFields,
 } from "@agentic-toolkit/auth/client";
 

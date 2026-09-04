@@ -17,7 +17,7 @@
 // against that ecosystem (403 otherwise). Connection-scoped ops (disconnect / sync /
 // settings) derive the ecosystem from the connection, so they take only its id.
 
-import { authedJson, authedRequest, isNotFound } from "../http";
+import { authedJson, authedRequest, decodeBase64UrlJson, isNotFound } from "../http";
 import { enc } from "../client-helpers";
 import type {
   AuthUrlResultRow,
@@ -132,31 +132,13 @@ export interface IntegrationOAuthStateClaims {
 export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClaims | null {
   const dot = state.indexOf(".");
   if (dot <= 0 || dot === state.length - 1) return null;
-  let json: string;
-  try {
-    // base64url → base64: atob is the only decoder guaranteed present in every browser,
-    // and it rejects the url-safe alphabet.
-    //
-    // atob yields BYTES, one per code unit, not text — so the result is read back through a
-    // UTF-8 decoder rather than used as a string. The backend serializes these claims with
-    // `JSON.stringify` and base64s the utf-8 bytes, so any non-ASCII in a serviceType or an
-    // ecosystem id arrives here as multiple bytes that atob hands back as separate Latin-1
-    // characters. Parsing that directly yields mojibake in the very fields that are then
-    // echoed to `POST /integrations/connect`, where they no longer match anything. Today's
-    // ids are ASCII, which is exactly why this would be found by a customer and not by us.
-    const bytes = Uint8Array.from(atob(state.slice(0, dot).replace(/-/g, "+").replace(/_/g, "/")), (ch) =>
-      ch.charCodeAt(0),
-    );
-    json = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
-  } catch {
-    return null;
-  }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(json) as unknown;
-  } catch {
-    return null;
-  }
+  // Decoded by `auth`'s shared base64url-JSON reader rather than by an `atob` here. The
+  // backend serializes these claims with `JSON.stringify` and base64s the UTF-8 bytes, and
+  // `atob` hands those bytes back one per code unit — so a non-ASCII serviceType or
+  // ecosystem id decoded naively becomes mojibake in the very fields that are echoed to
+  // `POST /integrations/connect`, where they match nothing. That decode is identical to the
+  // one a JWT payload needs, and it was written three times before it was written once.
+  const parsed = decodeBase64UrlJson(state.slice(0, dot));
   if (!parsed || typeof parsed !== "object") return null;
   const c = parsed as Record<string, unknown>;
   const str = (v: unknown): v is string => typeof v === "string" && v.length > 0;
@@ -177,11 +159,20 @@ export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClai
  * How long a minted `state` stays valid, and how far ahead of us an issuer's clock may be.
  *
  * These MIRROR `OAUTH_STATE_TTL_MS` and `FUTURE_SKEW_MS` in the hub backend's
- * `integration/oauthState.ts`, which is the authority — the backend re-checks freshness on
- * every connect and this copy can only ever refuse EARLIER than it does, never later. That is
- * the safe direction to be wrong in: an over-eager client says "start again" to a state the
- * backend might still have taken, while an over-generous one sends a POST that is already
- * decided and returns the backend's raw rejection text to an operator who did nothing wrong.
+ * `integration/oauthState.ts`, which is the authority: the backend re-checks freshness on
+ * every connect, and this copy is a COURTESY — it exists to say "start again" in a sentence
+ * instead of forwarding the backend's rejection prose, and it must never be the thing that
+ * decides a connect.
+ *
+ * Which is why the pre-flight window is deliberately WIDER than the backend's by
+ * {@link OAUTH_STATE_CLOCK_GRACE_MS}, in both directions. The two clocks are the operator's
+ * browser and a server, so mirrored bounds do not agree: they differ by whatever the drift
+ * plus the round-trip is, and a client that is even a second STRICTER refuses a state the
+ * backend would have taken — telling an operator to redo an installation that was about to
+ * succeed, with no way to tell that from a real expiry. Being wider only ever costs the POST
+ * that would have happened anyway before this check existed, answered by the backend's own
+ * verdict. The grace is the drift this can absorb; past it the backend answers, as it always
+ * did.
  *
  * They live here, beside the claims they judge, because the claims are the only reason a
  * client can ask the question at all.
@@ -189,6 +180,11 @@ export function decodeOAuthStateClaims(state: string): IntegrationOAuthStateClai
 export const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 /** @see {@link OAUTH_STATE_TTL_MS} */
 export const OAUTH_STATE_FUTURE_SKEW_MS = 60_000;
+/** How far the two clocks may disagree before this pre-flight and the backend can differ on
+ *  the same state. Added to BOTH bounds, so the client's window strictly contains the
+ *  backend's and this check can only ever be the more permissive of the two.
+ *  @see {@link OAUTH_STATE_TTL_MS} */
+export const OAUTH_STATE_CLOCK_GRACE_MS = 30_000;
 
 /**
  * Whether a decoded `state` is still within the window the backend will accept.
@@ -204,7 +200,10 @@ export function isOAuthStateFresh(
   now: number = Date.now(),
 ): boolean {
   const age = now - claims.iat;
-  return age <= OAUTH_STATE_TTL_MS && age >= -OAUTH_STATE_FUTURE_SKEW_MS;
+  return (
+    age <= OAUTH_STATE_TTL_MS + OAUTH_STATE_CLOCK_GRACE_MS &&
+    age >= -(OAUTH_STATE_FUTURE_SKEW_MS + OAUTH_STATE_CLOCK_GRACE_MS)
+  );
 }
 
 const configPath = (ecosystemId: string, providerId?: string) =>

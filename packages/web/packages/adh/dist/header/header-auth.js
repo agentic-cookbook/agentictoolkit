@@ -3,7 +3,13 @@
 "use client";
 
 // src/header/header-auth.ts
-import { useAuth, beginLogin, isAdmin, ssoSwitchUrl } from "@agentic-toolkit/auth";
+import {
+  useAuth,
+  beginLogin,
+  isAdmin,
+  ssoSwitchUrl,
+  currentReturnTo
+} from "@agentic-toolkit/auth";
 import { siteHomePath } from "@agentic-toolkit/adh-registry";
 function toAvatarUser(u, fallback = "User") {
   const fullName = u.name?.trim() || void 0;
@@ -21,13 +27,10 @@ function ssoSwitchResolver(signedIn) {
 function useAnonymousHeaderAuth(_opts) {
   return { user: null, authLoading: false };
 }
-function currentPath() {
-  if (typeof window === "undefined") return "/";
-  return `${window.location.pathname}${window.location.search}`;
-}
 function defaultReturnTo(siteId) {
-  if (typeof window === "undefined" || !siteId) return currentPath();
-  return window.location.pathname === "/" ? siteHomePath(siteId) : currentPath();
+  const here = currentReturnTo();
+  if (here === void 0 || !siteId) return here ?? "/";
+  return window.location.pathname === "/" ? siteHomePath(siteId) : here;
 }
 function makeSmartHeaderAuth(cfg = {}) {
   const { clientId = "adh", returnTo, avatarFallback = "User" } = cfg;

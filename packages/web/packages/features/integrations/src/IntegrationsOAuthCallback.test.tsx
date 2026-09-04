@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { StrictMode } from "react";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 
 /**
  * The return leg of every integration connect, which until now nothing rendered anywhere in
@@ -14,12 +14,15 @@ import { render, screen, waitFor, cleanup } from "@testing-library/react";
  * presented exactly that way.
  */
 
-const { connect, push, replace, reportUnexpectedAuthError } = vi.hoisted(() => ({
-  connect: vi.fn(),
-  push: vi.fn(),
-  replace: vi.fn(),
-  reportUnexpectedAuthError: vi.fn(),
-}));
+const { connect, push, replace, reportUnexpectedAuthError, router } = vi.hoisted(() => {
+  const push = vi.fn();
+  const replace = vi.fn();
+  // ONE object for the life of the file. `useRouter: () => ({ push, replace })` minted a fresh
+  // one on every render, and `router` is in the callback effect's dependency array — so the
+  // effect re-ran on every render, and only the `ran` latch hid it. A mock that is unstable in
+  // a way the real `useRouter` is not tests the latch instead of the component.
+  return { connect: vi.fn(), push, replace, reportUnexpectedAuthError: vi.fn(), router: { push, replace } };
+});
 
 /** The shape `useAuth` returns that this component reads. `user` is here because the claims
  *  name the customer who started the flow, and the callback refuses a state that names someone
@@ -31,7 +34,7 @@ let authed: { isLoading: boolean; isAuthenticated: boolean; user?: { id: string 
   user: { id: "cus-1" },
 };
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, replace }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 // PARTIAL, via `importOriginal`, and that is load-bearing rather than tidy. A factory that
 // returns an object replaces the WHOLE module, so every export it forgets becomes `undefined`
 // — and `oauth-callback-store` imports `safeReturnTo` from here to validate the stashed
@@ -127,6 +130,13 @@ afterEach(() => {
 });
 
 const stashed = (state: string) => sessionStorage.getItem(`int-oauth-connect:${state}`);
+
+/** What `authedRequest` rejects with once the backend has ANSWERED: an `Error` carrying the
+ *  numeric status. `httpStatus` duck-types exactly that, and its absence is what distinguishes
+ *  a spent credential from one that never left the browser. */
+function httpError(status: number, message: string): Error {
+  return Object.assign(new Error(message), { status });
+}
 
 describe("finishing a github_app connect", () => {
   it("files the installation and routes back to the whole URL it started from", async () => {
@@ -282,9 +292,12 @@ describe("the exits that finish nothing", () => {
    * consumed the provider's single-use `code` (or filed the installation) whatever it answered,
    * so the entry cannot be replayed and is only something for a later flow to trip on. The
    * tombstone is deliberately not laid here — a failed connect is one the operator may retry.
+   *
+   * The STATUS on the rejection is the fixture's whole point, not decoration: it is what says a
+   * response came back at all. See the mirror test below, which is the same failure without one.
    */
-  it("clears the stash even when the connect throws", async () => {
-    connect.mockRejectedValue(new Error("installation already claimed"));
+  it("clears the stash when a connect the backend ANSWERED throws", async () => {
+    connect.mockRejectedValue(httpError(500, "installation already claimed"));
     const state = signedState(CLAIMS);
     stashPendingConnect(state, STASH);
     atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
@@ -299,6 +312,30 @@ describe("the exits that finish nothing", () => {
       // connects in a report that otherwise just says "the callback".
       { feature: "integration-oauth-callback", step: "github_app" },
     );
+  });
+
+  /**
+   * The other mirror, and the one the `httpStatus` check exists for.
+   *
+   * A rejection carrying NO status never reached the backend — offline, DNS, a dropped
+   * connection, a CORS preflight — so the installation is unfiled and the credential is still
+   * good. Clearing the stash there destroyed the only copy of an `oauth` connect's
+   * `redirectUri`, and the retry the error message invites then reported an expired link: the
+   * failure that is most likely to be transient was the one made permanent.
+   */
+  it("keeps the stash when the connect never reached the backend", async () => {
+    // No `status`: `authedRequest` rejects with exactly this shape when `fetch` itself throws.
+    connect.mockRejectedValue(new TypeError("Failed to fetch"));
+    const state = signedState(CLAIMS);
+    stashPendingConnect(state, STASH);
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+
+    expect(await screen.findByText(/failed to fetch/i)).toBeTruthy();
+    expect(stashed(state)).not.toBeNull();
+    // And no tombstone either — this connect is not "already set up", it is unmade.
+    expect(sessionStorage.getItem(`int-oauth-consumed:${state}`)).toBeNull();
   });
 
   /**
@@ -320,6 +357,56 @@ describe("the exits that finish nothing", () => {
     expect(await screen.findByText(/an owner has to approve it/i)).toBeTruthy();
     expect(stashed(state)).not.toBeNull();
     expect(connect).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The 409 that means the operator ALREADY HAS what they came for.
+   *
+   * Two tabs on one callback URL is the ordinary way here — Chrome's Duplicate Tab CLONES
+   * `sessionStorage`, so the losing document sees no tombstone and POSTs a connect the winner
+   * has already made. The backend's own prose names an internal provider id, under a heading
+   * reading "Connection not completed", at an operator whose connection is in fact complete.
+   */
+  it("renders the already-connected conflict as the success it is", async () => {
+    connect.mockRejectedValue(httpError(409, "already connected to 'github-app' (code)"));
+    const state = signedState(CLAIMS);
+    stashPendingConnect(state, STASH);
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+
+    expect(await screen.findByText("Already connected")).toBeTruthy();
+    expect(screen.queryByText("Connection not completed")).toBeNull();
+    // Not an unexpected error: it is an outcome this component knows the name of.
+    expect(reportUnexpectedAuthError).not.toHaveBeenCalled();
+    // The credential was read, so the stash goes; the tombstone goes down so a reload of THIS
+    // document recognizes itself rather than POSTing a third time.
+    expect(stashed(state)).toBeNull();
+    expect(sessionStorage.getItem(`int-oauth-consumed:${state}`)).toBe(RETURN_TO);
+    // Nothing navigates: the tab that WON the race is doing that, and two documents racing to
+    // replace the same address costs one of them a scroll position for nothing.
+    expect(replace).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The other 409, which shares the substring "already connected" and means the opposite: the
+   * installation is attached to somebody else's ecosystem and only the operator can detach it.
+   * Reporting that as success leaves them believing in a connection that does not exist.
+   */
+  it("still reports the conflict that names an installation as a failure", async () => {
+    connect.mockRejectedValue(
+      httpError(409, "installation 42 is already connected elsewhere; disconnect it there first"),
+    );
+    const state = signedState(CLAIMS);
+    stashPendingConnect(state, STASH);
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+
+    expect(await screen.findByText(/disconnect it there first/i)).toBeTruthy();
+    expect(screen.getByText("Connection not completed")).toBeTruthy();
+    // No tombstone: there is nothing set up, and a later reload must not say there is.
+    expect(sessionStorage.getItem(`int-oauth-consumed:${state}`)).toBeNull();
   });
 
   it("offers a way back that does not name a page the host may not have", async () => {
@@ -535,5 +622,100 @@ describe("the cases a stateless state token makes reachable", () => {
 
     await waitFor(() => expect(connect).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(replace).toHaveBeenCalledWith(RETURN_TO));
+  });
+});
+
+/**
+ * Where a replay, a recovery and a dead end each send the operator.
+ *
+ * `returnTo` is the one thing the signed state cannot carry, so on the three paths below it
+ * comes from somewhere else entirely — a tombstone, a prop, or nothing at all. Each of those
+ * is a separate way to land somebody on a page their console does not have, which reads as
+ * the connect having failed and is indistinguishable from it.
+ */
+describe("the address a finished callback offers to go back to", () => {
+  it("remembers where a spent connect came from, so a replay's Back is not a guess", async () => {
+    const state = signedState(CLAIMS);
+    stashPendingConnect(state, STASH);
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(RETURN_TO));
+    cleanup();
+    replace.mockClear();
+
+    // The reload. The stash is gone — it was spent — so the tombstone is the ONLY record of
+    // the dialog this connect was started from.
+    render(<IntegrationsOAuthCallback />);
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+    expect(replace).toHaveBeenCalledWith(RETURN_TO);
+  });
+
+  it("falls back rather than trusting a tombstone from before it carried an address", async () => {
+    // What this key held in the released version: a bare "1". `safeReturnTo` resolves that
+    // against the origin into "/1" — a real-looking path to a page nothing mounts — so the
+    // reader requires a leading slash. A tab open across a deploy is the ordinary way here.
+    const state = signedState(CLAIMS);
+    sessionStorage.setItem(`int-oauth-consumed:${state}`, "1");
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+    expect(replace).toHaveBeenCalledWith("/home#connections");
+  });
+
+  /**
+   * The host names the destination, because the destination is the host's fact. `/home` plus
+   * the connections fragment is the FAMILY's convention and the right default, but a console
+   * that mounts its entry elsewhere would otherwise land its own operators on a 404 with no
+   * way to say so from outside this package.
+   */
+  it("honours a fallback the host named, on the arrival that has nothing stashed", async () => {
+    const state = signedState(CLAIMS);
+    atCallback(`?installation_id=99&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback fallbackReturnTo="/console?tab=connections" />);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/console?tab=connections"));
+  });
+
+  it("honours it on the Back button too, where there is no address at all", async () => {
+    // No state, so nothing was recovered and nothing was stashed: this is the exit where the
+    // fallback is the whole answer.
+    atCallback("?installation_id=42");
+
+    render(<IntegrationsOAuthCallback fallbackReturnTo="/console?tab=connections" />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Back" }));
+    expect(replace).toHaveBeenCalledWith("/console?tab=connections");
+  });
+});
+
+/**
+ * The announcement, which is this route's entire content.
+ *
+ * A live region mounted only on the working branch is unmounted at the exact moment there is
+ * something to say, so a screen reader hears the spinner's message and then nothing — on a
+ * page that exists to deliver one sentence. The region has to OUTLIVE the transition, which
+ * is a fact about node identity and not about the markup of either branch.
+ */
+describe("what a screen reader hears", () => {
+  it("keeps one region across the transition it exists to announce", async () => {
+    connect.mockRejectedValue(httpError(500, "the forge said no"));
+    const state = signedState(CLAIMS);
+    stashPendingConnect(state, STASH);
+    atCallback(`?installation_id=42&state=${encodeURIComponent(state)}`);
+
+    render(<IntegrationsOAuthCallback />);
+
+    const working = screen.getByRole("status");
+    expect(working.getAttribute("aria-live")).toBe("polite");
+
+    await screen.findByText("the forge said no");
+    // The SAME node, not merely another one matching the role: a remount is silence.
+    expect(screen.getByRole("status")).toBe(working);
+    // Assertive on the outcome that asks the operator to do something, and that they can
+    // otherwise sit in indefinitely.
+    expect(working.getAttribute("aria-live")).toBe("assertive");
   });
 });

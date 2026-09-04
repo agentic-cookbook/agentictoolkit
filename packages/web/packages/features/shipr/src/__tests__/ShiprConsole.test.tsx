@@ -15,6 +15,38 @@ vi.mock('../live', () => ({
   watchWorkspaceRuns: () => ({ close: vi.fn() }),
 }));
 
+/**
+ * The Connections dialog's two outside edges, stubbed — because one spec below opens it.
+ *
+ * `#connections` in the address opens Configure, and Configure's `connectionsOpen` initialises
+ * from that same fragment, so the Connections body mounts on the SAME render. That body resolves
+ * the workspace's infrastructure ecosystem, which is a real `GET /api/ecosystem/ecosystems`
+ * against an unmocked `fetch`. It never made the spec fail: the assertion resolves first and
+ * react-query swallows the rejection, so the request left as an unhandled fetch to a host jsdom
+ * has no route to — passing, then, for a reason unrelated to what is under test, and failing
+ * later against whatever a future runner does with real network calls.
+ *
+ * `CONNECTIONS_HASH` is the REAL one (`importOriginal`): it is the string both ends of the OAuth
+ * round-trip must agree on, and this file's whole point is that the console recognises it. A
+ * spelled copy here would agree with itself while the product disagreed.
+ */
+vi.mock('@agentic-toolkit/data/ecosystems', () => ({
+  useWorkspaceDefaultEcosystemId: () => ({
+    ecosystemId: 'eco-1',
+    canManage: true,
+    isPending: false,
+    isFetching: false,
+    isError: false,
+  }),
+}));
+
+vi.mock('@agentic-toolkit/integrations', async (importOriginal) => ({
+  CONNECTIONS_HASH: (
+    await importOriginal<typeof import('@agentic-toolkit/integrations')>()
+  ).CONNECTIONS_HASH,
+  IntegrationsPane: () => <div data-testid="integrations-pane" />,
+}));
+
 const repo: RepoItem = {
   id: 'm1',
   devRepoId: 'd1',
@@ -185,11 +217,16 @@ describe('ShiprConsole — the gear menu', () => {
    * operator was. Without this the new connection lands on a bare tree with every dialog
    * closed, which reads as the connect having failed rather than succeeded.
    */
-  it('reopens Configure when the address comes back naming Connections', async () => {
+  it('reopens Configure — and Connections inside it — when the address names Connections', async () => {
     window.history.replaceState(null, '', '/acme?workspace=acme#connections');
     try {
       render(<ShiprConsole client={stubClient()} />);
       expect(await screen.findByText('Configure', { selector: '[data-slot="dialog-title"]' }))
+        .toBeTruthy();
+      // Configure alone is not the destination: the fragment names Connections, and a return
+      // leg that stopped one dialog short would leave the operator looking at repository
+      // settings with no sign the connect they left to make had landed.
+      expect(await screen.findByText('Connections', { selector: '[data-slot="dialog-title"]' }))
         .toBeTruthy();
     } finally {
       window.history.replaceState(null, '', '/');

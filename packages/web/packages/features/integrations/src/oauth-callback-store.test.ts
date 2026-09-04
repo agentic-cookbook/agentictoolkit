@@ -157,9 +157,27 @@ describe("currentReturnTo", () => {
     expect(currentReturnTo()).toBe("/settings/integrations");
   });
 
+  /**
+   * The WRITE side of the same check the read side has always made.
+   *
+   * `pathname` looks like it cannot be anything but a path, and a leading-slash assertion
+   * passes on every value it ever holds — including this one. A browser at
+   * `https://shipr.example//evil.example/pwned` reports `pathname` as `//evil.example/pwned`,
+   * which starts with a slash, is stashed verbatim, survives the read-side check that only
+   * inspects what is already stored, and becomes a PROTOCOL-RELATIVE `router.replace` at the
+   * end of a connect the visitor was asked to trust. So the address is run through the same
+   * `safeReturnTo` the stash is read back through, and a value it cannot vouch for is
+   * replaced by the family fallback rather than carried.
+   */
+  it("refuses a protocol-relative pathname, which a leading-slash check accepts", () => {
+    atLocation({ pathname: "//evil.example/pwned", search: "", hash: "" });
+    expect(currentReturnTo()).toBe(FALLBACK_RETURN_TO);
+  });
+
   it("is origin-relative, so it can never send the visitor to another site", () => {
     atLocation({ pathname: "/home", search: "?a=1", hash: "" });
     expect(currentReturnTo().startsWith("/")).toBe(true);
+    expect(currentReturnTo().startsWith("//")).toBe(false);
   });
 });
 

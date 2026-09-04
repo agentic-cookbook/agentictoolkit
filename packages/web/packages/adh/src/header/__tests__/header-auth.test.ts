@@ -33,6 +33,26 @@ describe('defaultReturnTo', () => {
     expect(defaultReturnTo('cookbook')).toBe('/bob?tab=chat')
   })
 
+  /**
+   * The half of the same rule that LOOKED correct without it.
+   *
+   * `pathname + search` — which this used to be — passes every case above, and drops the
+   * one piece of the address a console cannot rebuild: on a surface shown in a dialog, the
+   * fragment is the only record the dialog was open. A visitor who clicks Login from inside
+   * Connections and comes back to a page with it closed has no way to tell whether the login
+   * worked. Asserted here rather than left to the shared `currentReturnTo` this now calls,
+   * because the defect was never in that function — it was in a second spelling of it.
+   */
+  it('keeps the fragment, which is the only record a dialog was open', () => {
+    at('/bob?workspace=acme#connections')
+    expect(defaultReturnTo('cookbook')).toBe('/bob?workspace=acme#connections')
+  })
+
+  it('keeps the fragment for a site with no siteId to resolve a landing from', () => {
+    at('/bob#connections')
+    expect(defaultReturnTo()).toBe('/bob#connections')
+  })
+
   it('treats only the landing itself as the landing', () => {
     at('/bob/settings')
     expect(defaultReturnTo('cookbook')).toBe('/bob/settings')

@@ -288,19 +288,26 @@ describe('Connections is the one dialog the address bar knows about', () => {
     await waitFor(() => expect(window.location.hash).toBe(''));
   });
 
-  it("leaves somebody else's fragment where it is, and still opens", async () => {
+  it("takes somebody else's fragment, and gives it back when it closes", async () => {
     // A fragment names a position within the page — an anchor a deep link aimed at, a scroll
-    // target a shared URL carried. This one is a convenience that lets a return leg reopen a
-    // dialog, and the return leg has a fallback; trading the first for the second is a bad
-    // trade. So the dialog opens either way and the address is simply not claimed.
+    // target a shared URL carried — and this dialog wants the same slot. DECLINING to open
+    // over one, which is what this did, looked like the conservative reading and was not: an
+    // operator who arrived by a deep link got a Connections dialog whose GitHub round-trip
+    // could never reopen it, because the address is the only carrier that survives the
+    // document being thrown away and the branch that writes it had refused to run. So the
+    // fragment is displaced and remembered rather than either overwritten or deferred to.
     at('/acme/repos?workspace=acme#pricing');
     draw();
     await userEvent.click(await screen.findByRole('button', { name: 'Connections' }));
     const connections = await waitFor(() => dialog('Connections'));
-    expect(window.location.hash).toBe('#pricing');
-    // And closing does not clear it either: only a hash this console wrote is ever removed.
+    await waitFor(() => expect(window.location.hash).toBe('#connections'));
+    // The path and query are untouched either way — `?workspace=` is what the tree is read
+    // with, and only the fragment was ever this function's to claim.
+    expect(window.location.search).toBe('?workspace=acme');
+
     await userEvent.click(within(connections).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(1));
+    // Restored, not cleared: the deep link the operator followed is still where they left it.
     expect(window.location.hash).toBe('#pricing');
   });
 

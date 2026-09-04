@@ -9,6 +9,7 @@ export {
   tokensFromResponse,
   readAccessToken,
   readTokenSubject,
+  decodeBase64UrlJson,
   onSessionChange,
   type BackendTokenFields,
 } from './tokens'

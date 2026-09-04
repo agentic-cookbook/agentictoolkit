@@ -130,9 +130,17 @@ export interface SmartHeaderAuthConfig {
  *
  * Read at CLICK time (inside the handler), so `/home` hangs off the click and
  * nothing else: an already-signed-in visitor who arrives at `/` on their own is
- * never redirected. SSR-guarded via {@link currentPath}; with no `siteId` (a source
- * built outside SiteHeader) it degrades to the current path rather than guessing a
- * landing.
+ * never redirected. With no `siteId` (a source built outside SiteHeader) it degrades
+ * to the current address rather than guessing a landing.
+ *
+ * That address is `currentReturnTo()` — auth's, the SAME one the SSO bounce and the
+ * integrations connect round-trip come back to — and NOT a local `pathname + search`,
+ * which is what this read used to be. The two differ by the hash, and the hash is not
+ * decoration on a console: it is the only record that a surface shown in a DIALOG was
+ * open. Dropping it sent a visitor who clicked Login from inside Connections back to a
+ * page with the dialog closed and nothing saying the login had worked. Its `undefined`
+ * off the browser is this function's SSR guard, and `'/'` is the site root a header
+ * rendered on the server can honestly name.
  */
 export declare function defaultReturnTo(siteId?: SiteId): string;
 /**

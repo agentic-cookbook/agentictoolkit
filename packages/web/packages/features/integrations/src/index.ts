@@ -45,6 +45,7 @@ export {
   readPendingConnect,
   markPendingConnectConsumed,
   wasPendingConnectConsumed,
+  consumedReturnTo,
   clearPendingConnect,
   type PendingOAuthConnect,
   type RedirectAuthMethod,

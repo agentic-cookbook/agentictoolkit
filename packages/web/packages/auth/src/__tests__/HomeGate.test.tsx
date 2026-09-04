@@ -43,8 +43,12 @@ beforeEach(() => {
   mocks.replace.mockClear()
   mocks.beginLogin.mockClear()
   mocks.providerSeen.mockClear()
-  // Reset the query string between tests — HomeGate appends window.location.search
-  // to returnTo, so a leaked query would pollute a later spec's assertion.
+  // Reset the whole address between tests, not just the query. HomeGate's returnTo is
+  // `currentReturnTo()`, which is `pathname + search + hash` — so a leaked FRAGMENT pollutes
+  // a later spec's assertion exactly as a leaked query does, and the specs below that set a
+  // hash are the reason this line has to say so. `replaceState` to '/' clears all three at
+  // once; the comment used to name only the query, which read as a promise this reset was
+  // narrower than it is.
   window.history.replaceState({}, '', '/')
 })
 
