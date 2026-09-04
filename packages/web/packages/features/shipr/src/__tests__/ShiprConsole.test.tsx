@@ -370,4 +370,18 @@ describe('ShiprConsole — faults are raised, not printed into the chrome', () =
     // anywhere on screen.
     expect(screen.queryByText('Internal Server Error')).toBeNull();
   });
+
+  it('raises nothing at all for a failure that carries no message', async () => {
+    // `new Error()` has an empty `message`, and the catch that fills `error` copies it
+    // through unread. Keyed on null alone, that empty string counts as a fault and opens a
+    // dialog with a title and no body — strictly worse than the silence it replaced, since
+    // there is nothing in it to act on and nothing to say what went wrong.
+    render(
+      <ShiprConsole
+        client={stubClient({ tree: vi.fn().mockRejectedValue(new Error()) })}
+      />,
+    );
+
+    await waitFor(() => expect(screen.queryAllByRole('dialog')).toHaveLength(0));
+  });
 });

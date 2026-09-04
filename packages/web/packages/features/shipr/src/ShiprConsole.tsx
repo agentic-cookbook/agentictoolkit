@@ -683,7 +683,12 @@ function Console({
   const [alert, setAlert] = React.useState<string | null>(null);
   const raised = React.useRef<string | null>(null);
   React.useEffect(() => {
-    if (problem === null) {
+    // Truthiness, not `=== null`: `new Error()` carries an empty `message`, and the
+    // catch that fills `error` copies it through unread. Keyed on null alone, that
+    // empty string counts as a fault and raises a dialog with a title and no body —
+    // strictly worse than the silence it replaced, since there is nothing in it to
+    // act on and nothing to say what went wrong.
+    if (!problem) {
       raised.current = null;
       return;
     }
@@ -863,7 +868,7 @@ function Console({
       />
 
       <AlertModal
-        open={alert !== null}
+        open={Boolean(alert)}
         tone="error"
         title="shipr hit a problem"
         description={alert ?? ''}
