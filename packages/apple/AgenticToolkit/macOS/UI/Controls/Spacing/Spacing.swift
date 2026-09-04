@@ -83,21 +83,26 @@ public enum SpacingEdge: String, CaseIterable, Sendable {
     /// True for the two edges whose controls stand in a row.
     public var isHorizontal: Bool { self == .top || self == .bottom }
 
-    /// The way out of the frame across this edge — which is the way the arrow
-    /// that *adds* space points. Every arrow in the frame control is one of
-    /// these two, so "which number, which direction" never needs a table.
-    public var outward: SpacingArrow {
+    /// The way this edge of the view itself travels when its inset *grows*:
+    /// inward, because the room being added goes on the other side of it.
+    ///
+    /// Every arrow in the frame control points the way the line it touches
+    /// moves — `->|` — so this is the arrow that adds room, and
+    /// ``shrinking`` is the one that takes it away. Naming the *edge's*
+    /// travel rather than "out of the frame" is what keeps the two straight:
+    /// an arrow that pointed out of the frame would move the line the other
+    /// way from where it pointed.
+    public var growing: SpacingArrow {
         switch self {
-        case .top: return .up
-        case .bottom: return .down
-        case .leading: return .left
-        case .trailing: return .right
+        case .top: return .down
+        case .bottom: return .up
+        case .leading: return .right
+        case .trailing: return .left
         }
     }
 
-    /// The way into the content across this edge: the arrow that takes room
-    /// away.
-    public var inward: SpacingArrow { outward.opposite }
+    /// The way the edge travels when its inset shrinks.
+    public var shrinking: SpacingArrow { growing.opposite }
 }
 
 /// One of the two gutters. Only the pane-divider flavor has them.
@@ -126,6 +131,11 @@ public enum SpacingArrow: String, CaseIterable, Sendable {
 
     /// The SF Symbol drawn on the button.
     public var symbolName: String { "arrow.\(rawValue)" }
+
+    /// True for the two that point across rather than up and down. The box an
+    /// arrow is drawn in is shaped by this, and so is which axis it is placed
+    /// along.
+    public var isHorizontal: Bool { self == .left || self == .right }
 
     public var opposite: SpacingArrow {
         switch self {

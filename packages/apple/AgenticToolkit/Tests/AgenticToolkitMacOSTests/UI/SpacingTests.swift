@@ -8,7 +8,7 @@ final class SpacingEditRulesTests: XCTestCase {
 
     private let range = 0...80
 
-    func testTheOutwardArrowAddsRoomAndTheInwardArrowTakesItAway() {
+    func testTheGrowingArrowAddsRoomAndTheShrinkingArrowTakesItAway() {
         let start = Spacing(uniform: 10)
 
         for edge in SpacingEdge.allCases {
@@ -17,17 +17,19 @@ final class SpacingEditRulesTests: XCTestCase {
         }
     }
 
-    /// Which way each arrow points is derived from the edge, not looked up, so
-    /// what is pinned is that the pair are opposites and that the growing one
-    /// points out of the frame.
-    func testEachEdgesArrowsPointOutOfAndIntoTheFrame() {
-        XCTAssertEqual(SpacingEdge.top.outward, .up)
-        XCTAssertEqual(SpacingEdge.bottom.outward, .down)
-        XCTAssertEqual(SpacingEdge.leading.outward, .left)
-        XCTAssertEqual(SpacingEdge.trailing.outward, .right)
+    /// Every arrow points the way the line it stands against travels, and the
+    /// line an inset moves is the *view's* edge — so adding room at the top
+    /// sends the top edge **down**. This is the assertion that catches the
+    /// tempting reading, "the arrow that adds room points out of the frame",
+    /// which puts every arrow opposite the line it moves.
+    func testEachEdgesArrowsPointTheWayThatEdgeTravels() {
+        XCTAssertEqual(SpacingEdge.top.growing, .down)
+        XCTAssertEqual(SpacingEdge.bottom.growing, .up)
+        XCTAssertEqual(SpacingEdge.leading.growing, .right)
+        XCTAssertEqual(SpacingEdge.trailing.growing, .left)
 
         for edge in SpacingEdge.allCases {
-            XCTAssertEqual(edge.inward, edge.outward.opposite, "\(edge)'s two arrows are opposites")
+            XCTAssertEqual(edge.shrinking, edge.growing.opposite, "\(edge)'s two arrows are opposites")
         }
     }
 
@@ -68,52 +70,67 @@ final class SpacingEditRulesTests: XCTestCase {
 /// other, are bugs a compile cannot catch.
 final class SpacingControlLayoutTests: XCTestCase {
 
-    /// The two diagrams the control draws, at the sizes it draws them: the pane
-    /// grid fills the control, and the frame is inset to leave room for the
-    /// numbers straddling its edges.
-    private let paneDiagram = CGRect(x: 0, y: 0, width: 300, height: 170)
-    private let frameDiagram = CGRect(x: 22, y: 16, width: 256, height: 138)
+    /// The rectangle **both** flavors draw their diagram in: one control size
+    /// (380 × 220) less one inset (28 a side), so a panel showing a frame
+    /// control above a divider control gets two pictures that line up.
+    private let diagram = CGRect(x: 28, y: 28, width: 324, height: 164)
 
     private func frame(_ spacing: Spacing) -> SpacingControlLayout {
-        SpacingControlLayout(diagram: frameDiagram, spacing: spacing, style: .frame)
+        SpacingControlLayout(diagram: diagram, spacing: spacing, style: .frame)
     }
 
     private func panes(_ spacing: Spacing) -> SpacingControlLayout {
-        SpacingControlLayout(diagram: paneDiagram, spacing: spacing, style: .paneDividers)
+        SpacingControlLayout(diagram: diagram, spacing: spacing, style: .paneDividers)
     }
 
     func testWithNoInsetsTheContentFillsTheFrame() {
-        XCTAssertEqual(frame(Spacing()).content, frameDiagram)
+        XCTAssertEqual(frame(Spacing()).content, diagram)
     }
 
     func testEachInsetTakesFromItsOwnEdge() {
         let content = frame(Spacing(top: 10, leading: 20)).content
 
-        XCTAssertEqual(content.minX, frameDiagram.minX + SpacingControlLayout.displayed(20))
-        XCTAssertEqual(content.maxX, frameDiagram.maxX, "trailing was not set")
-        XCTAssertEqual(content.maxY, frameDiagram.maxY - SpacingControlLayout.displayed(10))
-        XCTAssertEqual(content.minY, frameDiagram.minY, "bottom was not set")
+        XCTAssertEqual(content.minX, diagram.minX + SpacingControlLayout.displayed(20))
+        XCTAssertEqual(content.maxX, diagram.maxX, "trailing was not set")
+        XCTAssertEqual(content.maxY, diagram.maxY - SpacingControlLayout.displayed(10))
+        XCTAssertEqual(content.minY, diagram.minY, "bottom was not set")
     }
 
-    func testEachNumberSitsOnTheMiddleOfTheEdgeItEdits() {
+    /// A number straddles the line its arrows move — the **view's** edge, not
+    /// the container's. The container stays where it is however much room is
+    /// asked for, so an arrow attached to it would point at a line it never
+    /// touches.
+    func testEachNumberSitsOnTheMiddleOfTheEdgeOfTheViewItEdits() {
         let plan = frame(Spacing(top: 10, leading: 20, bottom: 30, trailing: 40))
+        let content = plan.content
 
-        XCTAssertEqual(plan.position(of: .top), CGPoint(x: frameDiagram.midX, y: frameDiagram.maxY))
-        XCTAssertEqual(plan.position(of: .bottom), CGPoint(x: frameDiagram.midX, y: frameDiagram.minY))
-        XCTAssertEqual(plan.position(of: .leading), CGPoint(x: frameDiagram.minX, y: frameDiagram.midY))
-        XCTAssertEqual(plan.position(of: .trailing), CGPoint(x: frameDiagram.maxX, y: frameDiagram.midY))
+        XCTAssertEqual(plan.position(of: .top), CGPoint(x: content.midX, y: content.maxY))
+        XCTAssertEqual(plan.position(of: .bottom), CGPoint(x: content.midX, y: content.minY))
+        XCTAssertEqual(plan.position(of: .leading), CGPoint(x: content.minX, y: content.midY))
+        XCTAssertEqual(plan.position(of: .trailing), CGPoint(x: content.maxX, y: content.midY))
+
+        XCTAssertNotEqual(
+            plan.position(of: .top), CGPoint(x: diagram.midX, y: diagram.maxY),
+            "pinned to the container, an arrow would sit still while the line it points at moved"
+        )
     }
 
-    /// The reason the controls hang off the frame rather than off the content:
-    /// an arrow held down would otherwise walk out from under the pointer.
-    func testAnEdgesControlsDoNotMoveWhenItsNumberChanges() {
-        for edge in SpacingEdge.allCases {
-            XCTAssertEqual(
-                frame(Spacing()).position(of: edge),
-                frame(Spacing(uniform: 40)).position(of: edge),
-                "\(edge)'s controls moved with its value"
-            )
-        }
+    /// An arrow standing against the line it moves travels with that line, so
+    /// the picture only works while that travel stays under half an arrow: past
+    /// that, an arrow held down slides out from under the pointer and the
+    /// repeat stops. That is why the *displayed* inset is capped far below the
+    /// range the number itself covers.
+    func testAHeldArrowCannotTravelOutFromUnderThePointer() {
+        XCTAssertLessThan(
+            SpacingControlLayout.maximumDisplayedInset,
+            SpacingControl.arrowLength / 2,
+            "an arrow can travel further than half its own length"
+        )
+
+        let travel = frame(Spacing()).position(of: .top).y
+            - frame(Spacing(uniform: 80)).position(of: .top).y
+        XCTAssertEqual(travel, SpacingControlLayout.maximumDisplayedInset)
+        XCTAssertLessThan(travel, SpacingControl.arrowLength / 2)
     }
 
     func testTheFrameDiagramHasOnePaneAndNoDividers() {
@@ -168,29 +185,55 @@ final class SpacingControlLayoutTests: XCTestCase {
     /// The two divider controls sit on gutters that cross, so the only thing
     /// keeping them apart is where along each gutter they are put. Checked
     /// across the range, because the panes — and so the distance between the
-    /// two middles — change size with the gap.
+    /// two middles — change size with the gap, and because each control is now
+    /// four arrows wide rather than two.
     func testTheTwoDividerControlsNeverOverlap() {
         for gap in [0, 10, 40, 80] {
             let plan = panes(Spacing(betweenColumns: gap, betweenRows: gap))
-            let columns = box(around: plan.position(of: .betweenColumns), stacked: true)
-            let rows = box(around: plan.position(of: .betweenRows), stacked: false)
 
-            XCTAssertFalse(columns.intersects(rows), "divider controls overlap at gap \(gap)")
+            XCTAssertFalse(
+                columnControlBox(plan).intersects(rowControlBox(plan)),
+                "divider controls overlap at gap \(gap)"
+            )
         }
     }
 
-    /// The control's own metrics: a 44 × 21 field, flanked along the divider by
-    /// two buttons 18 points thick and 40 long, offset half a field plus half a
-    /// button plus half the arrow gap.
-    private func box(around centre: CGPoint, stacked: Bool) -> CGRect {
-        let reach = stacked
-            ? CGSize(width: 44 / 2, height: 21 / 2 + 18 / 2 + 3 + 18 / 2)
-            : CGSize(width: 44 / 2 + 18 / 2 + 3 + 18 / 2, height: 40 / 2)
+    // MARK: - What a divider control covers
+
+    /// The control's own metrics, restated because they are private to it: a
+    /// 40 × 21 field, and four arrows drawn in 28 × 20 boxes — `length` the way
+    /// the arrow points, `breadth` across it.
+    private static let fieldSize = CGSize(width: 40, height: 21)
+    private static let arrowGap: CGFloat = 2
+    private static let arrowBreadth: CGFloat = 20
+
+    /// Along the divider, from the number's centre to an arrow's: clear of the
+    /// number, by the arrow's breadth rather than its length.
+    private static func alongOffset(alongHorizontal horizontal: Bool) -> CGFloat {
+        (horizontal ? fieldSize.width : fieldSize.height) / 2 + arrowGap + arrowBreadth / 2
+    }
+
+    /// The column divider's four arrows point left and right, so each reaches
+    /// out from the pane edge it stands against by half an arrow to be seated
+    /// and half again for its own box — a whole arrow length either side of the
+    /// gutter.
+    private func columnControlBox(_ plan: SpacingControlLayout) -> CGRect {
+        let along = Self.alongOffset(alongHorizontal: false) + Self.arrowBreadth / 2
         return CGRect(
-            x: centre.x - reach.width,
-            y: centre.y - reach.height,
-            width: reach.width * 2,
-            height: reach.height * 2
+            x: plan.columnGutter.minX - SpacingControl.arrowLength,
+            y: plan.position(of: .betweenColumns).y - along,
+            width: plan.columnGutter.width + SpacingControl.arrowLength * 2,
+            height: along * 2
+        )
+    }
+
+    private func rowControlBox(_ plan: SpacingControlLayout) -> CGRect {
+        let along = Self.alongOffset(alongHorizontal: true) + Self.arrowBreadth / 2
+        return CGRect(
+            x: plan.position(of: .betweenRows).x - along,
+            y: plan.rowGutter.minY - SpacingControl.arrowLength,
+            width: along * 2,
+            height: plan.rowGutter.height + SpacingControl.arrowLength * 2
         )
     }
 }

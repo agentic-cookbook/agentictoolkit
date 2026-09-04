@@ -10,20 +10,26 @@ import AgenticToolkitCoreMacOS
 /// cannot say *which* edge is which without the reader building the picture in
 /// their head. Here the diagram is the control.
 ///
-/// Two flavors, chosen by `SpacingDiagram`:
-/// - `.frame` — one view inside its container. Each of the four edges carries a
-///   number straddling the line, with an arrow either side of it: the one
-///   pointing out of the frame adds room, the one pointing into the view takes
-///   it away.
-/// - `.paneDividers` — four panes and the two dividers between them. Each
-///   divider carries a number and two buttons whose glyphs are arrow *pairs*:
-///   arrows converging on the line close the gap, arrows spreading apart open
-///   it. A divider is shared by the panes either side of it, so ten points means
-///   ten points of gap, not ten from each side — which is why the buttons close
-///   and open a gap rather than moving an edge.
+/// **Every arrow stands against the line it moves, and points the way that line
+/// travels** — `->|` and `|<-`. So the arrow that adds room at an edge is the
+/// one pointing *into* the view: growing the top inset is what sends the view's
+/// top edge down. Reading it the other way round — an arrow pointing out of the
+/// frame to add room — puts the arrow and the line it moves in opposite
+/// directions, which is exactly the thing a picture is here to avoid.
 ///
-/// Both flavors come out the same size overall, so a panel showing one of each
-/// gets two diagrams that line up.
+/// Two flavors, chosen by `SpacingDiagram`, and they are the *same* control:
+/// same size, same inset, same chips, same code — only the diagram inside
+/// differs, so a panel showing one of each gets two pictures that line up and
+/// behave alike.
+/// - `.frame` — one view inside its container. Each of the four edges of the
+///   view carries a number straddling the line, with one arrow either side of
+///   it.
+/// - `.paneDividers` — four panes and the two dividers between them. A divider
+///   has two edges, one per pane, so it carries **four** arrows: a pair closing
+///   the gap, a pair opening it, each arrow against the pane edge it moves. A
+///   divider is shared by the panes either side of it, so ten points means ten
+///   points of gap, not ten from each side — which is why both arrows of a pair
+///   change the same number.
 ///
 /// The control knows nothing about settings or about what it is spacing. It
 /// holds a `Spacing` and reports changes; wiring that to a setting, and
@@ -60,40 +66,40 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     // MARK: - Metrics
 
-    /// The overall size of either control, and the diagram size of the pane
-    /// flavor — which draws entirely inside itself. Wide enough that the two
-    /// divider controls stay clear of each other: each sits in the middle of a
+    /// The overall size of **both** flavors. Wide enough that the two divider
+    /// controls stay clear of each other: each sits in the middle of a
     /// different pane, and the room between those two middles is what this
     /// number buys.
-    private static let controlSize = CGSize(width: 300, height: 170)
-    private static let fieldSize = CGSize(width: 44, height: 21)
-    private static let edgeArrowSize: CGFloat = 22
+    private static let controlSize = CGSize(width: 380, height: 220)
+    private static let fieldSize = CGSize(width: 40, height: 21)
+
+    /// An arrow is drawn in a box shaped like the glyph on it: `length` runs
+    /// the way the arrow points, `breadth` across. Deliberately large — these
+    /// are the controls, not annotations on a drawing, and a 22-point chip read
+    /// as the latter.
+    /// `nonisolated` because they are geometry, not view state: the layout
+    /// tests reason about them without a main actor to hop to.
+    nonisolated static let arrowLength: CGFloat = 28
+    nonisolated static let arrowBreadth: CGFloat = 20
+
     /// Between a number and the arrow beside it.
-    private static let arrowGap: CGFloat = 6
-    /// How far the outward arrow is pushed past its edge, and the inward one
-    /// pulled inside it. Small, but it is what makes the pair read as *out of
-    /// the frame* and *into it* rather than as two arrows in a row.
-    private static let arrowNudge: CGFloat = 5
-    /// A divider button's glyph is a pair of arrows either side of a line, so it
-    /// is twice as long as it is thick. The box is shaped like the glyph, and
-    /// the *thickness* is what the layout spaces on.
-    private static let gutterButtonLength: CGFloat = 40
-    private static let gutterButtonThickness: CGFloat = 18
-    private static let arrowSymbolPointSize: CGFloat = 14
+    private static let arrowGap: CGFloat = 2
+    private static let arrowSymbolPointSize: CGFloat = 20
     /// Every arrow sits on a rounded chip. Without it a bare glyph reads as part
     /// of the drawing rather than as a button — and these are the buttons the
     /// control exists for.
     private static let chipRadius: CGFloat = 5
 
-    /// Room the frame flavor needs outside its diagram: a number straddling an
-    /// edge hangs half its width past the frame, and the arrow beside it is
-    /// nudged further out still. The wider of the two wins on each axis.
-    private static let framePadding = CGSize(
-        width: max(fieldSize.width / 2, edgeArrowSize / 2 + arrowNudge),
-        height: max(fieldSize.height / 2, edgeArrowSize / 2 + arrowNudge)
+    /// Room outside the diagram for what hangs off it — the same on both
+    /// flavors, so the two draw the same rectangle in the same place.
+    ///
+    /// An arrow standing outside an edge at zero spacing reaches a full arrow
+    /// length past the frame line, and a number straddling that line hangs half
+    /// its width past it. The larger wins on each axis.
+    private static let diagramInset = CGSize(
+        width: max(fieldSize.width / 2, arrowLength),
+        height: max(fieldSize.height / 2, arrowLength)
     )
-
-    private var padding: CGSize { style == .frame ? Self.framePadding : .zero }
 
     // MARK: - Subviews
 
@@ -111,10 +117,27 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     private var gutterFields: [SpacingGutter: NSTextField] = [:]
     /// Per edge: the arrow that adds room and the arrow that takes it away.
     private var edgeButtons: [SpacingEdge: (more: NSButton, less: NSButton)] = [:]
-    /// Per divider: the button that closes the gap and the button that opens it.
-    private var gutterButtons: [SpacingGutter: (narrower: NSButton, wider: NSButton)] = [:]
+    /// Per divider: the two arrows that close the gap and the two that open it,
+    /// one of each standing against each of the panes either side.
+    ///
+    /// A single button carrying a *pair* of arrows on one glyph said the same
+    /// thing in half the buttons, but it was one control touching neither edge.
+    /// These touch the edges they move.
+    private var gutterButtons: [SpacingGutter: GutterArrows] = [:]
+
+    /// `near` is the pane before the divider — the left one, or the lower one;
+    /// `far` is the one after it.
+    private struct GutterArrows {
+        let narrowerNear: NSButton
+        let narrowerFar: NSButton
+        let widerNear: NSButton
+        let widerFar: NSButton
+    }
 
     private var arrowActions: [ObjectIdentifier: ArrowAction] = [:]
+    /// Which way each arrow points — the one fact its placement and its box are
+    /// both derived from, so neither can disagree with the glyph.
+    private var arrowDirections: [ObjectIdentifier: SpacingArrow] = [:]
     private var fieldTargets: [ObjectIdentifier: FieldTarget] = [:]
 
     private var palette: SemanticPalette = ThemePaletteObserver.currentPalette
@@ -159,12 +182,12 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             addSubview(field)
 
             let more = makeArrowButton(
-                symbol: edge.outward.symbolName,
+                arrow: edge.growing,
                 accessibility: "spacing.edge.\(edge.rawValue).more",
                 tooltip: "More \(edge.displayName.lowercased()) space"
             )
             let less = makeArrowButton(
-                symbol: edge.inward.symbolName,
+                arrow: edge.shrinking,
                 accessibility: "spacing.edge.\(edge.rawValue).less",
                 tooltip: "Less \(edge.displayName.lowercased()) space"
             )
@@ -184,37 +207,38 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             gutterFields[gutter] = field
             addSubview(field)
 
-            let narrower = makeArrowButton(
-                symbol: Self.gutterSymbol(gutter, narrower: true),
-                accessibility: "spacing.gutter.\(gutter.rawValue).narrower",
-                tooltip: "Narrower gap between \(gutter.displayName)"
+            func arrow(near: Bool, narrower: Bool) -> NSButton {
+                let button = makeArrowButton(
+                    arrow: Self.gutterArrow(gutter, near: near, narrower: narrower),
+                    accessibility: "spacing.gutter.\(gutter.rawValue)"
+                        + ".\(narrower ? "narrower" : "wider").\(near ? "near" : "far")",
+                    tooltip: "\(narrower ? "Narrower" : "Wider") gap between \(gutter.displayName)"
+                )
+                arrowActions[ObjectIdentifier(button)] = .gutter(gutter, narrower ? -1 : 1)
+                addSubview(button)
+                return button
+            }
+
+            gutterButtons[gutter] = GutterArrows(
+                narrowerNear: arrow(near: true, narrower: true),
+                narrowerFar: arrow(near: false, narrower: true),
+                widerNear: arrow(near: true, narrower: false),
+                widerFar: arrow(near: false, narrower: false)
             )
-            let wider = makeArrowButton(
-                symbol: Self.gutterSymbol(gutter, narrower: false),
-                accessibility: "spacing.gutter.\(gutter.rawValue).wider",
-                tooltip: "Wider gap between \(gutter.displayName)"
-            )
-            arrowActions[ObjectIdentifier(narrower)] = .gutter(gutter, -1)
-            arrowActions[ObjectIdentifier(wider)] = .gutter(gutter, 1)
-            addSubview(narrower)
-            addSubview(wider)
-            gutterButtons[gutter] = (narrower, wider)
         }
     }
 
-    /// Arrows pointing at a line close the gap; arrows pointing away from it
-    /// open the gap. The line in the symbol is the divider, which is why these
-    /// read without a label.
-    private static func gutterSymbol(_ gutter: SpacingGutter, narrower: Bool) -> String {
+    /// Which way one of a divider's four arrows points: the way the pane edge
+    /// it stands against travels.
+    ///
+    /// Closing the gap brings both edges towards the divider and opening it
+    /// takes them both away, so the near arrow and the far arrow of a pair
+    /// point at each other or away from each other — which is what makes the
+    /// pair read as *close* or *open* without a label on it.
+    private static func gutterArrow(_ gutter: SpacingGutter, near: Bool, narrower: Bool) -> SpacingArrow {
         switch gutter {
-        case .betweenColumns:
-            return narrower
-                ? "arrow.right.and.line.vertical.and.arrow.left"
-                : "arrow.left.and.line.vertical.and.arrow.right"
-        case .betweenRows:
-            return narrower
-                ? "arrow.down.and.line.horizontal.and.arrow.up"
-                : "arrow.up.and.line.horizontal.and.arrow.down"
+        case .betweenColumns: return near == narrower ? .right : .left
+        case .betweenRows: return near == narrower ? .up : .down
         }
     }
 
@@ -247,14 +271,14 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         return field.accessibilityID(accessibility)
     }
 
-    /// The button is sized in `layout()`, so the caller passes only what the
-    /// button *is*, never how big it is.
-    private func makeArrowButton(symbol: String, accessibility: String, tooltip: String) -> NSButton {
+    /// The button is placed in `layout()`, so the caller passes only what the
+    /// button *is* and which way it points — never where it goes.
+    private func makeArrowButton(arrow: SpacingArrow, accessibility: String, tooltip: String) -> NSButton {
         // `scaleProportionallyDown` never scales *up*, so a bigger box on its
         // own buys nothing — the symbol has to be asked for at the size it is
         // meant to be drawn, and at the weight it is meant to be read at.
-        let image = NSImage(systemSymbolName: symbol, accessibilityDescription: tooltip)?
-            .withSymbolConfiguration(.init(pointSize: Self.arrowSymbolPointSize, weight: .semibold))
+        let image = NSImage(systemSymbolName: arrow.symbolName, accessibilityDescription: tooltip)?
+            .withSymbolConfiguration(.init(pointSize: Self.arrowSymbolPointSize, weight: .bold))
         let button = NSButton(image: image ?? NSImage(), target: self, action: #selector(arrowClicked(_:)))
         button.isBordered = false
         button.setButtonType(.momentaryChange)
@@ -273,7 +297,17 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             button.layer?.borderColor = palette.nsColor(.border).cgColor
             button.layer?.borderWidth = 1
         }
+        arrowDirections[ObjectIdentifier(button)] = arrow
         return button.accessibilityID(accessibility)
+    }
+
+    /// The box an arrow is drawn in: shaped like the glyph on it, so a row of
+    /// arrows takes only the room the arrows need.
+    private func box(of button: NSButton) -> CGSize {
+        guard let arrow = arrowDirections[ObjectIdentifier(button)], arrow.isHorizontal else {
+            return CGSize(width: Self.arrowBreadth, height: Self.arrowLength)
+        }
+        return CGSize(width: Self.arrowLength, height: Self.arrowBreadth)
     }
 
     // MARK: - Actions
@@ -368,10 +402,10 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     private var diagramRect: CGRect {
         CGRect(
-            x: padding.width,
-            y: padding.height,
-            width: Self.controlSize.width - padding.width * 2,
-            height: Self.controlSize.height - padding.height * 2
+            x: Self.diagramInset.width,
+            y: Self.diagramInset.height,
+            width: Self.controlSize.width - Self.diagramInset.width * 2,
+            height: Self.controlSize.height - Self.diagramInset.height * 2
         )
     }
 
@@ -386,75 +420,109 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         layoutDividerControls(plan)
     }
 
-    /// The number straddles the edge; one arrow stands either side of it along
-    /// that edge, the *more* arrow nudged outward and the *less* arrow inward.
-    /// All of it is pinned to the frame, which is the one rectangle that does
-    /// not move as the numbers change — so an arrow held down never slides out
-    /// from under the pointer.
+    /// One step out from a line, along the axis an arrow points: half an arrow,
+    /// so the arrow's tip lands exactly on the line.
+    private static let attachment: CGFloat = arrowLength / 2
+
+    /// Where an arrow's centre goes if its **tip** is to touch `line` on the
+    /// cross axis: half an arrow back along the way it points, which puts the
+    /// body on the far side from where it is aimed — `->|`.
+    private func attached(_ arrow: SpacingArrow, to centre: CGPoint) -> CGPoint {
+        switch arrow {
+        case .up: return CGPoint(x: centre.x, y: centre.y - Self.attachment)
+        case .down: return CGPoint(x: centre.x, y: centre.y + Self.attachment)
+        case .left: return CGPoint(x: centre.x + Self.attachment, y: centre.y)
+        case .right: return CGPoint(x: centre.x - Self.attachment, y: centre.y)
+        }
+    }
+
+    /// Which side of the number an arrow sits on, as a sign along its edge: up
+    /// on the left and down on the right, left at the top and right at the
+    /// bottom. Read off the *direction*, so both horizontal edges of the frame
+    /// read the same way as each other and both vertical edges do too — which
+    /// is what stops the top and bottom of the picture being mirror images the
+    /// reader has to re-derive.
+    private static func seat(_ arrow: SpacingArrow) -> CGFloat {
+        switch arrow {
+        case .up, .right: return -1
+        case .down, .left: return 1
+        }
+    }
+
+    /// Along an edge, from the number's centre to an arrow's: clear of the
+    /// number, by the arrow's *breadth* — never its length, which runs the
+    /// other way.
+    private static func alongOffset(alongHorizontal horizontal: Bool) -> CGFloat {
+        (horizontal ? fieldSize.width : fieldSize.height) / 2 + arrowGap + arrowBreadth / 2
+    }
+
+    /// The number straddles the edge of the **view**; one arrow stands either
+    /// side of it along that edge, each with its tip on the line and its body
+    /// on the side opposite the way it points. Press it and the line moves the
+    /// way the arrow is aimed.
     private func layoutEdgeControls(_ plan: SpacingControlLayout) {
         for (edge, field) in edgeFields {
             let centre = plan.position(of: edge)
             place(field, at: centre)
             guard let buttons = edgeButtons[edge] else { continue }
-            let box = CGSize(width: Self.edgeArrowSize, height: Self.edgeArrowSize)
-            if edge.isHorizontal {
-                let along = Self.fieldSize.width / 2 + Self.arrowGap + Self.edgeArrowSize / 2
-                // Up on the left, down on the right, on both horizontal edges —
-                // so the top and bottom of the picture read the same way, and
-                // each arrow is nudged the way it points. Which of the two grows
-                // the edge is then said by the picture itself: the one that adds
-                // room is the one standing outside the frame line.
-                let (left, right) = edge == .top ? (buttons.more, buttons.less) : (buttons.less, buttons.more)
-                place(left, at: CGPoint(x: centre.x - along, y: centre.y + Self.arrowNudge), size: box)
-                place(right, at: CGPoint(x: centre.x + along, y: centre.y - Self.arrowNudge), size: box)
-            } else {
-                let along = Self.fieldSize.height / 2 + Self.arrowGap + Self.edgeArrowSize / 2
-                let out = edge == .leading ? -Self.arrowNudge : Self.arrowNudge
-                place(buttons.more, at: CGPoint(x: centre.x + out, y: centre.y + along), size: box)
-                place(buttons.less, at: CGPoint(x: centre.x - out, y: centre.y - along), size: box)
+            let along = Self.alongOffset(alongHorizontal: edge.isHorizontal)
+            for (button, arrow) in [(buttons.more, edge.growing), (buttons.less, edge.shrinking)] {
+                let seat = Self.seat(arrow) * along
+                let seated = edge.isHorizontal
+                    ? CGPoint(x: centre.x + seat, y: centre.y)
+                    : CGPoint(x: centre.x, y: centre.y + seat)
+                place(button, at: attached(arrow, to: seated), size: box(of: button))
             }
         }
     }
 
-    /// The number sits on the divider, in the middle of the panes it separates;
-    /// the two buttons flank it *along* the divider — close first, open second,
-    /// reading down the column divider and across the row divider.
+    /// A divider has two edges, one per pane, so its number is flanked by two
+    /// *pairs* of arrows: the closing pair one way along the divider, the
+    /// opening pair the other. Each arrow stands against its own pane's edge,
+    /// outside the gutter — there is no room to stand one inside a gap that is
+    /// a hairline at zero, so the opening pair is drawn from the outside too.
     private func layoutDividerControls(_ plan: SpacingControlLayout) {
         for (gutter, field) in gutterFields {
             let centre = plan.position(of: gutter)
             place(field, at: centre)
             guard let buttons = gutterButtons[gutter] else { continue }
-            let step = gutterButtonOffset(for: gutter)
-            let box = gutterBox(for: gutter)
-            switch gutter {
-            case .betweenColumns:
-                place(buttons.narrower, at: CGPoint(x: centre.x, y: centre.y + step), size: box)
-                place(buttons.wider, at: CGPoint(x: centre.x, y: centre.y - step), size: box)
-            case .betweenRows:
-                place(buttons.narrower, at: CGPoint(x: centre.x - step, y: centre.y), size: box)
-                place(buttons.wider, at: CGPoint(x: centre.x + step, y: centre.y), size: box)
+            let across = gutter == .betweenColumns ? plan.columnGutter : plan.rowGutter
+            let along = Self.alongOffset(alongHorizontal: gutter == .betweenRows)
+            let pairs = [(-along, buttons.widerNear, buttons.widerFar),
+                         (along, buttons.narrowerNear, buttons.narrowerFar)]
+            for (offset, near, far) in pairs {
+                for (button, isNear) in [(near, true), (far, false)] {
+                    let seat = Self.gutterSeat(
+                        gutter, on: centre, in: across, along: offset, near: isNear
+                    )
+                    place(button, at: seat, size: box(of: button))
+                }
             }
         }
     }
 
-    /// Shaped like the glyph in it: the column pair points across, the row pair
-    /// points up and down.
-    private func gutterBox(for gutter: SpacingGutter) -> CGSize {
+    /// One of a divider's four arrow seats: `along` picks the pair (the closing
+    /// pair sits above the number on the column divider and to its left on the
+    /// row divider), `near` picks which side of the gutter.
+    private static func gutterSeat(
+        _ gutter: SpacingGutter,
+        on centre: CGPoint,
+        in across: CGRect,
+        along: CGFloat,
+        near: Bool
+    ) -> CGPoint {
         switch gutter {
         case .betweenColumns:
-            return CGSize(width: Self.gutterButtonLength, height: Self.gutterButtonThickness)
+            let side = near
+                ? across.minX - attachment
+                : across.maxX + attachment
+            return CGPoint(x: side, y: centre.y + along)
         case .betweenRows:
-            return CGSize(width: Self.gutterButtonThickness, height: Self.gutterButtonLength)
+            let side = near
+                ? across.minY - attachment
+                : across.maxY + attachment
+            return CGPoint(x: centre.x - along, y: side)
         }
-    }
-
-    /// Far enough from the field that the two do not touch. The column pair
-    /// stacks above and below it, so it clears the field's height; the row pair
-    /// sits either side, so it clears the width. Either way it is the button's
-    /// *thickness* that stacks against the field, never its length.
-    private func gutterButtonOffset(for gutter: SpacingGutter) -> CGFloat {
-        let extent = gutter == .betweenColumns ? Self.fieldSize.height : Self.fieldSize.width
-        return extent / 2 + Self.gutterButtonThickness / 2 + Self.arrowGap / 2
     }
 
     private func place(_ view: NSView?, at center: CGPoint, size: CGSize? = nil) {

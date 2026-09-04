@@ -31,7 +31,16 @@ public struct SpacingControlLayout: Equatable {
     /// the range. The preview says *more* or *less*, not *how many* — that is
     /// the number's job.
     private static let displayScale: CGFloat = 0.7
-    private static let maximumDisplayedInset: CGFloat = 20
+
+    /// How far anything anchored to a moving line can travel over the whole
+    /// range — and so the reason this number is small.
+    ///
+    /// The arrows stand against the edges they move, which means they move
+    /// too. An arrow held down would slide out from under the pointer, and
+    /// stop repeating, the moment it travelled half its own length; the cap is
+    /// kept under that. See `SpacingControl.arrowLength` and
+    /// `testAHeldArrowCannotTravelOutFromUnderThePointer`.
+    public static let maximumDisplayedInset: CGFloat = 12
 
     /// A divider narrower than this is still drawn as a hairline, so the
     /// diagram reads as four panes rather than one at zero.
@@ -97,18 +106,19 @@ public struct SpacingControlLayout: Equatable {
     }
 
     /// Where an edge's number and its two arrows are centred: on the middle of
-    /// that edge of the frame, straddling the line.
+    /// that edge **of the view**, straddling the line.
     ///
-    /// The frame is the one rectangle that does not move as the numbers change,
-    /// which is exactly what a control wants to be attached to — the alternative
-    /// is a row of arrows that slide out from under the pointer as they are
-    /// pressed.
+    /// The line a number moves is the content's, not the frame's — the frame
+    /// is the container, and it stays where it is however much room is asked
+    /// for. So this is the line an arrow has to be attached to for pressing it
+    /// to move what it points at. It does travel as the value changes, which
+    /// is what ``maximumDisplayedInset`` is sized against.
     public func position(of edge: SpacingEdge) -> CGPoint {
         switch edge {
-        case .top: return CGPoint(x: outerFrame.midX, y: outerFrame.maxY)
-        case .bottom: return CGPoint(x: outerFrame.midX, y: outerFrame.minY)
-        case .leading: return CGPoint(x: outerFrame.minX, y: outerFrame.midY)
-        case .trailing: return CGPoint(x: outerFrame.maxX, y: outerFrame.midY)
+        case .top: return CGPoint(x: content.midX, y: content.maxY)
+        case .bottom: return CGPoint(x: content.midX, y: content.minY)
+        case .leading: return CGPoint(x: content.minX, y: content.midY)
+        case .trailing: return CGPoint(x: content.maxX, y: content.midY)
         }
     }
 

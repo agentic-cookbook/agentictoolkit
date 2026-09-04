@@ -19,11 +19,18 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
         case ansi(Int)
         case role(ThemeRole)
         case paneOutline
+        case paneBackdrop
     }
 
     let context: ThemeEditorContext
 
     private var colorWells: [(slot: Slot, well: NSColorWell)] = []
+
+    /// Set while a well is being put back on a resolved value rather than
+    /// edited. `NSColorWell` sends its action for a programmatic assignment too,
+    /// so without this a topic clearing its overrides would immediately record
+    /// them again from the colors it had just stopped using.
+    private var isRestoringWells = false
 
     init(context: ThemeEditorContext, title: String, symbol: String) {
         self.context = context
@@ -78,7 +85,18 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
         return well
     }
 
+    /// Put a well back on a color without recording an edit — what a topic needs
+    /// after dropping its overrides, since the wells show *resolved* values and
+    /// the resolution has just changed underneath them.
+    func showColor(_ rgba: RGBAColor, in slot: Slot) {
+        guard let entry = colorWells.first(where: { $0.slot == slot }) else { return }
+        isRestoringWells = true
+        entry.well.color = NSColor(rgba)
+        isRestoringWells = false
+    }
+
     @objc private func colorWellChanged(_ sender: NSColorWell) {
+        guard !isRestoringWells else { return }
         guard let entry = colorWells.first(where: { $0.well === sender }) else { return }
         let srgb = sender.color.usingColorSpace(.sRGB) ?? sender.color
         apply(RGBAColor(srgb), to: entry.slot)
@@ -96,6 +114,8 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
             case .role(let role): theme.roleOverrides[role.rawValue] = rgba
             case .paneOutline:
                 theme.project = (theme.project ?? ThemeProjectOptions()).with { $0.paneOutline = rgba }
+            case .paneBackdrop:
+                theme.project = (theme.project ?? ThemeProjectOptions()).with { $0.paneBackdrop = rgba }
             }
         }
         didApplyColor(to: slot)

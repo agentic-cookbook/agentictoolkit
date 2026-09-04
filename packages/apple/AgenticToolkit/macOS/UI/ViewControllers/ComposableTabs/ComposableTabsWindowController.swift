@@ -70,6 +70,9 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     /// is open, so the Spacing panel previews on the window behind its sheet.
     private var spacingObservers: [UserSettingObserver<Int>] = []
 
+    /// Keeps the plane behind the panes following the theme.
+    private var backdropObserver: ThemePaletteObserver?
+
     public init(project: ProjectWorkspace) {
         self.project = project
         self.tabbed = MultiTabbedViewController()
@@ -87,6 +90,9 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
 
         tabbed.delegate = self
         tabbed.contentInsets = PaneSpacing.contentInsets
+        backdropObserver = ThemePaletteObserver { [weak self] palette in
+            self?.tabbed.centerBackgroundColor = NSColor(palette.projectPaneBackdrop)
+        }
         spacingObservers = PaneSpacing.edgeSettings.values.map { setting in
             UserSettingObserver(setting) { [weak self] _ in
                 self?.tabbed.contentInsets = PaneSpacing.contentInsets

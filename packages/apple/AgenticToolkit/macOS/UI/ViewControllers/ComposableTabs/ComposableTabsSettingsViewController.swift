@@ -216,9 +216,10 @@ private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPane
             .init(
                 title: "Frame Spacing",
                 body: "The room between the panes and the tab bars framing them, in points, "
-                    + "set per side. Each number sits on the edge it belongs to, with an "
-                    + "arrow either side of it: the arrow pointing out of the frame adds "
-                    + "space, the one pointing inward takes it away. Hold an arrow down to "
+                    + "set per side. Each number straddles the edge it belongs to, with an "
+                    + "arrow either side of it. Every arrow stands against that edge and "
+                    + "points the way it travels, so the arrow pointing into the view is "
+                    + "the one that adds space. Hold an arrow down to "
                     + "keep going, or type a number and press Return. Up and down arrows "
                     + "adjust the field you are in."
             ),

@@ -84,6 +84,16 @@ open class MultiTabbedViewController: NSViewController {
         didSet { applyContentInsets() }
     }
 
+    /// The plane the centre content sits on — what shows through
+    /// `contentInsets`, and through any gap the content leaves inside itself.
+    ///
+    /// `nil` is the window background, so the centre disappears into the window
+    /// and the tab bars are the only chrome. A host whose content should read
+    /// as separate objects rather than as one field gives it a color of its own.
+    public var centerBackgroundColor: NSColor? {
+        didSet { centerContainer.colorOverride = centerBackgroundColor }
+    }
+
     /// The four constraints pinning the mounted content, kept so an inset
     /// change is a constant update rather than a teardown.
     private var centerContentConstraints: [NSLayoutConstraint] = []

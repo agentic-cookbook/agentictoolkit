@@ -154,12 +154,12 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
             && isWindowFocused
             && ComposableTabsActivePane.shared.activeNodeID(in: window) == nodeID
         layer?.borderWidth = isActive ? 2 : 0
-        // The elevated-surface gray, not the accent: this rectangle says which
-        // pane you are in, and it sits around content the user is reading. A
-        // saturated frame competes with what is inside it, where a tone one
-        // step lighter than every other pane's backdrop reads as "raised"
-        // without asking for attention (`principle-of-least-astonishment`).
-        let outline = overrides?.paneOutline.map { NSColor($0) } ?? palette.nsColor(.elevatedSurface)
-        layer?.borderColor = isActive ? outline.cgColor : nil
+        // The outline gray, not the accent: this rectangle says which pane you
+        // are in, and it sits around content the user is reading, so a
+        // saturated frame would compete with what is inside it. It is also not
+        // a *surface* tone — the first version drew it in the raised-surface
+        // gray, which is now the color of the backdrop the pane sits on, and a
+        // line the color of the plane behind it is a line nobody can see.
+        layer?.borderColor = isActive ? NSColor(palette.projectPaneOutline).cgColor : nil
     }
 }

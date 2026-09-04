@@ -82,7 +82,10 @@ public final class PaneSplitView: ThemedSplitView {
             super.drawDivider(in: rect)
             return
         }
-        currentPalette.nsColor(.windowBackground).setFill()
+        // The backdrop, not the window background: a gutter is a window-shaped
+        // hole between two panes, so it has to show the same plane the frame
+        // spacing around them does or the panes float on two different grounds.
+        NSColor(currentPalette.projectPaneBackdrop).setFill()
         rect.fill()
     }
 
