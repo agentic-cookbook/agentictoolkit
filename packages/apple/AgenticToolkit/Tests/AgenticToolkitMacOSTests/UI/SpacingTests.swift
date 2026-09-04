@@ -71,9 +71,15 @@ final class SpacingEditRulesTests: XCTestCase {
 final class SpacingControlLayoutTests: XCTestCase {
 
     /// The rectangle **both** flavors draw their diagram in: one control size
-    /// (380 × 220) less one inset (28 a side), so a panel showing a frame
-    /// control above a divider control gets two pictures that line up.
-    private let diagram = CGRect(x: 28, y: 28, width: 324, height: 164)
+    /// (420 × 250) less the chrome that hangs off it — an arrow's length and a
+    /// number beyond that, on each side — so a panel showing a frame control
+    /// above a divider control gets two pictures that line up.
+    private let diagram = CGRect(
+        x: SpacingControlLayout.chrome.width,
+        y: SpacingControlLayout.chrome.height,
+        width: 420 - SpacingControlLayout.chrome.width * 2,
+        height: 250 - SpacingControlLayout.chrome.height * 2
+    )
 
     private func frame(_ spacing: Spacing) -> SpacingControlLayout {
         SpacingControlLayout(diagram: diagram, spacing: spacing, style: .frame)
@@ -96,11 +102,11 @@ final class SpacingControlLayoutTests: XCTestCase {
         XCTAssertEqual(content.minY, diagram.minY, "bottom was not set")
     }
 
-    /// A number straddles the line its arrows move — the **view's** edge, not
+    /// An edge's arrows meet on the line they move — the **view's** edge, not
     /// the container's. The container stays where it is however much room is
     /// asked for, so an arrow attached to it would point at a line it never
     /// touches.
-    func testEachNumberSitsOnTheMiddleOfTheEdgeOfTheViewItEdits() {
+    func testEachEdgesArrowsMeetOnTheMiddleOfTheEdgeOfTheViewTheyEdit() {
         let plan = frame(Spacing(top: 10, leading: 20, bottom: 30, trailing: 40))
         let content = plan.content
 
@@ -115,6 +121,78 @@ final class SpacingControlLayoutTests: XCTestCase {
         )
     }
 
+    /// The number is not on that line: it stands outside the container,
+    /// centred on the edge it names, and far enough out to clear the arrows.
+    /// At zero spacing the view's edge *is* the container's, which is when an
+    /// arrow reaches furthest past the frame — so that is the case to measure.
+    func testEachNumberStandsOutsideTheContainerClearOfItsArrows() {
+        let plan = frame(Spacing())
+        let field = SpacingControlLayout.fieldSize
+        let reach = SpacingControlLayout.arrowLength
+
+        let top = plan.fieldPosition(of: .top)
+        XCTAssertEqual(top.x, plan.outerFrame.midX, "centred on the edge it names")
+        XCTAssertGreaterThanOrEqual(top.y - field.height / 2, plan.position(of: .top).y + reach)
+
+        let bottom = plan.fieldPosition(of: .bottom)
+        XCTAssertEqual(bottom.x, plan.outerFrame.midX)
+        XCTAssertLessThanOrEqual(bottom.y + field.height / 2, plan.position(of: .bottom).y - reach)
+
+        let leading = plan.fieldPosition(of: .leading)
+        XCTAssertEqual(leading.y, plan.outerFrame.midY)
+        XCTAssertLessThanOrEqual(leading.x + field.width / 2, plan.position(of: .leading).x - reach)
+
+        let trailing = plan.fieldPosition(of: .trailing)
+        XCTAssertEqual(trailing.y, plan.outerFrame.midY)
+        XCTAssertGreaterThanOrEqual(trailing.x - field.width / 2, plan.position(of: .trailing).x + reach)
+    }
+
+    /// The point of moving it out there: the arrows travel with the line, the
+    /// number does not. It is a label on the side, not a mark on the edge.
+    func testANumberHoldsStillWhileTheLineItEditsTravels() {
+        for edge in SpacingEdge.allCases {
+            XCTAssertEqual(
+                frame(Spacing()).fieldPosition(of: edge),
+                frame(Spacing(uniform: 80)).fieldPosition(of: edge),
+                "\(edge)'s number moved"
+            )
+            XCTAssertNotEqual(
+                frame(Spacing()).position(of: edge),
+                frame(Spacing(uniform: 80)).position(of: edge),
+                "\(edge)'s arrows did not"
+            )
+        }
+    }
+
+    /// A divider's number goes outside too, in line with the divider it names —
+    /// above the frame for the gap between the columns, beside it for the gap
+    /// between the rows. Centred on the frame instead, it would name neither.
+    func testADividersNumberStandsOutsideTheFrameInLineWithItsDivider() {
+        let plan = panes(Spacing(betweenColumns: 10, betweenRows: 10))
+
+        let columns = plan.fieldPosition(of: .betweenColumns)
+        XCTAssertEqual(columns.x, plan.columnGutter.midX)
+        XCTAssertGreaterThan(columns.y, plan.outerFrame.maxY)
+
+        let rows = plan.fieldPosition(of: .betweenRows)
+        XCTAssertEqual(rows.y, plan.rowGutter.midY)
+        XCTAssertLessThan(rows.x, plan.outerFrame.minX)
+    }
+
+    /// The two flavors are one control, so their numbers stand the same
+    /// distance off the same rectangle. A panel showing one of each would
+    /// otherwise line the frames up and leave the numbers ragged.
+    func testBothFlavorsHangTheirNumbersTheSameDistanceOffTheFrame() {
+        XCTAssertEqual(
+            frame(Spacing()).fieldPosition(of: .top).y - diagram.maxY,
+            panes(Spacing()).fieldPosition(of: .betweenColumns).y - diagram.maxY
+        )
+        XCTAssertEqual(
+            frame(Spacing()).fieldPosition(of: .leading).x - diagram.minX,
+            panes(Spacing()).fieldPosition(of: .betweenRows).x - diagram.minX
+        )
+    }
+
     /// An arrow standing against the line it moves travels with that line, so
     /// the picture only works while that travel stays under half an arrow: past
     /// that, an arrow held down slides out from under the pointer and the
@@ -123,14 +201,14 @@ final class SpacingControlLayoutTests: XCTestCase {
     func testAHeldArrowCannotTravelOutFromUnderThePointer() {
         XCTAssertLessThan(
             SpacingControlLayout.maximumDisplayedInset,
-            SpacingControl.arrowLength / 2,
+            SpacingControlLayout.arrowLength / 2,
             "an arrow can travel further than half its own length"
         )
 
         let travel = frame(Spacing()).position(of: .top).y
             - frame(Spacing(uniform: 80)).position(of: .top).y
         XCTAssertEqual(travel, SpacingControlLayout.maximumDisplayedInset)
-        XCTAssertLessThan(travel, SpacingControl.arrowLength / 2)
+        XCTAssertLessThan(travel, SpacingControlLayout.arrowLength / 2)
     }
 
     func testTheFrameDiagramHasOnePaneAndNoDividers() {
@@ -166,10 +244,10 @@ final class SpacingControlLayoutTests: XCTestCase {
         XCTAssertGreaterThan(plan.rowGutter.height, 0)
     }
 
-    /// Each divider's number is centred on the panes it separates — the column
+    /// Each divider's arrows are centred on the panes it separates — the column
     /// divider halfway down the top row, the row divider halfway across the
     /// left column.
-    func testADividersNumberSitsInTheMiddleOfThePanesItSeparates() {
+    func testADividersArrowsSitInTheMiddleOfThePanesItSeparates() {
         let plan = panes(Spacing(betweenColumns: 10, betweenRows: 10))
         let topLeft = plan.panes[0]
 
@@ -200,40 +278,34 @@ final class SpacingControlLayoutTests: XCTestCase {
 
     // MARK: - What a divider control covers
 
-    /// The control's own metrics, restated because they are private to it: a
-    /// 40 × 21 field, and four arrows drawn in 28 × 20 boxes — `length` the way
-    /// the arrow points, `breadth` across it.
-    private static let fieldSize = CGSize(width: 40, height: 21)
-    private static let arrowGap: CGFloat = 2
-    private static let arrowBreadth: CGFloat = 20
-
-    /// Along the divider, from the number's centre to an arrow's: clear of the
-    /// number, by the arrow's breadth rather than its length.
-    private static func alongOffset(alongHorizontal horizontal: Bool) -> CGFloat {
-        (horizontal ? fieldSize.width : fieldSize.height) / 2 + arrowGap + arrowBreadth / 2
-    }
+    /// Across the divider, from its centre to the far side of either pair of
+    /// arrows: half a breadth and half a gap out to the pair's centre, and half
+    /// a breadth again for the arrow itself. Nothing sits between the pairs any
+    /// more — the number moved outside the frame — so this is narrower than it
+    /// was, which only makes the overlap check below easier to pass.
+    private static let across =
+        (SpacingControlLayout.arrowBreadth + SpacingControlLayout.arrowGap) / 2
+            + SpacingControlLayout.arrowBreadth / 2
 
     /// The column divider's four arrows point left and right, so each reaches
     /// out from the pane edge it stands against by half an arrow to be seated
     /// and half again for its own box — a whole arrow length either side of the
     /// gutter.
     private func columnControlBox(_ plan: SpacingControlLayout) -> CGRect {
-        let along = Self.alongOffset(alongHorizontal: false) + Self.arrowBreadth / 2
-        return CGRect(
-            x: plan.columnGutter.minX - SpacingControl.arrowLength,
-            y: plan.position(of: .betweenColumns).y - along,
-            width: plan.columnGutter.width + SpacingControl.arrowLength * 2,
-            height: along * 2
+        CGRect(
+            x: plan.columnGutter.minX - SpacingControlLayout.arrowLength,
+            y: plan.position(of: .betweenColumns).y - Self.across,
+            width: plan.columnGutter.width + SpacingControlLayout.arrowLength * 2,
+            height: Self.across * 2
         )
     }
 
     private func rowControlBox(_ plan: SpacingControlLayout) -> CGRect {
-        let along = Self.alongOffset(alongHorizontal: true) + Self.arrowBreadth / 2
-        return CGRect(
-            x: plan.position(of: .betweenRows).x - along,
-            y: plan.rowGutter.minY - SpacingControl.arrowLength,
-            width: along * 2,
-            height: plan.rowGutter.height + SpacingControl.arrowLength * 2
+        CGRect(
+            x: plan.position(of: .betweenRows).x - Self.across,
+            y: plan.rowGutter.minY - SpacingControlLayout.arrowLength,
+            width: Self.across * 2,
+            height: plan.rowGutter.height + SpacingControlLayout.arrowLength * 2
         )
     }
 }

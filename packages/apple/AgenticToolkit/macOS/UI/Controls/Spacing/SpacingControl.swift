@@ -3,12 +3,19 @@ import AppKit
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
 
-/// A picture of the thing being spaced, with each number and its arrows sitting
-/// on the edge — or the divider — they belong to.
+/// A picture of the thing being spaced: the arrows stand on the line they move,
+/// and each number sits outside the frame, in line with the arrows that change
+/// it.
 ///
 /// Four text fields and a column of labels can say the same thing, but they
 /// cannot say *which* edge is which without the reader building the picture in
 /// their head. Here the diagram is the control.
+///
+/// The number is outside because the line belongs to the arrows. They are
+/// attached to it and travel with it, and a number sharing that line pushed all
+/// three along the edge and away from the middle of it. Out beyond the frame the
+/// number holds still and is centred on the side it names, which is what a label
+/// on an edge should do.
 ///
 /// **Every arrow stands against the line it moves, and points the way that line
 /// travels** — `->|` and `|<-`. So the arrow that adds room at an edge is the
@@ -22,8 +29,8 @@ import AgenticToolkitCoreMacOS
 /// differs, so a panel showing one of each gets two pictures that line up and
 /// behave alike.
 /// - `.frame` — one view inside its container. Each of the four edges of the
-///   view carries a number straddling the line, with one arrow either side of
-///   it.
+///   view carries two arrows meeting tip to tip on the line, and a number
+///   beyond the container, centred on that edge.
 /// - `.paneDividers` — four panes and the two dividers between them. A divider
 ///   has two edges, one per pane, so it carries **four** arrows: a pair closing
 ///   the gap, a pair opening it, each arrow against the pane edge it moves. A
@@ -66,24 +73,16 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     // MARK: - Metrics
 
+    /// The diagram's geometry, which lives with the rules that use it.
+    private typealias Metrics = SpacingControlLayout
+
     /// The overall size of **both** flavors. Wide enough that the two divider
     /// controls stay clear of each other: each sits in the middle of a
     /// different pane, and the room between those two middles is what this
-    /// number buys.
-    private static let controlSize = CGSize(width: 380, height: 220)
-    private static let fieldSize = CGSize(width: 40, height: 21)
+    /// number buys. Wider and taller than it was, so the diagram keeps its
+    /// proportions now that a ring of numbers stands outside it.
+    private static let controlSize = CGSize(width: 420, height: 250)
 
-    /// An arrow is drawn in a box shaped like the glyph on it: `length` runs
-    /// the way the arrow points, `breadth` across. Deliberately large — these
-    /// are the controls, not annotations on a drawing, and a 22-point chip read
-    /// as the latter.
-    /// `nonisolated` because they are geometry, not view state: the layout
-    /// tests reason about them without a main actor to hop to.
-    nonisolated static let arrowLength: CGFloat = 28
-    nonisolated static let arrowBreadth: CGFloat = 20
-
-    /// Between a number and the arrow beside it.
-    private static let arrowGap: CGFloat = 2
     private static let arrowSymbolPointSize: CGFloat = 20
     /// Every arrow sits on a rounded chip. Without it a bare glyph reads as part
     /// of the drawing rather than as a button — and these are the buttons the
@@ -93,13 +92,11 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// Room outside the diagram for what hangs off it — the same on both
     /// flavors, so the two draw the same rectangle in the same place.
     ///
-    /// An arrow standing outside an edge at zero spacing reaches a full arrow
-    /// length past the frame line, and a number straddling that line hangs half
-    /// its width past it. The larger wins on each axis.
-    private static let diagramInset = CGSize(
-        width: max(fieldSize.width / 2, arrowLength),
-        height: max(fieldSize.height / 2, arrowLength)
-    )
+    /// At zero spacing an arrow standing outside an edge reaches a full arrow
+    /// length past the frame line, and the number stands beyond that again.
+    /// Adding those up is ``SpacingControlLayout/chrome``'s job, since it is
+    /// what places them.
+    private static let diagramInset = Metrics.chrome
 
     // MARK: - Subviews
 
@@ -305,9 +302,9 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// arrows takes only the room the arrows need.
     private func box(of button: NSButton) -> CGSize {
         guard let arrow = arrowDirections[ObjectIdentifier(button)], arrow.isHorizontal else {
-            return CGSize(width: Self.arrowBreadth, height: Self.arrowLength)
+            return CGSize(width: Metrics.arrowBreadth, height: Metrics.arrowLength)
         }
-        return CGSize(width: Self.arrowLength, height: Self.arrowBreadth)
+        return CGSize(width: Metrics.arrowLength, height: Metrics.arrowBreadth)
     }
 
     // MARK: - Actions
@@ -427,8 +424,8 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// overlap; the control clips rather than shrinking further, which is a
     /// legible failure instead of an illegible one.
     private static let minimumSize = CGSize(
-        width: diagramInset.width * 2 + fieldSize.width * 3,
-        height: diagramInset.height * 2 + fieldSize.height * 3
+        width: diagramInset.width * 2 + Metrics.fieldSize.width * 3,
+        height: diagramInset.height * 2 + Metrics.fieldSize.height * 3
     )
 
     /// Measured from `bounds`, not from `controlSize`.
@@ -475,7 +472,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     /// One step out from a line, along the axis an arrow points: half an arrow,
     /// so the arrow's tip lands exactly on the line.
-    private static let attachment: CGFloat = arrowLength / 2
+    private static let attachment: CGFloat = Metrics.arrowLength / 2
 
     /// Where an arrow's centre goes if its **tip** is to touch `line` on the
     /// cross axis: half an arrow back along the way it points, which puts the
@@ -489,58 +486,42 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         }
     }
 
-    /// Which side of the number an arrow sits on, as a sign along its edge: up
-    /// on the left and down on the right, left at the top and right at the
-    /// bottom. Read off the *direction*, so both horizontal edges of the frame
-    /// read the same way as each other and both vertical edges do too — which
-    /// is what stops the top and bottom of the picture being mirror images the
-    /// reader has to re-derive.
-    private static func seat(_ arrow: SpacingArrow) -> CGFloat {
-        switch arrow {
-        case .up, .right: return -1
-        case .down, .left: return 1
-        }
-    }
+    /// Between a divider's two pairs of arrows, from the divider's centre to
+    /// each pair: half an arrow's breadth and half the gap, so the closing pair
+    /// and the opening pair stand clear of each other with nothing between them.
+    /// There used to be a number there, and this is what shrank when it moved
+    /// outside.
+    private static let pairOffset: CGFloat = (Metrics.arrowBreadth + Metrics.arrowGap) / 2
 
-    /// Along an edge, from the number's centre to an arrow's: clear of the
-    /// number, by the arrow's *breadth* — never its length, which runs the
-    /// other way.
-    private static func alongOffset(alongHorizontal horizontal: Bool) -> CGFloat {
-        (horizontal ? fieldSize.width : fieldSize.height) / 2 + arrowGap + arrowBreadth / 2
-    }
-
-    /// The number straddles the edge of the **view**; one arrow stands either
-    /// side of it along that edge, each with its tip on the line and its body
-    /// on the side opposite the way it points. Press it and the line moves the
-    /// way the arrow is aimed.
+    /// Both of an edge's arrows sit on the middle of that edge of the **view**,
+    /// tips meeting on the line and bodies on opposite sides of it — `->| |<-`.
+    /// Press one and the line moves the way it is aimed. The number stands out
+    /// beyond the container, centred on the same edge.
     private func layoutEdgeControls(_ plan: SpacingControlLayout) {
         for (edge, field) in edgeFields {
-            let centre = plan.position(of: edge)
-            place(field, at: centre)
+            place(field, at: plan.fieldPosition(of: edge))
             guard let buttons = edgeButtons[edge] else { continue }
-            let along = Self.alongOffset(alongHorizontal: edge.isHorizontal)
+            let line = plan.position(of: edge)
             for (button, arrow) in [(buttons.more, edge.growing), (buttons.less, edge.shrinking)] {
-                let seat = Self.seat(arrow) * along
-                let seated = edge.isHorizontal
-                    ? CGPoint(x: centre.x + seat, y: centre.y)
-                    : CGPoint(x: centre.x, y: centre.y + seat)
-                place(button, at: attached(arrow, to: seated), size: box(of: button))
+                place(button, at: attached(arrow, to: line), size: box(of: button))
             }
         }
     }
 
-    /// A divider has two edges, one per pane, so its number is flanked by two
-    /// *pairs* of arrows: the closing pair one way along the divider, the
-    /// opening pair the other. Each arrow stands against its own pane's edge,
-    /// outside the gutter — there is no room to stand one inside a gap that is
-    /// a hairline at zero, so the opening pair is drawn from the outside too.
+    /// A divider has two edges, one per pane, so it carries two *pairs* of
+    /// arrows: the closing pair one way along the divider, the opening pair the
+    /// other, straddling the middle of the panes they separate. Each arrow
+    /// stands against its own pane's edge, outside the gutter — there is no room
+    /// to stand one inside a gap that is a hairline at zero, so the opening pair
+    /// is drawn from the outside too. The number stands outside the container,
+    /// in line with the divider.
     private func layoutDividerControls(_ plan: SpacingControlLayout) {
         for (gutter, field) in gutterFields {
             let centre = plan.position(of: gutter)
-            place(field, at: centre)
+            place(field, at: plan.fieldPosition(of: gutter))
             guard let buttons = gutterButtons[gutter] else { continue }
             let across = gutter == .betweenColumns ? plan.columnGutter : plan.rowGutter
-            let along = Self.alongOffset(alongHorizontal: gutter == .betweenRows)
+            let along = Self.pairOffset
             let pairs = [(-along, buttons.widerNear, buttons.widerFar),
                          (along, buttons.narrowerNear, buttons.narrowerFar)]
             for (offset, near, far) in pairs {
@@ -580,7 +561,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
 
     private func place(_ view: NSView?, at center: CGPoint, size: CGSize? = nil) {
         guard let view else { return }
-        let box = size ?? Self.fieldSize
+        let box = size ?? Metrics.fieldSize
         view.frame = CGRect(
             x: (center.x - box.width / 2).rounded(),
             y: (center.y - box.height / 2).rounded(),
