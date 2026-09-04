@@ -2,6 +2,7 @@ import AppKit
 
 import AgenticToolkitCore
 import AgenticToolkitCoreMacOS
+import AgenticToolkitLanguage
 
 /// A file browser that shows what you click: the tree on the left, the selected
 /// file on the right.
@@ -45,13 +46,20 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
     ///   - ignorePatterns: Wildcard filename patterns to leave out of the tree.
     ///   - autosaveName: Divider-position key; distinct per pane when a host can
     ///     open more than one.
+    ///   - documentStore: The app-wide open-document registry. Injected —
+    ///     never built here, so two panes over the same project genuinely
+    ///     share one refcounted set of open documents.
+    ///   - saveScheduler: The app-wide debounced autosave scheduler, likewise
+    ///     shared rather than built per pane.
     public init(
         directories: FileBrowserDirectories,
         excludedURL: URL,
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         autosaveName: String = "file-browser-split",
-        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState(),
+        documentStore: TextDocumentStore,
+        saveScheduler: TextDocumentSaveScheduler
     ) {
         let selection = FileBrowserSelection()
         self.selection = selection
@@ -61,9 +69,14 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
             config: config,
             ignorePatterns: ignorePatterns,
             selection: selection,
-            restoration: restoration
+            restoration: restoration,
+            documentStore: documentStore
         )
-        self.viewerViewController = FileViewerViewController(selection: selection)
+        self.viewerViewController = FileViewerViewController(
+            selection: selection,
+            documentStore: documentStore,
+            saveScheduler: saveScheduler
+        )
         self.splitAutosaveName = autosaveName
         super.init(nibName: nil, bundle: nil)
     }
@@ -75,7 +88,9 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
         config: FileTreeConfig = .default,
         ignorePatterns: [String] = [],
         autosaveName: String = "file-browser-split",
-        restoration: FileBrowserRestorationState = FileBrowserRestorationState()
+        restoration: FileBrowserRestorationState = FileBrowserRestorationState(),
+        documentStore: TextDocumentStore,
+        saveScheduler: TextDocumentSaveScheduler
     ) {
         self.init(
             directories: FileBrowserDirectories(primary: rootURL),
@@ -83,7 +98,9 @@ public final class FileBrowserSplitViewController: ThemedSplitViewController {
             config: config,
             ignorePatterns: ignorePatterns,
             autosaveName: autosaveName,
-            restoration: restoration
+            restoration: restoration,
+            documentStore: documentStore,
+            saveScheduler: saveScheduler
         )
     }
 
