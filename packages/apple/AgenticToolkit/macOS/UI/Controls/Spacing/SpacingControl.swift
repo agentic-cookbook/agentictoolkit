@@ -79,11 +79,9 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// The overall size of **both** flavors. Wide enough that the two divider
     /// controls stay clear of each other: each sits in the middle of a
     /// different pane, and the room between those two middles is what this
-    /// number buys. Taller than it was by exactly the footer Reset stands in.
-    private static let controlSize = CGSize(
-        width: 420,
-        height: 250 + Metrics.footer
-    )
+    /// number buys. Reset needs no room of its own — it rides the row the
+    /// bottom number sits on, which the chrome already allows for.
+    private static let controlSize = CGSize(width: 420, height: 250)
 
     /// The arrows are bare glyphs in the highlight colour — no chip, no box,
     /// no weight. Four of them meet on a divider and two on every edge, and
@@ -603,6 +601,16 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         }
     }
 
+    /// The number Tab arrives at first, and the one it leaves from — the two
+    /// ends a panel showing more than one of these joins together.
+    ///
+    /// The join is the panel's to make, not this control's: which control comes
+    /// next is a fact about the panel, and a control that reached for its own
+    /// successor would have to know it had one. Handing back the two ends is
+    /// enough, and it is the same thing `nextKeyView` asks for anywhere else.
+    public var firstNumberField: NSView? { tabOrder.first }
+    public var lastNumberField: NSView? { tabOrder.last }
+
     /// AppKit infers the key view loop from where subviews *are*, and these are
     /// placed by frame rather than by constraints — so the loop it works out
     /// threads this control's numbers in among whatever else the panel happens
@@ -610,9 +618,10 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// nowhere. Tab is answered here instead.
     ///
     /// Only *within* the control: at either end the key is handed back, so
-    /// focus still leaves the control the way it leaves anything else. A ring
-    /// would have been the easy version and is the wrong one — a closed ring
-    /// is a trap, and the panel around this has fields of its own.
+    /// focus still leaves the control the way it leaves anything else — down
+    /// whatever `nextKeyView` the panel joined the two ends to. A ring would
+    /// have been the easy version and is the wrong one — a closed ring is a
+    /// trap, and the panel around this has fields of its own.
     private func moveFocus(from field: NSTextField, by step: Int) -> Bool {
         let fields = tabOrder
         guard let index = fields.firstIndex(of: field),
@@ -700,7 +709,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// legible failure instead of an illegible one.
     private static let minimumSize = CGSize(
         width: diagramInset.width * 2 + Metrics.fieldGroupSize.width * 3,
-        height: diagramInset.height * 2 + Metrics.footer + Metrics.fieldGroupSize.height * 3
+        height: diagramInset.height * 2 + Metrics.fieldGroupSize.height * 3
     )
 
     /// Measured from `bounds`, not from `controlSize`.
@@ -718,14 +727,11 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             width: max(bounds.width, Self.minimumSize.width),
             height: max(bounds.height, Self.minimumSize.height)
         )
-        // The footer comes off the bottom and nowhere else: taking it from
-        // both ends would move the picture up relative to a control that had no
-        // Reset, and the two flavors have to draw the same rectangle.
         return CGRect(
             x: Self.diagramInset.width,
-            y: Self.diagramInset.height + Metrics.footer,
+            y: Self.diagramInset.height,
             width: size.width - Self.diagramInset.width * 2,
-            height: size.height - Self.diagramInset.height * 2 - Metrics.footer
+            height: size.height - Self.diagramInset.height * 2
         )
     }
 
@@ -749,16 +755,24 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         layoutReset(plan)
     }
 
-    /// Under the lower-right corner of the diagram: right edge flush with the
-    /// frame's, top edge a gap below where the bottom number hangs. Both are
-    /// read off the plan rather than off `bounds`, so it stays with the picture
+    /// On the row the bottom number rides, right edge flush with the frame's.
+    ///
+    /// Both flavors leave the same room below the diagram for a number, and
+    /// only the frame flavor puts one there — so Reset on that line lands
+    /// beside the bottom number rather than under it, and lands in the same
+    /// place in the picture that has no bottom number. It used to stand in a
+    /// footer of its own below everything, which put it one distance from the
+    /// frame control's numbers and a different one from the divider control's.
+    ///
+    /// Read off the plan rather than off `bounds`, so it stays with the picture
     /// when the control is given less room than it asked for.
     private func layoutReset(_ plan: SpacingControlLayout) {
         guard let resetButton else { return }
         let size = Metrics.resetSize
+        let row = plan.fieldPosition(of: .bottom).y
         resetButton.frame = CGRect(
             x: (plan.outerFrame.maxX - size.width).rounded(),
-            y: (plan.outerFrame.minY - Metrics.chrome.height - Metrics.footer).rounded(),
+            y: (row - size.height / 2).rounded(),
             width: size.width,
             height: size.height
         )

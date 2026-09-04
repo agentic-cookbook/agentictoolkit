@@ -60,13 +60,11 @@ public struct SpacingControlLayout: Equatable {
         height: arrowLength + arrowGap + fieldGroupSize.height
     )
 
-    /// Reset stands below the bottom number rather than inside the diagram, so
-    /// the room it needs comes off the diagram's bottom and nowhere else — the
-    /// picture stays centred left to right, which is what keeps the two flavors
-    /// drawing the same rectangle.
+    /// Reset stands outside the diagram, on the same row as the bottom number
+    /// and against the frame's right edge. It costs the picture no room of its
+    /// own: that row is already part of the chrome, empty on the flavor with no
+    /// bottom number, which is what puts Reset in the same place in both.
     public static let resetSize = CGSize(width: 58, height: 20)
-    public static let resetGap: CGFloat = 8
-    public static let footer: CGFloat = resetGap + resetSize.height
 
     /// From the container's edge out to the centre of a number sitting beyond
     /// it, given how far that number reaches across the gap.

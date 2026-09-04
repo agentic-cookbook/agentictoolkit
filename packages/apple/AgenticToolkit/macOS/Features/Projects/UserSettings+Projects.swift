@@ -20,4 +20,13 @@ extension UserSettings {
     /// project window's panes — nothing else in the app has any.
     /// `ThemeProjectOptions.highlightActivePane` overrides it.
     static public var highlightActivePane = UserSetting<Bool>("highlight_active_pane", default: true)
+
+    /// Whether moving the pointer over a pane makes it the active one and hands
+    /// it the keyboard, so a window in front can be typed into without a click.
+    ///
+    /// Off by default. Focus that moves without being asked to is a preference
+    /// people hold strongly in both directions, and the surprising answer — the
+    /// keys going somewhere the user did not put them — is the wrong default.
+    static public var activePaneFollowsMouse =
+        UserSetting<Bool>("active_pane_follows_mouse", default: false)
 }

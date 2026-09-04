@@ -101,14 +101,12 @@ final class SpacingEditRulesTests: XCTestCase {
 final class SpacingControlLayoutTests: XCTestCase {
 
     /// The rectangle **both** flavors draw their diagram in: one control size
-    /// (420 wide, and 250 tall plus the footer Reset stands in) less the chrome
-    /// that hangs off it — an arrow's length and a number-plus-stepper beyond
-    /// that, on each side, and the footer off the bottom only — so a panel
-    /// showing a frame control above a divider control gets two pictures that
-    /// line up.
+    /// (420 by 250) less the chrome that hangs off it — an arrow's length and a
+    /// number-plus-stepper beyond that, on each side — so a panel showing a
+    /// frame control above a divider control gets two pictures that line up.
     private let diagram = CGRect(
         x: SpacingControlLayout.chrome.width,
-        y: SpacingControlLayout.chrome.height + SpacingControlLayout.footer,
+        y: SpacingControlLayout.chrome.height,
         width: 420 - SpacingControlLayout.chrome.width * 2,
         height: 250 - SpacingControlLayout.chrome.height * 2
     )

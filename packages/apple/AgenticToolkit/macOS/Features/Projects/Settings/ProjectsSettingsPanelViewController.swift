@@ -21,6 +21,11 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     /// part that comes and goes is one stack the group holds.
     private let patternList = NSStackView()
 
+    /// Held so the panel can join their Tab orders end to end — see
+    /// `joinTabOrder()`.
+    private var frameSpacing: SpacingControl?
+    private var dividerSpacing: SpacingControl?
+
     private let newPatternField = ThemedTextField()
     private let addButton = NSButton(title: "Add", target: nil, action: nil)
     private let restoreButton = NSButton(title: "Restore Defaults", target: nil, action: nil)
@@ -85,6 +90,18 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
                     + "to compete with what is inside it."
             ),
             .init(
+                title: "Active Pane Follows the Mouse",
+                body: "With this on, the pane under the pointer becomes the active one as "
+                    + "soon as the pointer is over it, and the keyboard goes with it — so a "
+                    + "window that is already in front can be typed into without clicking "
+                    + "first. Only the front window follows the pointer: passing over a "
+                    + "window behind it changes nothing, because that window is not the one "
+                    + "taking the keys. The keys land where a click at that spot would have "
+                    + "put them, which is the terminal, the list or the field the pointer is "
+                    + "actually over rather than the pane as a whole. Off, the active pane "
+                    + "is the one you last clicked in."
+            ),
+            .init(
                 title: "Themes Override This",
                 body: "A theme can carry its own answer for whether the active pane is "
                     + "outlined, and in what color, under the theme's Project topic in Theme "
@@ -116,6 +133,7 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
         addGroup(createDividerGroup())
         addGroup(createActivePaneGroup())
         addGroup(createSkippedFoldersGroup())
+        joinTabOrder()
 
         patternsObserver = UserSettingObserver(UserSettings.projectScanSkipPatterns) { [weak self] _ in
             self?.reloadPatterns()
@@ -150,20 +168,36 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
     /// out which four were the outside.
     private func createFrameGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Frame Spacing")
-        group.addSettingSubview(SpacingControl.boundToSettings(
-            style: .frame,
-            edges: PaneSpacing.edgeSettings
-        ))
+        let control = SpacingControl.boundToSettings(style: .frame, edges: PaneSpacing.edgeSettings)
+        frameSpacing = control
+        group.addSettingSubview(control)
         return group
     }
 
     private func createDividerGroup() -> ComposableSettings.GroupView {
         let group = ComposableSettings.GroupView(withTitle: "Pane Divider Spacing")
-        group.addSettingSubview(SpacingControl.boundToSettings(
+        let control = SpacingControl.boundToSettings(
             style: .paneDividers,
             gutters: PaneSpacing.gutterSettings
-        ))
+        )
+        dividerSpacing = control
+        group.addSettingSubview(control)
         return group
+    }
+
+    /// Tab out of the last number in one group and into the first number of the
+    /// next, then on into the panel's own field.
+    ///
+    /// Each control answers Tab within itself and hands the key back at either
+    /// end, which is where AppKit takes over — and AppKit works the key view
+    /// loop out from where subviews *are*. These are placed by frame, so left
+    /// to itself Tab out of the bottom number went somewhere that looked like
+    /// nowhere. Which control follows which is the panel's knowledge, so the
+    /// panel is what says it. `nextKeyView` sets the back link too, so
+    /// Shift-Tab walks the same chain the other way.
+    private func joinTabOrder() {
+        frameSpacing?.lastNumberField?.nextKeyView = dividerSpacing?.firstNumberField
+        dividerSpacing?.lastNumberField?.nextKeyView = newPatternField
     }
 
     private func createActivePaneGroup() -> ComposableSettings.GroupView {
@@ -171,6 +205,10 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
         group.addSettingSubview(ComposableSettings.CheckboxView(with: ComposableSettings.ViewModel<Bool>(
             title: "Outline the active pane",
             setting: UserSettings.highlightActivePane
+        )))
+        group.addSettingSubview(ComposableSettings.CheckboxView(with: ComposableSettings.ViewModel<Bool>(
+            title: "Active pane follows the mouse",
+            setting: UserSettings.activePaneFollowsMouse
         )))
         return group
     }
