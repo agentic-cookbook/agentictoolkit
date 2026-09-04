@@ -193,10 +193,21 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             queue: .main
         ) { [weak self] _ in
             MainActor.assumeIsolated {
-                guard let self, self.hasAppliedPreferredThicknesses else { return }
-                self.rootSplit()?.scheduleThicknessPersist()
+                self?.persistThicknessAfterResize()
             }
         }
+    }
+
+    /// Split out of the `didResizeSubviewsNotification` handler above so that
+    /// handler captures `self` with a single optional-chained access rather
+    /// than unwrapping it into a local `self` and using it twice — the latter
+    /// is what actually triggers "sending 'self' risks causing data races"
+    /// for a non-`Sendable`, `NSObject`-rooted type inside
+    /// `MainActor.assumeIsolated`, even though the notification is only ever
+    /// posted on the main queue (`queue: .main`, set above).
+    private func persistThicknessAfterResize() {
+        guard hasAppliedPreferredThicknesses else { return }
+        rootSplit()?.scheduleThicknessPersist()
     }
 
     /// `preferredThicknessFraction` alone is not enough. AppKit resolves it
