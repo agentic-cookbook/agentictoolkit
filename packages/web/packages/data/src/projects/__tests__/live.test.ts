@@ -48,7 +48,7 @@ afterEach(() => {
 
 /** Fire the stream's `project` event as the backend would: an empty payload. */
 function serverSaysChanged(which = 0): void {
-  opened[which]!.onEvent("{}");
+  opened[which]!.onEvent("{}", "project");
 }
 
 describe("subscribeToProject — the connection", () => {
