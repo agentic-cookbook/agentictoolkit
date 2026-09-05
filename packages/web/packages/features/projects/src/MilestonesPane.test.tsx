@@ -340,7 +340,27 @@ describe("MilestonesPane", () => {
 // renders — what matters is which FACTS it commits to, and "overdue" is the one that could be
 // wrong in a way nobody notices.
 describe("milestoneSublabel", () => {
-  const today = new Date().toISOString().slice(0, 10);
+  // The only block in this file that reads the WALL CLOCK: `milestoneSublabel` asks whether the
+  // target date has passed, so every assertion below is really an assertion about what day it is.
+  // Left on the real clock they rot on a calendar date rather than on a change — the fixture's
+  // 2026-09-01 went past on 2026-09-02, the two exact-string expectations here started reading
+  // "Sep 1, 2026 · overdue", and every repo in the fleet went red on a commit that had touched
+  // none of this. Freeze the clock rather than move the fixture forward: a later date only sets
+  // the same trap for a later day, and the point of these six cases is the FOLD, not the calendar.
+  const NOW = new Date("2026-08-15T12:00:00Z"); // before the fixture date, so it is still ahead
+  // Derived from the frozen clock, not from `new Date()` — this constant is evaluated when the
+  // suite is COLLECTED, before any beforeEach has run, so reading the real clock here would
+  // quietly stop testing "today" the moment the two disagreed.
+  const today = NOW.toISOString().slice(0, 10);
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
   it("leads with the date, then the progress", () => {
     expect(milestoneSublabel(milestone({ counts: counts({ todo: 1, done: 1 }) }))).toBe(
