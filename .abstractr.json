@@ -1,0 +1,506 @@
+{
+  "version": 1,
+  "shared_packages": [
+    {
+      "name": "agenticdevelopertoolkit",
+      "path": "external/agenticdevelopertoolkit"
+    }
+  ],
+  "tiers": [
+    {
+      "name": "apple-core",
+      "paths": [
+        "packages/apple/AgenticToolkit/Core/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "AgenticToolkitCore. Foundation only \u2014 no UI, no platform APIs."
+    },
+    {
+      "name": "apple-pluginkit",
+      "paths": [
+        "packages/apple/AgenticToolkit/AIPluginKit/"
+      ],
+      "depends_on": [
+        "apple-core"
+      ],
+      "shared": true,
+      "holds": "AIPluginKit. The plugin ABI and loading model."
+    },
+    {
+      "name": "apple-coreui",
+      "paths": [
+        "packages/apple/AgenticToolkit/CoreUI/"
+      ],
+      "depends_on": [
+        "apple-core"
+      ],
+      "shared": true,
+      "holds": "AgenticToolkitCoreUI. Cross-cutting AppKit utilities and primitive views."
+    },
+    {
+      "name": "apple-coremacos",
+      "paths": [
+        "packages/apple/AgenticToolkit/CoreMacOS/"
+      ],
+      "depends_on": [
+        "apple-core",
+        "apple-coreui"
+      ],
+      "shared": true,
+      "holds": "AgenticToolkitCoreMacOS. macOS-only foundations."
+    },
+    {
+      "name": "apple-permissions",
+      "paths": [
+        "packages/apple/AgenticToolkit/Permissions/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "AgenticToolkitPermissions. TCC/entitlement state, no UI."
+    },
+    {
+      "name": "apple-permissionsui",
+      "paths": [
+        "packages/apple/AgenticToolkit/PermissionsUI/"
+      ],
+      "depends_on": [
+        "apple-permissions"
+      ],
+      "shared": true,
+      "holds": "AgenticToolkitPermissionsUI. The permission-request surfaces."
+    },
+    {
+      "name": "apple-database",
+      "paths": [
+        "packages/apple/AgenticToolkit/Database/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "AgenticToolkitDatabase. Storage primitives."
+    },
+    {
+      "name": "apple-sync",
+      "paths": [
+        "packages/apple/AgenticToolkit/Sync/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "AgenticToolkitSync. Backend-agnostic sync protocol."
+    },
+    {
+      "name": "apple-syncgrdb",
+      "paths": [
+        "packages/apple/AgenticToolkit/SyncGRDB/"
+      ],
+      "depends_on": [
+        "apple-sync",
+        "apple-database"
+      ],
+      "shared": true,
+      "holds": "AgenticToolkitSyncGRDB. The GRDB-backed sync implementation."
+    },
+    {
+      "name": "apple-macos",
+      "paths": [
+        "packages/apple/AgenticToolkit/macOS/"
+      ],
+      "depends_on": [
+        "apple-core",
+        "apple-coreui",
+        "apple-coremacos",
+        "apple-permissions",
+        "apple-permissionsui",
+        "apple-pluginkit"
+      ],
+      "shared": true,
+      "holds": "AgenticToolkitMacOS. The feature-rich framework the host app, plugins, Whippet and Stenographer all consume."
+    },
+    {
+      "name": "apple-tests",
+      "paths": [
+        "packages/apple/AgenticToolkit/Tests/"
+      ],
+      "depends_on": [
+        "apple-core",
+        "apple-coreui",
+        "apple-coremacos",
+        "apple-macos",
+        "apple-permissions",
+        "apple-permissionsui",
+        "apple-pluginkit",
+        "apple-database",
+        "apple-sync",
+        "apple-syncgrdb"
+      ],
+      "shared": false,
+      "holds": "Test bundles. Nothing depends on these."
+    },
+    {
+      "name": "apple-app",
+      "paths": [
+        "packages/apple/AgenticToolkitApp/"
+      ],
+      "depends_on": [
+        "apple-core",
+        "apple-coreui",
+        "apple-coremacos",
+        "apple-macos",
+        "apple-permissions",
+        "apple-permissionsui",
+        "apple-pluginkit"
+      ],
+      "shared": false,
+      "holds": "The host app. Wiring only."
+    },
+    {
+      "name": "apple-plugins",
+      "paths": [
+        "packages/apple/AIPlugins/"
+      ],
+      "depends_on": [
+        "apple-core",
+        "apple-coreui",
+        "apple-coremacos",
+        "apple-macos",
+        "apple-pluginkit"
+      ],
+      "shared": false,
+      "holds": ".aiplugin bundles plus AIPluginsShared."
+    },
+    {
+      "name": "web-ui",
+      "paths": [
+        "packages/web/packages/ui/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/ui. shadcn slot, cn, blocks, globals.css. The bottom of the web stack."
+    },
+    {
+      "name": "web-model",
+      "paths": [
+        "packages/web/packages/model/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/model. Providers, hooks, search/breadcrumb/nav lib."
+    },
+    {
+      "name": "web-landing",
+      "paths": [
+        "packages/web/packages/landing/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/landing. Standalone marketing deck; builds on nothing and nothing builds on it."
+    },
+    {
+      "name": "web-deploy-platform",
+      "paths": [
+        "packages/web/packages/deploy-platform/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/deploy-platform."
+    },
+    {
+      "name": "web-persona",
+      "paths": [
+        "packages/web/packages/persona/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/persona."
+    },
+    {
+      "name": "web-adh-api-types",
+      "paths": [
+        "packages/web/packages/adh-api-types/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-api-types. Generated vocabulary."
+    },
+    {
+      "name": "web-adh-registry",
+      "paths": [
+        "packages/web/packages/adh-registry/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-registry."
+    },
+    {
+      "name": "web-adh-site-config",
+      "paths": [
+        "packages/web/packages/adh-site-config/"
+      ],
+      "depends_on": [],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-site-config."
+    },
+    {
+      "name": "web-themes",
+      "paths": [
+        "packages/web/packages/themes/"
+      ],
+      "depends_on": [
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/themes. ColorModeProvider, ThemeStyle, theme manifest."
+    },
+    {
+      "name": "web-markdown",
+      "paths": [
+        "packages/web/packages/markdown/"
+      ],
+      "depends_on": [
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/markdown."
+    },
+    {
+      "name": "web-auth",
+      "paths": [
+        "packages/web/packages/auth/"
+      ],
+      "depends_on": [
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/auth. Session, sign-in surfaces, auth context."
+    },
+    {
+      "name": "web-controls",
+      "paths": [
+        "packages/web/packages/controls/"
+      ],
+      "depends_on": [
+        "web-model"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/controls. filtered-list, panels, toggles, orb-row."
+    },
+    {
+      "name": "web-search",
+      "paths": [
+        "packages/web/packages/search/"
+      ],
+      "depends_on": [
+        "web-markdown",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/search."
+    },
+    {
+      "name": "web-data",
+      "paths": [
+        "packages/web/packages/data/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/data. Typed access over the backend API."
+    },
+    {
+      "name": "web-api-explorer",
+      "paths": [
+        "packages/web/packages/api-explorer/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/api-explorer."
+    },
+    {
+      "name": "web-messaging",
+      "paths": [
+        "packages/web/packages/messaging/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/messaging."
+    },
+    {
+      "name": "web-resource",
+      "paths": [
+        "packages/web/packages/resource/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-data",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/resource. List/detail scaffolding."
+    },
+    {
+      "name": "web-crud",
+      "paths": [
+        "packages/web/packages/crud/"
+      ],
+      "depends_on": [
+        "web-api-explorer",
+        "web-auth",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/crud. Generated CRUD surfaces."
+    },
+    {
+      "name": "web-features",
+      "paths": [
+        "packages/web/packages/features/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-crud",
+        "web-data",
+        "web-resource",
+        "web-ui"
+      ],
+      "shared": false,
+      "holds": "One package per product area. New feature code is expected here \u2014 but a piece that two features would both want belongs one tier down."
+    },
+    {
+      "name": "web-adh",
+      "paths": [
+        "packages/web/packages/adh/"
+      ],
+      "depends_on": [
+        "web-adh-registry",
+        "web-adh-site-config",
+        "web-api-explorer",
+        "web-auth",
+        "web-data",
+        "web-features",
+        "web-markdown",
+        "web-themes",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh. Family site chrome \u2014 header, footer, legal, themes, debug."
+    },
+    {
+      "name": "web-site",
+      "paths": [
+        "websites/"
+      ],
+      "depends_on": [
+        "web-adh",
+        "web-features",
+        "web-controls",
+        "web-landing",
+        "web-search",
+        "web-themes",
+        "web-model",
+        "web-ui"
+      ],
+      "shared": false,
+      "holds": "The in-repo demo site. Outside the pnpm workspace."
+    },
+    {
+      "name": "apple-project",
+      "paths": [
+        "packages/apple/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "The Xcode/SwiftPM scaffolding around the frameworks: the workspace and xcodeproj, their shared schemes, project.yml, the Makefile, .swiftlint.yml and .swiftpm mirrors. Longest-prefix match sends every framework directory to its own tier, so only the build scaffolding lands here."
+    },
+    {
+      "name": "platform-stubs",
+      "paths": [
+        "packages/android/",
+        "packages/windows/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "Placeholders for targets that do not exist yet \u2014 a .gitkeep under packages/android/ and packages/windows/ and nothing else. Named platform-stubs rather than android or windows because a tier name is matched against import specifiers."
+    },
+    {
+      "name": "web-workspace",
+      "paths": [
+        "packages/web/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "The pnpm workspace itself: package.json, pnpm-workspace.yaml, the lockfile, .npmrc/.npmignore, copy-css.mjs and the web README. Configuration for the packages below it, not code they import."
+    },
+    {
+      "name": "web-tools",
+      "paths": [
+        "packages/web/tools/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "Python maintenance scripts run against the workspace by hand \u2014 content extraction and validation, and the chat-types copy verifier. They read the tree; nothing in the tree imports them."
+    },
+    {
+      "name": "vendor",
+      "paths": [
+        "external/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "Submodule checkouts of sibling repos consumed as shared packages, declared in shared_packages above. Their contents belong to their own repo and their own map \u2014 never edit them here. Named vendor, not external, because a tier name is matched against import specifiers."
+    },
+    {
+      "name": "repo-docs",
+      "paths": [
+        "docs/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "Design specs, plans, research and the project overview, including docs/web/ which holds the web stack's own layering table. Prose. Named repo-docs, not docs, to keep the tier name off any import specifier."
+    },
+    {
+      "name": "repo-meta",
+      "paths": [
+        ".claude/",
+        ".github/",
+        ".gitignore",
+        ".gitmodules",
+        "AGENTS.md",
+        "README.md",
+        "install.sh",
+        ".abstractr.json"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "How this repo is worked on rather than what it ships: the agent instructions, CI workflows, git's own files, the top-level README, the submodule install script and this tier map."
+    },
+    {
+      "name": "component-recipes",
+      "paths": [
+        "recipes/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "The component catalogue \u2014 one dated, versioned markdown recipe per shared component (button, dialog, data-table, crud-table\u2026), each naming the package that owns it. Prose, and the human-readable index of what web-ui and its siblings already export: read it before proposing a new component."
+    },
+    {
+      "name": "repo-scripts",
+      "paths": [
+        "scripts/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "Repo-level guards run by hand and in CI, not imported by anything. check_boundaries.py enforces this repo's OTHER layering rule, orthogonal to the tiers here: packages named @agentic-toolkit/adh* are the adh VOCABULARY tier and portable MECHANISM packages may never import them. Its banned set is discovered from package.json names, never listed."
+    }
+  ],
+  "rules": {
+    "unmapped_path": "warn"
+  }
+}
