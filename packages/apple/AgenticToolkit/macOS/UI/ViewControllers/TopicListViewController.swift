@@ -82,6 +82,12 @@ open class TopicListViewController: NSViewController {
     private var listTitle: String?
     private let titleLabel = NSTextField(labelWithString: "")
     private let headerView = NSView()
+    // Header contents stack vertically — title, then an optional client
+    // accessory (the settings window puts its search field here, the way
+    // System Settings leads its sidebar with one).
+    private let headerStack = NSStackView()
+    private let accessoryContainer = NSView()
+    private var headerAccessoryView: NSView?
     private let footerContainer = NSView()
     private var footerView: NSView?
     private let contentStack = NSStackView()
@@ -139,7 +145,22 @@ open class TopicListViewController: NSViewController {
         headerView.setContentHuggingPriority(.required, for: .vertical)
         footerContainer.setContentHuggingPriority(.required, for: .vertical)
 
-        self.view = contentStack
+        // The stack sits inside a plain root rather than *being* the view, and
+        // its top is pinned to the safe area: in a window whose content runs the
+        // full height (the settings window, so the sidebar's fill reaches up
+        // behind the window buttons) the titlebar overlaps this view, and the
+        // list has to begin below it. Everywhere else that inset is zero and
+        // nothing moves.
+        let root = NSView()
+        root.translatesAutoresizingMaskIntoConstraints = false
+        root.addSubview(contentStack)
+        NSLayoutConstraint.activate([
+            contentStack.topAnchor.constraint(equalTo: root.safeAreaLayoutGuide.topAnchor),
+            contentStack.leadingAnchor.constraint(equalTo: root.leadingAnchor),
+            contentStack.trailingAnchor.constraint(equalTo: root.trailingAnchor),
+            contentStack.bottomAnchor.constraint(equalTo: root.bottomAnchor)
+        ])
+        self.view = root
 
         themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in
             self?.applyTheme(palette)
@@ -148,6 +169,11 @@ open class TopicListViewController: NSViewController {
 
     private func applyTheme(_ palette: SemanticPalette) {
         let background = palette.windowBackgroundColor
+        // The root too, not just the stack: the strip it holds behind the
+        // titlebar is the sidebar's, and an unpainted root shows the window
+        // through it as a differently coloured band above the list.
+        view.wantsLayer = true
+        view.layer?.backgroundColor = background.cgColor
         contentStack.wantsLayer = true
         contentStack.layer?.backgroundColor = background.cgColor
         headerView.wantsLayer = true
@@ -191,24 +217,71 @@ open class TopicListViewController: NSViewController {
         if isViewLoaded { applyFooterView() }
     }
 
+    /// Installs (or, with nil, clears) a view directly under the sidebar's title
+    /// and above the list — a search field, a filter bar, a segmented scope. It
+    /// spans the header's width; an unset accessory collapses to nothing.
+    open func setHeaderAccessoryView(_ view: NSView?) {
+        headerAccessoryView = view
+        if isViewLoaded {
+            applyHeaderAccessoryView()
+            updateHeaderVisibility()
+        }
+    }
+
     private func configureHeader() {
         titleLabel.lineBreakMode = .byTruncatingTail
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         headerView.translatesAutoresizingMaskIntoConstraints = false
-        headerView.addSubview(titleLabel)
+
+        headerStack.orientation = .vertical
+        headerStack.alignment = .leading
+        headerStack.spacing = CellMetrics.headerAccessorySpacing
+        headerStack.translatesAutoresizingMaskIntoConstraints = false
+        headerView.addSubview(headerStack)
+
+        headerStack.addArrangedSubview(titleLabel)
+        accessoryContainer.translatesAutoresizingMaskIntoConstraints = false
+        headerStack.addArrangedSubview(accessoryContainer)
+
         NSLayoutConstraint.activate([
-            titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 14),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: headerView.trailingAnchor, constant: -8),
-            titleLabel.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 10),
-            titleLabel.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -6)
+            headerStack.leadingAnchor.constraint(
+                equalTo: headerView.leadingAnchor, constant: CellMetrics.titleLeadingInset),
+            headerStack.trailingAnchor.constraint(
+                equalTo: headerView.trailingAnchor, constant: -CellMetrics.headerTrailingInset),
+            headerStack.topAnchor.constraint(equalTo: headerView.topAnchor, constant: 10),
+            headerStack.bottomAnchor.constraint(equalTo: headerView.bottomAnchor, constant: -6),
+            // The stack aligns leading, so neither child is stretched — but
+            // neither may overflow the sidebar either.
+            titleLabel.widthAnchor.constraint(lessThanOrEqualTo: headerStack.widthAnchor),
+            accessoryContainer.widthAnchor.constraint(equalTo: headerStack.widthAnchor)
         ])
+
+        applyHeaderAccessoryView()
         updateHeaderVisibility()
+    }
+
+    private func applyHeaderAccessoryView() {
+        accessoryContainer.subviews.forEach { $0.removeFromSuperview() }
+        guard let headerAccessoryView else {
+            accessoryContainer.isHidden = true
+            return
+        }
+        accessoryContainer.isHidden = false
+        headerAccessoryView.translatesAutoresizingMaskIntoConstraints = false
+        accessoryContainer.addSubview(headerAccessoryView)
+        NSLayoutConstraint.activate([
+            headerAccessoryView.leadingAnchor.constraint(equalTo: accessoryContainer.leadingAnchor),
+            headerAccessoryView.trailingAnchor.constraint(equalTo: accessoryContainer.trailingAnchor),
+            headerAccessoryView.topAnchor.constraint(equalTo: accessoryContainer.topAnchor),
+            headerAccessoryView.bottomAnchor.constraint(equalTo: accessoryContainer.bottomAnchor)
+        ])
     }
 
     private func updateHeaderVisibility() {
         let text = listTitle?.trimmingCharacters(in: .whitespaces) ?? ""
         titleLabel.stringValue = text
-        headerView.isHidden = text.isEmpty
+        titleLabel.isHidden = text.isEmpty
+        headerView.isHidden = text.isEmpty && headerAccessoryView == nil
     }
 
     private func applyFooterView() {
@@ -237,10 +310,20 @@ open class TopicListViewController: NSViewController {
     /// Populate the list with grouped sections. Sections whose `title` is nil
     /// render their items without a header row.
     open func setSections(_ sections: [TopicListSection]) {
+        // The selection is the user's place in the list, and it survives a
+        // rebuild by *id*, not by row: re-sectioning or filtering (a sidebar
+        // search) renumbers every row, so restoring an index would land on a
+        // different item. Suppress across the whole reload+restore — otherwise
+        // `reloadData()`'s own selection drop fires `onSelect(nil)` and the
+        // detail pane goes blank behind a list that still looks selected.
+        let selectedId = selectedItem?.id
         self.sections = sections
         self.rootNodesCache = Self.buildRootNodes(from: sections)
-        outlineView.reloadData()
-        outlineView.expandItem(nil, expandChildren: true)
+        suppressingSelectionCallbacks {
+            outlineView.reloadData()
+            outlineView.expandItem(nil, expandChildren: true)
+            if let selectedId { selectItem(withId: selectedId) }
+        }
     }
 
     /// The width needed to fully show the widest row (icon + label) without
@@ -270,6 +353,12 @@ open class TopicListViewController: NSViewController {
         if let footerView {
             width = max(width, footerView.fittingSize.width)
         }
+        // Nor should a header accessory (a search field), which sits inside the
+        // header's own leading/trailing insets rather than the outline's chrome.
+        if let headerAccessoryView {
+            width = max(width, headerAccessoryView.fittingSize.width
+                + CellMetrics.titleLeadingInset + CellMetrics.headerTrailingInset)
+        }
         return width
     }
 
@@ -285,6 +374,8 @@ open class TopicListViewController: NSViewController {
         static var headerFont: NSFont { ThemePaletteObserver.currentPalette.font(.caption) }
         static var titleFont: NSFont { ThemePaletteObserver.currentPalette.font(.button) }
         static let titleLeadingInset: CGFloat = 14
+        static let headerTrailingInset: CGFloat = 14
+        static let headerAccessorySpacing: CGFloat = 8
         static let iconLeadingInset: CGFloat = 4
         static let iconSize: CGFloat = 16
         static let iconToTextGap: CGFloat = 6
@@ -305,6 +396,17 @@ open class TopicListViewController: NSViewController {
     private static let trailingMargin: CGFloat = 18
     private static var outlineChromePadding: CGFloat {
         sourceListLeadingInset + scrollerGutter + trailingMargin
+    }
+
+    /// The item on the selected row, or nil when nothing — or a section header —
+    /// is selected.
+    open var selectedItem: (any TopicListItemProtocol)? {
+        let row = outlineView.selectedRow
+        guard row >= 0,
+              let node = outlineView.item(atRow: row) as? TopicListNode,
+              case .item(let item) = node.kind
+        else { return nil }
+        return item
     }
 
     /// Selects the row matching `id` without firing `onSelect`.
@@ -456,15 +558,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
 
     public func outlineViewSelectionDidChange(_ notification: Notification) {
         if selectionSuppressionDepth > 0 { return }
-        let row = outlineView.selectedRow
-        guard row >= 0,
-              let node = outlineView.item(atRow: row) as? TopicListNode,
-              case .item(let item) = node.kind
-        else {
-            onSelect?(nil)
-            return
-        }
-        onSelect?(item)
+        onSelect?(selectedItem)
     }
 
     public func outlineView(_ outlineView: NSOutlineView, shouldShowOutlineCellForItem item: Any) -> Bool {

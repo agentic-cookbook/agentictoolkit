@@ -2,6 +2,7 @@ import SwiftUI
 import CodeEditLanguages
 
 import AgenticToolkitCore
+import AgenticToolkitCoreMacOS
 
 // MARK: - Custom File Type Mapping Model
 
@@ -96,7 +97,10 @@ private struct BuiltInFileType: Identifiable {
                 // Skip empty extensions and internal languages
                 guard !ext.isEmpty else { continue }
                 entries.append(BuiltInFileType(
-                    id: "builtin-\(ext)",
+                    // The language belongs in the id: several languages claim
+                    // the same extension (`.h`, `.m`, `.ts`), and an id shared
+                    // by two rows makes `ForEach` render one of them twice.
+                    id: "builtin-\(lang.tsName)-\(ext)",
                     fileExtension: ext,
                     languageName: lang.tsName.capitalized,
                     iconName: iconForExtension(ext)
@@ -149,11 +153,18 @@ private struct BuiltInFileType: Identifiable {
 
 /// Settings tab for viewing built-in file type associations and adding custom ones.
 ///
-/// Shows a table of all recognized file extensions with their language name
-/// and icon. Users can add custom mappings that override the built-in detection.
+/// Shows every recognized file extension with its language name and icon. Users
+/// can add custom mappings that override the built-in detection.
+///
+/// Laid out with `ComposableSettings`' card vocabulary rather than a `List`, so
+/// it reads as the same kind of thing as every other panel in the window. A
+/// `List` gave it striped rows under a sticky grey section header, which is a
+/// perfectly good table and looks nothing like the rest of the settings window.
 public struct FileTypesSettingsView: View {
 
     // MARK: - State
+
+    @Environment(\.theme) private var theme
 
     @State private var customMappings: [CustomFileTypeMapping] = CustomFileTypeMappings.load()
     @State private var builtInTypes: [BuiltInFileType] = BuiltInFileType.allBuiltIn()
@@ -165,60 +176,29 @@ public struct FileTypesSettingsView: View {
     // MARK: - Body
 
     public var body: some View {
-        VStack(spacing: 0) {
-            // Toolbar
-            HStack {
-                TextField("Search file types...", text: $searchText)
-                    .textFieldStyle(.roundedBorder)
-                    .frame(maxWidth: 200)
+        VStack(alignment: .leading, spacing: 0) {
+            // Above the scroll, so it stays put while a few hundred extensions
+            // go by, and leading-aligned so it clears the help button in the
+            // panel's top-right corner.
+            ComposableSettings.SettingsSearchField("Search file types", text: $searchText)
+                .frame(maxWidth: 240)
+                .padding(.horizontal, ComposableSettings.SettingsLayout.default[.panelInset])
+                .padding(.top, ComposableSettings.SettingsLayout.default[.panelInset])
 
-                Spacer()
-
-                Button {
-                    showingAddSheet = true
-                } label: {
-                    Label("Add Custom Type", systemImage: "plus")
+            ScrollView {
+                VStack(
+                    alignment: .leading,
+                    spacing: ComposableSettings.SettingsLayout.default[.groupSpacing]
+                ) {
+                    customGroup
+                    builtInGroup
                 }
+                .padding(.horizontal, ComposableSettings.SettingsLayout.default[.panelInset])
+                .padding(.vertical, ComposableSettings.SettingsLayout.default[.groupSpacing])
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
-
-            Divider()
-
-            // Table
-            List {
-                if !filteredCustomMappings.isEmpty {
-                    Section("Custom Mappings") {
-                        ForEach(filteredCustomMappings) { mapping in
-                            FileTypeRow(
-                                fileExtension: mapping.fileExtension,
-                                languageName: mapping.languageName,
-                                iconName: mapping.iconName,
-                                isCustom: true
-                            )
-                            .contextMenu {
-                                Button("Delete", role: .destructive) {
-                                    removeCustomMapping(mapping)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Section("Built-in Types (\(filteredBuiltInTypes.count))") {
-                    ForEach(filteredBuiltInTypes) { entry in
-                        FileTypeRow(
-                            fileExtension: entry.fileExtension,
-                            languageName: entry.languageName,
-                            iconName: entry.iconName,
-                            isCustom: false
-                        )
-                    }
-                }
-            }
-            .listStyle(.inset(alternatesRowBackgrounds: true))
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .sheet(isPresented: $showingAddSheet) {
             AddCustomFileTypeSheet(
                 existingExtensions: Set(customMappings.map { $0.fileExtension.lowercased() }),
@@ -226,6 +206,82 @@ public struct FileTypesSettingsView: View {
                     addCustomMapping(mapping)
                 }
             )
+        }
+    }
+
+    // MARK: - Groups
+
+    private var customGroup: some View {
+        ComposableSettings.SettingsGroup("Custom Mappings") {
+            if filteredCustomMappings.isEmpty {
+                ComposableSettings.SettingsCardRow {
+                    Text(customMappings.isEmpty
+                        ? "No custom types yet: the built-in list below is what the editor uses."
+                        : "No custom type matches the search.")
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
+                }
+            } else {
+                ForEach(
+                    Array(filteredCustomMappings.enumerated()), id: \.element.id
+                ) { index, mapping in
+                    if index > 0 {
+                        ComposableSettings.SettingsCardDivider()
+                    }
+                    ComposableSettings.SettingsCardRow {
+                        FileTypeRow(
+                            fileExtension: mapping.fileExtension,
+                            languageName: mapping.languageName,
+                            iconName: mapping.iconName,
+                            isCustom: true,
+                            onRemove: { removeCustomMapping(mapping) }
+                        )
+                    }
+                }
+            }
+
+            // The card's own action row, where System Settings puts its "+".
+            ComposableSettings.SettingsCardDivider()
+            ComposableSettings.SettingsCardRow {
+                Button {
+                    showingAddSheet = true
+                } label: {
+                    Label("Add Custom Type", systemImage: "plus")
+                }
+                .buttonStyle(.borderless)
+            }
+        }
+    }
+
+    private var builtInGroup: some View {
+        ComposableSettings.SettingsGroup("Built-in Types (\(filteredBuiltInTypes.count))") {
+            if filteredBuiltInTypes.isEmpty {
+                ComposableSettings.SettingsCardRow {
+                    Text("No built-in type matches the search.")
+                        .font(theme.font(.caption))
+                        .foregroundStyle(theme.secondaryText)
+                }
+            } else {
+                // Lazy because the built-in list is every extension the editor
+                // knows, and only a screenful of it is ever on screen.
+                LazyVStack(spacing: 0) {
+                    ForEach(
+                        Array(filteredBuiltInTypes.enumerated()), id: \.element.id
+                    ) { index, entry in
+                        if index > 0 {
+                            ComposableSettings.SettingsCardDivider()
+                        }
+                        ComposableSettings.SettingsCardRow {
+                            FileTypeRow(
+                                fileExtension: entry.fileExtension,
+                                languageName: entry.languageName,
+                                iconName: entry.iconName,
+                                isCustom: false
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -253,7 +309,9 @@ public struct FileTypesSettingsView: View {
 
     private func addCustomMapping(_ mapping: CustomFileTypeMapping) {
         customMappings.append(mapping)
-        customMappings.sort { $0.fileExtension.localizedCaseInsensitiveCompare($1.fileExtension) == .orderedAscending }
+        customMappings.sort {
+            $0.fileExtension.localizedCaseInsensitiveCompare($1.fileExtension) == .orderedAscending
+        }
         CustomFileTypeMappings.save(customMappings)
     }
 
@@ -266,11 +324,18 @@ public struct FileTypesSettingsView: View {
 // MARK: - File Type Row
 
 /// A single row displaying a file type's extension, language name, and icon.
+///
+/// The row draws no padding of its own: `SettingsCardRow` supplies the card's
+/// insets, so every row in the window lines up whether it was built here or in
+/// an AppKit panel.
 private struct FileTypeRow: View {
     public let fileExtension: String
     public let languageName: String
     public let iconName: String
     public let isCustom: Bool
+    /// Supplied for a custom mapping, which the user can take back out; `nil`
+    /// for a built-in one, which is not theirs to remove.
+    public var onRemove: (() -> Void)?
 
     @Environment(\.theme) private var theme
 
@@ -289,17 +354,15 @@ private struct FileTypeRow: View {
 
             Spacer()
 
-            if isCustom {
-                Text("Custom")
-                    .font(theme.font(.caption))
-                    .foregroundStyle(theme.accent)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(theme.accent.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "minus.circle")
+                        .foregroundStyle(theme.secondaryText)
+                }
+                .buttonStyle(.borderless)
+                .help("Remove the custom mapping for .\(fileExtension)")
             }
         }
-        .padding(.vertical, 2)
     }
 }
 

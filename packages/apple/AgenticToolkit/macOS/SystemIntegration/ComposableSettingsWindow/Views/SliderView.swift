@@ -23,6 +23,9 @@ extension ComposableSettings {
             self.slider.doubleValue = viewModel.value
             self.slider.target = self
             self.slider.action = #selector(sliderChanged(_:))
+            // Below the row spacer's `defaultLow` so the slider, not the gap,
+            // takes the width left over after the label.
+            self.slider.setContentHuggingPriority(.init(1), for: .horizontal)
 
             let row = Self.makeRow([self.label, self.slider])
             self.addSubview(row)

@@ -102,8 +102,6 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
     private var lastPersistedThicknesses = ""
     private static let thicknessPersistDelay: DispatchTimeInterval = .milliseconds(300)
 
-    private var splitResizeObserver: NSObjectProtocol?
-
     /// Keeps the gutters live: `dividerThickness` is computed from the setting,
     /// so something has to tell AppKit the answer moved.
     private var spacingObservers: [UserSettingObserver<Int>] = []
@@ -158,12 +156,6 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         project?.layout ?? ComposableTabsLayout.placeholderOnly()
     }
 
-    isolated deinit {
-        if let splitResizeObserver {
-            NotificationCenter.default.removeObserver(splitResizeObserver)
-        }
-    }
-
     /// Panes are separated by a gap the user sets, not by AppKit's seam — see
     /// `PaneSplitView`.
     public override func makeSplitView() -> ThemedSplitView { PaneSplitView() }
@@ -183,20 +175,23 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
         for child in layoutChildren {
             addSplitViewItem(makeItem(for: child.viewController))
         }
+    }
 
-        // Where a dragged divider becomes a saved layout. AppKit has no "the
-        // user let go" notification, so the write is debounced instead — see
-        // `scheduleThicknessPersist()`.
-        splitResizeObserver = NotificationCenter.default.addObserver(
-            forName: NSSplitView.didResizeSubviewsNotification,
-            object: splitView,
-            queue: .main
-        ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                guard let self, self.hasAppliedPreferredThicknesses else { return }
-                self.rootSplit()?.scheduleThicknessPersist()
-            }
-        }
+    /// Where a dragged divider becomes a saved layout. AppKit has no "the user
+    /// let go" notification, so the write is debounced instead — see
+    /// `scheduleThicknessPersist()`. Nothing is written before the preferred
+    /// thicknesses have been applied: until then what is on screen is AppKit's
+    /// placeholder geometry, not the user's layout.
+    ///
+    /// The delegate method AppKit already calls, rather than a block observer
+    /// on the same notification: a block observer is `@Sendable`, and this
+    /// controller is not `Sendable` — its superclass is `open` in another
+    /// module, so no implicit conformance reaches it — which makes capturing
+    /// `self` in one an error under complete concurrency checking.
+    public override func splitViewDidResizeSubviews(_ notification: Notification) {
+        super.splitViewDidResizeSubviews(notification)
+        guard hasAppliedPreferredThicknesses else { return }
+        rootSplit()?.scheduleThicknessPersist()
     }
 
     /// `preferredThicknessFraction` alone is not enough. AppKit resolves it

@@ -34,10 +34,12 @@ extension ComposableSettings {
 
             // The slider is the only flexible element in the row — let it
             // absorb extra width so the right-hand caption pins to the panel
-            // edge instead of leaving a gap.
+            // edge instead of leaving a gap. Below the row spacer's own
+            // `defaultLow` (see `NSView.makeRowSpacer`), or the two tie and the
+            // free width is split between them.
             self.label.setContentHuggingPriority(.required, for: .horizontal)
             self.valueLabel.setContentHuggingPriority(.required, for: .horizontal)
-            self.slider.setContentHuggingPriority(.defaultLow, for: .horizontal)
+            self.slider.setContentHuggingPriority(.init(1), for: .horizontal)
 
             // Pin the value label to the width of the longest possible caption
             // so the slider's width doesn't oscillate as the user drags through
@@ -89,12 +91,17 @@ extension ComposableSettings {
             fatalError("init(coder:) has not been implemented")
         }
 
-        // Span the full GroupView width so the slider can stretch and the
-        // trailing value label pins to the right edge of the panel.
+        // Span the full width so the slider can stretch and the trailing value
+        // label pins to the right edge. One below required: a group's card
+        // insets its rows with required constraints, and two required width
+        // rules on one view is an unsatisfiable pair AppKit resolves by dropping
+        // whichever it likes.
         public override func viewDidMoveToSuperview() {
             super.viewDidMoveToSuperview()
             guard let parent = self.superview else { return }
-            self.widthAnchor.constraint(equalTo: parent.widthAnchor).isActive = true
+            let fullWidth = self.widthAnchor.constraint(equalTo: parent.widthAnchor)
+            fullWidth.priority = .required - 1
+            fullWidth.isActive = true
         }
 
         static func createLabel(title: String) -> NSTextField {

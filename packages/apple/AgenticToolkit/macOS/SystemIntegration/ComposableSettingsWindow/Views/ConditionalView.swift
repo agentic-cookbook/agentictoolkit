@@ -18,8 +18,13 @@ extension ComposableSettings {
     /// ) { $0 == "custom_command" }
     /// ```
     @MainActor
-    public class ConditionalView<Value: Codable & Sendable>: NSView, SettingsViewProtocol {
+    public class ConditionalView<Value: Codable & Sendable>:
+        NSView, SettingsViewProtocol, SelfHidingSettingsView {
         public let child: NSView
+
+        /// Told to whoever placed this view — a group's card closes up over a
+        /// row whose content has taken itself off screen.
+        public var onVisibilityChange: (() -> Void)?
 
         private let observer: UserSettingObserver<Value>
         private let isVisible: @MainActor (Value) -> Bool
@@ -48,7 +53,10 @@ extension ComposableSettings {
         }
 
         private func applyVisibility(for value: Value) {
-            self.isHidden = !isVisible(value)
+            let hidden = !isVisible(value)
+            guard hidden != self.isHidden else { return }
+            self.isHidden = hidden
+            self.onVisibilityChange?()
         }
 
         public override init(frame frameRect: NSRect) {

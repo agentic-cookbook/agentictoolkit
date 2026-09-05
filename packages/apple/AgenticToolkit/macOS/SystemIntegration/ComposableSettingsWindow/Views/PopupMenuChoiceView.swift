@@ -27,6 +27,13 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
+            // System Settings draws a popup inside a card without a bezel: the
+            // current value in secondary text with the chevron pair after it.
+            // The card is the surface, so a second one around the control just
+            // boxes a box.
+            self.popUpButton.isBordered = false
+            self.popUpButton.setContentHuggingPriority(.defaultHigh, for: .horizontal)
+
             let row = Self.makeRow([self.label, self.popUpButton])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)

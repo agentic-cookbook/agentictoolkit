@@ -8,7 +8,11 @@ extension ComposableSettings {
     /// backing `UserSetting<Bool>` flips to `true`. Use for one-time onboarding
     /// prompts ("enable launch at login so you never miss a session…").
     @MainActor
-    public class DismissibleHintView: NSView, SettingsViewProtocol {
+    public class DismissibleHintView: NSView, SettingsViewProtocol, SelfHidingSettingsView {
+        /// Told to whoever placed this view — a group's card closes up over a
+        /// row whose content has taken itself off screen.
+        public var onVisibilityChange: (() -> Void)?
+
         public let textLabel: NSTextField
         public let dismissButton: NSButton
 
@@ -47,7 +51,9 @@ extension ComposableSettings {
             Self.pinToEdges(stack, of: self)
 
             self.observer.onChange = { [weak self] dismissed in
-                self?.isHidden = dismissed
+                guard let self, dismissed != self.isHidden else { return }
+                self.isHidden = dismissed
+                self.onVisibilityChange?()
             }
             self.isHidden = self.observer.value
         }

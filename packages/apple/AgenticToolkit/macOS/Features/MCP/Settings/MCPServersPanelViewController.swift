@@ -99,10 +99,15 @@ private final class MCPServersListPanelViewController: ComposableSettings.Settin
         MCPServersPanelViewController.serversHelp
     }
 
+    /// The sidebar's search cannot read a SwiftUI panel's controls, so this
+    /// panel names what it is about.
+    override var searchKeywords: [String] {
+        ["mcp", "model context protocol", "server", "tools", "stdio", "endpoint", "command"]
+    }
+
     override func loadView() {
-        let hosting = NSHostingView(rootView: MCPServersListView(viewModel: viewModel).themedRoot())
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        self.view = hosting
+        self.view = Self.hostingView(
+            for: MCPServersListView(viewModel: viewModel).themedRoot())
     }
 }
 
@@ -195,7 +200,10 @@ private struct MCPServersListView: View {
             Spacer(minLength: 0)
         }
         .padding(20)
-        .frame(minWidth: 480, minHeight: 240, alignment: .topLeading)
+        // Fills the pane and top-anchors in it. A *minimum* here was the
+        // panel telling the window how big to be — the one thing panel
+        // content is never allowed to do.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .sheet(isPresented: $showingAdd) {
             MCPAddServerSheet(
                 onCommit: { configuration in

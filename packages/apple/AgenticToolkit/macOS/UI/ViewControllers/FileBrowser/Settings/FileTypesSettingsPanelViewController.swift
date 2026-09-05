@@ -46,16 +46,20 @@ public final class FileTypesSettingsPanelViewController: ComposableSettings.Sett
             ),
             .init(
                 title: "Removing a Mapping",
-                body: "Right-click a custom row to delete it. The built-in entry underneath "
-                    + "it comes back — a custom mapping shadows a built-in one, it never "
-                    + "replaces it."
+                body: "The minus button at the end of a custom row deletes it. The built-in "
+                    + "entry underneath it comes back — a custom mapping shadows a built-in "
+                    + "one, it never replaces it."
             )
         ])
     }
 
+    /// The sidebar's search cannot read a SwiftUI panel's controls, so this
+    /// panel names what it is about.
+    public override var searchKeywords: [String] {
+        ["file type", "extension", "language", "syntax", "highlighting", "icon", "mapping"]
+    }
+
     public override func loadView() {
-        let hosting = NSHostingView(rootView: FileTypesSettingsView().themedRoot())
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        self.view = hosting
+        self.view = Self.hostingView(for: FileTypesSettingsView().themedRoot())
     }
 }

@@ -4,8 +4,8 @@ import AgenticToolkitCoreMacOS
 
 extension ComposableSettings {
 
-    /// Root container for a panel. Hosts a vertical stack of `GroupView`s with
-    /// `DividerView`s between them, all inside the panel's content area.
+    /// Root container for a panel. Hosts a vertical stack of `GroupView` cards,
+    /// spaced apart inside the panel's content area.
     @MainActor
     open class PanelView: NSView, SettingsViewProtocol {
 
@@ -36,7 +36,10 @@ extension ComposableSettings {
             ])
 
             themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in
-                self?.layer?.backgroundColor = palette.surfaceColor.cgColor
+                // The same ground as the sidebar and the window: the cards are
+                // what stand out here, and a panel-shaped patch of a second
+                // near-identical colour behind them only reads as a misprint.
+                self?.layer?.backgroundColor = palette.windowBackgroundColor.cgColor
             }
         }
 
@@ -44,10 +47,10 @@ extension ComposableSettings {
             fatalError("not overridden")
         }
 
+        /// Groups are separated by the stack's own spacing, not a rule: each one
+        /// is a card with its own edges, and a divider between two cards reads
+        /// as a third thing floating in the gutter.
         public func addGroup(_ group: GroupView) {
-            if !self.stackView.arrangedSubviews.isEmpty {
-                self.stackView.addArrangedSubview(DividerView())
-            }
             self.stackView.addArrangedSubview(group)
         }
 

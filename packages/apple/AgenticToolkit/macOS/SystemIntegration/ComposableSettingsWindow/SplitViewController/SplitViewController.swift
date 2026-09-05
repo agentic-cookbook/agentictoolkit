@@ -54,6 +54,52 @@ extension ComposableSettings {
             didSet { if isViewLoaded { listViewController.setTitle(sidebarTitle) } }
         }
 
+        /// Whether the sidebar leads with a search field that filters the panel
+        /// list, as System Settings' does.
+        ///
+        /// Off by default and switched on only for the window's root split: a
+        /// nested split's sidebar is a table of contents for one panel, and a
+        /// second search field inside the first one's results is a maze.
+        public var showsSidebarSearch: Bool = false
+
+        /// Fired whenever the selection or the trail behind it changes, so a
+        /// toolbar can revalidate its back/forward arrows and retitle itself.
+        public var onNavigationChange: (() -> Void)?
+
+        /// Title of the panel on screen — what the toolbar names beside the
+        /// `‹ ›` control. A split whose selected panel is itself a split answers
+        /// with the topic selected *inside* it: that is the panel the reader is
+        /// looking at, and naming the outer container instead left the toolbar
+        /// stuck on the container's name while the reader moved down its list.
+        public var currentPanelTitle: String? {
+            if let nested = currentPanel as? SplitViewController,
+               let inner = nested.currentPanelTitle {
+                return inner
+            }
+            return currentPanel?.descriptor.title
+        }
+
+        /// Where the `‹ ›` arrows can go from here.
+        private var history = SettingsNavigationHistory()
+
+        /// The split whose trail the `‹ ›` arrows should act on: the innermost
+        /// one still able to move in the asked-for direction, else this one.
+        ///
+        /// Only the window's root split is wired to the toolbar, but the
+        /// reader's last step may well have been taken inside a nested topic
+        /// list — so "back" has to undo *that* before it backs out of the nested
+        /// panel entirely.
+        private func navigator(goingBack: Bool) -> SplitViewController {
+            guard let inner = (currentPanel as? SplitViewController)?
+                    .navigator(goingBack: goingBack),
+                  goingBack ? inner.history.canGoBack : inner.history.canGoForward
+            else { return self }
+            return inner
+        }
+
+        public var canGoBack: Bool { navigator(goingBack: true).history.canGoBack }
+        public var canGoForward: Bool { navigator(goingBack: false).history.canGoForward }
+
         private let detailContainer = NSViewController()
 
         /// The detail pane's persistent chrome — panel content plus the help
@@ -72,6 +118,25 @@ extension ComposableSettings {
         // Repaints the window chrome and detail pane on every theme change.
         private var themeObserver: ThemePaletteObserver?
 
+        /// The sidebar's search field, built only if `showsSidebarSearch` asks
+        /// for it. Filtering happens in the list controller — this is just the
+        /// control that feeds it.
+        private lazy var searchField: ThemedSearchField = {
+            let field = ThemedSearchField(placeholder: "Search")
+            field.translatesAutoresizingMaskIntoConstraints = false
+            // Filter as the user types rather than on Return: the list is short
+            // enough that the narrowing *is* the feedback.
+            field.sendsWholeSearchString = false
+            field.sendsSearchStringImmediately = true
+            field.target = self
+            field.action = #selector(searchQueryChanged(_:))
+            return field
+        }()
+
+        @objc private func searchQueryChanged(_ sender: NSSearchField) {
+            listViewController.searchQuery = sender.stringValue
+        }
+
         public init(listViewController: PanelListViewController = PanelListViewController()) {
             self.listViewController = listViewController
             super.init(nibName: nil, bundle: nil)
@@ -84,12 +149,24 @@ extension ComposableSettings {
             super.viewDidLoad()
 
             listViewController.setTitle(sidebarTitle)
+            if showsSidebarSearch {
+                listViewController.setHeaderAccessoryView(searchField)
+            }
 
             let detailView = NSView()
             detailView.wantsLayer = true
             detailContainer.view = detailView
             detailView.addSubview(panelHost)
-            NSView.pinToEdges(panelHost, of: detailView)
+            // Top against the safe area, the rest against the view: the detail
+            // pane's fill reaches up behind the toolbar so the colour is
+            // continuous, but its content starts below the band. Outside a
+            // full-height-content window the inset is zero.
+            NSLayoutConstraint.activate([
+                panelHost.topAnchor.constraint(equalTo: detailView.safeAreaLayoutGuide.topAnchor),
+                panelHost.leadingAnchor.constraint(equalTo: detailView.leadingAnchor),
+                panelHost.trailingAnchor.constraint(equalTo: detailView.trailingAnchor),
+                panelHost.bottomAnchor.constraint(equalTo: detailView.bottomAnchor)
+            ])
 
             let sidebarItem = NSSplitViewItem(sidebarWithViewController: listViewController)
             // The topic list must never auto-hide — it's the only way to switch
@@ -120,7 +197,16 @@ extension ComposableSettings {
             }
 
             listViewController.onSelectPanel = { [weak self] panel in
-                self?.show(panel)
+                guard let self else { return }
+                // A click is a navigation step like any other, so it joins the
+                // trail here rather than in `selectPanel(at:)` — that one is the
+                // programmatic door, and routing the click through it would
+                // re-select the row the user just clicked.
+                if let panel, let index = self.panels.firstIndex(where: { $0 === panel }) {
+                    self.history.record(index)
+                }
+                self.show(panel)
+                self.notifyNavigationChange()
             }
 
             applyDetailMinimumThickness()
@@ -132,6 +218,10 @@ extension ComposableSettings {
 
         open override func viewWillAppear() {
             super.viewWillAppear()
+            // The first `applyTheme` runs from `viewDidLoad`, where there is no
+            // window yet to paint — so without this the window keeps its stock
+            // grey, which a transparent titlebar puts on show along the top.
+            applyTheme(ThemePaletteObserver.currentPalette)
             updateSidebarLayout()
             // Auto-select the first panel so the detail pane is never blank.
             if currentPanel == nil, let first = panels.first {
@@ -205,39 +295,67 @@ extension ComposableSettings {
         private static let maximumContentSidebarWidth: CGFloat = 480
 
         private func applyTheme(_ palette: SemanticPalette) {
-            // Window background follows the theme so the title bar and
-            // overall chrome don't stay system-dark when a light theme is active.
-            view.window?.backgroundColor = palette.windowBackgroundColor
-            // Detail pane uses a slightly elevated surface to visually
-            // separate it from the sidebar.
-            detailContainer.view.layer?.backgroundColor = palette.surfaceColor.cgColor
+            // One background under everything — sidebar, detail pane, and the
+            // window itself, which shows at the rounded corners and behind the
+            // transparent titlebar. Depth in this window comes from the cards
+            // being raised off that ground, so a second, subtly different ground
+            // under the detail pane only reads as a seam down the middle.
+            let background = palette.windowBackgroundColor
+            view.window?.backgroundColor = background
+            detailContainer.view.layer?.backgroundColor = background.cgColor
         }
 
         // MARK: - Panel management
 
         public func setPanels(_ panels: [any ComposableSettingsPanel]) {
             self.panels = panels
+            // The trail is a list of positions in `panels`; a different list makes
+            // every one of them point somewhere else.
+            history.reset()
             listViewController.setPanels(panels)
             updateSidebarLayout()
+            // A panel that is no longer in the list must not stay on screen: no
+            // row names it any more, so it would sit in the detail pane
+            // unreachable and unhighlighted. One that survived the swap keeps
+            // its place, and its row is re-selected in the rebuilt list.
+            if let current = currentPanel {
+                if let index = panels.firstIndex(where: { $0 === current }) {
+                    history.record(index)
+                    listViewController.selectPanel(at: index)
+                } else {
+                    show(nil)
+                }
+            }
+            notifyNavigationChange()
         }
 
         public func addPanel(_ panel: any ComposableSettingsPanel) {
+            // Appending leaves every existing position where it was, so the trail
+            // still points at the panels it was recorded for.
             panels.append(panel)
             listViewController.setPanels(panels)
             updateSidebarLayout()
+            // The arrows' reach changed even though the selection did not: a
+            // toolbar that isn't told keeps its forward arrow disabled past the
+            // panel that would now answer it.
+            notifyNavigationChange()
         }
 
         public func removePanel(_ panel: any ComposableSettingsPanel) {
             panels.removeAll { $0 === panel }
+            history.reset()
             listViewController.setPanels(panels)
             updateSidebarLayout()
             if currentPanel === panel { show(nil) }
+            notifyNavigationChange()
         }
 
         public func clear() {
             panels.removeAll()
+            history.reset()
             listViewController.setPanels(panels)
             show(nil)
+            notifyNavigationChange()
         }
 
         public func selectPanel(_ panel: any ComposableSettingsPanel) {
@@ -247,8 +365,55 @@ extension ComposableSettings {
 
         public func selectPanel(at index: Int) {
             guard panels.indices.contains(index) else { return }
+            history.record(index)
+            navigate(to: index)
+        }
+
+        /// Steps back to the previously shown panel. No-op at the start of the trail.
+        public func goBack() {
+            let target = navigator(goingBack: true)
+            guard let index = target.history.goBack() else { return }
+            target.navigate(to: index)
+        }
+
+        /// Steps forward again after a `goBack()`. No-op at the end of the trail.
+        public func goForward() {
+            let target = navigator(goingBack: false)
+            guard let index = target.history.goForward() else { return }
+            target.navigate(to: index)
+        }
+
+        /// Shows a panel the history has already accounted for — the one path
+        /// that must never record a step, or going back would append the place
+        /// it came from and the arrows would ping-pong.
+        private func navigate(to index: Int) {
+            guard panels.indices.contains(index) else { return }
+            // Going somewhere the current filter hides would select a row that
+            // isn't there: the panel arrives in the detail pane with nothing
+            // highlighted beside it in the sidebar. A step taken by the arrows
+            // is a step out of the search results, so the field empties with it.
+            clearSidebarSearch()
             listViewController.selectPanel(at: index)
             show(panels[index])
+            notifyNavigationChange()
+        }
+
+        /// Empties the sidebar's search field and the filter it drives. No-op on
+        /// a split that has no search field, so the lazy control is never built
+        /// just to be cleared.
+        private func clearSidebarSearch() {
+            guard showsSidebarSearch, !listViewController.searchQuery.isEmpty else { return }
+            searchField.stringValue = ""
+            listViewController.searchQuery = ""
+        }
+
+        /// Announces a navigation to this split's observer and to every split
+        /// above it. The toolbar's arrows are wired to the window's root split
+        /// only, so a step taken inside a nested topic list has to travel
+        /// outwards or they stay stale — describing a trail nobody is on.
+        private func notifyNavigationChange() {
+            onNavigationChange?()
+            enclosingSettingsSplit?.notifyNavigationChange()
         }
 
         // MARK: - Detail pane

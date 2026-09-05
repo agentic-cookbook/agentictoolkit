@@ -22,6 +22,7 @@ extension ComposableSettings {
             self.title = title
             self.icon = icon
             self.isDisabled = isDisabled
+            self.section = section
         }
 
         public convenience init() {

@@ -33,6 +33,17 @@ public protocol ComposableSettingsPanel: NSViewController {
     /// Only the window's outermost split has a help presenter, so an inner
     /// selection's help has to travel outwards to be shown at all.
     var effectiveHelpContent: ComposableSettings.PanelHelp? { get }
+
+    /// Words this panel should be findable by that its view does not spell out.
+    ///
+    /// The sidebar's search reads the labels off any panel that is already
+    /// built, but it never builds one to look inside it — constructing every
+    /// panel on the first keystroke is the work lazy panels exist to avoid, and
+    /// it runs their side effects for a reader who typed one letter. Keywords
+    /// are how a panel stays findable *before* it is first opened, and the only
+    /// way a SwiftUI-hosted one is findable at all: its controls are not AppKit
+    /// labels to read.
+    var searchKeywords: [String] { get }
 }
 
 public extension ComposableSettingsPanel {
@@ -41,4 +52,6 @@ public extension ComposableSettingsPanel {
     var helpContent: ComposableSettings.PanelHelp? { nil }
 
     var effectiveHelpContent: ComposableSettings.PanelHelp? { helpContent }
+
+    var searchKeywords: [String] { [] }
 }

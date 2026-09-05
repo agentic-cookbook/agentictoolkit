@@ -60,6 +60,14 @@ public final class ProjectsSettingsPanelViewController: ComposableSettings.Setti
 
     public required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
+    /// The sidebar's search only reads the controls of a panel that has already
+    /// been opened, so this panel names what it is about for the search that
+    /// happens before anyone opens it.
+    public override var searchKeywords: [String] {
+        ["project", "spacing", "frame", "divider", "active pane", "outline",
+         "highlight", "skipped folder", "exclude", "scan", "pattern"]
+    }
+
     public override var helpContent: ComposableSettings.PanelHelp? {
         ComposableSettings.PanelHelp(topics: [
             .init(

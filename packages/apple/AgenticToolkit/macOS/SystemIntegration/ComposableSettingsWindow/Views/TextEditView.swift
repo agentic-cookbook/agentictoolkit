@@ -18,6 +18,11 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
+            // Below the row spacer's hugging, so the field — not the gap — takes
+            // the width left over after the label. An empty field sized to its
+            // own content is a few points wide and unclickable.
+            self.textField.setContentHuggingPriority(.init(1), for: .horizontal)
+
             let row = Self.makeRow([self.label, self.textField])
             self.addSubview(row)
             Self.pinToEdges(row, of: self)

@@ -63,6 +63,12 @@ open class AIPanelViewController: ComposableSettings.SettingsPanelSplitViewContr
         ])
     }
 
+    /// The provider editors are SwiftUI, so their controls cannot be read off
+    /// the view tree; this names what the whole panel is about.
+    open override var searchKeywords: [String] {
+        ["llm", "provider", "api key", "model", "claude", "openai", "google", "endpoint"]
+    }
+
     public override func viewDidLoad() {
         super.viewDidLoad()
         listViewController.setFooterView(makeFooter())
@@ -315,11 +321,13 @@ private final class ProviderConfigPanelViewController: ComposableSettings.Settin
         fatalError("init(coder:) has not been implemented")
     }
 
+    override var searchKeywords: [String] {
+        ["provider", "api key", "endpoint", "model", config.name]
+    }
+
     override func loadView() {
         let editor = LLMProviderEditorView(configuration: config, viewModel: viewModel)
-        let hosting = NSHostingView(rootView: editor.themedRoot())
-        hosting.translatesAutoresizingMaskIntoConstraints = false
-        self.view = hosting
+        self.view = Self.hostingView(for: editor.themedRoot())
     }
 
     override func viewWillAppear() {

@@ -382,35 +382,39 @@ public final class ModelChooserViewController: NSViewController {
 
         let group = ComposableSettings.GroupView(
             withHeaderView: Self.wrappingLabel(item.id, role: .primaryText, textRole: .heading))
+        // Every line below describes the same model, so together they read as
+        // one block of prose: continuations tucked against each other, not
+        // settings divided from one another by hairlines.
+        func addLine(_ text: String, role: ThemeRole, textRole: TextRole) {
+            group.addSettingSubview(
+                Self.wrappingLabel(text, role: role, textRole: textRole), style: .continuation)
+        }
         let badges = ModelChooserContent.capabilityBadges(item: item, metadata: meta)
         let parts = badges.map { "\($0) ✓" } + [ModelChooserContent.specLine(meta)].compactMap { $0 }
         if !parts.isEmpty {
-            group.addSettingSubview(Self.wrappingLabel(
-                parts.joined(separator: " · "), role: .secondaryText, textRole: .caption))
+            addLine(parts.joined(separator: " · "), role: .secondaryText, textRole: .caption)
         }
         // Context window / output limit / token prices — this provider's terms, not
         // the model's own, so they sit apart from the capability badges above.
         if let facts = ModelChooserContent.factsLine(item.info) {
-            group.addSettingSubview(Self.wrappingLabel(facts, role: .tertiaryText, textRole: .caption))
+            addLine(facts, role: .tertiaryText, textRole: .caption)
         }
         let size = LocalModelServer.size(of: item.id, in: sizesByModel)
         if let fit = ModelChooserContent.fitLine(
             sizeBytes: size, physicalRAM: physicalRAM,
             warnPct: context.warnPct, blockPct: context.blockPct) {
             let role: ThemeRole = fit.tier == .block ? .danger : fit.tier == .warn ? .warning : .secondaryText
-            group.addSettingSubview(Self.wrappingLabel(fit.text, role: role, textRole: .caption))
+            addLine(fit.text, role: role, textRole: .caption)
         }
         if let popularity = ModelChooserContent.popularityLine(pageStatsByModel[item.id]) {
-            group.addSettingSubview(Self.wrappingLabel(
-                popularity, role: .secondaryText, textRole: .caption))
+            addLine(popularity, role: .secondaryText, textRole: .caption)
         }
         if let rank = ModelChooserContent.rankLine(ranksByModel[item.id]) {
-            group.addSettingSubview(Self.wrappingLabel(
-                rank, role: .secondaryText, textRole: .caption))
+            addLine(rank, role: .secondaryText, textRole: .caption)
         }
-        group.addSettingSubview(Self.wrappingLabel(
+        addLine(
             ModelChooserContent.descriptionText(item: item, fetched: descriptionsByModel[item.id]),
-            role: .primaryText, textRole: .body))
+            role: .primaryText, textRole: .body)
         panel.addGroup(group)
     }
 

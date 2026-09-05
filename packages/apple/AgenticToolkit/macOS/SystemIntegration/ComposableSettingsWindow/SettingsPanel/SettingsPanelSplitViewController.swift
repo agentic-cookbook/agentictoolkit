@@ -28,6 +28,10 @@ extension ComposableSettings {
         /// is asking about the topic, not about the list.
         open var effectiveHelpContent: PanelHelp? { effectiveHelp ?? helpContent }
 
+        /// Nothing by default: a nested split is searched through the panels
+        /// it hosts. Redeclared for the same dispatch reason as `helpContent`.
+        open var searchKeywords: [String] { [] }
+
         public init(with descriptor: SettingsPanelDescriptor? = nil) {
             if let descriptor {
                 self.descriptor = descriptor
