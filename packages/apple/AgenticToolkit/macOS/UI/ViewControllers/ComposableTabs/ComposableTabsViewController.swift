@@ -191,15 +191,27 @@ public final class ComposableTabsViewController: ThemedSplitViewController {
             forName: NSSplitView.didResizeSubviewsNotification,
             object: splitView,
             queue: .main
-        ) { [weak self] _ in
+        ) { [owner = WeakOwnerBox(self)] _ in
             MainActor.assumeIsolated {
-                self?.persistThicknessAfterResize()
+                owner.value?.persistThicknessAfterResize()
             }
         }
     }
 
+    /// The observer block is `@Sendable`, and a `[weak self]` capture of a
+    /// `@MainActor`, `NSObject`-rooted class is not — the compiler rejects the
+    /// capture outright rather than trusting `queue: .main`. Carrying the weak
+    /// reference in a box that vouches for itself keeps the capture list
+    /// `Sendable` while leaving the actual dereference where it always was:
+    /// inside `MainActor.assumeIsolated`, on the main queue the notification
+    /// is posted on.
+    private final class WeakOwnerBox: @unchecked Sendable {
+        weak var value: ComposableTabsViewController?
+        init(_ value: ComposableTabsViewController?) { self.value = value }
+    }
+
     /// Split out of the `didResizeSubviewsNotification` handler above so that
-    /// handler captures `self` with a single optional-chained access rather
+    /// handler touches `self` through a single optional-chained access rather
     /// than unwrapping it into a local `self` and using it twice — the latter
     /// is what actually triggers "sending 'self' risks causing data races"
     /// for a non-`Sendable`, `NSObject`-rooted type inside
