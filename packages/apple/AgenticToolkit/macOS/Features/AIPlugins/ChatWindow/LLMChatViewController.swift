@@ -203,7 +203,7 @@ public final class LLMChatViewController: NSViewController, Themeable {
 
         NSLayoutConstraint.activate(constraints)
         self.view = root
-        themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in self?.applyTheme(palette) }
     }
 
     public override func viewDidLoad() {
@@ -357,7 +357,7 @@ public final class LLMChatViewController: NSViewController, Themeable {
             && (offersModels || !(template?.models.isEmpty ?? true) || !currentModel.isEmpty)
         modelValue.stringValue = currentModel.isEmpty ? "None chosen" : currentModel
         chooseButton.isEnabled = selectedConfiguration != nil
-        applyModelRowTheme(ThemePaletteObserver.currentPalette)
+        applyModelRowTheme(view.resolvedThemeScope.palette)
     }
 
     // MARK: - Actions

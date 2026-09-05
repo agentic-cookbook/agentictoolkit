@@ -317,7 +317,7 @@ private final class ProjectRowView: NSView {
             systemSymbolName: symbol,
             accessibilityDescription: node.isFolder ? "Folder" : "Project"
         ) ?? NSImage())
-        icon.contentTintColor = ThemePaletteObserver.currentPalette.nsColor(
+        icon.contentTintColor = resolvedThemeScope.palette.nsColor(
             node.isFolder ? .secondaryText : .accent
         )
         icon.setContentHuggingPriority(.required, for: .horizontal)

@@ -82,7 +82,8 @@ public final class TerminalSessionRowCellView: NSTableCellView {
                 // A live session's dot is its own profile color — user data, not
                 // theme. Only the terminated state is ours to color, and it uses
                 // the theme's lowest-emphasis text role.
-                let terminatedColor = ThemePaletteObserver.currentPalette.nsColor(.tertiaryText)
+                let palette = self?.resolvedThemeScope.palette ?? ThemePaletteObserver.currentPalette
+                let terminatedColor = palette.nsColor(.tertiaryText)
                 self?.dotView.layer?.backgroundColor = (state == .terminated ? terminatedColor : dotColor).cgColor
                 self?.titleLabel.stringValue = oscTitle ?? name
 

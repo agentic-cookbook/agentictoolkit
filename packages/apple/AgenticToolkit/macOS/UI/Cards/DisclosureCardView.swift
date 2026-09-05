@@ -305,7 +305,7 @@ public final class DisclosureCardView: NSView, Themeable {
             floor
         ])
 
-        observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        observer = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
     }
 
     @available(*, unavailable)

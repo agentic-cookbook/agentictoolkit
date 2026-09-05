@@ -176,7 +176,7 @@ extension SessionWatcher {
             super.init(frame: frame)
             accessibilityID("session-panel.empty-state")
             setupViews()
-            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
@@ -250,7 +250,7 @@ extension SessionWatcher {
             wantsLayer = true
             layer?.cornerRadius = 8
             setupViews()
-            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
@@ -425,7 +425,7 @@ extension SessionWatcher {
             layer?.cornerRadius = 6
             setupViews()
             setupContextMenu()
-            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)
@@ -680,23 +680,23 @@ extension SessionWatcher {
 
         public override func mouseEntered(with event: NSEvent) {
             isHovered = true
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = resolvedThemeScope.palette
             layer?.backgroundColor = palette.selectionColor.withAlphaComponent(0.18).cgColor
         }
 
         public override func mouseExited(with event: NSEvent) {
             isHovered = false
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = resolvedThemeScope.palette
             layer?.backgroundColor = palette.surfaceColor.withAlphaComponent(0.5).cgColor
         }
 
         public override func mouseDown(with event: NSEvent) {
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = resolvedThemeScope.palette
             layer?.backgroundColor = palette.selectionColor.withAlphaComponent(0.35).cgColor
         }
 
         public override func mouseUp(with event: NSEvent) {
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = resolvedThemeScope.palette
             layer?.backgroundColor = isHovered
                 ? palette.selectionColor.withAlphaComponent(0.18).cgColor
                 : palette.surfaceColor.withAlphaComponent(0.5).cgColor
@@ -747,7 +747,7 @@ extension SessionWatcher {
             accessibilityID("session-panel.error-banner")
             wantsLayer = true
             setupViews(message: message, isPermissionError: isPermissionError)
-            themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
         }
 
         @available(*, unavailable)

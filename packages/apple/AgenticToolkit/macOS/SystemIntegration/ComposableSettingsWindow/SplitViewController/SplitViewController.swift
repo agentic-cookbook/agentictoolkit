@@ -125,7 +125,7 @@ extension ComposableSettings {
 
             applyDetailMinimumThickness()
 
-            themeObserver = ThemePaletteObserver { [weak self] palette in
+            themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in
                 self?.applyTheme(palette)
             }
         }

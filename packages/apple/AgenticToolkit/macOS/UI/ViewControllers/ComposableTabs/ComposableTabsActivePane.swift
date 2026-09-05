@@ -37,6 +37,13 @@ public final class ComposableTabsActivePane {
     /// able to go away without being told twice.
     private let paneWindows = NSHashTable<NSWindow>.weakObjects()
 
+    /// The pane backdrops currently on screen, so the active spot can be handed
+    /// on when the pane holding it goes away. A tab switch replaces every pane
+    /// in the window and closing a pane takes one out from under the user;
+    /// either way the window would otherwise keep pointing at a node nobody can
+    /// see. Weak for the same reason `paneWindows` is.
+    private let paneViews = NSHashTable<ComposableTabsPaneBackgroundView>.weakObjects()
+
     private var followsMouseObserver: UserSettingObserver<Bool>?
 
     private init() {
@@ -57,9 +64,15 @@ public final class ComposableTabsActivePane {
 
         // Windows outlive nothing here, but their entries would: without this
         // the map grows by one dead key per closed document window.
+        //
+        // `DispatchQueue.main`, never `RunLoop.main`: the latter enqueues in
+        // `.default` mode only, so anything posted while AppKit is running a
+        // mouse-down in `.eventTracking` waits until the drag ends. The main
+        // dispatch queue is drained in every mode. `UserSetting` documents the
+        // same failure.
         NotificationCenter.default.publisher(for: NSWindow.willCloseNotification)
             .compactMap { $0.object as? NSWindow }
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] window in
                 self?.activeByWindow.removeValue(forKey: ObjectIdentifier(window))
             }
@@ -106,14 +119,52 @@ public final class ComposableTabsActivePane {
     /// Told by each pane's backdrop as it lands in a window.
     ///
     /// The window is kept so a later change to `activePaneFollowsMouse` can
-    /// reach it, and the first pane to arrive claims the active spot: a window
-    /// nobody has clicked in yet still has a pane the user is typing into.
-    public func paneDidAppear(nodeID: UUID, in window: NSWindow) {
+    /// reach it, and a pane claims the active spot whenever no pane on screen
+    /// holds it: a window nobody has clicked in yet still has a pane the user
+    /// is typing into, and so does one whose active pane has just been replaced
+    /// by a tab switch.
+    public func paneDidAppear(_ pane: ComposableTabsPaneBackgroundView, in window: NSWindow) {
         paneWindows.add(window)
+        paneViews.add(pane)
         acceptMouseMoved(in: window)
-        if activeNodeID(in: window) == nil {
-            activate(nodeID: nodeID, in: window)
+        if livePane(for: activeNodeID(in: window), in: window) == nil {
+            activate(nodeID: pane.nodeID, in: window)
         }
+    }
+
+    /// Told by each pane's backdrop as it leaves a window — closed, or swapped
+    /// out by a tab switch.
+    ///
+    /// A window whose entry outlives the pane it names is a window where
+    /// `isInActivePane` answers "no" for every pane on screen: nothing is
+    /// outlined, and `record` never hands the keyboard on, because the pointer
+    /// only takes focus when it *changes* the active pane and the pane it moves
+    /// into is never the phantom one. So the spot is handed to a surviving pane,
+    /// and to no pane at all only when the window has none left — which is the
+    /// state a fresh pane's arrival is already written to claim.
+    public func paneDidDisappear(_ pane: ComposableTabsPaneBackgroundView, from window: NSWindow) {
+        paneViews.remove(pane)
+        let key = ObjectIdentifier(window)
+        guard activeByWindow[key] == pane.nodeID else { return }
+        if let successor = livePanes(in: window).first {
+            activeByWindow[key] = successor.nodeID
+        } else {
+            activeByWindow.removeValue(forKey: key)
+        }
+        NotificationCenter.default.post(name: Self.didChangeNotification, object: window)
+    }
+
+    /// The pane in `window` carrying `nodeID`, if one is on screen.
+    private func livePane(for nodeID: UUID?, in window: NSWindow) -> ComposableTabsPaneBackgroundView? {
+        guard let nodeID else { return nil }
+        return livePanes(in: window).first { $0.nodeID == nodeID }
+    }
+
+    /// A hidden pane is on screen as far as this is concerned — a collapsed
+    /// split is still the user's pane. Only a pane out of the window entirely
+    /// has stopped being somewhere the keys can go.
+    private func livePanes(in window: NSWindow) -> [ComposableTabsPaneBackgroundView] {
+        paneViews.allObjects.filter { $0.window === window }
     }
 
     /// Switched on, and never back off. `acceptsMouseMovedEvents` is the
@@ -140,13 +191,20 @@ public final class ComposableTabsActivePane {
         // taking the keyboard again on every one of those moves would interrupt
         // whatever the user was doing with it inside the pane.
         guard activeNodeID(in: window) != background.nodeID else { return }
-        activate(nodeID: background.nodeID, in: window)
 
         // A click carries its own focus: the view under it takes first
         // responder the ordinary AppKit way. The pointer carries nothing, so a
         // pane it moves into would be outlined as active while the keys kept
         // going to the pane the user left.
-        if following { takeFocus(within: chain, in: window) }
+        //
+        // Focus is taken *before* the pane is activated, because the pane the
+        // user left may refuse to give the keyboard up — a text field failing
+        // validation in `resignFirstResponder` is AppKit's ordinary way of
+        // saying "finish this first". Outlining the new pane anyway would point
+        // at a pane the keys are not going to, so a refusal leaves both where
+        // they were and the pointer changes nothing.
+        if following, case .refused = takeFocus(within: chain, in: window) { return }
+        activate(nodeID: background.nodeID, in: window)
     }
 
     /// Whether the pointer is entitled to move the active pane in this window.
@@ -179,6 +237,18 @@ public final class ComposableTabsActivePane {
         return nil
     }
 
+    /// What came of trying to hand the keyboard to the pane under the pointer.
+    private enum FocusOutcome {
+        /// The keys are in the pane under the pointer — either just moved
+        /// there, or already there.
+        case taken
+        /// Nothing in the pane wanted the keyboard. The pointer still owns the
+        /// outline; the first responder stays where it was.
+        case nowhereToPut
+        /// The view holding the keyboard would not give it up.
+        case refused
+    }
+
     /// Hand the keyboard to whatever a click at this point would have handed it
     /// to: the innermost view under the pointer that will take it.
     ///
@@ -188,12 +258,27 @@ public final class ComposableTabsActivePane {
     /// actually over. A pane with nothing to type in keeps the outline and
     /// leaves the first responder where it was, which is the honest outcome:
     /// there was nowhere in it for the keys to go.
-    private func takeFocus(within chain: [NSView], in window: NSWindow) {
+    ///
+    /// `acceptsFirstResponder` is a claim, not a promise — `makeFirstResponder`
+    /// still returns false when the *outgoing* responder refuses to resign, and
+    /// when the incoming one declines the appointment it was offered. The first
+    /// is the whole window saying no and ends the walk; the second is only this
+    /// view saying no, so the walk carries on outwards and the pane's next
+    /// candidate gets its turn.
+    @discardableResult
+    private func takeFocus(within chain: [NSView], in window: NSWindow) -> FocusOutcome {
         for view in chain where view.acceptsFirstResponder {
-            guard window.firstResponder !== view else { return }
-            window.makeFirstResponder(view)
-            return
+            guard window.firstResponder !== view else { return .taken }
+            if window.makeFirstResponder(view) { return .taken }
+            // Which of the two refused is readable from where the keyboard
+            // ended up. A view that declines the appointment leaves the window
+            // itself holding it, having already let the old responder go — so
+            // the next candidate outwards is worth offering. Anything else
+            // means the old responder is still holding on, and it will refuse
+            // every candidate the same way.
+            guard window.firstResponder === window else { return .refused }
         }
+        return .nowhereToPut
     }
 }
 
@@ -208,18 +293,31 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
     private var observer: ThemePaletteObserver?
     private var cancellables = Set<AnyCancellable>()
 
+    /// The window this backdrop was last in, so that leaving one can be
+    /// reported. `viewDidMoveToWindow` is told where the view has arrived and
+    /// never where it came from, and by the time it runs `window` is already
+    /// the new answer.
+    private weak var lastWindow: NSWindow?
+
+    /// The palette for this view's own `ThemeScope`, which is what every repaint
+    /// below reads. `ThemePaletteObserver.currentPalette` is the app-wide answer
+    /// and would undo the scope on every repaint that is not a theme change —
+    /// a project window running its own scope would snap back to the app's the
+    /// first time the user moved between panes.
+    private var scopedPalette: SemanticPalette { resolvedThemeScope.palette }
+
     public init(nodeID: UUID) {
         self.nodeID = nodeID
         super.init(frame: .zero)
         self.wantsLayer = true
 
-        observer = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        observer = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
 
         NotificationCenter.default.publisher(for: ComposableTabsActivePane.didChangeNotification)
             .sink { [weak self] notification in
                 guard let self, let window = notification.object as? NSWindow,
                       window === self.window else { return }
-                self.applyTheme(ThemePaletteObserver.currentPalette)
+                self.applyTheme(self.scopedPalette)
             }
             .store(in: &cancellables)
 
@@ -231,15 +329,21 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
             NotificationCenter.default.publisher(for: NSWindow.didResignKeyNotification)
         )
         .sink { [weak self] _ in
-            self?.applyTheme(ThemePaletteObserver.currentPalette)
+            guard let self else { return }
+            self.applyTheme(self.scopedPalette)
         }
         .store(in: &cancellables)
 
+        // `DispatchQueue.main`, never `RunLoop.main`: the latter enqueues in
+        // `.default` mode only, so a change made while AppKit tracks a mouse in
+        // `.eventTracking` — a checkbox being clicked — would not repaint until
+        // the mouse came up. `UserSetting` documents the same failure.
         UserSettings.shared.changes
             .filter { $0 == UserSettings.highlightActivePane.name }
-            .receive(on: RunLoop.main)
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] _ in
-                self?.applyTheme(ThemePaletteObserver.currentPalette)
+                guard let self else { return }
+                self.applyTheme(self.scopedPalette)
             }
             .store(in: &cancellables)
     }
@@ -249,10 +353,15 @@ public final class ComposableTabsPaneBackgroundView: NSView, Themeable {
 
     public override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        if let window {
-            ComposableTabsActivePane.shared.paneDidAppear(nodeID: nodeID, in: window)
+        let tracker = ComposableTabsActivePane.shared
+        if let previous = lastWindow, previous !== window {
+            tracker.paneDidDisappear(self, from: previous)
         }
-        applyTheme(ThemePaletteObserver.currentPalette)
+        lastWindow = window
+        if let window {
+            tracker.paneDidAppear(self, in: window)
+        }
+        applyTheme(scopedPalette)
     }
 
     /// A sheet takes key from the window it is attached to, and the pane

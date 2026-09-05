@@ -38,6 +38,7 @@ final class ThemedTerminalView: LocalProcessTerminalView {
     }
 
     private var isHollow = false
+    private weak var cachedCaret: NSView?
     private var cancellables = Set<AnyCancellable>()
 
     override init(frame: CGRect) {
@@ -90,17 +91,33 @@ final class ThemedTerminalView: LocalProcessTerminalView {
         applyOutline()
     }
 
-    /// SwiftTerm adds its caret as a direct subview but exposes no accessor for
-    /// it, so it is recognized by class name. A miss is not fatal — the caret
-    /// just stays filled — which is why this is a `guard`, not a precondition.
     private func applyOutline() {
-        guard let caret = subviews.first(where: {
-            String(describing: type(of: $0)).hasSuffix("CaretView")
-        }) else { return }
+        guard let caret = caretView else { return }
 
         caret.wantsLayer = true
         caret.layer?.borderWidth = isHollow ? Self.outlineWidth : 0
         caret.layer?.borderColor = isHollow ? caretAppearance.color.cgColor : nil
+    }
+
+    /// SwiftTerm adds its caret as a direct subview but exposes no accessor for
+    /// it, so it is recognized by class name. A miss is not fatal — the caret
+    /// just stays filled — which is why every caller of this `guard`s rather
+    /// than asserting.
+    ///
+    /// Cached, because the search is not free and the caller is not rare:
+    /// `showCursor` runs on every cursor movement, and
+    /// `String(describing: type(of:))` demangles a metatype for each subview it
+    /// passes — a per-keystroke cost for an answer that changes when SwiftTerm
+    /// rebuilds its subviews and at no other time. Weak, and re-derived the
+    /// moment the view it names is no longer ours, so a rebuild is picked up
+    /// rather than remembered wrongly.
+    private var caretView: NSView? {
+        if let cachedCaret, cachedCaret.superview === self { return cachedCaret }
+        let found = subviews.first {
+            String(describing: type(of: $0)).hasSuffix("CaretView")
+        }
+        cachedCaret = found
+        return found
     }
 
     private static let outlineWidth: CGFloat = 1

@@ -344,7 +344,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
         ])
 
         self.view = root
-        themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in self?.applyTheme(palette) }
     }
 
     public override func viewDidLoad() {
@@ -651,7 +651,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
 
     /// Repaints both description panes and refills the models table for `row`.
     private func updateInfo(for row: ProviderPickerRow?) {
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
         for textView in [infoTextView, modelInfoTextView] {
             textView.linkTextAttributes = [
                 .foregroundColor: palette.accentColor,
@@ -710,7 +710,7 @@ public final class ProviderPickerViewController: NSViewController, Themeable {
     }
 
     private func updateModelInfo(for model: ModelRow?) {
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
         let content = model.map { ProviderPickerInfo.model(name: $0.name, info: $0.info, palette: palette) }
             ?? ProviderPickerInfo.placeholder(noModelText, palette: palette)
         modelInfoTextView.textStorage?.setAttributedString(content)
@@ -838,7 +838,7 @@ extension ProviderPickerViewController: NSTableViewDataSource, NSTableViewDelega
     public func tableView(_ tableView: NSTableView,
                           viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
         guard let column = tableColumn else { return nil }
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
         if tableView === modelTableView {
             guard row >= 0, row < modelRows.count else { return nil }
             let entry = modelRows[row]

@@ -22,7 +22,7 @@ extension ComposableSettings {
                 self.heightAnchor.constraint(equalToConstant: SettingsLayout.default[.dividerThickness])
             ])
 
-            themeObserver = ThemePaletteObserver { [weak self] palette in
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in
                 self?.layer?.backgroundColor = palette.dividerColor.cgColor
             }
         }
@@ -33,7 +33,7 @@ extension ComposableSettings {
 
         public override func updateLayer() {
             super.updateLayer()
-            self.layer?.backgroundColor = ThemePaletteObserver.currentPalette.dividerColor.cgColor
+            self.layer?.backgroundColor = self.resolvedThemeScope.palette.dividerColor.cgColor
         }
     }
 }

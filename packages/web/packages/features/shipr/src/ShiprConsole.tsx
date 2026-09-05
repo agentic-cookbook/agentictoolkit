@@ -699,6 +699,23 @@ function Console({
   const problem = error ?? tree.error;
   const [alert, setAlert] = React.useState<string | null>(null);
   const raised = React.useRef<string | null>(null);
+  // The live value of `problem`, read from a timer below rather than an effect dependency —
+  // see `snoozeTimer`.
+  const problemRef = React.useRef(problem);
+  problemRef.current = problem;
+  // How long a fault stays quiet after the operator dismisses it while it is still live. Not
+  // zero: `raised.current` staying set is what stops a still-failing read from reopening the
+  // SAME dialog on its very next poll, a beat after it was just closed. Not forever either:
+  // "dismissed" must not become "silenced for the rest of the session" for a fault that is
+  // still there — see the comment on `onConfirm` below, and the one above `raised`.
+  const RERAISE_AFTER_MS = 60_000;
+  const snoozeTimer = React.useRef<number | null>(null);
+  React.useEffect(
+    () => () => {
+      if (snoozeTimer.current !== null) window.clearTimeout(snoozeTimer.current);
+    },
+    [],
+  );
   React.useEffect(() => {
     // Truthiness, not `=== null`: `new Error()` carries an empty `message`, and the
     // catch that fills `error` copies it through unread. Keyed on null alone, that
@@ -889,7 +906,25 @@ function Console({
         tone="error"
         title="shipr hit a problem"
         description={alert ?? ''}
-        onConfirm={() => setAlert(null)}
+        onConfirm={() => {
+          setAlert(null);
+          // Dismissing hides the modal, not the fault. `raised.current` is deliberately LEFT
+          // set — see the effect above — so an outage that is still going does not vanish
+          // with no signal at all for the rest of the session (the case the removed inline
+          // `<ErrorText>` used to cover; see the comment at the top of this block). Instead
+          // the SAME fault is allowed to raise again once the snooze runs out, and only if it
+          // is still the live one: a different fault already got its own dialog through the
+          // effect above, and a fault that cleared needs no reminder.
+          const dismissed = raised.current;
+          if (!dismissed) return;
+          if (snoozeTimer.current !== null) window.clearTimeout(snoozeTimer.current);
+          snoozeTimer.current = window.setTimeout(() => {
+            snoozeTimer.current = null;
+            if (raised.current === dismissed && problemRef.current === dismissed) {
+              setAlert(dismissed);
+            }
+          }, RERAISE_AFTER_MS);
+        }}
       />
     </div>
   );

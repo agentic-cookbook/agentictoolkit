@@ -485,7 +485,7 @@ extension FileTreeOutlineViewController: NSOutlineViewDataSource, NSOutlineViewD
         viewFor tableColumn: NSTableColumn?,
         item: Any
     ) -> NSView? {
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
         switch item {
         case let manager as FileTreeManager:
             let isTarget = selection.selectedRoot == manager.repoRootURL

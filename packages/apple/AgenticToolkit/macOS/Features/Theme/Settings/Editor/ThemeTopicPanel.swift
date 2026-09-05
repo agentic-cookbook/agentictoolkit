@@ -63,7 +63,7 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
 
         let label = NSTextField(labelWithString: caption)
         label.font = .systemFont(ofSize: 10)
-        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        label.textColor = view.resolvedThemeScope.palette.secondaryTextColor
         label.alignment = .center
 
         let column = NSStackView(views: [well, label])
@@ -156,7 +156,7 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
     func sectionTitle(_ text: String) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: 11, weight: .semibold)
-        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        label.textColor = view.resolvedThemeScope.palette.secondaryTextColor
         return label
     }
 
@@ -173,7 +173,7 @@ class ThemeTopicPanel: ComposableSettings.SettingsPanelViewController {
     func captionLabel(_ text: String, _ width: CGFloat) -> NSTextField {
         let label = NSTextField(labelWithString: text)
         label.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        label.textColor = view.resolvedThemeScope.palette.secondaryTextColor
         label.translatesAutoresizingMaskIntoConstraints = false
         label.widthAnchor.constraint(equalToConstant: width).isActive = true
         return label

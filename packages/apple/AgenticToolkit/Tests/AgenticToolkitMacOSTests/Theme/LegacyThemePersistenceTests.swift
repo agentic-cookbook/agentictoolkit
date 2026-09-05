@@ -24,16 +24,33 @@ struct LegacyThemePersistenceTests {
     private let suiteName = "AgenticToolkitLegacyThemePersistenceTests"
     private let key = "theme.active_theme_id"
 
-    private func freshDefaults() -> UserDefaults {
+    /// Points `UserSettings.shared` at a fresh, isolated `UserDefaults` domain.
+    /// Returns the domain and the closure that puts `UserSettings.shared` back
+    /// the way it was found. **Both halves matter**: `UserSettings.shared` is a
+    /// process-wide `static var`, so a test that only wipes its own defaults
+    /// domain still leaves every later test in the bundle pointed at a
+    /// `UserSettings` whose backing store has just been deleted — a failure
+    /// that lands somewhere else and looks like anything but this file.
+    /// Mirrors `ExternalThemeChangeObservationTests.freshDefaults()`; not
+    /// shared with it because doing so would mean adding a new shared
+    /// test-support file for one nine-line helper.
+    private func freshDefaults() -> (defaults: UserDefaults, restore: () -> Void) {
+        let previousShared = UserSettings.shared
+
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
-        return defaults
+
+        let suiteName = self.suiteName
+        return (defaults, {
+            UserSettings.shared = previousShared
+            defaults.removePersistentDomain(forName: suiteName)
+        })
     }
 
     @Test("a theme selected under an older build is still selected when read back through UserSettingsThemeStorage")
     func survivesThroughStorageAdapter() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let (defaults, restore) = freshDefaults()
+        defer { restore() }
 
         // Manufacture legacy on-disk state exactly as a pre-seam build would have
         // left it: a raw String under the literal key, written directly to
@@ -48,8 +65,8 @@ struct LegacyThemePersistenceTests {
 
     @Test("a theme selected under an older build is still selected when ThemeManager() launches")
     func survivesThroughThemeManagerLaunch() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let (defaults, restore) = freshDefaults()
+        defer { restore() }
 
         defaults.set(BuiltInThemes.gruvboxDark.id, forKey: key)
 
@@ -63,8 +80,8 @@ struct LegacyThemePersistenceTests {
 
     @Test("writing through the new seam still lands under the historical key, unchanged")
     func writesUnderTheHistoricalKey() {
-        let defaults = freshDefaults()
-        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let (defaults, restore) = freshDefaults()
+        defer { restore() }
 
         UserSettings.shared = UserSettings(with: UserDefaultsSettingsStorageProvider(defaults: defaults))
         let storage = UserSettingsThemeStorage()

@@ -37,7 +37,7 @@ extension ComposableSettings {
             super.init(frame: .zero)
             self.translatesAutoresizingMaskIntoConstraints = false
 
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = self.resolvedThemeScope.palette
             let font = palette.font(monospaced ? .code : .body)
             self.textView.font = font
             self.textView.string = viewModel.value

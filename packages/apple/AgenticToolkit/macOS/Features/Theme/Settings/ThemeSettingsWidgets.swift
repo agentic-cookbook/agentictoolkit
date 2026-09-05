@@ -22,7 +22,7 @@ final class ThemeCard: NSView {
 
         header.stringValue = title
         header.font = .systemFont(ofSize: 12, weight: .semibold)
-        header.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        header.textColor = resolvedThemeScope.palette.secondaryTextColor
         header.translatesAutoresizingMaskIntoConstraints = false
 
         content.translatesAutoresizingMaskIntoConstraints = false
@@ -53,7 +53,7 @@ final class ThemeCard: NSView {
         ])
 
         // Recolor the header live so editing the active theme updates it too.
-        observer = ThemePaletteObserver { [weak self] palette in
+        observer = ThemePaletteObserver(host: self) { [weak self] palette in
             self?.header.textColor = palette.secondaryTextColor
         }
     }

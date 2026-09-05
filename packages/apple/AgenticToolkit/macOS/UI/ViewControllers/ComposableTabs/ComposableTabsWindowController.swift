@@ -90,7 +90,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
 
         tabbed.delegate = self
         tabbed.contentInsets = PaneSpacing.contentInsets
-        backdropObserver = ThemePaletteObserver { [weak self] palette in
+        backdropObserver = ThemePaletteObserver(host: tabbed.view) { [weak self] palette in
             self?.tabbed.centerBackgroundColor = NSColor(palette.projectPaneBackdrop)
         }
         spacingObservers = PaneSpacing.edgeSettings.values.map { setting in
@@ -190,7 +190,7 @@ public final class ComposableTabsWindowController: WindowController<NSViewContro
     private func refreshArrangeButton() {
         let enabled = ComposableTabsArrangeMode.shared.isEnabled(in: window)
         arrangeButton?.contentTintColor =
-            enabled ? ThemePaletteObserver.currentPalette.nsColor(.accent) : nil
+            enabled ? tabbed.view.resolvedThemeScope.palette.nsColor(.accent) : nil
         arrangeButton?.state = enabled ? .on : .off
     }
 

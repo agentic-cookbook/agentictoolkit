@@ -81,18 +81,31 @@ export function ImportDialog({
   const [document, setDocument] = React.useState<ShiprDocument | null>(null);
   const [readError, setReadError] = React.useState<string | null>(null);
   const [connectionId, setConnectionId] = React.useState('');
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const firstConnectionId = connections?.[0]?.id ?? '';
 
   // Re-seeded on OPEN, not on mount — the dialog stays mounted while closed, and a second
   // import must not start on the first one's file. Especially this one: the tree it would be
   // compared against has moved since, so the plan on the screen would describe a fleet that
-  // no longer exists.
+  // no longer exists. Keyed on `open` ALONE: `connections` is not, so a list that merely
+  // reordered mid-read (a background revalidation) does not run this and throw away a file
+  // the operator already picked.
   React.useEffect(() => {
     if (!open) return;
     setFilename('');
     setDocument(null);
     setReadError(null);
+    // The platform control keeps whatever the operator last chose; without this, picking the
+    // SAME file again after a reset fires no change event and the dialog just sits there.
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [open]);
+
+  // Seeding the connection default is a separate concern from resetting the read: it should
+  // track the connections list, not just `open`, so a picker that arrives after the dialog is
+  // already open (the list finishes loading a beat later) still gets a default.
+  React.useEffect(() => {
+    if (!open) return;
     setConnectionId(firstConnectionId);
   }, [open, firstConnectionId]);
 
@@ -143,6 +156,7 @@ export function ImportDialog({
               custom drop zone would be a second way to do the same thing badly. */}
           <input
             id="shipr-import-file"
+            ref={fileInputRef}
             type="file"
             accept="application/json,.json"
             className="text-xs text-apt-text-muted file:mr-3 file:rounded file:border file:border-apt-border file:bg-apt-surface-2 file:px-2 file:py-1 file:text-xs file:text-apt-text"

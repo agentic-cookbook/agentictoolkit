@@ -77,6 +77,13 @@ export function planImport({ document, groups, items }: ImportPlanOptions): Impo
   return { rows, newGroups, counts };
 }
 
+/** A folder only earns its place in the plan-level list once a row has actually said it
+ *  needs it — see the two call sites below, both past every `blocked` return. A row this
+ *  console refuses to import must not leave its folder behind for `apply` to build anyway. */
+function addNewGroup(newGroups: string[], group: string | null, groupIsNew: boolean): void {
+  if (groupIsNew && group && !newGroups.includes(group)) newGroups.push(group);
+}
+
 function row(
   project: ExportedProject,
   ctx: {
@@ -93,10 +100,7 @@ function row(
   if (group) {
     const existing = findGroup(ctx.groups, group);
     if (existing) groupId = existing.id;
-    else {
-      groupIsNew = true;
-      if (!ctx.newGroups.includes(group)) ctx.newGroups.push(group);
-    }
+    else groupIsNew = true;
   }
   const base = { project, reason: '', changes: [], notes, group, groupId, groupIsNew };
 
@@ -132,6 +136,11 @@ function row(
         )} — a second one is declared in that repository's \`.shipr\`, not added from here`,
       };
     }
+    // Recorded the moment this row is ACCEPTED, not just at the top from the live tree — a
+    // second row further down the same file claiming this source hits the check above
+    // instead of both being waved through as registrations.
+    ctx.devSlugs.add(devSlug);
+    addNewGroup(ctx.newGroups, group, groupIsNew);
     return { ...base, state: 'new' };
   }
 
@@ -167,12 +176,20 @@ function row(
   }
 
   const wanted: Partial<Record<Environment, string>> = {};
-  for (const [env, branch] of Object.entries(config.environments ?? {})) {
-    if (!isEnvironment(env)) {
-      notes.push(`\`${env}\` is not an environment this console deploys to, so it is dropped`);
-      continue;
+  if (config.environments) {
+    for (const [env, branch] of Object.entries(config.environments)) {
+      if (!isEnvironment(env)) {
+        notes.push(`\`${env}\` is not an environment this console deploys to, so it is dropped`);
+        continue;
+      }
+      if (typeof branch === 'string' && branch) wanted[env] = branch;
     }
-    if (typeof branch === 'string' && branch) wanted[env] = branch;
+  } else {
+    // The KEY missing is silence, not an instruction — a file that never mentions
+    // environments (or only touches other settings) must not clear every mapping this
+    // console already holds. Only a `environments: {}` that is actually IN the file, checked
+    // above, means "deploys to none of them now".
+    Object.assign(wanted, existing.envBranches);
   }
   if (!sameEnvironments(wanted, existing.envBranches)) {
     patch.envBranches = wanted;
@@ -185,15 +202,21 @@ function row(
 
   // The folder is part of the layout the file carries, so a repository filed somewhere else
   // here is a difference like any other. A folder that does not exist yet has no id at plan
-  // time; the apply fills it in from the folder it just made.
-  if ((groupId ?? null) !== (existing.groupId ?? null) && (group !== null || existing.groupId !== null)) {
+  // time — `groupId` is `null` whether the file means "top level" or "a folder not made
+  // yet" — so `groupIsNew` is checked FIRST, on its own: a repository moving into a
+  // brand-new folder is a change no matter what its current folder's id happens to be. The
+  // apply fills the id in from the folder it just made.
+  if (
+    (groupIsNew || (groupId ?? null) !== (existing.groupId ?? null)) &&
+    (group !== null || existing.groupId !== null)
+  ) {
     if (!groupIsNew) patch.groupId = groupId;
     changes.push(`folder → ${group ?? '(top level)'}`);
   }
 
-  return changes.length === 0
-    ? { ...base, state: 'same', repoId: existing.id }
-    : { ...base, state: 'differs', repoId: existing.id, changes, patch };
+  if (changes.length === 0) return { ...base, state: 'same', repoId: existing.id };
+  addNewGroup(ctx.newGroups, group, groupIsNew);
+  return { ...base, state: 'differs', repoId: existing.id, changes, patch };
 }
 
 function sameEnvironments(

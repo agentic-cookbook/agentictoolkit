@@ -35,7 +35,7 @@ extension ComposableSettings {
                 self.stackView.bottomAnchor.constraint(lessThanOrEqualTo: self.bottomAnchor, constant: -inset)
             ])
 
-            themeObserver = ThemePaletteObserver { [weak self] palette in
+            themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in
                 self?.layer?.backgroundColor = palette.surfaceColor.cgColor
             }
         }

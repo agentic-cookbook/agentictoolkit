@@ -579,7 +579,7 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
         guard let held = heldNumber(for: field) else { return false }
         let typed = (field.currentEditor()?.string ?? field.stringValue)
             .trimmingCharacters(in: .whitespaces)
-        let number = Int(typed).map { $0.clamped(to: range) } ?? held
+        let number = parsed(typed, in: field).map { $0.clamped(to: range) } ?? held
         shownNumbers[ObjectIdentifier(field)] = number
         field.integerValue = number
         if let editor = field.currentEditor() {
@@ -587,6 +587,20 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
             editor.selectedRange = NSRange(location: field.stringValue.count, length: 0)
         }
         return true
+    }
+
+    /// Read a typed number back the same way the field wrote it.
+    ///
+    /// `field.integerValue` renders through the field's `NumberFormatter`,
+    /// which is locale-aware, while `Int(_:)` reads ASCII digits and nothing
+    /// else. Where the two disagree — a locale whose digits are not `0`–`9` —
+    /// the field's own text parses as no number at all, so a number the user
+    /// typed was quietly replaced by the one already held. Asking the formatter
+    /// keeps the reading and the writing on the same side of the locale.
+    /// `Int(_:)` remains the answer for a field with no formatter at all.
+    private func parsed(_ text: String, in field: NSTextField) -> Int? {
+        guard let formatter = field.formatter as? NumberFormatter else { return Int(text) }
+        return formatter.number(from: text)?.intValue ?? Int(text)
     }
 
     /// The order Tab walks the numbers in: round the picture the way it reads
@@ -707,9 +721,18 @@ public final class SpacingControl: NSView, NSTextFieldDelegate {
     /// Below this the picture stops being readable and the arrows start to
     /// overlap; the control clips rather than shrinking further, which is a
     /// legible failure instead of an illegible one.
+    ///
+    /// Two floors, and the larger wins: three number groups across, which is
+    /// what keeps the chrome legible, and ``Metrics/minimumDiagramSize``, which
+    /// is what keeps the top of the range drawable. The second is the taller of
+    /// the two — the chrome floor left 63 points of diagram for a range that
+    /// asks for 80 — so a squeezed control now stops shrinking while the
+    /// picture can still move over every value the user can type.
     private static let minimumSize = CGSize(
-        width: diagramInset.width * 2 + Metrics.fieldGroupSize.width * 3,
-        height: diagramInset.height * 2 + Metrics.fieldGroupSize.height * 3
+        width: diagramInset.width * 2
+            + max(Metrics.minimumDiagramSize.width, Metrics.fieldGroupSize.width * 3),
+        height: diagramInset.height * 2
+            + max(Metrics.minimumDiagramSize.height, Metrics.fieldGroupSize.height * 3)
     )
 
     /// Measured from `bounds`, not from `controlSize`.
@@ -1014,6 +1037,19 @@ private final class SpacingHandle: NSView {
     /// this short costs a held arrow nothing.
     private static let grace: TimeInterval = 0.12
 
+    /// The longest the whole decision may take, however many events arrive.
+    ///
+    /// The grace is restarted by each event, and a finger resting on a trackpad
+    /// is not a pointer sending nothing — it is a pointer sending a steady
+    /// trickle of sub-point jitter. Every one of those restarted the clock, so
+    /// on a trackpad the wait never ended and the arrow never got its press
+    /// back: hold-to-repeat was unreachable there, while a mouse, which really
+    /// does go silent, worked. This bounds the wait so a press that has not
+    /// travelled ``slop`` is a hold whether or not the pointer is quiet, and it
+    /// stays under the 0.45s an arrow waits before repeating, so nothing is
+    /// lost at the other end either.
+    private static let patience: TimeInterval = 0.3
+
     /// Which way this handle moves. It is also the cursor it shows, so the
     /// pointer says the pair is draggable before anything is pressed.
     private let axis: SpacingAxis
@@ -1055,13 +1091,17 @@ private final class SpacingHandle: NSView {
     /// that lies still is a hold the arrow should have back so it can repeat.
     /// The grace measures the *stillness*, not the whole press: every mouse
     /// event that arrives puts the clock back, so a drag begun slowly is still
-    /// a drag — it is only a pointer that stops sending anything at all that
-    /// counts as held. Timing the press instead handed a slow drag to the
-    /// button, which then had the press and could do nothing with it but click.
+    /// a drag. Timing the press alone handed a slow drag to the button, which
+    /// then had the press and could do nothing with it but click.
+    ///
+    /// ``patience`` is what keeps that from being unbounded: a trackpad's
+    /// resting jitter is a stream of events that never travels ``slop``, and
+    /// restarting the clock on each of them waits forever.
     func claimsPress(_ event: NSEvent, on button: NSButton) -> Bool {
         guard let window else { return false }
         let start = event.locationInWindow
-        var deadline = Date().addingTimeInterval(Self.grace)
+        let expiry = Date().addingTimeInterval(Self.patience)
+        var deadline = min(Date().addingTimeInterval(Self.grace), expiry)
         while let next = window.nextEvent(
             matching: [.leftMouseDragged, .leftMouseUp],
             until: deadline,
@@ -1083,7 +1123,11 @@ private final class SpacingHandle: NSView {
                 track(from: event, continuing: next)
                 return true
             }
-            deadline = Date().addingTimeInterval(Self.grace)
+            deadline = min(Date().addingTimeInterval(Self.grace), expiry)
+            // An expired deadline does not end the loop on its own: an event
+            // already sitting in the queue is handed over regardless of the
+            // date, which on a trackpad is a backlog that never runs dry.
+            if deadline <= Date() { break }
         }
         return false
     }

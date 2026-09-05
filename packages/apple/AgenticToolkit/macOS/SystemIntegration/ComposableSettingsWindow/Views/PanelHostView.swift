@@ -62,7 +62,7 @@ extension ComposableSettings {
                     equalTo: self.contentContainer.trailingAnchor, constant: -Self.buttonInset)
             ])
 
-            self.themeObserver = ThemePaletteObserver { [weak self] _ in
+            self.themeObserver = ThemePaletteObserver(host: self) { [weak self] _ in
                 self?.updateHelpButton()
             }
 
@@ -112,7 +112,7 @@ extension ComposableSettings {
 
         private func updateHelpButton() {
             let disclosed = self.helpPresenter?.isHelpVisible ?? false
-            let palette = ThemePaletteObserver.currentPalette
+            let palette = self.resolvedThemeScope.palette
             // Shown for every panel this split hosts, whether or not that panel
             // has prose. It used to come and go with `help != nil`, which put a
             // control in the corner of some panels and not others and made the

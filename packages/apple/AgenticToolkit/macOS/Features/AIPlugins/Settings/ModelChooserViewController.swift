@@ -262,7 +262,7 @@ public final class ModelChooserViewController: NSViewController {
 
     public override func viewDidLoad() {
         super.viewDidLoad()
-        themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in self?.applyTheme(palette) }
         keyboard.onMoveSelection = { [weak self] delta in self?.moveSelection(by: delta) }
         keyboard.onChoose = { [weak self] in self?.chooseTapped() }
         keyboard.onCancel = { [weak self] in self?.cancelTapped() }

@@ -424,7 +424,7 @@ public final class DiscoveredWindowRowView: NSView {
         isHovered = true
         wantsLayer = true
         // A hand-rolled "subtle raised surface" fill for the hover state.
-        layer?.backgroundColor = ThemePaletteObserver.currentPalette.nsColor(.elevatedSurface).cgColor
+        layer?.backgroundColor = resolvedThemeScope.palette.nsColor(.elevatedSurface).cgColor
     }
 
     public override func mouseExited(with event: NSEvent) {

@@ -28,13 +28,13 @@ public final class TerminalSettingsPanelViewController: ComposableSettings.Setti
                 body: "Space between the terminal text and the edge of its pane, in points, "
                     + "set per side. A terminal sitting under a tab bar usually wants more "
                     + "room at the top than at the bottom, which is why there are four "
-                    + "numbers and not one. Each number straddles the edge it belongs to, "
-                    + "with an arrow either side of it. Every arrow stands against that edge "
+                    + "numbers and not one. Each number stands outside the diagram, in "
+                    + "line with the edge it belongs to. Every arrow stands against that edge "
                     + "and points the way it travels, so the arrow pointing into the terminal "
                     + "is the one that adds space. Hold an arrow "
-                    + "down to keep going, or type a number and press Return. Up and down "
-                    + "arrows adjust the field you are in. Changes apply to every open "
-                    + "terminal as you make them."
+                    + "down to keep going, or type a number and press Return. The stepper "
+                    + "beside each number adjusts it a point at a time. Changes apply to "
+                    + "every open terminal as you make them."
             ),
             .init(
                 title: "Font",

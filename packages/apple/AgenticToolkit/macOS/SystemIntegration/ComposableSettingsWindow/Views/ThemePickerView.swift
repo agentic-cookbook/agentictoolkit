@@ -28,7 +28,7 @@ extension ComposableSettings {
             self.addSubview(stack)
             Self.pinToEdges(stack, of: self)
 
-            self.observer = ThemePaletteObserver { [weak self] palette in
+            self.observer = ThemePaletteObserver(host: self) { [weak self] palette in
                 self?.preview.show(palette.theme)
             }
         }

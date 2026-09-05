@@ -216,12 +216,12 @@ private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPane
             .init(
                 title: "Frame Spacing",
                 body: "The room between the panes and the tab bars framing them, in points, "
-                    + "set per side. Each number straddles the edge it belongs to, with an "
-                    + "arrow either side of it. Every arrow stands against that edge and "
+                    + "set per side. Each number stands outside the diagram, in line with "
+                    + "the edge it belongs to. Every arrow stands against that edge and "
                     + "points the way it travels, so the arrow pointing into the view is "
                     + "the one that adds space. Hold an arrow down to "
-                    + "keep going, or type a number and press Return. Up and down arrows "
-                    + "adjust the field you are in."
+                    + "keep going, or type a number and press Return. The stepper beside "
+                    + "each number adjusts it a point at a time."
             ),
             .init(
                 title: "Pane Divider Spacing",
@@ -244,18 +244,32 @@ private final class ProjectSpacingSettingsPanel: ComposableSettings.SettingsPane
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        let frame = ComposableSettings.GroupView(withTitle: "Frame Spacing")
-        frame.addSettingSubview(SpacingControl.boundToSettings(
+        let frameSpacing = SpacingControl.boundToSettings(
             style: .frame,
             edges: PaneSpacing.edgeSettings
-        ))
+        )
+        let frame = ComposableSettings.GroupView(withTitle: "Frame Spacing")
+        frame.addSettingSubview(frameSpacing)
         addGroup(frame)
 
-        let dividers = ComposableSettings.GroupView(withTitle: "Pane Divider Spacing")
-        dividers.addSettingSubview(SpacingControl.boundToSettings(
+        let dividerSpacing = SpacingControl.boundToSettings(
             style: .paneDividers,
             gutters: PaneSpacing.gutterSettings
-        ))
+        )
+        let dividers = ComposableSettings.GroupView(withTitle: "Pane Divider Spacing")
+        dividers.addSettingSubview(dividerSpacing)
         addGroup(dividers)
+
+        // Tab out of the last number in one control and into the first of the
+        // next. Each control answers Tab within itself and hands the key back
+        // at either end, where AppKit takes over — and AppKit works the key
+        // view loop out from where subviews *are*. These are placed by frame,
+        // so left to itself Tab out of the bottom number went somewhere that
+        // looked like nowhere. This sheet shows the same pair as the Projects
+        // settings panel, so it owes the user the same key view loop.
+        // The sheet holds nothing else to type in, so the loop closes on itself
+        // rather than trailing off into the sheet's buttons.
+        frameSpacing.lastNumberField?.nextKeyView = dividerSpacing.firstNumberField
+        dividerSpacing.lastNumberField?.nextKeyView = frameSpacing.firstNumberField
     }
 }

@@ -98,6 +98,19 @@ public struct SpacingControlLayout: Equatable {
     /// range instead of holding the diagram still above 17.
     public static let maximumDisplayedInset: CGFloat = 40
 
+    /// The smallest diagram that can still draw the whole range: both opposite
+    /// sides at their maximum, and a core left over that still reads as the
+    /// view they are insetting.
+    ///
+    /// Tied to ``maximumDisplayedInset`` rather than written out, because the
+    /// two moved apart once already — the cap rose to meet the range and the
+    /// minimum did not follow, leaving a diagram that ran out of room at 31
+    /// points a side and drew the last nine as nothing moving.
+    public static let minimumDiagramSize = CGSize(
+        width: maximumDisplayedInset * 2 + fieldGroupSize.width,
+        height: maximumDisplayedInset * 2 + fieldGroupSize.height
+    )
+
     /// A divider narrower than this is still drawn as a hairline, so the
     /// diagram reads as four panes rather than one at zero.
     private static let minimumDisplayedGutter: CGFloat = 1

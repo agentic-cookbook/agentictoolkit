@@ -291,7 +291,7 @@ public final class LLMPickerView: NSView, SettingsViewProtocol {
     }
 
     private func refreshModelRow() {
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = resolvedThemeScope.palette
         guard let (config, template) = resolvedSelection() else {
             modelNameLabel.stringValue = Self.noProviderModelText
             modelNameLabel.textColor = palette.secondaryTextColor

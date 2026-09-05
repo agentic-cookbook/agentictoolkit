@@ -46,7 +46,7 @@ extension ComposableSettings {
                 self.scrollView.bottomAnchor.constraint(equalTo: self.bottomAnchor)
             ])
 
-            self.themeObserver = ThemePaletteObserver { [weak self] palette in
+            self.themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in
                 self?.applyTheme(palette)
             }
         }

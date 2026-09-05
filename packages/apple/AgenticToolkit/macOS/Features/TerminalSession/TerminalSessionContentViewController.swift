@@ -62,7 +62,7 @@ public final class TerminalSessionContentViewController: NSViewController {
 
         // Fires immediately with the current palette, which is what paints the
         // first terminal — so there is no separate "apply on load" path.
-        themeObserver = ThemePaletteObserver { [weak self] palette in
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in
             self?.applyAppearance(palette: palette)
         }
     }
@@ -93,7 +93,7 @@ public final class TerminalSessionContentViewController: NSViewController {
 
             // Goes through the same path as a later settings change, so the
             // constraints get their constants from one place (`dry`).
-            applyAppearance(palette: ThemePaletteObserver.currentPalette)
+            applyAppearance(palette: view.resolvedThemeScope.palette)
 
             DispatchQueue.main.async { [weak terminalView] in
                 terminalView?.window?.makeFirstResponder(terminalView)
@@ -104,7 +104,7 @@ public final class TerminalSessionContentViewController: NSViewController {
     }
 
     private func reapplyAppearance() {
-        applyAppearance(palette: ThemePaletteObserver.currentPalette)
+        applyAppearance(palette: view.resolvedThemeScope.palette)
     }
 
     private func applyAppearance(palette: SemanticPalette) {

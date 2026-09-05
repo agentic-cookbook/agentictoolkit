@@ -100,13 +100,13 @@ final class ThemeDetailsTopicPanel: ThemeTopicPanel {
     private func makeLockRow() -> NSView {
         let icon = NSImageView()
         icon.image = NSImage(systemSymbolName: "lock.fill", accessibilityDescription: "Locked")
-        icon.contentTintColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        icon.contentTintColor = view.resolvedThemeScope.palette.secondaryTextColor
         icon.setContentHuggingPriority(.required, for: .horizontal)
 
         let label = NSTextField(wrappingLabelWithString: context.theme.isBuiltIn
             ? "Built-in theme — duplicate it to customize its colors and fonts."
             : "Imported theme — duplicate it to customize its colors and fonts.")
-        label.textColor = ThemePaletteObserver.currentPalette.secondaryTextColor
+        label.textColor = view.resolvedThemeScope.palette.secondaryTextColor
         label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
         let stack = row([icon, label], spacing: 6)

@@ -51,7 +51,7 @@ public final class MultiChoiceFilterButton: NSPopUpButton {
         translatesAutoresizingMaskIntoConstraints = false
         buildMenu()
         refreshTitle()
-        themeObserver = ThemePaletteObserver { [weak self] palette in self?.applyTheme(palette) }
+        themeObserver = ThemePaletteObserver(host: self) { [weak self] palette in self?.applyTheme(palette) }
     }
 
     @available(*, unavailable)

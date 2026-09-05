@@ -141,7 +141,7 @@ open class TopicListViewController: NSViewController {
 
         self.view = contentStack
 
-        themeObserver = ThemePaletteObserver { [weak self] palette in
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] palette in
             self?.applyTheme(palette)
         }
     }
@@ -416,7 +416,7 @@ extension TopicListViewController: NSOutlineViewDelegate {
 
     public func outlineView(_ outlineView: NSOutlineView, viewFor tableColumn: NSTableColumn?, item: Any) -> NSView? {
         guard let node = item as? TopicListNode else { return nil }
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
 
         switch node.kind {
         case .header(let title):

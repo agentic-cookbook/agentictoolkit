@@ -285,7 +285,7 @@ private final class TabButton: NSView {
     }
 
     private func updateAppearance() {
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = resolvedThemeScope.palette
         backgroundView.layer?.backgroundColor = isHighlighted
             ? palette.nsColor(.selection).cgColor
             : NSColor.clear.cgColor

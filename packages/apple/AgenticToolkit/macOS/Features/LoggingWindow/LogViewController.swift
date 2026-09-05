@@ -105,7 +105,7 @@ open class LogViewController: NSViewController {
 
     open override func viewDidLoad() {
         super.viewDidLoad()
-        themeObserver = ThemePaletteObserver { [weak self] _ in
+        themeObserver = ThemePaletteObserver(host: view) { [weak self] _ in
             self?.updateStateIndicators()
         }
     }
@@ -187,7 +187,7 @@ open class LogViewController: NSViewController {
         // friends: a theme picks its green, and the dot is the one place in this
         // window where "connected" has to read as the same green the rest of the
         // app uses for it.
-        let palette = ThemePaletteObserver.currentPalette
+        let palette = view.resolvedThemeScope.palette
         let (color, label): (NSColor, String)
         if controller.isConnected {
             color = palette.nsColor(.success)
