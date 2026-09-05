@@ -169,209 +169,20 @@
       "holds": ".aiplugin bundles plus AIPluginsShared."
     },
     {
-      "name": "web-ui",
+      "name": "web-toolchain",
       "paths": [
-        "packages/web/packages/ui/"
+        "packages/web/vitest.adt",
+        "packages/web/vitest.setup",
+        "packages/web/vitest.config",
+        "packages/web/tsconfig.base",
+        "packages/web/copy-css",
+        "packages/web/vitest.preset",
+        "packages/web/packages/features/tsup.preset",
+        "packages/web/packages/features/vitest.preset"
       ],
       "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/ui. shadcn slot, cn, blocks, globals.css. The bottom of the web stack."
-    },
-    {
-      "name": "web-model",
-      "paths": [
-        "packages/web/packages/model/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/model. Providers, hooks, search/breadcrumb/nav lib."
-    },
-    {
-      "name": "web-landing",
-      "paths": [
-        "packages/web/packages/landing/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/landing. Standalone marketing deck; builds on nothing and nothing builds on it."
-    },
-    {
-      "name": "web-deploy-platform",
-      "paths": [
-        "packages/web/packages/deploy-platform/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/deploy-platform."
-    },
-    {
-      "name": "web-persona",
-      "paths": [
-        "packages/web/packages/persona/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/persona."
-    },
-    {
-      "name": "web-adh-api-types",
-      "paths": [
-        "packages/web/packages/adh-api-types/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/adh-api-types. Generated vocabulary."
-    },
-    {
-      "name": "web-adh-registry",
-      "paths": [
-        "packages/web/packages/adh-registry/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/adh-registry."
-    },
-    {
-      "name": "web-adh-site-config",
-      "paths": [
-        "packages/web/packages/adh-site-config/"
-      ],
-      "depends_on": [],
-      "shared": true,
-      "holds": "@agentic-toolkit/adh-site-config."
-    },
-    {
-      "name": "web-themes",
-      "paths": [
-        "packages/web/packages/themes/"
-      ],
-      "depends_on": [
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/themes. ColorModeProvider, ThemeStyle, theme manifest."
-    },
-    {
-      "name": "web-markdown",
-      "paths": [
-        "packages/web/packages/markdown/"
-      ],
-      "depends_on": [
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/markdown."
-    },
-    {
-      "name": "web-auth",
-      "paths": [
-        "packages/web/packages/auth/"
-      ],
-      "depends_on": [
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/auth. Session, sign-in surfaces, auth context."
-    },
-    {
-      "name": "web-controls",
-      "paths": [
-        "packages/web/packages/controls/"
-      ],
-      "depends_on": [
-        "web-model"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/controls. filtered-list, panels, toggles, orb-row."
-    },
-    {
-      "name": "web-search",
-      "paths": [
-        "packages/web/packages/search/"
-      ],
-      "depends_on": [
-        "web-markdown",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/search."
-    },
-    {
-      "name": "web-data",
-      "paths": [
-        "packages/web/packages/data/"
-      ],
-      "depends_on": [
-        "web-auth",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/data. Typed access over the backend API."
-    },
-    {
-      "name": "web-api-explorer",
-      "paths": [
-        "packages/web/packages/api-explorer/"
-      ],
-      "depends_on": [
-        "web-auth",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/api-explorer."
-    },
-    {
-      "name": "web-messaging",
-      "paths": [
-        "packages/web/packages/messaging/"
-      ],
-      "depends_on": [
-        "web-auth",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/messaging."
-    },
-    {
-      "name": "web-resource",
-      "paths": [
-        "packages/web/packages/resource/"
-      ],
-      "depends_on": [
-        "web-auth",
-        "web-data",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/resource. List/detail scaffolding."
-    },
-    {
-      "name": "web-crud",
-      "paths": [
-        "packages/web/packages/crud/"
-      ],
-      "depends_on": [
-        "web-api-explorer",
-        "web-auth",
-        "web-ui"
-      ],
-      "shared": true,
-      "holds": "@agentic-toolkit/crud. Generated CRUD surfaces."
-    },
-    {
-      "name": "web-features",
-      "paths": [
-        "packages/web/packages/features/"
-      ],
-      "depends_on": [
-        "web-auth",
-        "web-crud",
-        "web-data",
-        "web-resource",
-        "web-ui"
-      ],
       "shared": false,
-      "holds": "One package per product area. New feature code is expected here \u2014 but a piece that two features would both want belongs one tier down."
+      "holds": "The build and test toolchain every package's own `vitest.config.ts` and `tsup.config.ts` extends: the workspace-root presets, plus the two that happen to sit inside `features/` \u2014 a shared preset is toolchain wherever it physically lives, and longest-prefix matching is what lets those two files say so without moving. This is the one thing packages legitimately reach up to, so it is its own foundation tier rather than part of the `web-workspace` catch-all; otherwise every package in the repo reads as importing upward. Paths are spelled without extensions because a relative import resolves that way. Not shared: config to extend, not components to build on."
     },
     {
       "name": "web-adh",
@@ -381,16 +192,349 @@
       "depends_on": [
         "web-adh-registry",
         "web-adh-site-config",
+        "web-adh-ui",
         "web-api-explorer",
         "web-auth",
         "web-data",
-        "web-features",
-        "web-markdown",
-        "web-themes",
-        "web-ui"
+        "web-messaging",
+        "web-resource",
+        "web-toolchain"
       ],
       "shared": true,
       "holds": "@agentic-toolkit/adh. Family site chrome \u2014 header, footer, legal, themes, debug."
+    },
+    {
+      "name": "web-adh-api-types",
+      "paths": [
+        "packages/web/packages/adh-api-types/"
+      ],
+      "depends_on": [
+        "web-api-explorer",
+        "web-crud",
+        "web-data",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-api-types. Generated vocabulary."
+    },
+    {
+      "name": "web-adh-next-config",
+      "paths": [
+        "packages/web/packages/adh-next-config/"
+      ],
+      "depends_on": [
+        "web-adh-registry",
+        "web-next-env",
+        "web-next-headers",
+        "web-next-preflight",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/adh-next-config` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-adh-registry",
+      "paths": [
+        "packages/web/packages/adh-registry/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-registry."
+    },
+    {
+      "name": "web-adh-site-config",
+      "paths": [
+        "packages/web/packages/adh-site-config/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/adh-site-config."
+    },
+    {
+      "name": "web-adh-site-homes",
+      "paths": [
+        "packages/web/packages/adh-site-homes/"
+      ],
+      "depends_on": [
+        "web-adh",
+        "web-adh-registry",
+        "web-auth",
+        "web-data",
+        "web-resource",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/adh-site-homes` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-adh-ui",
+      "paths": [
+        "packages/web/packages/adh-ui/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/adh-ui` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-api-explorer",
+      "paths": [
+        "packages/web/packages/api-explorer/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/api-explorer."
+    },
+    {
+      "name": "web-auth",
+      "paths": [
+        "packages/web/packages/auth/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/auth. Session, sign-in surfaces, auth context."
+    },
+    {
+      "name": "web-content",
+      "paths": [
+        "packages/web/packages/content/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/content` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-controls",
+      "paths": [
+        "packages/web/packages/controls/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/controls. filtered-list, panels, toggles, orb-row."
+    },
+    {
+      "name": "web-crud",
+      "paths": [
+        "packages/web/packages/crud/"
+      ],
+      "depends_on": [
+        "web-api-explorer",
+        "web-auth",
+        "web-resource",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/crud. Generated CRUD surfaces."
+    },
+    {
+      "name": "web-data",
+      "paths": [
+        "packages/web/packages/data/"
+      ],
+      "depends_on": [
+        "web-adh-ui",
+        "web-auth",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/data. Typed access over the backend API."
+    },
+    {
+      "name": "web-deploy-platform",
+      "paths": [
+        "packages/web/packages/deploy-platform/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/deploy-platform."
+    },
+    {
+      "name": "web-features",
+      "paths": [
+        "packages/web/packages/features/"
+      ],
+      "depends_on": [
+        "web-adh",
+        "web-adh-api-types",
+        "web-adh-registry",
+        "web-adh-ui",
+        "web-api-explorer",
+        "web-auth",
+        "web-crud",
+        "web-data",
+        "web-persona",
+        "web-resource",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "One package per product area. New feature code is expected here \u2014 but a piece that two features would both want belongs one tier down."
+    },
+    {
+      "name": "web-layout",
+      "paths": [
+        "packages/web/packages/layout/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/layout` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-markdown",
+      "paths": [
+        "packages/web/packages/markdown/"
+      ],
+      "depends_on": [
+        "web-toolchain",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/markdown."
+    },
+    {
+      "name": "web-messaging",
+      "paths": [
+        "packages/web/packages/messaging/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-data",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/messaging."
+    },
+    {
+      "name": "web-model",
+      "paths": [
+        "packages/web/packages/model/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/model. Providers, hooks, search/breadcrumb/nav lib."
+    },
+    {
+      "name": "web-next-env",
+      "paths": [
+        "packages/web/packages/next-env/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/next-env` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-next-headers",
+      "paths": [
+        "packages/web/packages/next-headers/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/next-headers` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-next-preflight",
+      "paths": [
+        "packages/web/packages/next-preflight/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/next-preflight` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-olylo",
+      "paths": [
+        "packages/web/packages/olylo/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "The `@agentic-toolkit/olylo` package \u2014 a published sibling library other packages and every site build on. New code here is a change to the shared surface, so it stops for a decision."
+    },
+    {
+      "name": "web-persona",
+      "paths": [
+        "packages/web/packages/persona/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/persona."
+    },
+    {
+      "name": "web-resource",
+      "paths": [
+        "packages/web/packages/resource/"
+      ],
+      "depends_on": [
+        "web-auth",
+        "web-data",
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/resource. List/detail scaffolding."
+    },
+    {
+      "name": "web-search",
+      "paths": [
+        "packages/web/packages/search/"
+      ],
+      "depends_on": [
+        "web-markdown",
+        "web-toolchain",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/search."
+    },
+    {
+      "name": "web-themes",
+      "paths": [
+        "packages/web/packages/themes/"
+      ],
+      "depends_on": [
+        "web-toolchain",
+        "web-ui"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/themes. ColorModeProvider, ThemeStyle, theme manifest."
+    },
+    {
+      "name": "web-ui",
+      "paths": [
+        "packages/web/packages/ui/"
+      ],
+      "depends_on": [
+        "web-toolchain"
+      ],
+      "shared": true,
+      "holds": "@agentic-toolkit/ui. shadcn slot, cn, blocks, globals.css. The bottom of the web stack."
     },
     {
       "name": "web-site",
@@ -401,7 +545,6 @@
         "web-adh",
         "web-features",
         "web-controls",
-        "web-landing",
         "web-search",
         "web-themes",
         "web-model",
@@ -498,6 +641,15 @@
       "depends_on": [],
       "shared": false,
       "holds": "Repo-level guards run by hand and in CI, not imported by anything. check_boundaries.py enforces this repo's OTHER layering rule, orthogonal to the tiers here: packages named @agentic-toolkit/adh* are the adh VOCABULARY tier and portable MECHANISM packages may never import them. Its banned set is discovered from package.json names, never listed."
+    },
+    {
+      "name": "repo-tools",
+      "paths": [
+        "tools/"
+      ],
+      "depends_on": [],
+      "shared": false,
+      "holds": "One-off maintenance scripts run by hand against the repo itself \u2014 currently the recipe classifier that sorts `recipes/` by component tier. Nothing imports these; they are invoked, not built on."
     }
   ],
   "rules": {
