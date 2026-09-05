@@ -2521,9 +2521,6 @@ importers:
 
   packages/status-web:
     dependencies:
-      '@agentic-toolkit/adh':
-        specifier: workspace:*
-        version: link:../adh
       '@agentic-toolkit/deploy-platform':
         specifier: workspace:*
         version: link:../deploy-platform
