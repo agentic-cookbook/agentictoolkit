@@ -18,6 +18,8 @@ packages:
   - './packages/adh-site-homes'
   - './packages/adh-api-types'
   - './packages/deploy-platform'
+  - './packages/status-server'
+  - './packages/status-web'
   - './packages/next-preflight'
   - './packages/next-headers'
   - './packages/next-env'
